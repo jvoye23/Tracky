@@ -1,0 +1,17 @@
+package com.jvcs.tracky.core.database.entity
+
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
+@Entity(tableName = "projects")
+data class ProjectEntity(
+    @PrimaryKey
+    val projectId: String,
+    val title: String,
+    val description: String?,
+    val color: Int?,
+    val totalDuration: Long?,
+    val startDateTimeEpochMs: Long,
+    val isFinished: Boolean,
+    val endDateTimeEpochMs: Long?,
+)

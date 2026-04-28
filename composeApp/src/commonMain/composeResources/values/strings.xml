@@ -1,0 +1,68 @@
+<resources>
+    <string name="app_name">Tracky</string>
+    <string name="add_project">Add new project</string>
+    <string name="enter_new_title">Enter new title</string>
+    <string name="enter_session_name">Enter session name</string>
+    <string name="edit_uppercase">EDIT</string>
+    <string name="title">Title</string>
+    <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
+    <string name="description">Description</string>
+    <string name="project_overview">Project Overview</string>
+    <string name="sessions">Sessions</string>
+    <string name="total_duration">Total duration</string>
+    <string name="close">Close</string>
+    <string name="log_out">Log out</string>
+    <string name="submit">Submit</string>
+
+    <!-- Auth -->
+    <string name="welcome_back">Welcome Back</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="username">Username</string>
+    <string name="username_hint">3-20 characters</string>
+    <string name="password_hint">Min 8 chars, uppercase, lowercase, digit, special char</string>
+    <string name="forgot_password">Forgot password?</string>
+    <string name="forgot_password_desc">Enter your email address and we\'ll send you a link to reset your password.</string>
+    <string name="forgot_password_email_sent">A password reset link has been sent to your email address.</string>
+    <string name="login">Log in</string>
+    <string name="register">Register</string>
+    <string name="create_account">Create Account</string>
+    <string name="already_have_account">Already have an account? Log in</string>
+    <string name="set_new_password">Set New Password</string>
+    <string name="reset_password_successfully">Your password has been reset successfully!</string>
+
+    <!-- Register success -->
+    <string name="account_successfully_created">Account Created Successfully!</string>
+    <string name="verification_email_sent">A verification email has been sent to %1$s. Please check your inbox.</string>
+    <string name="resend_verification_email">Resend verification email</string>
+    <string name="resent_verification_email">Verification email resent successfully</string>
+
+    <!-- Email verification -->
+    <string name="verifying_account">Verifying your account…</string>
+    <string name="email_verified_successfully">Email Verified!</string>
+    <string name="email_verified_successfully_desc">Your email has been verified successfully. You can now log in.</string>
+    <string name="email_verified_failed">Verification Failed</string>
+    <string name="email_verified_failed_desc">The verification link is invalid or has expired.</string>
+
+    <!-- Auth errors -->
+    <string name="error_invalid_credentials">The email or password is incorrect.</string>
+    <string name="error_email_not_verified">Unable to login because your email isn\'t verified.</string>
+    <string name="error_invalid_email">Please enter a valid email address.</string>
+    <string name="error_invalid_username">Username must be between 3 and 20 characters.</string>
+    <string name="error_invalid_password">Password must be at least 8 characters with uppercase, lowercase, digit, and special character.</string>
+    <string name="error_account_exists">An account with that email or username already exists.</string>
+    <string name="error_reset_password_token_invalid">The reset password link is not valid or has expired.</string>
+    <string name="error_same_password">The new password can\'t be the same as the old one.</string>
+
+    <!-- Generic errors -->
+    <string name="error_disk_full">Failed to save the item because your disk is full.</string>
+    <string name="error_request_timeout">The request timed out</string>
+    <string name="error_too_many_requests">You\'ve hit your API rate limit.</string>
+    <string name="error_no_internet">Please check your internet connection, couldn\'t reach the server</string>
+    <string name="error_payload_too_large">The file you\'re trying to upload is too large</string>
+    <string name="error_server_error">Oops, something went wrong. Please try again.</string>
+    <string name="error_serialization">Oops, couldn\'t parse data</string>
+    <string name="error_unknown">Oops, an unknown error occurred.</string>
+    <string name="error_email_exists">A user with that email already exists.</string>
+</resources>
