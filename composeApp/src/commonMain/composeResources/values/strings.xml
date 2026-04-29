@@ -55,6 +55,41 @@
     <string name="error_reset_password_token_invalid">The reset password link is not valid or has expired.</string>
     <string name="error_same_password">The new password can\'t be the same as the old one.</string>
 
+    <!-- Auth — design alignment -->
+    <string name="login_subtitle">Log in to your account to continue</string>
+    <string name="register_subtitle">Start tracking your projects today</string>
+    <string name="welcome_title">Welcome back</string>
+    <string name="continue_with_google">Continue with Google</string>
+    <string name="continue_with_apple">Continue with Apple</string>
+    <string name="google">Google</string>
+    <string name="apple">Apple</string>
+    <string name="or_continue_with_email">or continue with email</string>
+    <string name="or_sign_up_with_email">or sign up with email</string>
+    <string name="dont_have_account">Don\'t have an account? </string>
+    <string name="sign_up">Sign up</string>
+    <string name="full_name">Full name</string>
+    <string name="full_name_hint">At least 2 characters</string>
+    <string name="confirm_password">Confirm password</string>
+    <string name="i_agree_to_terms_prefix">I agree to the </string>
+    <string name="terms_of_service">Terms of Service</string>
+    <string name="and_word"> and </string>
+    <string name="privacy_policy">Privacy Policy</string>
+    <string name="terms_required">You must agree to the terms</string>
+    <string name="passwords_do_not_match">Passwords do not match</string>
+    <string name="error_invalid_name">Name must be at least 2 characters</string>
+    <string name="forgot_password_title">Forgot your password?</string>
+    <string name="send_reset_link">Send reset link</string>
+    <string name="back_to_login">Back to log in</string>
+    <string name="check_your_email">Check your email</string>
+    <string name="check_your_email_desc">We sent a reset link to %1$s. Check your inbox and follow the instructions.</string>
+    <string name="resend_email">Resend email</string>
+    <string name="verify_your_email">Verify your email</string>
+    <string name="verify_your_email_desc">We sent a verification link to your inbox. Please verify your account before logging in.</string>
+    <string name="open_email_app">Open email app</string>
+    <string name="reset_password">Reset password</string>
+    <string name="error_social_login_unavailable">Social login is not available yet.</string>
+    <string name="already_have_account_prefix">Already have an account? </string>
+
     <!-- Generic errors -->
     <string name="error_disk_full">Failed to save the item because your disk is full.</string>
     <string name="error_request_timeout">The request timed out</string>
