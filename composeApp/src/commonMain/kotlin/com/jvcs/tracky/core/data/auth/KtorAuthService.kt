@@ -3,9 +3,10 @@ package com.jvcs.tracky.core.data.auth
 import com.jvcs.tracky.core.data.dto.AuthInfoSerializable
 import com.jvcs.tracky.core.data.dto.requests.EmailRequest
 import com.jvcs.tracky.core.data.dto.requests.LoginRequest
-import com.jvcs.tracky.core.data.dto.requests.RegisterRequest
 import com.jvcs.tracky.core.data.dto.requests.RefreshRequest
+import com.jvcs.tracky.core.data.dto.requests.RegisterRequest
 import com.jvcs.tracky.core.data.dto.requests.ResetPasswordRequest
+import com.jvcs.tracky.core.data.dto.requests.SocialLoginRequest
 import com.jvcs.tracky.core.data.mappers.toDomain
 import com.jvcs.tracky.core.data.networking.get
 import com.jvcs.tracky.core.data.networking.post
@@ -33,12 +34,26 @@ class KtorAuthService(
 
     override suspend fun register(
         email: String,
-        username: String,
+        name: String,
         password: String
     ): Result<AuthInfo, DataError.Network> {
         return httpClient.post<RegisterRequest, AuthInfoSerializable>(
             route = "/api/auth/register",
-            body = RegisterRequest(email = email, username = username, password = password)
+            body = RegisterRequest(email = email, name = name, password = password)
+        ).map { it.toDomain() }
+    }
+
+    override suspend fun loginWithGoogle(idToken: String): Result<AuthInfo, DataError.Network> {
+        return httpClient.post<SocialLoginRequest, AuthInfoSerializable>(
+            route = "/api/auth/google",
+            body = SocialLoginRequest(idToken = idToken)
+        ).map { it.toDomain() }
+    }
+
+    override suspend fun loginWithApple(idToken: String): Result<AuthInfo, DataError.Network> {
+        return httpClient.post<SocialLoginRequest, AuthInfoSerializable>(
+            route = "/api/auth/apple",
+            body = SocialLoginRequest(idToken = idToken)
         ).map { it.toDomain() }
     }
 

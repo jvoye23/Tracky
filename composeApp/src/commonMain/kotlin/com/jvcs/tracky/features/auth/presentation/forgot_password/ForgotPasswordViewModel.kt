@@ -44,6 +44,9 @@ class ForgotPasswordViewModel(
     fun onAction(action: ForgotPasswordAction) {
         when (action) {
             ForgotPasswordAction.OnSubmitClick -> submit()
+            ForgotPasswordAction.OnResendClick -> {
+                _state.update { it.copy(isEmailSentSuccessfully = false) }
+            }
             else -> Unit
         }
     }

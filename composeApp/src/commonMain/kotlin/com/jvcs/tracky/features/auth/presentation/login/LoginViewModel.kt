@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jvcs.tracky.core.domain.auth.AuthService
 import com.jvcs.tracky.core.domain.auth.SessionStorage
+import com.jvcs.tracky.core.domain.auth.SocialAuthProvider
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.onFailure
 import com.jvcs.tracky.core.domain.util.onSuccess
@@ -29,7 +30,8 @@ import tracky.composeapp.generated.resources.error_invalid_credentials
 
 class LoginViewModel(
     private val authService: AuthService,
-    private val sessionStorage: SessionStorage
+    private val sessionStorage: SessionStorage,
+    private val socialAuthProvider: SocialAuthProvider,
 ) : ViewModel() {
 
     private var hasLoadedInitialData = false
@@ -63,6 +65,8 @@ class LoginViewModel(
             LoginAction.OnTogglePasswordVisibility -> {
                 _state.update { it.copy(isPasswordVisible = !it.isPasswordVisible) }
             }
+            LoginAction.OnGoogleSignInClick -> signInWithGoogle()
+            LoginAction.OnAppleSignInClick -> signInWithApple()
             else -> Unit
         }
     }
@@ -92,6 +96,48 @@ class LoginViewModel(
                 }
                 _state.update { it.copy(error = errorMessage, isLoggingIn = false) }
             }
+        }
+    }
+
+    private fun signInWithGoogle() {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoggingIn = true, error = null) }
+            socialAuthProvider.signInWithGoogle()
+                .onSuccess { idToken ->
+                    authService.loginWithGoogle(idToken)
+                        .onSuccess { authInfo ->
+                            sessionStorage.set(authInfo)
+                            _state.update { it.copy(isLoggingIn = false) }
+                            eventChannel.send(LoginEvent.Success)
+                        }
+                        .onFailure { error ->
+                            _state.update { it.copy(error = error.asUiText(), isLoggingIn = false) }
+                        }
+                }
+                .onFailure { error ->
+                    _state.update { it.copy(error = error.asUiText(), isLoggingIn = false) }
+                }
+        }
+    }
+
+    private fun signInWithApple() {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoggingIn = true, error = null) }
+            socialAuthProvider.signInWithApple()
+                .onSuccess { idToken ->
+                    authService.loginWithApple(idToken)
+                        .onSuccess { authInfo ->
+                            sessionStorage.set(authInfo)
+                            _state.update { it.copy(isLoggingIn = false) }
+                            eventChannel.send(LoginEvent.Success)
+                        }
+                        .onFailure { error ->
+                            _state.update { it.copy(error = error.asUiText(), isLoggingIn = false) }
+                        }
+                }
+                .onFailure { error ->
+                    _state.update { it.copy(error = error.asUiText(), isLoggingIn = false) }
+                }
         }
     }
 }

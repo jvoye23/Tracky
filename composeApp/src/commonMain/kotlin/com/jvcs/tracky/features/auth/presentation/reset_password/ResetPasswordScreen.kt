@@ -6,30 +6,26 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.jvcs.tracky.design_system.Icon_CheckCircle
+import com.jvcs.tracky.design_system.Icon_Lock
+import com.jvcs.tracky.design_system.components.AuthHeaderIcon
+import com.jvcs.tracky.design_system.components.TrackyPrimaryButton
+import com.jvcs.tracky.design_system.components.TrackyTextField
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import tracky.composeapp.generated.resources.Res
@@ -69,86 +65,86 @@ fun ResetPasswordScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 24.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+                .imePadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 28.dp, vertical = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             if (state.isResetSuccessful) {
-                Icon(
-                    imageVector = Icons.Default.CheckCircle,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(72.dp)
+                AuthHeaderIcon(
+                    icon = Icon_CheckCircle,
+                    containerSize = 88.dp,
+                    iconSize = 44.dp,
+                    cornerRadius = 28.dp,
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+
+                Spacer(Modifier.height(20.dp))
+
                 Text(
                     text = stringResource(Res.string.reset_password_successfully),
-                    style = MaterialTheme.typography.headlineSmall,
-                    textAlign = TextAlign.Center
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    textAlign = TextAlign.Center,
                 )
-                Spacer(modifier = Modifier.height(32.dp))
-                Button(
+
+                Spacer(Modifier.height(28.dp))
+
+                TrackyPrimaryButton(
+                    text = stringResource(Res.string.login),
                     onClick = { onAction(ResetPasswordAction.OnLoginClick) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(stringResource(Res.string.login))
-                }
+                    modifier = Modifier.fillMaxWidth(),
+                )
             } else {
+                AuthHeaderIcon(
+                    icon = Icon_Lock,
+                    containerSize = 72.dp,
+                    iconSize = 32.dp,
+                )
+
+                Spacer(Modifier.height(28.dp))
+
                 Text(
                     text = stringResource(Res.string.set_new_password),
-                    style = MaterialTheme.typography.headlineLarge
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    textAlign = TextAlign.Center,
                 )
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(Modifier.height(28.dp))
 
-                OutlinedTextField(
-                    value = state.passwordTextState.text.toString(),
-                    onValueChange = { newValue ->
-                        state.passwordTextState.edit {
-                            replace(0, length, newValue)
-                        }
+                TrackyTextField(
+                    state = state.passwordTextState,
+                    label = stringResource(Res.string.password),
+                    leadingIcon = Icon_Lock,
+                    isPassword = true,
+                    imeAction = ImeAction.Done,
+                    onImeAction = {
+                        if (state.canSubmit) onAction(ResetPasswordAction.OnSubmitClick)
                     },
-                    label = { Text(stringResource(Res.string.password)) },
-                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-                    trailingIcon = {
-                        IconButton(onClick = { onAction(ResetPasswordAction.OnTogglePasswordVisibilityClick) }) {
-                            Icon(
-                                imageVector = if (state.isPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                contentDescription = null
-                            )
-                        }
-                    },
-                    visualTransformation = if (state.isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    supportingText = { Text(stringResource(Res.string.password_hint)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    hint = stringResource(Res.string.password_hint),
+                    modifier = Modifier.fillMaxWidth(),
                 )
 
                 if (state.errorText != null) {
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(Modifier.height(8.dp))
                     Text(
                         text = state.errorText.asString(),
                         color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(Modifier.height(24.dp))
 
-                Button(
+                TrackyPrimaryButton(
+                    text = stringResource(Res.string.submit),
                     onClick = { onAction(ResetPasswordAction.OnSubmitClick) },
                     enabled = state.canSubmit,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    if (state.isLoading) {
-                        CircularProgressIndicator(
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.height(24.dp)
-                        )
-                    } else {
-                        Text(stringResource(Res.string.submit))
-                    }
-                }
+                    isLoading = state.isLoading,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         }
     }

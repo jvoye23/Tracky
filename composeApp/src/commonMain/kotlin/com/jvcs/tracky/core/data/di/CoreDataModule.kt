@@ -8,6 +8,7 @@ import com.jvcs.tracky.core.database.DatabaseFactory
 import com.jvcs.tracky.core.database.TrackyDatabase
 import com.jvcs.tracky.core.domain.auth.AuthService
 import com.jvcs.tracky.core.domain.auth.SessionStorage
+import com.jvcs.tracky.core.domain.auth.SocialAuthProvider
 import com.jvcs.tracky.features.project_tracker.data.RoomLocalProjectDataSource
 import com.jvcs.tracky.features.project_tracker.domain.ProjectRepository
 import kotlinx.serialization.json.Json
@@ -41,4 +42,5 @@ val coreDataModule = module {
     singleOf(::DataStoreSessionStorage) bind SessionStorage::class
     single { HttpClientFactory(get()).create(get()) }
     singleOf(::KtorAuthService) bind AuthService::class
+    single { SocialAuthProvider() }
 }
