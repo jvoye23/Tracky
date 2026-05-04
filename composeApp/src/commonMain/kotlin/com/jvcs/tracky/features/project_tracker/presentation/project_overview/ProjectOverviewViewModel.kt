@@ -61,20 +61,36 @@ class ProjectOverviewViewModel(
                     isAddNewProjectBottomSheetVisible = !it.isAddNewProjectBottomSheetVisible
                 ) }
             }
-
-
+            ProjectOverviewAction.OnMenuClick -> { /* Handle menu */ }
+            is ProjectOverviewAction.OnSearchQueryChange -> {
+                _state.update { it.copy(searchQuery = action.query) }
+                filterProjects(action.query)
+            }
+            ProjectOverviewAction.OnToggleViewMode -> {
+                _state.update { it.copy(isGridView = !it.isGridView) }
+            }
         }
+    }
+
+    private fun filterProjects(query: String) {
+        val projects = _state.value.projects ?: return
+        val filtered = if (query.isEmpty()) {
+            projects
+        } else {
+            projects.filter { it.title.contains(query, ignoreCase = true) }
+        }
+        _state.update { it.copy(filteredProjects = filtered) }
     }
 
     private fun getProjects() {
         viewModelScope.launch {
             projectRepository.getProjects()
                 .collect { projectList ->
+                    val uiProjects = projectList.map { it.toProjectUi() }
                     _state.update { it ->
                         it.copy(
-                            projects = projectList.map {
-                                it.toProjectUi()
-                            }
+                            projects = uiProjects,
+                            filteredProjects = if (it.searchQuery.isEmpty()) uiProjects else uiProjects.filter { p -> p.title.contains(it.searchQuery, ignoreCase = true) }
                         )
                     }
                 }

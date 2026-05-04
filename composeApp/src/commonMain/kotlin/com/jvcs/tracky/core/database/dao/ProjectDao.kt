@@ -6,7 +6,9 @@ import androidx.room.Transaction
 import androidx.room.Upsert
 import com.jvcs.tracky.core.database.entity.ProjectEntity
 import com.jvcs.tracky.core.database.entity.ProjectSessionEntity
+import com.jvcs.tracky.core.database.entity.SessionIntervalEntity
 import com.jvcs.tracky.core.database.relation.ProjectWithSessions
+import com.jvcs.tracky.core.database.relation.SessionWithIntervals
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -35,7 +37,7 @@ interface ProjectDao {
 
     @Transaction
     @Query("SELECT * FROM projects WHERE projectId = :projectId")
-    fun getProjectWithSessionsById(projectId: String): ProjectWithSessions?
+    suspend fun getProjectWithSessionsById(projectId: String): ProjectWithSessions?
 
     @Upsert
     suspend fun upsertProjectRecord(record: ProjectSessionEntity)
@@ -45,4 +47,26 @@ interface ProjectDao {
 
     @Query("UPDATE project_records SET durationMillis = :newDurationMillis WHERE recordId = :sessionId")
     suspend fun updateSessionDuration(sessionId: String, newDurationMillis: Long)
+
+    @Transaction
+    @Query("SELECT * FROM project_records WHERE recordId = :sessionId")
+    fun getSessionWithIntervalsById(sessionId: String): Flow<SessionWithIntervals?>
+
+    @Upsert
+    suspend fun upsertSessionInterval(interval: SessionIntervalEntity)
+
+    @Query("DELETE FROM session_intervals WHERE parentSessionId = :sessionId")
+    suspend fun deleteIntervalsBySessionId(sessionId: String)
+
+    @Query("SELECT * FROM session_intervals WHERE parentSessionId = :sessionId AND endDateTimeEpochMs IS NULL LIMIT 1")
+    suspend fun getOpenIntervalBySessionId(sessionId: String): SessionIntervalEntity?
+
+    @Query("UPDATE project_records SET isTimerRunning = :isRunning WHERE recordId = :sessionId")
+    suspend fun updateSessionTimerStatus(sessionId: String, isRunning: Boolean)
+
+    @Query("UPDATE project_records SET durationMillis = durationMillis + :additionalDuration WHERE recordId = :sessionId")
+    suspend fun addSessionDuration(sessionId: String, additionalDuration: Long)
+
+    @Query("UPDATE project_records SET description = :title WHERE recordId = :sessionId")
+    suspend fun updateSessionTitle(sessionId: String, title: String)
 }

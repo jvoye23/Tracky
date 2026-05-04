@@ -1,7 +1,11 @@
 <resources>
     <string name="app_name">Tracky</string>
     <string name="add_project">Add new project</string>
+    <string name="add">Add</string>
+    <string name="new_project">New Project</string>
+    <string name="search_in_projects">Search in projects</string>
     <string name="enter_new_title">Enter new title</string>
+    <string name="confirm">Confirm</string>
     <string name="enter_session_name">Enter session name</string>
     <string name="edit_uppercase">EDIT</string>
     <string name="title">Title</string>
@@ -14,6 +18,11 @@
     <string name="close">Close</string>
     <string name="log_out">Log out</string>
     <string name="submit">Submit</string>
+    <string name="start_date">Start Date</string>
+    <string name="color">Color</string>
+    <string name="done">Done</string>
+    <string name="in_progress">In progress</string>
+    <string name="duration">Duration</string>
 
     <!-- Auth -->
     <string name="welcome_back">Welcome Back</string>
@@ -28,6 +37,7 @@
     <string name="login">Log in</string>
     <string name="register">Register</string>
     <string name="create_account">Create Account</string>
+    <string name="create_new_project">Create new project</string>
     <string name="already_have_account">Already have an account? Log in</string>
     <string name="set_new_password">Set New Password</string>
     <string name="reset_password_successfully">Your password has been reset successfully!</string>
@@ -100,4 +110,9 @@
     <string name="error_serialization">Oops, couldn\'t parse data</string>
     <string name="error_unknown">Oops, an unknown error occurred.</string>
     <string name="error_email_exists">A user with that email already exists.</string>
+
+    <!-- Color Picker -->
+    <string name="select_color">Select Color</string>
+    <string name="select">Select</string>
+
 </resources>

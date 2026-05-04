@@ -8,11 +8,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -49,12 +51,26 @@ fun ProjectSessionCard(
             )
         },
         trailingContent = {
-            Checkbox(
-                checked = false,
-                onCheckedChange = {
-
+            if (state.isEditMode) {
+                IconButton(
+                    onClick = {
+                        onAction(ProjectDetailAction.OnDeleteSessionClick(projectSessionUi.id!!))
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete Session",
+                        tint = MaterialTheme.colorScheme.error
+                    )
                 }
-            )
+            } else {
+                Checkbox(
+                    checked = false,
+                    onCheckedChange = {
+
+                    }
+                )
+            }
 
         },
         leadingContent = {
@@ -65,7 +81,7 @@ fun ProjectSessionCard(
                         onAction(ProjectDetailAction.OnToggleSessionTimer(projectSessionUi.id!!))
                     }
                     .background(
-                        color = if(projectSessionUi.isTimerRunning) {
+                        color = if (projectSessionUi.isTimerRunning) {
                             MaterialTheme.colorScheme.errorContainer
                         } else MaterialTheme.colorScheme.primaryContainer,
                         shape = CircleShape
@@ -73,11 +89,11 @@ fun ProjectSessionCard(
                 contentAlignment = Alignment.Center
             ){
                 Icon(
-                    imageVector = if(projectSessionUi.isTimerRunning) {
+                    imageVector = if (projectSessionUi.isTimerRunning) {
                         Icons.Default.Stop
-                    }else Icons.Default.PlayArrow,
+                    } else Icons.Default.PlayArrow,
                     contentDescription = null,
-                    tint = if(projectSessionUi.isTimerRunning) {
+                    tint = if (projectSessionUi.isTimerRunning) {
                         MaterialTheme.colorScheme.onErrorContainer
                     } else MaterialTheme.colorScheme.onPrimaryContainer
                 )

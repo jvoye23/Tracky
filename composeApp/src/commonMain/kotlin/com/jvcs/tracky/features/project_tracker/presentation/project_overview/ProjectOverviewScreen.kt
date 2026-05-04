@@ -1,43 +1,43 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.jvcs.tracky.features.project_tracker.presentation.project_overview
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material3.FabPosition
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.jvcs.tracky.design_system.components.UserProfileButton
 import com.jvcs.tracky.design_system.util.ObserveAsEvents
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.AddNewProjectBottomSheet
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectCard
+import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectOverViewTopBar
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import tracky.composeapp.generated.resources.Res
-import tracky.composeapp.generated.resources.project_overview
+import tracky.composeapp.generated.resources.new_project
 
 @Composable
 fun ProjectOverviewScreenRoot(
@@ -73,43 +73,19 @@ fun ProjectOverviewScreenRoot(
 
         }
     }
-
-
-    Scaffold(
-        modifier = modifier,
-        floatingActionButton = {
-            FloatingActionButton(onClick = { viewModel.onAction(
-                ProjectOverviewAction.OnFabClick
-            )
-
-            }) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Add"
-                )
+    ProjectOverviewScreen(
+        onAction = { action ->
+            when(action) {
+                is ProjectOverviewAction.OnProjectCardClick -> onNavigateToDetailScreen(action.projectId)
+                else -> Unit
             }
+            viewModel.onAction(action)
         },
-        floatingActionButtonPosition = FabPosition.End
-
-    ) { innerPadding ->
-        ProjectOverviewScreen(
-            onAction = { action ->
-                when(action) {
-                    is ProjectOverviewAction.OnProjectCardClick -> onNavigateToDetailScreen(action.projectId)
-                    else -> Unit
-                }
-                viewModel.onAction(action)
-            },
-            state = state,
-            username = username,
-            email = email,
-            onLogout = onLogout,
-            modifier = Modifier
-                .padding(innerPadding)
-        )
-
-    }
-
+        state = state,
+        username = username,
+        email = email,
+        onLogout = onLogout
+    )
 }
 
 @Composable
@@ -121,77 +97,75 @@ fun ProjectOverviewScreen(
     onLogout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier
+
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+
+    Scaffold(
+        modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
-            .testTag("project_overview")
+            .nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = {
+            ProjectOverViewTopBar(
+                modifier = Modifier.padding(horizontal = 10.dp),
+                onAction = onAction,
+                state = state,
+                onLogout = onLogout,
+                username = username,
+                email = email,
+                scrollBehavior = scrollBehavior
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        contentWindowInsets = WindowInsets.safeDrawing,
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = {
+                    onAction(ProjectOverviewAction.OnFabClick)
+                },
 
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(64.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            IconButton(
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .padding(horizontal = 16.dp)
-                    .background(
-                        shape = RoundedCornerShape(50.dp),
-                        color = MaterialTheme.colorScheme.primary .copy(alpha = 0.08f)
-                    )
-                    .size(32.dp),
-
-                onClick = { onAction(ProjectOverviewAction.OnCalendarIconClick) }
             ) {
                 Icon(
-                    modifier = Modifier
-                        ,
-                    imageVector = Icons.Default.CalendarMonth,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Add",
+                    modifier = Modifier.size(26.dp)
                 )
-            }
-            Text(
-                modifier = Modifier,
-                text = stringResource(Res.string.project_overview),
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.primary
-            )
-            if (username != null && email != null) {
-                UserProfileButton(
-                    username = username,
-                    email = email,
-                    onLogoutClick = onLogout,
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .padding(horizontal = 16.dp)
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = stringResource(Res.string.new_project),
+                    style = MaterialTheme.typography.bodyLarge
                 )
             }
         }
+
+    ) { innerPadding ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize(),
+            modifier = modifier
+                .fillMaxSize()
+                .padding(horizontal = 10.dp)
+                .testTag("project_overview"),
+            contentPadding = PaddingValues(
+                top = innerPadding.calculateTopPadding(),
+                bottom = innerPadding.calculateBottomPadding()
+            ),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             item {
                 Text(
                     modifier = Modifier
-                        .padding(all = 16.dp),
-                    text = "My current open projects"
+                        .padding(bottom = 8.dp, top = 8.dp, start = 8.dp),
+                    text = if (state.searchQuery.isEmpty()) "My current open projects" else "Search results",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             items(
-                items = state.projects ?: emptyList(),
+                items = state.filteredProjects ?: emptyList(),
                 key = { it.projectId!! }
             ) { item ->
                 ProjectCard(
                     projectUi = item,
-                    onAction = onAction,
-                    state = state
+                    onAction = onAction
                 )
 
             }

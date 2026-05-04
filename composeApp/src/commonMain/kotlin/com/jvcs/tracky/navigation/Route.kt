@@ -48,5 +48,10 @@ sealed interface Route : NavKey {
             val editText: String?,
             val editTextType: EditTextType
         ) : Route, NavKey
+
+        @Serializable
+        data class SessionDetail(
+            val sessionId: String
+        ) : Route, NavKey
     }
 }

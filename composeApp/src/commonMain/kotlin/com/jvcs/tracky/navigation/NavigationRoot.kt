@@ -2,7 +2,6 @@ package com.jvcs.tracky.navigation
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -33,6 +32,7 @@ import com.jvcs.tracky.features.project_tracker.presentation.project_detail.Proj
 import com.jvcs.tracky.features.project_tracker.presentation.project_detail.ProjectDetailScreenRoot
 import com.jvcs.tracky.features.project_tracker.presentation.project_detail.ProjectDetailViewModel
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.ProjectOverviewScreenRoot
+import com.jvcs.tracky.features.project_tracker.presentation.session_detail.SessionDetailScreenRoot
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import org.koin.compose.viewmodel.koinViewModel
@@ -74,6 +74,7 @@ fun NavigationRoot(
                     subclass(Route.AuthRoute.ResetPassword::class, Route.AuthRoute.ResetPassword.serializer())
                     subclass(Route.ProjectRoute.ProjectOverview::class, Route.ProjectRoute.ProjectOverview.serializer())
                     subclass(Route.ProjectRoute.ProjectDetail::class, Route.ProjectRoute.ProjectDetail.serializer())
+                    subclass(Route.ProjectRoute.SessionDetail::class, Route.ProjectRoute.SessionDetail.serializer())
                 }
             }
         },
@@ -210,6 +211,19 @@ fun NavigationRoot(
                                 editTextType = editTextType
                             )
                         )
+                    },
+                    onProjectSessionClick = { sessionId ->
+                        backStack.add(
+                            Route.ProjectRoute.SessionDetail(sessionId)
+                        )
+                    }
+                )
+            }
+            entry<Route.ProjectRoute.SessionDetail> { key ->
+                SessionDetailScreenRoot(
+                    sessionId = key.sessionId,
+                    navigateBack = {
+                        backStack.remove(key)
                     }
                 )
             }
