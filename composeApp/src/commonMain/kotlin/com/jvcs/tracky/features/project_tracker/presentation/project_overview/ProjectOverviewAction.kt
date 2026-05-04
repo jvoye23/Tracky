@@ -10,4 +10,7 @@ sealed interface ProjectOverviewAction {
     data object OnCalendarIconClick: ProjectOverviewAction
 
     data class OnAddProjectClick(val projectTitle: String): ProjectOverviewAction
+    data object OnMenuClick: ProjectOverviewAction
+    data class OnSearchQueryChange(val query: String): ProjectOverviewAction
+    data object OnToggleViewMode: ProjectOverviewAction
 }

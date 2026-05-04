@@ -8,5 +8,8 @@ data class ProjectOverviewState(
     val label: String = "",
     val isAddNewProjectBottomSheetVisible: Boolean = false,
     val addProjectTextFieldState: TextFieldState = TextFieldState(),
-    val projects: List<ProjectUi>? = null
+    val searchQuery: String = "",
+    val projects: List<ProjectUi>? = null,
+    val filteredProjects: List<ProjectUi>? = null,
+    val isGridView: Boolean = false
 )

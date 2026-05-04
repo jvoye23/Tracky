@@ -13,5 +13,6 @@ data class ProjectEntity(
     val totalDuration: Long?,
     val startDateTimeEpochMs: Long,
     val isFinished: Boolean,
+    val useLightTextColor: Boolean = false,
     val endDateTimeEpochMs: Long?,
 )

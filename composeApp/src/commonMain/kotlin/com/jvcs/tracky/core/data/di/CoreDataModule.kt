@@ -34,6 +34,7 @@ val coreDataModule = module {
     single {
         get<DatabaseFactory>()
             .create()
+            .addMigrations(TrackyDatabase.MIGRATION_1_2, TrackyDatabase.MIGRATION_2_3)
             .setDriver(BundledSQLiteDriver())
             .build()
     }

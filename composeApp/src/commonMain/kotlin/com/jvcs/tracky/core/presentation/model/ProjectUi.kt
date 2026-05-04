@@ -13,6 +13,7 @@ data class ProjectUi(
     val totalDuration: String,
     val startDateTimeUtc: String,
     val isFinished: Boolean,
+    val useLightTextColor: Boolean = false,
     val endDateTimeUtc: String?,
     val projectSessions: List<ProjectSessionUi>? = null
 ) {
