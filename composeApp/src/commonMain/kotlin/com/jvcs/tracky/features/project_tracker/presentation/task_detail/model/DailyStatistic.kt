@@ -1,4 +1,4 @@
-package com.jvcs.tracky.features.project_tracker.presentation.session_detail.model
+package com.jvcs.tracky.features.project_tracker.presentation.task_detail.model
 
 data class DailyStatistic(
     val formattedDate: String,

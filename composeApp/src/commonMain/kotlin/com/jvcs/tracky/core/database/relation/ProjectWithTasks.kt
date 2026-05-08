@@ -3,9 +3,9 @@ package com.jvcs.tracky.core.database.relation
 import androidx.room.Embedded
 import androidx.room.Relation
 import com.jvcs.tracky.core.database.entity.ProjectEntity
-import com.jvcs.tracky.core.database.entity.ProjectSessionEntity
+import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
 
-data class ProjectWithSessions(
+data class ProjectWithTasks(
     @Embedded
     val project: ProjectEntity,
 
@@ -13,5 +13,5 @@ data class ProjectWithSessions(
         parentColumn = "projectId",
         entityColumn = "parentProjectId"
     )
-    val projectSessions: List<ProjectSessionEntity>
+    val projectTasks: List<ProjectTaskEntity>
 )

@@ -37,7 +37,9 @@ import com.jvcs.tracky.features.project_tracker.presentation.project_overview.co
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import tracky.composeapp.generated.resources.Res
+import tracky.composeapp.generated.resources.current_projects
 import tracky.composeapp.generated.resources.new_project
+import tracky.composeapp.generated.resources.search_results
 
 @Composable
 fun ProjectOverviewScreenRoot(
@@ -153,7 +155,7 @@ fun ProjectOverviewScreen(
                 Text(
                     modifier = Modifier
                         .padding(bottom = 8.dp, top = 8.dp, start = 8.dp),
-                    text = if (state.searchQuery.isEmpty()) "My current open projects" else "Search results",
+                    text = if (state.searchQuery.isEmpty()) stringResource(Res.string.current_projects) else stringResource(Res.string.search_results),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

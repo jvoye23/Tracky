@@ -32,7 +32,7 @@ import com.jvcs.tracky.features.project_tracker.presentation.project_detail.Proj
 import com.jvcs.tracky.features.project_tracker.presentation.project_detail.ProjectDetailScreenRoot
 import com.jvcs.tracky.features.project_tracker.presentation.project_detail.ProjectDetailViewModel
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.ProjectOverviewScreenRoot
-import com.jvcs.tracky.features.project_tracker.presentation.session_detail.SessionDetailScreenRoot
+import com.jvcs.tracky.features.project_tracker.presentation.task_detail.TaskDetailScreenRoot
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import org.koin.compose.viewmodel.koinViewModel
@@ -74,7 +74,7 @@ fun NavigationRoot(
                     subclass(Route.AuthRoute.ResetPassword::class, Route.AuthRoute.ResetPassword.serializer())
                     subclass(Route.ProjectRoute.ProjectOverview::class, Route.ProjectRoute.ProjectOverview.serializer())
                     subclass(Route.ProjectRoute.ProjectDetail::class, Route.ProjectRoute.ProjectDetail.serializer())
-                    subclass(Route.ProjectRoute.SessionDetail::class, Route.ProjectRoute.SessionDetail.serializer())
+                    subclass(Route.ProjectRoute.TaskDetail::class, Route.ProjectRoute.TaskDetail.serializer())
                 }
             }
         },
@@ -212,16 +212,16 @@ fun NavigationRoot(
                             )
                         )
                     },
-                    onProjectSessionClick = { sessionId ->
+                    onProjectTaskClick = { sessionId ->
                         backStack.add(
-                            Route.ProjectRoute.SessionDetail(sessionId)
+                            Route.ProjectRoute.TaskDetail(sessionId)
                         )
                     }
                 )
             }
-            entry<Route.ProjectRoute.SessionDetail> { key ->
-                SessionDetailScreenRoot(
-                    sessionId = key.sessionId,
+            entry<Route.ProjectRoute.TaskDetail> { key ->
+                TaskDetailScreenRoot(
+                    taskId = key.taskId,
                     navigateBack = {
                         backStack.remove(key)
                     }

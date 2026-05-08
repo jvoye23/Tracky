@@ -9,16 +9,16 @@ import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.execSQL
 import com.jvcs.tracky.core.database.dao.ProjectDao
 import com.jvcs.tracky.core.database.entity.ProjectEntity
-import com.jvcs.tracky.core.database.entity.ProjectSessionEntity
-import com.jvcs.tracky.core.database.entity.SessionIntervalEntity
+import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
+import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 
 @Database(
     entities = [
         ProjectEntity::class,
-        ProjectSessionEntity::class,
-        SessionIntervalEntity::class
+        ProjectTaskEntity::class,
+        TaskIntervalEntity::class
     ],
-    version = 3,
+    version = 4,
 )
 @TypeConverters(RoomConverters::class)
 @ConstructedBy(TrackyDatabaseConstructor::class)
@@ -45,6 +45,13 @@ abstract class TrackyDatabase: RoomDatabase() {
                         durationMillis INTEGER NOT NULL
                     )
                 """.trimIndent())
+            }
+        }
+
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE session_intervals RENAME TO task_intervals")
+                connection.execSQL("ALTER TABLE task_intervals RENAME COLUMN parentSessionId TO parentTaskId")
             }
         }
     }

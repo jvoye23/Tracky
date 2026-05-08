@@ -5,10 +5,10 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Upsert
 import com.jvcs.tracky.core.database.entity.ProjectEntity
-import com.jvcs.tracky.core.database.entity.ProjectSessionEntity
-import com.jvcs.tracky.core.database.entity.SessionIntervalEntity
-import com.jvcs.tracky.core.database.relation.ProjectWithSessions
-import com.jvcs.tracky.core.database.relation.SessionWithIntervals
+import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
+import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
+import com.jvcs.tracky.core.database.relation.ProjectWithTasks
+import com.jvcs.tracky.core.database.relation.TaskWithIntervals
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -33,40 +33,40 @@ interface ProjectDao {
 
     @Transaction
     @Query("SELECT * FROM projects")
-    fun getProjectsWithSessions(): Flow<List<ProjectWithSessions>>
+    fun getProjectsWithTasks(): Flow<List<ProjectWithTasks>>
 
     @Transaction
     @Query("SELECT * FROM projects WHERE projectId = :projectId")
-    suspend fun getProjectWithSessionsById(projectId: String): ProjectWithSessions?
+    suspend fun getProjectWithTasksById(projectId: String): ProjectWithTasks?
 
     @Upsert
-    suspend fun upsertProjectRecord(record: ProjectSessionEntity)
+    suspend fun upsertProjectRecord(record: ProjectTaskEntity)
 
     @Query("DELETE FROM project_records WHERE recordId = :recordId")
     suspend fun deleteProjectRecord(recordId: String)
 
-    @Query("UPDATE project_records SET durationMillis = :newDurationMillis WHERE recordId = :sessionId")
-    suspend fun updateSessionDuration(sessionId: String, newDurationMillis: Long)
+    @Query("UPDATE project_records SET durationMillis = :newDurationMillis WHERE recordId = :taskId")
+    suspend fun updateTaskDuration(taskId: String, newDurationMillis: Long)
 
     @Transaction
-    @Query("SELECT * FROM project_records WHERE recordId = :sessionId")
-    fun getSessionWithIntervalsById(sessionId: String): Flow<SessionWithIntervals?>
+    @Query("SELECT * FROM project_records WHERE recordId = :taskId")
+    fun getTaskWithIntervalsById(taskId: String): Flow<TaskWithIntervals?>
 
     @Upsert
-    suspend fun upsertSessionInterval(interval: SessionIntervalEntity)
+    suspend fun upsertTaskInterval(interval: TaskIntervalEntity)
 
-    @Query("DELETE FROM session_intervals WHERE parentSessionId = :sessionId")
-    suspend fun deleteIntervalsBySessionId(sessionId: String)
+    @Query("DELETE FROM task_intervals WHERE parentTaskId = :taskId")
+    suspend fun deleteIntervalsByTaskId(taskId: String)
 
-    @Query("SELECT * FROM session_intervals WHERE parentSessionId = :sessionId AND endDateTimeEpochMs IS NULL LIMIT 1")
-    suspend fun getOpenIntervalBySessionId(sessionId: String): SessionIntervalEntity?
+    @Query("SELECT * FROM task_intervals WHERE parentTaskId = :sessionId AND endDateTimeEpochMs IS NULL LIMIT 1")
+    suspend fun getOpenIntervalBySessionId(sessionId: String): TaskIntervalEntity?
 
     @Query("UPDATE project_records SET isTimerRunning = :isRunning WHERE recordId = :sessionId")
     suspend fun updateSessionTimerStatus(sessionId: String, isRunning: Boolean)
 
-    @Query("UPDATE project_records SET durationMillis = durationMillis + :additionalDuration WHERE recordId = :sessionId")
-    suspend fun addSessionDuration(sessionId: String, additionalDuration: Long)
+    @Query("UPDATE project_records SET durationMillis = durationMillis + :additionalDuration WHERE recordId = :taskId")
+    suspend fun addTaskDuration(taskId: String, additionalDuration: Long)
 
-    @Query("UPDATE project_records SET description = :title WHERE recordId = :sessionId")
-    suspend fun updateSessionTitle(sessionId: String, title: String)
+    @Query("UPDATE project_records SET description = :title WHERE recordId = :taskId")
+    suspend fun updateTaskTitle(taskId: String, title: String)
 }

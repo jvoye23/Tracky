@@ -14,11 +14,11 @@ data class Project @OptIn(ExperimentalTime::class) constructor(
     val isFinished: Boolean,
     val useLightTextColor: Boolean = false,
     val endDateTimeUtc: Instant?,
-    val projectSessions: List<ProjectSession>? = null
+    val projectTasks: List<ProjectTask>? = null
 )
 
-data class ProjectSession @OptIn(ExperimentalTime::class) constructor(
-    val projectSessionId: String,
+data class ProjectTask @OptIn(ExperimentalTime::class) constructor(
+    val projectTaskId: String,
     val title: String,
     val durationMillis: Long?,
     val startDateTimeUtc: Instant,
@@ -26,10 +26,10 @@ data class ProjectSession @OptIn(ExperimentalTime::class) constructor(
     val isFinished: Boolean,
     val parentProjectId: String,
     val isTimerRunning: Boolean,
-    val intervals: List<SessionInterval> = emptyList()
+    val intervals: List<TaskInterval> = emptyList()
 )
 
-data class SessionInterval(
+data class TaskInterval(
     val intervalId: Long?,
     val parentSessionId: String,
     val startDateTimeUtc: Instant,

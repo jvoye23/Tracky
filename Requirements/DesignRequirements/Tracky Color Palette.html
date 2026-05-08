@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tracky Design System - Farbpalette</title>
+  <!-- Tailwind CSS für das Styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script>
+    // Die Funktion muss definiert sein, bevor Alpine.js initialisiert wird
+    function paletteManager() {
+        return {
+            mode: 'light',
+            contrast: 'Standard',
+            themes: {
+                light: {
+                    Standard: {
+                        primary: "#475D92", onPrimary: "#FFFFFF", primaryContainer: "#D9E2FF", onPrimaryContainer: "#2F4578",
+                        secondary: "#575E71", onSecondary: "#FFFFFF", secondaryContainer: "#DCE2F9", onSecondaryContainer: "#404659",
+                        tertiary: "#725572", onTertiary: "#FFFFFF", tertiaryContainer: "#FDD7FA", onTertiaryContainer: "#593D59",
+                        error: "#BA1A1A", onError: "#FFFFFF", errorContainer: "#FFDAD6", onErrorContainer: "#93000A",
+                        background: "#FAF8FF", onBackground: "#1A1B20",
+                        surface: "#FAF8FF", onSurface: "#1A1B20",
+                        surfaceVariant: "#E1E2EC", onSurfaceVariant: "#44464F",
+                        outline: "#757780", outlineVariant: "#C5C6D0",
+                        custom: "#2E628C", onCustom: "#FFFFFF", customContainer: "#CDE5FF", onCustomContainer: "#0B4A72"
+                    },
+                    Medium: {
+                        primary: "#1C3466", onPrimary: "#FFFFFF", primaryContainer: "#566CA1", onPrimaryContainer: "#FFFFFF",
+                        secondary: "#2F3648", onSecondary: "#FFFFFF", secondaryContainer: "#666D81", onSecondaryContainer: "#FFFFFF",
+                        tertiary: "#472D48", onTertiary: "#FFFFFF", tertiaryContainer: "#826381", onTertiaryContainer: "#FFFFFF",
+                        error: "#740006", onError: "#FFFFFF", errorContainer: "#CF2C27", onErrorContainer: "#FFFFFF",
+                        background: "#FAF8FF", onBackground: "#1A1B20",
+                        surface: "#FAF8FF", onSurface: "#0F1116",
+                        surfaceVariant: "#E1E2EC", onSurfaceVariant: "#34363E",
+                        outline: "#50525A", outlineVariant: "#6B6D75",
+                        custom: "#00395B", onCustom: "#FFFFFF", customContainer: "#3E719B", onCustomContainer: "#FFFFFF"
+                    },
+                    High: {
+                        primary: "#102A5C", onPrimary: "#FFFFFF", primaryContainer: "#31487B", onPrimaryContainer: "#FFFFFF",
+                        secondary: "#252C3D", onSecondary: "#FFFFFF", secondaryContainer: "#42495B", onSecondaryContainer: "#FFFFFF",
+                        tertiary: "#3C233E", onTertiary: "#FFFFFF", tertiaryContainer: "#5C405C", onTertiaryContainer: "#FFFFFF",
+                        error: "#600004", onError: "#FFFFFF", errorContainer: "#98000A", onErrorContainer: "#FFFFFF",
+                        background: "#FAF8FF", onBackground: "#1A1B20",
+                        surface: "#FAF8FF", onSurface: "#000000",
+                        surfaceVariant: "#E1E2EC", onSurfaceVariant: "#000000",
+                        outline: "#2A2C33", outlineVariant: "#474951",
+                        custom: "#002F4C", onCustom: "#FFFFFF", customContainer: "#104D75", onCustomContainer: "#FFFFFF"
+                    }
+                },
+                dark: {
+                    Standard: {
+                        primary: "#B0C6FF", onPrimary: "#152E60", primaryContainer: "#2F4578", onPrimaryContainer: "#D9E2FF",
+                        secondary: "#C0C6DC", onSecondary: "#2A3042", secondaryContainer: "#404659", onSecondaryContainer: "#DCE2F9",
+                        tertiary: "#E0BBDD", onTertiary: "#412742", tertiaryContainer: "#593D59", onTertiaryContainer: "#FDD7FA",
+                        error: "#FFB4AB", onError: "#690005", errorContainer: "#93000A", onErrorContainer: "#FFDAD6",
+                        background: "#121318", onBackground: "#E2E2E9",
+                        surface: "#121318", onSurface: "#E2E2E9",
+                        surfaceVariant: "#44464F", onSurfaceVariant: "#C5C6D0",
+                        outline: "#8F9099", outlineVariant: "#44464F",
+                        custom: "#9ACBFA", onCustom: "#003352", customContainer: "#0B4A72", onCustomContainer: "#CDE5FF"
+                    },
+                    Medium: {
+                        primary: "#D0DCFF", onPrimary: "#062355", primaryContainer: "#7A90C8", onPrimaryContainer: "#000000",
+                        secondary: "#D6DCF3", onSecondary: "#1F2536", secondaryContainer: "#8A90A5", onSecondaryContainer: "#000000",
+                        tertiary: "#F7D1F4", onTertiary: "#351D37", tertiaryContainer: "#A886A6", onTertiaryContainer: "#000000",
+                        error: "#FFD2CC", onError: "#540003", errorContainer: "#FF5449", onErrorContainer: "#000000",
+                        background: "#121318", onBackground: "#E2E2E9",
+                        surface: "#121318", onSurface: "#FFFFFF",
+                        surfaceVariant: "#44464F", onSurfaceVariant: "#DBDCE6",
+                        outline: "#B0B1BB", outlineVariant: "#8E9099",
+                        custom: "#C1E0FF", onCustom: "#002842", customContainer: "#6495C1", onCustomContainer: "#000000"
+                    },
+                    High: {
+                        primary: "#EDEFFF", onPrimary: "#000000", primaryContainer: "#ACC2FD", onPrimaryContainer: "#00000A",
+                        secondary: "#EDEFFF", onSecondary: "#000000", secondaryContainer: "#BCC2D8", onSecondaryContainer: "#050B1B",
+                        tertiary: "#FFFFEAFA", onTertiary: "#000000", tertiaryContainer: "#DCB7D9", onTertiaryContainer: "#18031B",
+                        error: "#FFECE9", onError: "#000000", errorContainer: "#FFAEA4", onErrorContainer: "#220001",
+                        background: "#121318", onBackground: "#E2E2E9",
+                        surface: "#121318", onSurface: "#FFFFFF",
+                        surfaceVariant: "#44464F", onSurfaceVariant: "#FFFFFF",
+                        outline: "#EFEFFA", outlineVariant: "#C1C2CC",
+                        custom: "#E6F1FF", onCustom: "#000000", customContainer: "#96C7F6", onCustomContainer: "#000C19"
+                    }
+                }
+            },
+            sections: [
+                {
+                    title: 'Primäre Farben', icon: 'palette',
+                    keys: [
+                        { id: 'primary', on: 'onPrimary', label: 'Primary', desc: 'Hauptmarkenfarbe' },
+                        { id: 'onPrimary', on: 'primary', label: 'On Primary', desc: 'Text auf Primary' },
+                        { id: 'primaryContainer', on: 'onPrimaryContainer', label: 'Primary Container', desc: 'Hintergrund für große Elemente' },
+                        { id: 'onPrimaryContainer', on: 'primaryContainer', label: 'On Primary Cont.', desc: 'Text auf Container' }
+                    ]
+                },
+                {
+                    title: 'Sekundäre Farben', icon: 'layers',
+                    keys: [
+                        { id: 'secondary', on: 'onSecondary', label: 'Secondary', desc: 'Akzentfarbe' },
+                        { id: 'onSecondary', on: 'secondary', label: 'On Secondary', desc: 'Text auf Secondary' },
+                        { id: 'secondaryContainer', on: 'onSecondaryContainer', label: 'Secondary Container', desc: 'Subtile Akzente' },
+                        { id: 'onSecondaryContainer', on: 'secondaryContainer', label: 'On Secondary Cont.', desc: 'Text auf Container' }
+                    ]
+                },
+                {
+                    title: 'Tertiäre Farben', icon: 'zap',
+                    keys: [
+                        { id: 'tertiary', on: 'onTertiary', label: 'Tertiary', desc: 'Komplementärfarbe' },
+                        { id: 'onTertiary', on: 'tertiary', label: 'On Tertiary', desc: 'Text auf Tertiary' },
+                        { id: 'tertiaryContainer', on: 'onTertiaryContainer', label: 'Tertiary Container', desc: 'Tertiäre Hintergründe' },
+                        { id: 'onTertiaryContainer', on: 'tertiaryContainer', label: 'On Tertiary Cont.', desc: 'Text auf Container' }
+                    ]
+                },
+                {
+                    title: 'System & Fehler', icon: 'shield-alert',
+                    keys: [
+                        { id: 'error', on: 'onError', label: 'Error', desc: 'Fehlerstatus' },
+                        { id: 'onError', on: 'error', label: 'On Error', desc: 'Text auf Fehlerfarbe' },
+                        { id: 'errorContainer', on: 'onErrorContainer', label: 'Error Container', desc: 'Fehlermeldungen' },
+                        { id: 'onErrorContainer', on: 'errorContainer', label: 'On Error Cont.', desc: 'Text auf Fehlercontainer' }
+                    ]
+                },
+                {
+                    title: 'Oberflächen (Surfaces)', icon: 'monitor',
+                    keys: [
+                        { id: 'background', on: 'onBackground', label: 'Background', desc: 'Haupt-App Hintergrund' },
+                        { id: 'surface', on: 'onSurface', label: 'Surface', desc: 'Karten & Module' },
+                        { id: 'surfaceVariant', on: 'onSurfaceVariant', label: 'Surface Variant', desc: 'Alternative Oberflächen' },
+                        { id: 'outline', on: 'background', label: 'Outline', desc: 'Rahmen & Trenner' }
+                    ]
+                },
+                {
+                    title: 'Eigene Farbe (Blues)', icon: 'droplet',
+                    keys: [
+                        { id: 'custom', on: 'onCustom', label: 'Custom Color', desc: 'Spezifische Markenfarbe' },
+                        { id: 'onCustom', on: 'custom', label: 'On Custom', desc: 'Text auf Custom' },
+                        { id: 'customContainer', on: 'onCustomContainer', label: 'Custom Container', desc: 'Custom Hintergründe' },
+                        { id: 'onCustomContainer', on: 'customContainer', label: 'On Custom Cont.', desc: 'Text auf Container' }
+                    ]
+                }
+            ],
+            getColor(key) {
+                return this.themes[this.mode][this.contrast][key] || '#000000';
+            },
+            init() {
+                // Initialisiert die Lucide Icons nach dem Laden
+                if (window.lucide) {
+                    lucide.createIcons();
+                }
+                this.$watch('mode', () => this.$nextTick(() => lucide.createIcons()));
+                this.$watch('contrast', () => this.$nextTick(() => lucide.createIcons()));
+            }
+        }
+    }
+  </script>
+
+  <!-- Alpine.js mit defer laden -->
+  <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    body { font-family: 'Inter', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 transition-colors duration-300" x-data="paletteManager()" x-cloak>
+
+<div class="min-h-screen p-6 md:p-12">
+  <!-- Header & Steuerung -->
+  <header class="max-w-6xl mx-auto mb-12 bg-white p-6 rounded-3xl shadow-xl border border-slate-100">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div>
+        <h1 class="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+          <i data-lucide="palette" class="text-indigo-600"></i>
+          Tracky Design System
+        </h1>
+        <p class="text-slate-500 mt-1">Material Design 3 Farbpaletten-Explorer</p>
+      </div>
+
+      <div class="flex flex-wrap gap-4">
+        <!-- Modus Umschalter (Hell/Dunkel) -->
+        <div class="flex bg-slate-100 p-1 rounded-full">
+          <button
+                  @click="mode = 'light'"
+                  :class="mode === 'light' ? 'bg-white shadow-md text-indigo-600' : 'text-slate-500'"
+                  class="flex items-center gap-2 px-4 py-2 rounded-full transition-all text-sm font-medium"
+          >
+            <i data-lucide="sun" class="w-4 h-4"></i> Hell
+          </button>
+          <button
+                  @click="mode = 'dark'"
+                  :class="mode === 'dark' ? 'bg-white shadow-md text-indigo-600' : 'text-slate-500'"
+                  class="flex items-center gap-2 px-4 py-2 rounded-full transition-all text-sm font-medium"
+          >
+            <i data-lucide="moon" class="w-4 h-4"></i> Dunkel
+          </button>
+        </div>
+
+        <!-- Kontrast Umschalter -->
+        <div class="flex bg-slate-100 p-1 rounded-full">
+          <template x-for="c in ['Standard', 'Medium', 'High']" :key="c">
+            <button
+                    @click="contrast = c"
+                    :class="contrast === c ? 'bg-white shadow-md text-indigo-600' : 'text-slate-500'"
+                    class="px-4 py-2 rounded-full text-sm font-medium transition-all"
+                    x-text="c"
+            ></button>
+          </template>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto">
+    <!-- Sektionen werden dynamisch gerendert -->
+    <template x-for="section in sections" :key="section.title">
+      <section class="mb-12">
+        <div class="flex items-center gap-2 mb-6">
+          <i :data-lucide="section.icon" class="text-slate-400 w-5 h-5"></i>
+          <h2 class="text-xl font-bold text-slate-700" x-text="section.title"></h2>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <template x-for="colorKey in section.keys" :key="colorKey.id">
+            <div
+                    class="flex flex-col p-5 rounded-2xl shadow-sm border border-black/5 transition-all duration-500"
+                    :style="{ backgroundColor: getColor(colorKey.id), color: getColor(colorKey.on) }"
+            >
+              <span class="font-bold text-xs uppercase tracking-widest opacity-90" x-text="colorKey.label"></span>
+              <span class="text-lg font-mono mt-2" x-text="getColor(colorKey.id)"></span>
+              <span class="text-[10px] mt-4 italic opacity-70 leading-tight" x-text="colorKey.desc"></span>
+            </div>
+          </template>
+        </div>
+      </section>
+    </template>
+  </main>
+
+  <footer class="max-w-6xl mx-auto mt-20 pt-8 border-t border-slate-200 text-slate-400 text-sm flex flex-col md:flex-row justify-between items-center gap-4">
+    <span>© April 2026 Tracky Android App - Design System</span>
+    <div class="flex gap-6">
+                <span class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-green-500"></span>
+                    Material 3 Konform
+                </span>
+      <span x-text="'Modus: ' + mode + ' | Kontrast: ' + contrast"></span>
+    </div>
+  </footer>
+</div>
+</body>
+</html>

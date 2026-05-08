@@ -1,11 +1,9 @@
 package com.jvcs.tracky.features.project_tracker.di
 
 import com.jvcs.tracky.features.project_tracker.presentation.project_detail.ProjectDetailViewModel
-import com.jvcs.tracky.features.project_tracker.presentation.project_detail.util.timeAndEmit
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.ProjectOverviewViewModel
-import com.jvcs.tracky.features.project_tracker.presentation.session_detail.SessionDetailViewModel
+import com.jvcs.tracky.features.project_tracker.presentation.task_detail.TaskDetailViewModel
 import org.koin.core.module.dsl.viewModel
-import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
 val projectModule = module {
@@ -25,8 +23,8 @@ val projectModule = module {
     }
 
     viewModel { (sessionId: String) ->
-        SessionDetailViewModel(
-            sessionId = sessionId,
+        TaskDetailViewModel(
+            taskId = sessionId,
             projectRepository = get(),
             timeManager = get()
         )

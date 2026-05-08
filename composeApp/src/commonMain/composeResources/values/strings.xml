@@ -14,15 +14,30 @@
     <string name="description">Description</string>
     <string name="project_overview">Project Overview</string>
     <string name="sessions">Sessions</string>
+    <string name="tasks">Tasks</string>
     <string name="total_duration">Total duration</string>
     <string name="close">Close</string>
     <string name="log_out">Log out</string>
     <string name="submit">Submit</string>
     <string name="start_date">Start Date</string>
+    <string name="last_active">Start Date</string>
     <string name="color">Color</string>
     <string name="done">Done</string>
     <string name="in_progress">In progress</string>
     <string name="duration">Duration</string>
+    <string name="current_projects">Current projects</string>
+    <string name="search_results">Search results</string>
+    <string name="project_duration">PROJECT DURATION</string>
+    <string name="project_color">PROJECT COLOR</string>
+    <string name="session_duration">SESSION DURATION</string>
+    <string name="task_duration">TASK DURATION</string>
+    <string name="session_details">SESSION DETAILS</string>
+    <string name="task_details">TASK DETAILS</string>
+    <string name="daily_sessions">Daily Sessions</string>
+    <string name="start_timer">Start timer</string>
+    <string name="stop_timer">Stop timer</string>
+    <string name="light_text_color">Light text color</string>
+    <string name="create_new_task">Create new task</string>
 
     <!-- Auth -->
     <string name="welcome_back">Welcome Back</string>
@@ -36,7 +51,7 @@
     <string name="forgot_password_email_sent">A password reset link has been sent to your email address.</string>
     <string name="login">Log in</string>
     <string name="register">Register</string>
-    <string name="create_account">Create Account</string>
+    <string name="create_your_tracky_account">Create your Tracky account</string>
     <string name="create_new_project">Create new project</string>
     <string name="already_have_account">Already have an account? Log in</string>
     <string name="set_new_password">Set New Password</string>
@@ -75,6 +90,7 @@
     <string name="apple">Apple</string>
     <string name="or_continue_with_email">or continue with email</string>
     <string name="or_sign_up_with_email">or sign up with email</string>
+    <string name="or_continue_with">or continue with</string>
     <string name="dont_have_account">Don\'t have an account? </string>
     <string name="sign_up">Sign up</string>
     <string name="full_name">Full name</string>
@@ -99,6 +115,7 @@
     <string name="reset_password">Reset password</string>
     <string name="error_social_login_unavailable">Social login is not available yet.</string>
     <string name="already_have_account_prefix">Already have an account? </string>
+    <string name="create_account">Create Account </string>
 
     <!-- Generic errors -->
     <string name="error_disk_full">Failed to save the item because your disk is full.</string>

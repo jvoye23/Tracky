@@ -1,13 +1,13 @@
 package com.jvcs.tracky.core.mapper
 
 import com.jvcs.tracky.core.database.entity.ProjectEntity
-import com.jvcs.tracky.core.database.entity.ProjectSessionEntity
-import com.jvcs.tracky.core.database.entity.SessionIntervalEntity
-import com.jvcs.tracky.core.database.relation.ProjectWithSessions
-import com.jvcs.tracky.core.database.relation.SessionWithIntervals
+import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
+import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
+import com.jvcs.tracky.core.database.relation.ProjectWithTasks
+import com.jvcs.tracky.core.database.relation.TaskWithIntervals
 import com.jvcs.tracky.core.domain.model.Project
-import com.jvcs.tracky.core.domain.model.ProjectSession
-import com.jvcs.tracky.core.domain.model.SessionInterval
+import com.jvcs.tracky.core.domain.model.ProjectTask
+import com.jvcs.tracky.core.domain.model.TaskInterval
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
@@ -44,7 +44,7 @@ fun ProjectEntity.toProject(): Project {
 }
 
 @OptIn(ExperimentalTime::class)
-fun ProjectWithSessions.toProject(): Project {
+fun ProjectWithTasks.toProject(): Project {
     return Project(
         projectId = project.projectId,
         title = project.title,
@@ -56,14 +56,14 @@ fun ProjectWithSessions.toProject(): Project {
         useLightTextColor = project.useLightTextColor,
         endDateTimeUtc = if (project.endDateTimeEpochMs == null) null else
             Instant.fromEpochMilliseconds(project.endDateTimeEpochMs),
-        projectSessions = projectSessions.map { it.toProjectSession() }
+        projectTasks = projectTasks.map { it.toProjectSession() }
     )
 }
 
 @OptIn(ExperimentalTime::class)
-fun ProjectSessionEntity.toProjectSession(): ProjectSession {
-    return ProjectSession(
-        projectSessionId = recordId,
+fun ProjectTaskEntity.toProjectSession(): ProjectTask {
+    return ProjectTask(
+        projectTaskId = recordId,
         title = description,
         durationMillis = durationMillis,
         startDateTimeUtc = Instant.fromEpochMilliseconds(startDateTimeEpochMs),
@@ -75,23 +75,23 @@ fun ProjectSessionEntity.toProjectSession(): ProjectSession {
 }
 
 @OptIn(ExperimentalTime::class)
-fun SessionWithIntervals.toProjectSession(): ProjectSession {
-    return ProjectSession(
-        projectSessionId = session.recordId,
-        title = session.description,
-        durationMillis = session.durationMillis,
-        startDateTimeUtc = Instant.fromEpochMilliseconds(session.startDateTimeEpochMs),
-        endDateTimeUtc = session.endDateTimeEpochMs?.let { Instant.fromEpochMilliseconds(it) },
-        isFinished = session.isFinished,
-        parentProjectId = session.parentProjectId,
-        isTimerRunning = session.isTimerRunning,
+fun TaskWithIntervals.toProjectSession(): ProjectTask {
+    return ProjectTask(
+        projectTaskId = task.recordId,
+        title = task.description,
+        durationMillis = task.durationMillis,
+        startDateTimeUtc = Instant.fromEpochMilliseconds(task.startDateTimeEpochMs),
+        endDateTimeUtc = task.endDateTimeEpochMs?.let { Instant.fromEpochMilliseconds(it) },
+        isFinished = task.isFinished,
+        parentProjectId = task.parentProjectId,
+        isTimerRunning = task.isTimerRunning,
         intervals = intervals.map { it.toSessionInterval() }
     )
 }
 
-fun ProjectSession.toProjectSessionEntity(): ProjectSessionEntity {
-    return ProjectSessionEntity(
-        recordId = projectSessionId,
+fun ProjectTask.toProjectSessionEntity(): ProjectTaskEntity {
+    return ProjectTaskEntity(
+        recordId = projectTaskId,
         parentProjectId = parentProjectId,
         description = title,
         durationMillis = durationMillis ?: 0L,
@@ -102,20 +102,20 @@ fun ProjectSession.toProjectSessionEntity(): ProjectSessionEntity {
     )
 }
 
-fun SessionIntervalEntity.toSessionInterval(): SessionInterval {
-    return SessionInterval(
+fun TaskIntervalEntity.toSessionInterval(): TaskInterval {
+    return TaskInterval(
         intervalId = intervalId,
-        parentSessionId = parentSessionId,
+        parentSessionId = parentTaskId,
         startDateTimeUtc = Instant.fromEpochMilliseconds(startDateTimeEpochMs),
         endDateTimeUtc = endDateTimeEpochMs?.let { Instant.fromEpochMilliseconds(it) },
         durationMillis = durationMillis
     )
 }
 
-fun SessionInterval.toSessionIntervalEntity(): SessionIntervalEntity {
-    return SessionIntervalEntity(
+fun TaskInterval.toSessionIntervalEntity(): TaskIntervalEntity {
+    return TaskIntervalEntity(
         intervalId = intervalId ?: 0,
-        parentSessionId = parentSessionId,
+        parentTaskId = parentSessionId,
         startDateTimeEpochMs = startDateTimeUtc.toEpochMilliseconds(),
         endDateTimeEpochMs = endDateTimeUtc?.toEpochMilliseconds(),
         durationMillis = durationMillis

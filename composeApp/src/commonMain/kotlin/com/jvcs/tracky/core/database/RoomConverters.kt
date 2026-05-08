@@ -1,7 +1,7 @@
 package com.jvcs.tracky.core.database
 
 import androidx.room.TypeConverter
-import com.jvcs.tracky.core.domain.model.ProjectSession
+import com.jvcs.tracky.core.domain.model.ProjectTask
 import kotlinx.serialization.json.Json
 
 class RoomConverters {
@@ -11,15 +11,15 @@ class RoomConverters {
     }
 
     @TypeConverter
-    fun fromProjectRecordList(projectSessions: List<ProjectSession>?): String? {
-        if(projectSessions == null) {
+    fun fromProjectRecordList(projectTasks: List<ProjectTask>?): String? {
+        if(projectTasks == null) {
             return null
         }
-        return jsonHandler.encodeToString(projectSessions)
+        return jsonHandler.encodeToString(projectTasks)
     }
 
     @TypeConverter
-    fun fromJsonStringToProjectRecordList(jsonString: String?): List<ProjectSession>? {
+    fun fromJsonStringToProjectRecordList(jsonString: String?): List<ProjectTask>? {
         if(jsonString == null) {
             return null
         }

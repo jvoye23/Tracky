@@ -16,7 +16,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerializationException
 
 fun constructRoute(route: String): String {
-    return if (route.startsWith("http")) route else "${ApiConfig.BASE_URL}$route"
+    return if (route.startsWith("https")) route else "${ApiConfig.BASE_URL}$route"
 }
 
 suspend inline fun <reified T> responseToResult(response: HttpResponse): Result<T, DataError.Network> {

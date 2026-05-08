@@ -43,7 +43,6 @@ import tracky.composeapp.generated.resources.done
 import tracky.composeapp.generated.resources.duration
 import tracky.composeapp.generated.resources.in_progress
 import tracky.composeapp.generated.resources.start_date
-import tracky.composeapp.generated.resources.title
 import kotlin.time.DurationUnit
 
 @Composable

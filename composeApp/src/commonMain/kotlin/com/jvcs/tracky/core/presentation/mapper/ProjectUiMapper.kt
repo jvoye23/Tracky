@@ -3,8 +3,8 @@ package com.jvcs.tracky.core.presentation.mapper
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import com.jvcs.tracky.core.domain.model.Project
-import com.jvcs.tracky.core.domain.model.ProjectSession
-import com.jvcs.tracky.core.presentation.model.ProjectSessionUi
+import com.jvcs.tracky.core.domain.model.ProjectTask
+import com.jvcs.tracky.core.presentation.model.ProjectTaskUi
 import com.jvcs.tracky.core.presentation.model.ProjectUi
 import com.jvcs.tracky.design_system.util.formatDuration
 import com.jvcs.tracky.design_system.util.parseDuration
@@ -46,7 +46,7 @@ fun Project.toProjectUi(): ProjectUi {
         isFinished = isFinished,
         useLightTextColor = useLightTextColor,
         endDateTimeUtc = endDateTimeInLocalDateTime?.date?.format(dateTimeFormat),
-        projectSessions = projectSessions?.map { it.toProjectSessionUi() }
+        projectTasks = projectTasks?.map { it.toProjectTaskUi() }
     )
 }
 
@@ -62,13 +62,13 @@ fun ProjectUi.toProject(): Project {
         isFinished = isFinished,
         useLightTextColor = useLightTextColor,
         endDateTimeUtc = endDateTimeUtc?.let { LocalDate.parse(it, dateTimeFormat).atStartOfDayIn(TimeZone.currentSystemDefault()) },
-        projectSessions = projectSessions?.map { it.toProjectSession(projectId ?: "") }
+        projectTasks = projectTasks?.map { it.toProjectTask(projectId ?: "") }
     )
 }
 
-fun ProjectSession.toProjectSessionUi(): ProjectSessionUi {
-    return ProjectSessionUi(
-        id = projectSessionId,
+fun ProjectTask.toProjectTaskUi(): ProjectTaskUi {
+    return ProjectTaskUi(
+        id = projectTaskId,
         title = title,
         formattedDuration = formatDuration(durationMillis?.milliseconds ?: Duration.ZERO),
         formattedStateDateTime = startDateTimeUtc.toLocalDateTime(TimeZone.currentSystemDefault()).date.format(dateTimeFormat),
@@ -78,9 +78,9 @@ fun ProjectSession.toProjectSessionUi(): ProjectSessionUi {
 }
 
 @OptIn(ExperimentalTime::class)
-fun ProjectSessionUi.toProjectSession(parentProjectId: String): ProjectSession {
-    return ProjectSession(
-        projectSessionId = id ?: "",
+fun ProjectTaskUi.toProjectTask(parentProjectId: String): ProjectTask {
+    return ProjectTask(
+        projectTaskId = id ?: "",
         title = title,
         durationMillis = parseDuration(formattedDuration).inWholeMilliseconds,
         startDateTimeUtc = LocalDate.parse(formattedStateDateTime, dateTimeFormat).atStartOfDayIn(TimeZone.currentSystemDefault()),
