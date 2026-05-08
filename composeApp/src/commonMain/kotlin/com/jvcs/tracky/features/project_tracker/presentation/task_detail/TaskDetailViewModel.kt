@@ -1,15 +1,14 @@
-package com.jvcs.tracky.features.project_tracker.presentation.session_detail
+package com.jvcs.tracky.features.project_tracker.presentation.task_detail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.jvcs.tracky.core.domain.model.ProjectSession
-import com.jvcs.tracky.core.domain.model.SessionInterval
+import com.jvcs.tracky.core.domain.model.TaskInterval
 import com.jvcs.tracky.core.domain.util.TimeManager
-import com.jvcs.tracky.core.presentation.mapper.toProjectSessionUi
+import com.jvcs.tracky.core.presentation.mapper.toProjectTaskUi
 import com.jvcs.tracky.design_system.util.formatDuration
 import com.jvcs.tracky.design_system.util.parseDuration
 import com.jvcs.tracky.features.project_tracker.domain.ProjectRepository
-import com.jvcs.tracky.features.project_tracker.presentation.session_detail.model.DailyStatistic
+import com.jvcs.tracky.features.project_tracker.presentation.task_detail.model.DailyStatistic
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.onStart
@@ -20,13 +19,13 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Duration.Companion.milliseconds
 
-class SessionDetailViewModel(
-    private val sessionId: String,
+class TaskDetailViewModel(
+    private val taskId: String,
     private val projectRepository: ProjectRepository,
     private val timeManager: TimeManager
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(SessionDetailState())
+    private val _state = MutableStateFlow(TaskDetailState())
     val state = _state
         .onStart {
             loadSession()
@@ -34,17 +33,17 @@ class SessionDetailViewModel(
         .stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5000),
-            SessionDetailState()
+            TaskDetailState()
         )
 
     init {
         viewModelScope.launch {
-            timeManager.sessionStates.collect { activeTimersMap ->
-                val timerState = activeTimersMap[sessionId]
+            timeManager.taskStates.collect { activeTimersMap ->
+                val timerState = activeTimersMap[taskId]
                 if (timerState != null && timerState.isRunning) {
                     _state.update { currentState ->
                         currentState.copy(
-                            session = currentState.session?.copy(
+                            task = currentState.task?.copy(
                                 formattedDuration = timerState.formattedTime
                             )
                         )
@@ -56,11 +55,11 @@ class SessionDetailViewModel(
 
     private fun loadSession() {
         viewModelScope.launch {
-            projectRepository.getSessionWithIntervalsById(sessionId).collect { session ->
+            projectRepository.getTaskWithIntervalsById(taskId).collect { session ->
                 session?.let {
                     _state.update { currentState ->
                         currentState.copy(
-                            session = it.toProjectSessionUi(),
+                            task = it.toProjectTaskUi(),
                             titleText = it.title,
                             dailyStatistics = calculateDailyStatistics(it.intervals),
                             isTimerRunning = it.isTimerRunning
@@ -71,7 +70,7 @@ class SessionDetailViewModel(
         }
     }
 
-    private fun calculateDailyStatistics(intervals: List<SessionInterval>): List<DailyStatistic> {
+    private fun calculateDailyStatistics(intervals: List<TaskInterval>): List<DailyStatistic> {
         return intervals
             .filter { it.endDateTimeUtc != null }
             .groupBy { it.startDateTimeUtc.toLocalDateTime(TimeZone.currentSystemDefault()).date }
@@ -85,13 +84,13 @@ class SessionDetailViewModel(
             .sortedByDescending { it.formattedDate }
     }
 
-    fun onAction(action: SessionDetailAction) {
+    fun onAction(action: TaskDetailAction) {
         when (action) {
-            SessionDetailAction.OnToggleTimer -> toggleTimer()
-            is SessionDetailAction.OnTitleChanged -> {
+            TaskDetailAction.OnToggleTimer -> toggleTimer()
+            is TaskDetailAction.OnTitleChanged -> {
                 _state.update { it.copy(titleText = action.newTitle) }
             }
-            SessionDetailAction.OnSaveTitle -> saveTitle()
+            TaskDetailAction.OnSaveTitle -> saveTitle()
             else -> Unit
         }
     }
@@ -100,20 +99,20 @@ class SessionDetailViewModel(
         viewModelScope.launch {
             val isRunning = _state.value.isTimerRunning
             if (isRunning) {
-                projectRepository.stopSession(sessionId)
-                timeManager.stopAndResetTimer(sessionId)
+                projectRepository.stopTask(taskId)
+                timeManager.stopAndResetTimer(taskId)
             } else {
-                projectRepository.startSession(sessionId)
-                val currentDurationString = _state.value.session?.formattedDuration ?: "00:00:00"
+                projectRepository.startTask(taskId)
+                val currentDurationString = _state.value.task?.formattedDuration ?: "00:00:00"
                 val currentDuration = parseDuration(currentDurationString)
-                timeManager.toggleTimer(sessionId, currentDuration)
+                timeManager.toggleTimer(taskId, currentDuration)
             }
         }
     }
 
     private fun saveTitle() {
         viewModelScope.launch {
-            projectRepository.updateSessionTitle(sessionId, _state.value.titleText)
+            projectRepository.updateTaskTitle(taskId, _state.value.titleText)
         }
     }
 }

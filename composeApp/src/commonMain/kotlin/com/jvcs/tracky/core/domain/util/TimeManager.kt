@@ -26,9 +26,9 @@ data class TimerState(
 class TimeManager(
     private val scope: CoroutineScope
 ) {
-    // Holds the public state for ALL sessions, keyed by ID
-    private val _sessionStates = MutableStateFlow<Map<String, TimerState>>(emptyMap())
-    val sessionStates = _sessionStates.asStateFlow()
+    // Holds the public state for ALL tasks, keyed by ID
+    private val _taskStates = MutableStateFlow<Map<String, TimerState>>(emptyMap())
+    val taskStates = _taskStates.asStateFlow()
 
     // Internal tracking for active jobs and start times
     private val jobs = mutableMapOf<String, Job>()
@@ -36,49 +36,49 @@ class TimeManager(
     private val accumulatedDurations = mutableMapOf<String, Duration>()
 
     /**
-     * Toggles the timer for a specific project/session ID.
+     * Toggles the timer for a specific project/task ID.
      * Requires a CoroutineScope (usually viewModelScope) to launch the ticker.
      */
-    fun toggleTimer(sessionId: String, initialDuration: Duration = Duration.ZERO) {
-        val currentState = _sessionStates.value[sessionId] ?: TimerState()
+    fun toggleTimer(taskId: String, initialDuration: Duration = Duration.ZERO) {
+        val currentState = _taskStates.value[taskId] ?: TimerState()
 
         if (currentState.isRunning) {
-            pauseTimer(sessionId)
+            pauseTimer(taskId)
         } else {
-            startTimer(sessionId, initialDuration)
+            startTimer(taskId, initialDuration)
         }
     }
 
     /**
-     * Returns a flow that emits ONLY when the state for [sessionId] changes.
+     * Returns a flow that emits ONLY when the state for [taskId] changes.
      * If the session doesn't exist, it emits a default (empty) TimerState.
      */
-    fun getSessionState(sessionId: String): Flow<TimerState> {
-        return sessionStates
-            .map { map -> map[sessionId] ?: TimerState() }
+    fun getTaskState(taskId: String): Flow<TimerState> {
+        return taskStates
+            .map { map -> map[taskId] ?: TimerState() }
             .distinctUntilChanged() // CRITICAL: Only emit if THIS specific timer updates
     }
 
-    private fun startTimer(sessionId: String, initialDuration: Duration) {
+    private fun startTimer(taskId: String, initialDuration: Duration) {
         // Prevent double-start
-        if (jobs[sessionId]?.isActive == true) return
+        if (jobs[taskId]?.isActive == true) return
 
         // 1. Set the mark
-        startMarks[sessionId] = TimeSource.Monotonic.markNow()
+        startMarks[taskId] = TimeSource.Monotonic.markNow()
 
-        accumulatedDurations[sessionId] = initialDuration
+        accumulatedDurations[taskId] = initialDuration
 
         // Update state immediately to "Running"
-        updateState(sessionId) { it.copy(isRunning = true) }
+        updateState(taskId) { it.copy(isRunning = true) }
 
         // 2. Launch the ticker job
-        jobs[sessionId] = scope.launch {
+        jobs[taskId] = scope.launch {
             while (isActive) {
-                val currentAccumulated = accumulatedDurations[sessionId] ?: Duration.ZERO
-                val timeSinceStart = startMarks[sessionId]?.elapsedNow() ?: Duration.ZERO
+                val currentAccumulated = accumulatedDurations[taskId] ?: Duration.ZERO
+                val timeSinceStart = startMarks[taskId]?.elapsedNow() ?: Duration.ZERO
                 val total = currentAccumulated + timeSinceStart
 
-                updateState(sessionId) {
+                updateState(taskId) {
                     it.copy(
                         totalDuration = total,
                         formattedTime = formatDuration(total)
@@ -88,40 +88,40 @@ class TimeManager(
             }
         }
     }
-    private fun pauseTimer(sessionId: String) {
+    private fun pauseTimer(taskId: String) {
         // 1. Cancel the job
-        jobs[sessionId]?.cancel()
-        jobs.remove(sessionId)
+        jobs[taskId]?.cancel()
+        jobs.remove(taskId)
 
         // 2. Bank the elapsed time
-        val startMark = startMarks[sessionId]
-        val currentAccumulated = accumulatedDurations[sessionId] ?: Duration.ZERO
+        val startMark = startMarks[taskId]
+        val currentAccumulated = accumulatedDurations[taskId] ?: Duration.ZERO
 
         if (startMark != null) {
-            accumulatedDurations[sessionId] = currentAccumulated + startMark.elapsedNow()
+            accumulatedDurations[taskId] = currentAccumulated + startMark.elapsedNow()
         }
 
         // 3. Clear the mark and update state
-        startMarks.remove(sessionId)
-        updateState(sessionId) { it.copy(isRunning = false) }
+        startMarks.remove(taskId)
+        updateState(taskId) { it.copy(isRunning = false) }
     }
 
-    fun stopAndResetTimer(sessionId: String) {
-        jobs[sessionId]?.cancel()
-        jobs.remove(sessionId)
-        startMarks.remove(sessionId)
-        accumulatedDurations.remove(sessionId)
+    fun stopAndResetTimer(taskId: String) {
+        jobs[taskId]?.cancel()
+        jobs.remove(taskId)
+        startMarks.remove(taskId)
+        accumulatedDurations.remove(taskId)
 
         // Reset state to default or remove it entirely
-        updateState(sessionId) { TimerState() }
+        updateState(taskId) { TimerState() }
     }
 
     // Helper to safely update the StateFlow Map
-    private fun updateState(sessionId: String, update: (TimerState) -> TimerState) {
-        _sessionStates.update { currentMap ->
-            val oldState = currentMap[sessionId] ?: TimerState()
+    private fun updateState(taskId: String, update: (TimerState) -> TimerState) {
+        _taskStates.update { currentMap ->
+            val oldState = currentMap[taskId] ?: TimerState()
             val newState = update(oldState)
-            currentMap + (sessionId to newState)
+            currentMap + (taskId to newState)
         }
     }
 }

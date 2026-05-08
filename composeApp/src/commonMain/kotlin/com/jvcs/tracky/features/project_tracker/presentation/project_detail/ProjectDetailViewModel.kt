@@ -3,13 +3,12 @@ package com.jvcs.tracky.features.project_tracker.presentation.project_detail
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.jvcs.tracky.core.domain.model.Project
-import com.jvcs.tracky.core.domain.model.ProjectSession
+import com.jvcs.tracky.core.domain.model.ProjectTask
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeManager
 import com.jvcs.tracky.core.domain.util.TimerState
 import com.jvcs.tracky.core.presentation.mapper.toProject
-import com.jvcs.tracky.core.presentation.mapper.toProjectSessionUi
+import com.jvcs.tracky.core.presentation.mapper.toProjectTaskUi
 import com.jvcs.tracky.core.presentation.mapper.toProjectUi
 import com.jvcs.tracky.design_system.util.asUiText
 import com.jvcs.tracky.design_system.util.parseDuration
@@ -62,7 +61,7 @@ class ProjectDetailViewModel(
 
     init {
         viewModelScope.launch {
-            timeManager.sessionStates.collect { activeTimersMap ->
+            timeManager.taskStates.collect { activeTimersMap ->
                 updateUiWithTimerValues(activeTimersMap)
 
             }
@@ -81,78 +80,76 @@ class ProjectDetailViewModel(
             is ProjectDetailAction.OnEditTextChanged -> {onEditTextChanged(action.value, action.editTextType)}
             is ProjectDetailAction.OnProjectSessionCardClick -> {}
             ProjectDetailAction.OnToggleAddNewProjectSessionBottomSheet -> {toggleAddNewProjectSessionBottomSheet()}
-            is ProjectDetailAction.OnCreateProjectSession -> {createProjectSession(action.projectSessionTitle)}
+            is ProjectDetailAction.OnCreateProjectSession -> {createProjectTask(action.projectSessionTitle)}
             is ProjectDetailAction.OnToggleSessionTimer -> {onToggleTimer(action.projectSessionId)}
-            is ProjectDetailAction.OnDeleteSessionClick -> {deleteProjectSession(action.sessionId)}
+            is ProjectDetailAction.OnDeleteSessionClick -> {deleteProjectTask(action.sessionId)}
             ProjectDetailAction.OnToggleColorPicker -> {toggleColorPicker()}
             is ProjectDetailAction.OnColorChanged -> {onColorChanged(action.color)}
             is ProjectDetailAction.OnUseLightTextColorToggled -> {onUseLightTextColorToggled(action.useLightTextColor)}
         }
     }
 
-    //NewTimer Implementation
+    //Timer Implementation
 
     private fun updateUiWithTimerValues(activeTimersMap: Map<String, TimerState>) {
         _state.update { currentState ->
             val currentProject = currentState.project ?: return@update currentState
 
             // Efficiently update only the sessions that are running
-            val updatedSessions = currentProject.projectSessions?.map { session ->
-                val timerState = activeTimersMap[session.id]
+            val updatedTasks = currentProject.projectTasks?.map { task ->
+                val timerState = activeTimersMap[task.id]
 
                 if (timerState != null && timerState.isRunning) {
                     // CASE: Running - Use the live value
-                    session.copy(
+                    task.copy(
                         formattedDuration = timerState.formattedTime,
                         isTimerRunning = timerState.isRunning
                     )
                 } else {
                     // CASE: Not Running - Keep static DB value
                     // This prevents "flickering" back to 0s if the timer stops
-                    session.copy(
+                    task.copy(
                         isTimerRunning = false
                     )
                 }
             }
 
             currentState.copy(
-                project = currentProject.copy(projectSessions = updatedSessions)
+                project = currentProject.copy(projectTasks = updatedTasks)
             )
         }
     }
 
-    private fun onToggleTimer(sessionId: String) {
+    private fun onToggleTimer(taskId: String) {
 
-        val session = _state.value.project?.projectSessions?.find { it.id == sessionId }
+        val session = _state.value.project?.projectTasks?.find { it.id == taskId }
         if(session == null) return
 
         val currentDuration = parseDuration( timeString = session.formattedDuration)
 
-        val timerState = timeManager.sessionStates.value[sessionId]
+        val timerState = timeManager.taskStates.value[taskId]
 
         if (timerState != null && timerState.isRunning) {
             viewModelScope.launch {
-                projectRepository.stopSession(sessionId)
-                timeManager.stopAndResetTimer(sessionId)
+                projectRepository.stopTask(taskId)
+                timeManager.stopAndResetTimer(taskId)
             }
         } else {
             viewModelScope.launch {
-                projectRepository.startSession(sessionId)
-                timeManager.toggleTimer(sessionId, currentDuration)
+                projectRepository.startTask(taskId)
+                timeManager.toggleTimer(taskId, currentDuration)
             }
         }
     }
     //End New Timer Implementation
 
-
-
-    private fun createProjectSession(projectSessionTitle: String) {
+    private fun createProjectTask(projectTaskTitle: String) {
         viewModelScope.launch {
             val currentProject = state.value.project
 
-            val newProjectSession = ProjectSession(
-                projectSessionId = Clock.System.now().toString().takeLast(6).dropLast(1),
-                title = projectSessionTitle,
+            val newProjectTask = ProjectTask(
+                projectTaskId = Clock.System.now().toString().takeLast(6).dropLast(1),
+                title = projectTaskTitle,
                 durationMillis = 0L,
                 startDateTimeUtc = Clock.System.now(),
                 endDateTimeUtc = null,
@@ -161,19 +158,19 @@ class ProjectDetailViewModel(
                 isTimerRunning = false
             )
 
-            when(val result = projectRepository.upsertProjectSession(newProjectSession)) {
+            when(val result = projectRepository.upsertProjectTask(newProjectTask)) {
                 is Result.Error -> {
                 eventChannel.send(ProjectDetailEvent.Error(result.error.asUiText()))
             }
                 is Result.Success-> {
                     _state.update { it.copy(
-                        isAddNewProjectSessionBottomSheetVisible = false,
-                        addProjectSessionTextFieldState = TextFieldState(),
+                        isAddNewProjectTaskBottomSheetVisible = false,
+                        addProjectTaskTextFieldState = TextFieldState(),
                         project = currentProject?.copy(
-                            projectSessions = currentProject.projectSessions?.plus(newProjectSession.toProjectSessionUi())
+                            projectTasks = currentProject.projectTasks?.plus(newProjectTask.toProjectTaskUi())
                         )
                     ) }
-                    eventChannel.send(ProjectDetailEvent.NewProjectSessionSaved(projectSessionTitle))
+                    eventChannel.send(ProjectDetailEvent.NewProjectSessionSaved(projectTaskTitle))
                 }
             }
         }
@@ -182,13 +179,13 @@ class ProjectDetailViewModel(
 
     private fun toggleAddNewProjectSessionBottomSheet() {
         _state.update { it.copy(
-            isAddNewProjectSessionBottomSheetVisible = !it.isAddNewProjectSessionBottomSheetVisible
+            isAddNewProjectTaskBottomSheetVisible = !it.isAddNewProjectTaskBottomSheetVisible
         ) }
     }
 
     private fun getProject(projectId: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            val newProject = projectRepository.getProjectWithSessionsByProjectId(projectId)
+            val newProject = projectRepository.getProjectWithTasksByProjectId(projectId)
             val color = if (newProject?.colorArgb != null) androidx.compose.ui.graphics.Color(newProject.colorArgb) else null
             _state.update { it.copy(
                 project = newProject?.toProjectUi(),
@@ -202,7 +199,6 @@ class ProjectDetailViewModel(
     }
 
     private fun saveProjectDetails(){
-
         val newTitle = _state.value.titleText.toString()
         val newDescription = _state.value.descriptionText.toString()
         val newColor = _state.value.selectedColor
@@ -221,7 +217,6 @@ class ProjectDetailViewModel(
         _state.update { it.copy(
             isEditMode = false
         ) }
-
     }
 
     private fun toggleColorPicker() {
@@ -249,14 +244,14 @@ class ProjectDetailViewModel(
         _state.update { it.copy(useLightTextColor = useLightTextColor) }
     }
 
-    private fun deleteProjectSession(sessionId: String) {
+    private fun deleteProjectTask(taskId: String) {
         viewModelScope.launch {
-            projectRepository.deleteProjectSession(sessionId)
+            projectRepository.deleteProjectTask(taskId)
             _state.update { currentState ->
                 val currentProject = currentState.project ?: return@update currentState
-                val updatedSessions = currentProject.projectSessions?.filter { it.id != sessionId }
+                val updatedTasks = currentProject.projectTasks?.filter { it.id != taskId }
                 currentState.copy(
-                    project = currentProject.copy(projectSessions = updatedSessions)
+                    project = currentProject.copy(projectTasks = updatedTasks)
                 )
             }
         }
@@ -270,8 +265,6 @@ class ProjectDetailViewModel(
                 _state.update { it.copy(descriptionText = value) }
         }
     }
-
-
 
     private fun toggleEditMode() {
         _state.update { it.copy(
@@ -288,79 +281,4 @@ class ProjectDetailViewModel(
             useLightTextColor = it.project?.useLightTextColor ?: false
         ) }
     }
-    /*private fun toggleSessionTimer(projectSessionId: String) {
-        if (_state.value.isTimerRunning) {
-            pauseTracker()
-        } else {
-            startTracker()
-        }
-    }
-
-    private var timerJob: Job? = null
-    private var accumulatedDuration: Duration = Duration.ZERO
-    private var startMark: TimeSource.Monotonic.ValueTimeMark? = null
-
-    fun toggleTracker() {
-        if (_state.value.isTimerRunning) {
-            pauseTracker()
-        } else {
-            startTracker()
-        }
-    }
-
-    private fun startTracker() {
-        // Prevent starting if already running
-        if (timerJob?.isActive == true) return
-
-        // 1. Mark the start time
-        startMark = TimeSource.Monotonic.markNow()
-
-        _state.update { it.copy(isTimerRunning = true) }
-
-        timerJob = viewModelScope.launch {
-            while (true) {
-                // 2. Calculate Total = (Previous Sessions) + (Current Session)
-                val currentSessionDuration = startMark?.elapsedNow() ?: Duration.ZERO
-                val totalDuration = accumulatedDuration + currentSessionDuration
-
-                // 3. Format and update state
-                val formattedString = formatDuration(totalDuration)
-                _state.update { it.copy(
-                    formattedTimerString = formattedString,
-                    timerDuration = totalDuration
-                ) }
-
-                delay(10) // Update every 10ms
-            }
-        }
-    }
-
-    private fun pauseTracker() {
-        timerJob?.cancel()
-
-        // 4. "Bank" the time from the current session into the accumulator
-        startMark?.let { mark ->
-            accumulatedDuration += mark.elapsedNow()
-        }
-
-        startMark = null
-        _state.update { it.copy(isTimerRunning = false) }
-    }
-
-    // Helper to format Duration in KMP
-    private fun formatDuration(duration: Duration): String {
-        return duration.toComponents { hours, minutes, seconds, nanoseconds ->
-            val centiseconds = nanoseconds / 10_000_000
-            "${hours.toString().padStart(2, '0')}:" +
-                    "${minutes.toString().padStart(2, '0')}:" +
-                    "${seconds.toString().padStart(2, '0')}:" +
-                    "${centiseconds.toString().padStart(2, '0')}"
-        }
-    }
-
-    fun stopTracker() {
-        timerJob?.cancel()
-        _state.update { it.copy(isTimerRunning = false) }
-    }*/
-
 }

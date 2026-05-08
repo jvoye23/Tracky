@@ -50,8 +50,8 @@ sealed interface Route : NavKey {
         ) : Route, NavKey
 
         @Serializable
-        data class SessionDetail(
-            val sessionId: String
+        data class TaskDetail(
+            val taskId: String
         ) : Route, NavKey
     }
 }

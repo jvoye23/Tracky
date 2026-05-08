@@ -8,8 +8,6 @@ import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.presentation.mapper.toProjectUi
 import com.jvcs.tracky.design_system.util.asUiText
 import com.jvcs.tracky.features.project_tracker.domain.ProjectRepository
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -110,7 +108,7 @@ class ProjectOverviewViewModel(
             startDateTimeUtc = Clock.System.now(),
             isFinished = false,
             endDateTimeUtc = null,
-            projectSessions = null
+            projectTasks = null
         )
 
 

@@ -15,13 +15,13 @@ data class ProjectUi(
     val isFinished: Boolean,
     val useLightTextColor: Boolean = false,
     val endDateTimeUtc: String?,
-    val projectSessions: List<ProjectSessionUi>? = null
+    val projectTasks: List<ProjectTaskUi>? = null
 ) {
     val totalProjectDuration: String
         get() {
             // 2. Sum up the durations.
             // We use 'fold' starting at ZERO to safely handle the list iteration.
-            val total = projectSessions?.fold(Duration.ZERO) { acc, session ->
+            val total = projectTasks?.fold(Duration.ZERO) { acc, session ->
                 acc + parseDuration(session.formattedDuration)
             } ?: Duration.ZERO
 
@@ -30,7 +30,7 @@ data class ProjectUi(
         }
 }
 
-data class ProjectSessionUi(
+data class ProjectTaskUi(
     val id: String?,
     val title: String,
     val formattedDuration: String,

@@ -19,7 +19,7 @@ import androidx.room.PrimaryKey
     // Indexing the foreign key is a best practice for performance
     indices = [Index(value = ["parentProjectId"])]
 )
-data class ProjectSessionEntity(
+data class ProjectTaskEntity(
     @PrimaryKey
     val recordId: String,
     val parentProjectId: String, // The Foreign Key link

@@ -3,11 +3,11 @@ package com.jvcs.tracky.core.database.entity
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "session_intervals")
-data class SessionIntervalEntity(
+@Entity(tableName = "task_intervals")
+data class TaskIntervalEntity(
     @PrimaryKey(autoGenerate = true)
     val intervalId: Long = 0,
-    val parentSessionId: String,
+    val parentTaskId: String,
     val startDateTimeEpochMs: Long,
     val endDateTimeEpochMs: Long?,
     val durationMillis: Long

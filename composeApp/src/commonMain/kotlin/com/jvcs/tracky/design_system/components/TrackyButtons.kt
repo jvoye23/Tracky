@@ -9,13 +9,20 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ElevatedButton
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -26,10 +33,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Devices
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.jvcs.tracky.design_system.theme.TrackyTheme
+import com.jvcs.tracky.features.auth.presentation.register.RegisterScreen
+import com.jvcs.tracky.features.auth.presentation.register.RegisterState
 
 @Composable
 fun TrackyPrimaryButton(
@@ -95,8 +108,8 @@ fun TrackyPrimaryButton(
                 Text(
                     text = text,
                     color = contentColor,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
                 )
             }
         }
@@ -117,7 +130,7 @@ fun TrackyOutlinedButton(
     val backgroundColor = if (isPressed) {
         MaterialTheme.colorScheme.primary.copy(alpha = 0.06f)
     } else {
-        androidx.compose.ui.graphics.Color.Transparent
+        Color.Transparent
     }
 
     Box(
@@ -149,8 +162,42 @@ fun TrackyOutlinedButton(
             Text(
                 text = text,
                 color = MaterialTheme.colorScheme.onSurface,
-                fontSize = 14.sp,
+                fontSize = 16.sp,
                 fontWeight = FontWeight.Medium,
+            )
+        }
+    }
+}
+
+
+
+@Preview (showSystemUi = false, device = Devices.PIXEL_9_PRO)
+@Composable
+private fun TrackyButtonsPreview() {
+    TrackyTheme {
+
+
+
+
+        Column(
+            modifier = Modifier.fillMaxSize()
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            TrackyPrimaryButton(
+                text = "Register",
+                onClick = {},
+                modifier = Modifier.fillMaxWidth(),
+                enabled = true,
+                isLoading = false,
+                leadingIcon = null
+            )
+
+            TrackyOutlinedButton(
+                text = "Continue with Google",
+                onClick = {},
+                modifier = Modifier.fillMaxWidth()
             )
         }
     }

@@ -32,12 +32,10 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -58,7 +56,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -68,24 +65,33 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.jvcs.tracky.core.presentation.model.ProjectSessionUi
+import com.jvcs.tracky.core.presentation.model.ProjectTaskUi
 import com.jvcs.tracky.core.presentation.model.ProjectUi
 import com.jvcs.tracky.design_system.Icon_ChevronRight
+import com.jvcs.tracky.design_system.components.DurationHeroCard
 import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.features.project_tracker.domain.EditTextType
-import com.jvcs.tracky.features.project_tracker.presentation.project_detail.components.AddNewProjectSessionBottomSheet
+import com.jvcs.tracky.features.project_tracker.presentation.project_detail.components.AddNewProjectTaskBottomSheet
+import com.jvcs.tracky.features.project_tracker.presentation.project_detail.components.ColorInfoCard
+import com.jvcs.tracky.features.project_tracker.presentation.project_detail.components.InfoCard
 import com.jvcs.tracky.features.project_tracker.presentation.project_detail.components.TrackyColorPicker
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.description
+import tracky.composeapp.generated.resources.last_active
+import tracky.composeapp.generated.resources.light_text_color
+import tracky.composeapp.generated.resources.project_color
+import tracky.composeapp.generated.resources.project_duration
+import tracky.composeapp.generated.resources.start_date
+import tracky.composeapp.generated.resources.tasks
 import tracky.composeapp.generated.resources.title
 
 @Composable
 fun ProjectDetailScreenRoot(
     navigateBack: () -> Unit,
     onEditTextClick: (String?, EditTextType) -> Unit,
-    onProjectSessionClick: (String) -> Unit,
+    onProjectTaskClick: (String) -> Unit,
     viewModel: ProjectDetailViewModel = koinViewModel ()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -96,7 +102,7 @@ fun ProjectDetailScreenRoot(
             when(action) {
                 ProjectDetailAction.OnBackClick -> navigateBack()
                 is ProjectDetailAction.OnEditTextClick -> onEditTextClick(action.text, action.editTextType)
-                is ProjectDetailAction.OnProjectSessionCardClick -> onProjectSessionClick(action.projectSessionId)
+                is ProjectDetailAction.OnProjectSessionCardClick -> onProjectTaskClick(action.projectSessionId)
                 else -> Unit
             }
             viewModel.onAction(action)
@@ -177,18 +183,19 @@ fun NewProjectDetailScreen(
                             .padding(vertical = 16.dp),
                         startDate = state.project.startDateTimeUtc,
                         lastActive = state.project.startDateTimeUtc,
-                        sessionCount = state.project.projectSessions?.size ?: 0,
+                        sessionCount = state.project.projectTasks?.size ?: 0,
                         color = state.selectedColor ?: Color.Cyan,
                         state = state,
                         onAction = onAction
                     )
                 }
 
-                // 3. Hero Card (Project-wide Timer)
+                // 3. Project Duration Hero Card
                 item {
                     DurationHeroCard(
                         modifier = Modifier
                             .padding(bottom = 16.dp),
+                        label = stringResource(Res.string.project_duration),
                         totalDuration = state.project.totalProjectDuration ?: "00:00:00:00",
                         projectColor = state.selectedColor ?: MaterialTheme.colorScheme.primary,
                         useLightTextColor = state.useLightTextColor,
@@ -210,16 +217,16 @@ fun NewProjectDetailScreen(
 
                 // 4. Sessions Header
                 item {
-                    SessionsHeader(onAddClick = {
+                    TasksHeader(onAddClick = {
                         onAction(ProjectDetailAction.OnToggleAddNewProjectSessionBottomSheet)
                     })
                 }
 
                 // 5. Session Items
-                itemsIndexed(project.projectSessions ?: emptyList()) { index, session ->
-                    SessionItem(
+                itemsIndexed(project.projectTasks ?: emptyList()) { index, session ->
+                    TaskItem(
                         index = index + 1,
-                        session = session,
+                        task = session,
                         projectColor = state.selectedColor ?: MaterialTheme.colorScheme.primary,
                         isEditMode = state.isEditMode,
                         onToggleTimer = {
@@ -236,8 +243,8 @@ fun NewProjectDetailScreen(
             }
         }
     }
-    if (state.isAddNewProjectSessionBottomSheetVisible) {
-        AddNewProjectSessionBottomSheet(
+    if (state.isAddNewProjectTaskBottomSheetVisible) {
+        AddNewProjectTaskBottomSheet(
             state = state,
             onAction = onAction
         )
@@ -251,7 +258,6 @@ fun NewProjectDetailScreen(
     }
 }
 
-// --- Private Components ---
 
 @Composable
 private fun ProjectHeader(
@@ -347,106 +353,19 @@ private fun InfoGrid(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            InfoCard(Modifier.weight(1f), Icons.Outlined.DateRange, "Started", startDate)
-            InfoCard(Modifier.weight(1f), Icons.Outlined.History, "Last Active", lastActive)
+            InfoCard(Modifier.weight(1f), Icons.Outlined.DateRange, stringResource(Res.string.start_date), startDate)
+            InfoCard(Modifier.weight(1f), Icons.Outlined.History, stringResource(Res.string.last_active), lastActive)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            InfoCard(Modifier.weight(1f), Icons.Outlined.GridView, "Sessions", "$sessionCount Total")
+            InfoCard(Modifier.weight(1f), Icons.Outlined.GridView, stringResource(Res.string.tasks), "$sessionCount Total")
             ColorInfoCard(
                 modifier = Modifier.weight(1f),
-                label = "Project Color",
+                label = stringResource(Res.string.project_color),
                 colorValue = color,
                 hexCode = state.selectedColorHex,
                 isEditMode = state.isEditMode,
                 onClick = { onAction(ProjectDetailAction.OnToggleColorPicker) }
             )
-        }
-    }
-}
-
-@Composable
-private fun InfoCard(modifier: Modifier, icon: ImageVector, label: String, value: String) {
-    Surface(
-        modifier = modifier,
-        color = Color(0xFFF0F3FA),
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, Color.Black.copy(alpha = 0.03f))
-    ) {
-        Column(Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.outline)
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(label.uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(value, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-        }
-    }
-}
-
-@Composable
-private fun ColorInfoCard(
-    modifier: Modifier,
-    label: String,
-    colorValue: Color,
-    hexCode: String,
-    isEditMode: Boolean,
-    onClick: () -> Unit
-) {
-    Surface(
-        modifier = modifier.clickable(enabled = isEditMode) { onClick() },
-        color = if (isEditMode) MaterialTheme.colorScheme.surfaceContainerLow else Color(0xFFF0F3FA),
-        shape = RoundedCornerShape(16.dp),
-        border = if (isEditMode) BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant) else null
-    ) {
-        Row(
-            modifier = Modifier.padding(
-                start = 16.dp,
-                top = 16.dp,
-                bottom = 16.dp
-            ),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Outlined.Palette,
-                        null,
-                        Modifier.size(14.dp),
-                        tint = MaterialTheme.colorScheme.outline
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        label.uppercase(),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        Modifier
-                            .size(14.dp)
-                            .clip(CircleShape)
-                            .background(colorValue)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        hexCode,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            }
-            if (isEditMode) {
-                Icon(
-                    modifier = Modifier.size(20.dp),
-                    imageVector = Icon_ChevronRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            }
         }
     }
 }
@@ -470,7 +389,7 @@ private fun TextColorToggle(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = "Light Project Textcolor",
+                text = stringResource(Res.string.light_text_color),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -487,63 +406,13 @@ private fun TextColorToggle(
 }
 
 @Composable
-private fun DurationHeroCard(
-    modifier: Modifier = Modifier,
-    totalDuration: String,
-    projectColor: Color,
-    useLightTextColor: Boolean,
-    onStartStopClick: () -> Unit
-) {
-    val contentColor = if (useLightTextColor) Color.White else Color.Black
-
-    Surface(
-        modifier = modifier.fillMaxWidth().clickable { onStartStopClick() },
-        color = projectColor,
-        shape = RoundedCornerShape(40.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(vertical = 32.dp, horizontal = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                "TOTAL DURATION",
-                style = MaterialTheme.typography.headlineMedium,
-                color = contentColor.copy(alpha = 0.7f)
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = totalDuration,
-                style = MaterialTheme.typography.displayMedium,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold,
-                color = contentColor
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Surface(
-                color = contentColor.copy(alpha = 0.2f),
-                shape = CircleShape
-            ) {
-                Row(
-                    Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.Schedule, null, Modifier.size(12.dp), tint = contentColor)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("PROJECT TRACKER", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = contentColor)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SessionsHeader(onAddClick: () -> Unit) {
+private fun TasksHeader(onAddClick: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("Sessions", style = MaterialTheme.typography.headlineMedium)
+        Text(text = stringResource(Res.string.tasks), style = MaterialTheme.typography.headlineMedium)
         FilledIconButton(
             onClick = onAddClick,
             shape = RoundedCornerShape(16.dp),
@@ -552,22 +421,22 @@ private fun SessionsHeader(onAddClick: () -> Unit) {
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer
             )
         ) {
-            Icon(Icons.Default.Add, contentDescription = "Add Session")
+            Icon(Icons.Default.Add, contentDescription = "Add Task")
         }
     }
 }
 
 @Composable
-private fun SessionItem(
+private fun TaskItem(
     index: Int,
-    session: ProjectSessionUi,
+    task: ProjectTaskUi,
     projectColor: Color,
     isEditMode: Boolean,
     onToggleTimer: () -> Unit,
     onDeleteClick: () -> Unit,
     onCardClick: () -> Unit
 ) {
-    val isCompleted = session.formattedEndDateTimeUtc.isNotBlank()
+    val isCompleted = task.formattedEndDateTimeUtc.isNotBlank()
 
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val pulseAlpha by infiniteTransition.animateFloat(
@@ -585,9 +454,9 @@ private fun SessionItem(
         color = Color.White,
         border = BorderStroke(
             1.dp,
-            if (session.isTimerRunning) projectColor.copy(0.2f) else Color.Transparent
+            if (task.isTimerRunning) projectColor.copy(0.2f) else Color.Transparent
         ),
-        shadowElevation = if (session.isTimerRunning) 4.dp else 0.dp
+        shadowElevation = if (task.isTimerRunning) 4.dp else 0.dp
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -599,16 +468,16 @@ private fun SessionItem(
                     .size(48.dp)
                     .clip(CircleShape)
                     .background(
-                        if (session.isTimerRunning) projectColor.copy(alpha = pulseAlpha)
+                        if (task.isTimerRunning) projectColor.copy(alpha = pulseAlpha)
                         else Color(0xFFF0F3FA)
                     )
                     .clickable { onToggleTimer() },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    if (session.isTimerRunning) Icons.Default.Stop else Icons.Default.PlayArrow,
+                    if (task.isTimerRunning) Icons.Default.Stop else Icons.Default.PlayArrow,
                     contentDescription = null,
-                    tint = if (session.isTimerRunning) Color.White else projectColor
+                    tint = if (task.isTimerRunning) Color.White else projectColor
                 )
             }
 
@@ -621,15 +490,15 @@ private fun SessionItem(
                         text = index.toString().padStart(2, '0'),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
-                        color = if (session.isTimerRunning) projectColor.copy(alpha = 0.6f) else MaterialTheme.colorScheme.outline.copy(alpha = alpha),
+                        color = if (task.isTimerRunning) projectColor.copy(alpha = 0.6f) else MaterialTheme.colorScheme.outline.copy(alpha = alpha),
                         textDecoration = textDecoration
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = session.title,
+                        text = task.title,
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
+                        color = if (task.isTimerRunning) projectColor.copy(alpha = 0.6f) else MaterialTheme.colorScheme.outline.copy(alpha = alpha),
                         textDecoration = textDecoration,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -639,11 +508,11 @@ private fun SessionItem(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text = session.formattedDuration,
+                    text = task.formattedDuration,
                     style = MaterialTheme.typography.headlineMedium,
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold,
-                    color = if (session.isTimerRunning) projectColor else MaterialTheme.colorScheme.onSurface.copy(alpha = if (isCompleted) 0.5f else 1f),
+                    color = if (task.isTimerRunning) projectColor else MaterialTheme.colorScheme.onSurface.copy(alpha = if (isCompleted) 0.5f else 1f),
                     letterSpacing = (-1).sp
                 )
             }
@@ -687,7 +556,7 @@ private fun NewProjectDetailScreenPreview() {
                     startDateTimeUtc = "2023-01-01T00:00:00Z",
                     isFinished = false,
                     endDateTimeUtc = null,
-                    projectSessions = projectSessionsPreview
+                    projectTasks = projectSessionsPreview
                 ),
                 isEditMode = true
             )
@@ -696,7 +565,7 @@ private fun NewProjectDetailScreenPreview() {
 }
 
 private val projectSessionsPreview = listOf(
-    ProjectSessionUi(
+    ProjectTaskUi(
         id = "1",
         title = "This is session One",
         formattedDuration = "10:00:00",
@@ -704,7 +573,7 @@ private val projectSessionsPreview = listOf(
         formattedEndDateTimeUtc = "2023-01-01T00:00:00Z",
         isTimerRunning = false
     ),
-    ProjectSessionUi(
+    ProjectTaskUi(
         id = "2",
         title = "This is session Two",
         formattedDuration = "10:00:00",
@@ -713,7 +582,7 @@ private val projectSessionsPreview = listOf(
         isTimerRunning = false
 
     ),
-    ProjectSessionUi(
+    ProjectTaskUi(
         id = "3",
         title = "This is session Three",
         formattedDuration = "10:00:00",

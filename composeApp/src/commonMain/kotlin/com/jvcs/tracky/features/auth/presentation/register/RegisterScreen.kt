@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -26,6 +27,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.tooling.preview.Devices
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -40,7 +43,10 @@ import com.jvcs.tracky.design_system.components.TrackyPrimaryButton
 import com.jvcs.tracky.design_system.components.TrackyTextField
 import com.jvcs.tracky.design_system.components.Wordmark
 import com.jvcs.tracky.design_system.components.WordmarkSize
+import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.design_system.util.ObserveAsEvents
+import com.jvcs.tracky.features.auth.presentation.login.LoginScreen
+import com.jvcs.tracky.features.auth.presentation.login.LoginState
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import tracky.composeapp.generated.resources.Res
@@ -48,6 +54,8 @@ import tracky.composeapp.generated.resources.already_have_account_prefix
 import tracky.composeapp.generated.resources.and_word
 import tracky.composeapp.generated.resources.apple
 import tracky.composeapp.generated.resources.confirm_password
+import tracky.composeapp.generated.resources.continue_with_apple
+import tracky.composeapp.generated.resources.continue_with_google
 import tracky.composeapp.generated.resources.create_account
 import tracky.composeapp.generated.resources.email
 import tracky.composeapp.generated.resources.full_name
@@ -55,6 +63,7 @@ import tracky.composeapp.generated.resources.full_name_hint
 import tracky.composeapp.generated.resources.google
 import tracky.composeapp.generated.resources.i_agree_to_terms_prefix
 import tracky.composeapp.generated.resources.login
+import tracky.composeapp.generated.resources.or_continue_with
 import tracky.composeapp.generated.resources.or_sign_up_with_email
 import tracky.composeapp.generated.resources.password
 import tracky.composeapp.generated.resources.password_hint
@@ -125,29 +134,7 @@ fun RegisterScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                GoogleSignInButton(
-                    text = stringResource(Res.string.google),
-                    onClick = { onAction(RegisterAction.OnGoogleSignInClick) },
-                    enabled = !state.isRegistering,
-                    modifier = Modifier.weight(1f),
-                )
-                AppleSignInButton(
-                    text = stringResource(Res.string.apple),
-                    onClick = { onAction(RegisterAction.OnAppleSignInClick) },
-                    enabled = !state.isRegistering,
-                    modifier = Modifier.weight(1f),
-                )
-            }
 
-            Spacer(Modifier.height(20.dp))
-
-            DividerWithLabel(label = stringResource(Res.string.or_sign_up_with_email))
-
-            Spacer(Modifier.height(20.dp))
 
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -190,6 +177,7 @@ fun RegisterScreen(
                     },
                     error = state.confirmPasswordError?.asString(),
                 )
+
             }
 
             Spacer(Modifier.height(16.dp))
@@ -282,6 +270,40 @@ fun RegisterScreen(
                     )
                 }
             }
+
+            Spacer(Modifier.height(10.dp))
+
+            DividerWithLabel(label = stringResource(Res.string.or_continue_with))
+
+            Spacer(Modifier.height(10.dp))
+            GoogleSignInButton(
+                text = stringResource(Res.string.continue_with_google),
+                onClick = { onAction(RegisterAction.OnGoogleSignInClick) },
+                enabled = !state.isRegistering,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(12.dp))
+            AppleSignInButton(
+                text = stringResource(Res.string.continue_with_apple),
+                onClick = { onAction(RegisterAction.OnAppleSignInClick) },
+                enabled = !state.isRegistering,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+
+
+
         }
+    }
+}
+
+@Preview (showSystemUi = false, device = Devices.PIXEL_9_PRO)
+@Composable
+private fun RegisterScreenPreview() {
+    TrackyTheme {
+        RegisterScreen(
+            state = RegisterState(),
+            onAction = {}
+        )
     }
 }

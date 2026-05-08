@@ -105,8 +105,6 @@ kotlin {
             implementation(libs.kotlinx.datetime)
             implementation(libs.uuid)
 
-            implementation(libs.material3.window.size.class1)
-
             implementation(libs.jetbrains.navigation3.ui)
             implementation(libs.jetbrains.lifecycle.viewmodel.nav3)
             implementation(libs.jetbrains.lifecycle.viewmodel)
@@ -123,7 +121,7 @@ kotlin {
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutines.swing)
-
+            implementation(libs.ktor.client.okhttp)
         }
     }
 }

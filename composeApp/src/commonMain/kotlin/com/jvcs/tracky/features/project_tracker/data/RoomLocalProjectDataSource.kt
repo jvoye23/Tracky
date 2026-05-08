@@ -1,11 +1,10 @@
 package com.jvcs.tracky.features.project_tracker.data
 
 import com.jvcs.tracky.core.database.dao.ProjectDao
-import com.jvcs.tracky.core.database.entity.SessionIntervalEntity
-import com.jvcs.tracky.core.database.relation.ProjectWithSessions
+import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 import com.jvcs.tracky.core.domain.model.Project
-import com.jvcs.tracky.core.domain.model.ProjectSession
-import com.jvcs.tracky.core.domain.model.SessionInterval
+import com.jvcs.tracky.core.domain.model.ProjectTask
+import com.jvcs.tracky.core.domain.model.TaskInterval
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.mapper.toProject
 import com.jvcs.tracky.features.project_tracker.domain.ProjectRepository
@@ -18,7 +17,6 @@ import com.jvcs.tracky.core.mapper.toProjectSessionEntity
 import com.jvcs.tracky.core.mapper.toSessionInterval
 import com.jvcs.tracky.core.mapper.toSessionIntervalEntity
 import kotlinx.coroutines.flow.map
-import kotlinx.datetime.Clock
 
 class RoomLocalProjectDataSource (
     private val projectDao: ProjectDao
@@ -35,8 +33,8 @@ class RoomLocalProjectDataSource (
 
     }
 
-    override suspend fun getProjectWithSessionsByProjectId(projectId: String): Project? {
-        return projectDao.getProjectWithSessionsById(projectId)?.toProject()
+    override suspend fun getProjectWithTasksByProjectId(projectId: String): Project? {
+        return projectDao.getProjectWithTasksById(projectId)?.toProject()
     }
 
     override suspend fun upsertProject(project: Project): Result<String, DataError> {
@@ -49,9 +47,9 @@ class RoomLocalProjectDataSource (
         }
     }
 
-    override suspend fun upsertProjectSession(projectSession: ProjectSession): Result<String, DataError> {
+    override suspend fun upsertProjectTask(projectTask: ProjectTask): Result<String, DataError> {
         return try {
-            val result = projectDao.upsertProjectRecord(projectSession.toProjectSessionEntity())
+            val result = projectDao.upsertProjectRecord(projectTask.toProjectSessionEntity())
             Result.Success(result.toString())
         } catch (e: Exception) {
             Result.Error(DataError.Local.DISK_FULL)
@@ -72,8 +70,8 @@ class RoomLocalProjectDataSource (
         projectDao.deleteProject(projectId)
     }
 
-    override suspend fun deleteProjectSession(sessionId: String) {
-        projectDao.deleteProjectRecord(sessionId)
+    override suspend fun deleteProjectTask(taskId: String) {
+        projectDao.deleteProjectRecord(taskId)
     }
 
     override suspend fun deleteAllProjects() {
@@ -81,40 +79,40 @@ class RoomLocalProjectDataSource (
 
     }
 
-    override suspend fun updateSessionDuration(
-        sessionId: String,
+    override suspend fun updateTaskDuration(
+        taskId: String,
         newDurationMillis: Long
     ) {
-        projectDao.updateSessionDuration(sessionId, newDurationMillis)
+        projectDao.updateTaskDuration(taskId, newDurationMillis)
     }
 
-    override fun getSessionWithIntervalsById(sessionId: String): Flow<ProjectSession?> {
-        return projectDao.getSessionWithIntervalsById(sessionId)
+    override fun getTaskWithIntervalsById(taskId: String): Flow<ProjectTask?> {
+        return projectDao.getTaskWithIntervalsById(taskId)
             .map { it?.toProjectSession() }
     }
 
-    override suspend fun upsertSessionInterval(interval: SessionInterval) {
-        projectDao.upsertSessionInterval(interval.toSessionIntervalEntity())
+    override suspend fun upsertTaskInterval(interval: TaskInterval) {
+        projectDao.upsertTaskInterval(interval.toSessionIntervalEntity())
     }
 
-    override suspend fun getOpenIntervalBySessionId(sessionId: String): SessionInterval? {
-        return projectDao.getOpenIntervalBySessionId(sessionId)?.toSessionInterval()
+    override suspend fun getOpenIntervalByTaskId(taskId: String): TaskInterval? {
+        return projectDao.getOpenIntervalBySessionId(taskId)?.toSessionInterval()
     }
 
-    override suspend fun startSession(sessionId: String) {
+    override suspend fun startTask(taskId: String) {
         val now = kotlin.time.Clock.System.now().toEpochMilliseconds()
-        val interval = SessionIntervalEntity(
-            parentSessionId = sessionId,
+        val interval = TaskIntervalEntity(
+            parentTaskId = taskId,
             startDateTimeEpochMs = now,
             endDateTimeEpochMs = null,
             durationMillis = 0L
         )
-        projectDao.upsertSessionInterval(interval)
-        projectDao.updateSessionTimerStatus(sessionId, true)
+        projectDao.upsertTaskInterval(interval)
+        projectDao.updateSessionTimerStatus(taskId, true)
     }
 
-    override suspend fun stopSession(sessionId: String) {
-        val openInterval = projectDao.getOpenIntervalBySessionId(sessionId)
+    override suspend fun stopTask(taskId: String) {
+        val openInterval = projectDao.getOpenIntervalBySessionId(taskId)
         if (openInterval != null) {
             val now = kotlin.time.Clock.System.now().toEpochMilliseconds()
             val duration = now - openInterval.startDateTimeEpochMs
@@ -122,15 +120,15 @@ class RoomLocalProjectDataSource (
                 endDateTimeEpochMs = now,
                 durationMillis = duration
             )
-            projectDao.upsertSessionInterval(updatedInterval)
+            projectDao.upsertTaskInterval(updatedInterval)
             
-            projectDao.addSessionDuration(sessionId, duration)
+            projectDao.addTaskDuration(taskId, duration)
         }
-        projectDao.updateSessionTimerStatus(sessionId, false)
+        projectDao.updateSessionTimerStatus(taskId, false)
     }
 
-    override suspend fun updateSessionTitle(sessionId: String, title: String) {
-        projectDao.updateSessionTitle(sessionId, title)
+    override suspend fun updateTaskTitle(taskId: String, title: String) {
+        projectDao.updateTaskTitle(taskId, title)
     }
 
 }
