@@ -5,18 +5,27 @@ import com.jvcs.tracky.core.domain.util.Result
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.HttpRequestBuilder
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
+import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.request.url
 import io.ktor.client.statement.HttpResponse
+import io.ktor.http.ContentType
+import io.ktor.http.contentType
 import io.ktor.util.network.UnresolvedAddressException
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerializationException
 
 fun constructRoute(route: String): String {
-    return if (route.startsWith("https")) route else "${ApiConfig.BASE_URL}$route"
+    return when {
+        route.contains(ApiConfig.BASE_URL) -> route
+        route.startsWith("/") -> ApiConfig.BASE_URL + route
+        route.startsWith("https") -> route
+        else -> ApiConfig.BASE_URL + "/$route"
+    }
 }
 
 suspend inline fun <reified T> responseToResult(response: HttpResponse): Result<T, DataError.Network> {
@@ -47,12 +56,14 @@ suspend inline fun <reified Response : Any> safeCall(
     val response = try {
         execute()
     } catch (e: UnresolvedAddressException) {
+        e.printStackTrace()
         return Result.Error(DataError.Network.NO_INTERNET)
     } catch (e: SerializationException) {
+        e.printStackTrace()
         return Result.Error(DataError.Network.SERIALIZATION)
-    } catch (e: CancellationException) {
-        throw e
     } catch (e: Exception) {
+        if (e is CancellationException) throw e
+        e.printStackTrace()
         return Result.Error(DataError.Network.UNKNOWN)
     }
     return responseToResult(response)
@@ -84,6 +95,36 @@ suspend inline fun <reified Response : Any> HttpClient.get(
             url(constructRoute(route))
             queryParams.forEach { (key, value) -> parameter(key, value) }
             builder()
+        }
+    }
+}
+
+suspend inline fun <reified Request, reified Response: Any> HttpClient.put(
+    route: String,
+    body: Request,
+    contentType: ContentType = ContentType.Application.Json
+): Result<Response, DataError.Network> {
+    return safeCall {
+        put {
+            url(constructRoute(route))
+            setBody(body)
+            contentType(
+                contentType
+            )
+        }
+    }
+}
+
+suspend inline fun <reified Response: Any> HttpClient.delete(
+    route: String,
+    queryParameters: Map<String, Any?> = mapOf()
+): Result<Response, DataError.Network> {
+    return safeCall {
+        delete {
+            url(constructRoute(route))
+            queryParameters.forEach { (key, value) ->
+                parameter(key, value)
+            }
         }
     }
 }

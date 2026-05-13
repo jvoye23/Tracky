@@ -58,7 +58,7 @@ interface ProjectDao {
     @Query("DELETE FROM task_intervals WHERE parentTaskId = :taskId")
     suspend fun deleteIntervalsByTaskId(taskId: String)
 
-    @Query("SELECT * FROM task_intervals WHERE parentTaskId = :sessionId AND endDateTimeEpochMs IS NULL LIMIT 1")
+    @Query("SELECT * FROM task_intervals WHERE parentTaskId = :sessionId AND endDateTimeUtc IS NULL LIMIT 1")
     suspend fun getOpenIntervalBySessionId(sessionId: String): TaskIntervalEntity?
 
     @Query("UPDATE project_records SET isTimerRunning = :isRunning WHERE recordId = :sessionId")

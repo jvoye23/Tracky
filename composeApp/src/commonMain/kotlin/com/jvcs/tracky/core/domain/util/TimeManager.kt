@@ -12,8 +12,11 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.time.Clock
 import kotlin.time.Duration
+import kotlin.time.DurationUnit
 import kotlin.time.TimeSource
+import kotlin.time.toDuration
 
 // Data class representing the UI state of a SINGLE session
 data class TimerState(
@@ -73,7 +76,9 @@ class TimeManager(
 
         // 2. Launch the ticker job
         jobs[taskId] = scope.launch {
+
             while (isActive) {
+                delay(10) // 10ms for UI updates
                 val currentAccumulated = accumulatedDurations[taskId] ?: Duration.ZERO
                 val timeSinceStart = startMarks[taskId]?.elapsedNow() ?: Duration.ZERO
                 val total = currentAccumulated + timeSinceStart
@@ -84,8 +89,9 @@ class TimeManager(
                         formattedTime = formatDuration(total)
                     )
                 }
-                delay(10) // 10ms for UI updates
+
             }
+
         }
     }
     private fun pauseTimer(taskId: String) {

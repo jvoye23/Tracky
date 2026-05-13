@@ -1,38 +1,40 @@
 package com.jvcs.tracky.core.domain.model
 
 
-import kotlin.time.ExperimentalTime
-import kotlin.time.Instant
+import kotlinx.serialization.Serializable
 
-data class Project @OptIn(ExperimentalTime::class) constructor(
-    val projectId: String, // null if new project
+@Serializable
+data class Project(
+    val projectId: String,
     val title: String,
     val description: String?,
     val colorArgb: Int?,
     val totalDurationMillis: Long?,
-    val startDateTimeUtc: Instant,
+    val startDateTimeUtc: String,
     val isFinished: Boolean,
     val useLightTextColor: Boolean = false,
-    val endDateTimeUtc: Instant?,
+    val endDateTimeUtc: String?,
     val projectTasks: List<ProjectTask>? = null
 )
 
-data class ProjectTask @OptIn(ExperimentalTime::class) constructor(
+@Serializable
+data class ProjectTask(
     val projectTaskId: String,
     val title: String,
     val durationMillis: Long?,
-    val startDateTimeUtc: Instant,
-    val endDateTimeUtc: Instant?,
+    val startDateTimeUtc: String,
+    val endDateTimeUtc: String?,
     val isFinished: Boolean,
     val parentProjectId: String,
     val isTimerRunning: Boolean,
     val intervals: List<TaskInterval> = emptyList()
 )
 
+@Serializable
 data class TaskInterval(
-    val intervalId: Long?,
+    val intervalId: String,
     val parentSessionId: String,
-    val startDateTimeUtc: Instant,
-    val endDateTimeUtc: Instant?,
+    val startDateTimeUtc: String,
+    val endDateTimeUtc: String?,
     val durationMillis: Long
 )

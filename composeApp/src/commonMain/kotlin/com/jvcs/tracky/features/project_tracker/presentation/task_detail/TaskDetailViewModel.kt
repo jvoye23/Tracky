@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Instant
 
 class TaskDetailViewModel(
     private val taskId: String,
@@ -73,7 +74,7 @@ class TaskDetailViewModel(
     private fun calculateDailyStatistics(intervals: List<TaskInterval>): List<DailyStatistic> {
         return intervals
             .filter { it.endDateTimeUtc != null }
-            .groupBy { it.startDateTimeUtc.toLocalDateTime(TimeZone.currentSystemDefault()).date }
+            .groupBy { Instant.parse(it.startDateTimeUtc).toLocalDateTime(TimeZone.currentSystemDefault()).date }
             .map { (date, dayIntervals) ->
                 val totalDurationMillis = dayIntervals.sumOf { it.durationMillis }
                 DailyStatistic(

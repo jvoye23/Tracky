@@ -20,13 +20,13 @@ import androidx.room.PrimaryKey
     indices = [Index(value = ["parentProjectId"])]
 )
 data class ProjectTaskEntity(
-    @PrimaryKey
+    @PrimaryKey(autoGenerate = false)
     val recordId: String,
     val parentProjectId: String, // The Foreign Key link
     val description: String,
     val durationMillis: Long,
-    val startDateTimeEpochMs: Long,
-    val endDateTimeEpochMs: Long?,
+    val startDateTimeUtc: String,
+    val endDateTimeUtc: String?,
     val isFinished: Boolean,
     val isTimerRunning: Boolean
 )

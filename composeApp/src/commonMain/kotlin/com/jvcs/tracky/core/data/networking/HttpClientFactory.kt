@@ -1,5 +1,6 @@
 package com.jvcs.tracky.core.data.networking
 
+import co.touchlab.kermit.Logger
 import com.jvcs.tracky.core.data.dto.AuthInfoSerializable
 import com.jvcs.tracky.core.data.dto.requests.RefreshRequest
 import com.jvcs.tracky.core.data.mappers.toDomain
@@ -35,6 +36,11 @@ class HttpClientFactory(
                 )
             }
             install(Logging) {
+                logger = object : io.ktor.client.plugins.logging.Logger {
+                    override fun log(message: String) {
+                        Logger.withTag("HTTP").d(message)
+                    }
+                }
                 level = LogLevel.ALL
             }
             defaultRequest {
@@ -42,6 +48,9 @@ class HttpClientFactory(
             }
             install(Auth) {
                 bearer {
+                    sendWithoutRequest { request ->
+                        !request.url.buildString().contains("/api/auth/")
+                    }
                     loadTokens {
                         sessionStorage.observeAuthInfo().firstOrNull()?.let {
                             BearerTokens(
@@ -51,7 +60,9 @@ class HttpClientFactory(
                         }
                     }
                     refreshTokens {
-                        if (this.response.call.request.url.encodedPath.contains("/api/auth/")) {
+                        // Never refresh on 401 from /api/auth/* (e.g. wrong password on login)
+                        // — otherwise this would loop indefinitely.
+                        if (this.response.call.request.url.encodedPath.startsWith("/api/auth/")) {
                             return@refreshTokens null
                         }
                         val authInfo = sessionStorage.observeAuthInfo().firstOrNull()
@@ -62,7 +73,7 @@ class HttpClientFactory(
                         var bearerTokens: BearerTokens? = null
                         client.post<RefreshRequest, AuthInfoSerializable>(
                             route = "/api/auth/refresh",
-                            body = RefreshRequest(refreshToken = authInfo!!.refreshToken),
+                            body = RefreshRequest(refreshToken = authInfo.refreshToken),
                             builder = { markAsRefreshTokenRequest() }
                         ).onSuccess { newAuthInfo ->
                             val newAuthInfoDomain = newAuthInfo.toDomain()

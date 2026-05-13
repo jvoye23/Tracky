@@ -14,4 +14,5 @@ interface AuthService {
     suspend fun forgotPassword(email: String): EmptyResult<DataError.Network>
     suspend fun resetPassword(newPassword: String, token: String): EmptyResult<DataError.Network>
     suspend fun logout(refreshToken: String): EmptyResult<DataError.Network>
+    fun clearTokenCache()
 }

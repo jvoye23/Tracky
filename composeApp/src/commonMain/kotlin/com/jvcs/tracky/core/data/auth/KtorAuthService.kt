@@ -16,11 +16,21 @@ import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.map
+import com.jvcs.tracky.core.domain.util.onSuccess
 import io.ktor.client.HttpClient
+import io.ktor.client.plugins.auth.authProviders
+import io.ktor.client.plugins.auth.providers.BearerAuthProvider
 
 class KtorAuthService(
     private val httpClient: HttpClient
 ) : AuthService {
+
+    override fun clearTokenCache() {
+        httpClient.authProviders
+            .filterIsInstance<BearerAuthProvider>()
+            .firstOrNull()
+            ?.clearToken()
+    }
 
     override suspend fun login(
         email: String,
@@ -30,6 +40,7 @@ class KtorAuthService(
             route = "/api/auth/login",
             body = LoginRequest(email = email, password = password)
         ).map { it.toDomain() }
+            .onSuccess { clearTokenCache() }
     }
 
     override suspend fun register(
@@ -41,6 +52,7 @@ class KtorAuthService(
             route = "/api/auth/register",
             body = RegisterRequest(email = email, name = name, password = password)
         ).map { it.toDomain() }
+            .onSuccess { clearTokenCache() }
     }
 
     override suspend fun loginWithGoogle(idToken: String): Result<AuthInfo, DataError.Network> {
@@ -48,6 +60,7 @@ class KtorAuthService(
             route = "/api/auth/google",
             body = SocialLoginRequest(idToken = idToken)
         ).map { it.toDomain() }
+            .onSuccess { clearTokenCache() }
     }
 
     override suspend fun loginWithApple(idToken: String): Result<AuthInfo, DataError.Network> {
@@ -55,6 +68,7 @@ class KtorAuthService(
             route = "/api/auth/apple",
             body = SocialLoginRequest(idToken = idToken)
         ).map { it.toDomain() }
+            .onSuccess { clearTokenCache() }
     }
 
     override suspend fun resendVerificationEmail(email: String): EmptyResult<DataError.Network> {

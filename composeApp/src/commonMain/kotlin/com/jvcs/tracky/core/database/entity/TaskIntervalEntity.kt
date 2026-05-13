@@ -5,10 +5,10 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "task_intervals")
 data class TaskIntervalEntity(
-    @PrimaryKey(autoGenerate = true)
-    val intervalId: Long = 0,
+    @PrimaryKey(autoGenerate = false)
+    val intervalId: String,
     val parentTaskId: String,
-    val startDateTimeEpochMs: Long,
-    val endDateTimeEpochMs: Long?,
+    val startDateTimeUtc: String,
+    val endDateTimeUtc: String?,
     val durationMillis: Long
 )
