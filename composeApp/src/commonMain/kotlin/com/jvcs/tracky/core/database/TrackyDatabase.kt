@@ -18,7 +18,7 @@ import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
         ProjectTaskEntity::class,
         TaskIntervalEntity::class
     ],
-    version = 4,
+    version = 6,
 )
 @TypeConverters(RoomConverters::class)
 @ConstructedBy(TrackyDatabaseConstructor::class)
@@ -52,6 +52,133 @@ abstract class TrackyDatabase: RoomDatabase() {
             override fun migrate(connection: SQLiteConnection) {
                 connection.execSQL("ALTER TABLE session_intervals RENAME TO task_intervals")
                 connection.execSQL("ALTER TABLE task_intervals RENAME COLUMN parentSessionId TO parentTaskId")
+            }
+        }
+
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(connection: SQLiteConnection) {
+                // projects: rebuild with TEXT columns for startDateTimeUtc / endDateTimeUtc
+                connection.execSQL(
+                    """
+                    CREATE TABLE projects_new (
+                        projectId TEXT NOT NULL PRIMARY KEY,
+                        title TEXT NOT NULL,
+                        description TEXT,
+                        color INTEGER,
+                        totalDuration INTEGER,
+                        startDateTimeUtc TEXT NOT NULL,
+                        isFinished INTEGER NOT NULL,
+                        useLightTextColor INTEGER NOT NULL DEFAULT 0,
+                        endDateTimeUtc TEXT
+                    )
+                    """.trimIndent()
+                )
+                connection.execSQL(
+                    """
+                    INSERT INTO projects_new
+                      (projectId, title, description, color, totalDuration,
+                       startDateTimeUtc, isFinished, useLightTextColor, endDateTimeUtc)
+                    SELECT projectId, title, description, color, totalDuration,
+                           strftime('%Y-%m-%dT%H:%M:%fZ', startDateTimeEpochMs/1000.0, 'unixepoch'),
+                           isFinished, useLightTextColor,
+                           CASE WHEN endDateTimeEpochMs IS NULL THEN NULL
+                                ELSE strftime('%Y-%m-%dT%H:%M:%fZ', endDateTimeEpochMs/1000.0, 'unixepoch') END
+                    FROM projects
+                    """.trimIndent()
+                )
+                connection.execSQL("DROP TABLE projects")
+                connection.execSQL("ALTER TABLE projects_new RENAME TO projects")
+
+                // project_records (ProjectTaskEntity)
+                connection.execSQL(
+                    """
+                    CREATE TABLE project_records_new (
+                        recordId TEXT NOT NULL PRIMARY KEY,
+                        parentProjectId TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        durationMillis INTEGER NOT NULL,
+                        startDateTimeUtc TEXT NOT NULL,
+                        endDateTimeUtc TEXT,
+                        isFinished INTEGER NOT NULL,
+                        isTimerRunning INTEGER NOT NULL,
+                        FOREIGN KEY(parentProjectId) REFERENCES projects(projectId) ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                connection.execSQL(
+                    """
+                    INSERT INTO project_records_new
+                      (recordId, parentProjectId, description, durationMillis,
+                       startDateTimeUtc, endDateTimeUtc, isFinished, isTimerRunning)
+                    SELECT recordId, parentProjectId, description, durationMillis,
+                           strftime('%Y-%m-%dT%H:%M:%fZ', startDateTimeEpochMs/1000.0, 'unixepoch'),
+                           CASE WHEN endDateTimeEpochMs IS NULL THEN NULL
+                                ELSE strftime('%Y-%m-%dT%H:%M:%fZ', endDateTimeEpochMs/1000.0, 'unixepoch') END,
+                           isFinished, isTimerRunning
+                    FROM project_records
+                    """.trimIndent()
+                )
+                connection.execSQL("DROP TABLE project_records")
+                connection.execSQL("ALTER TABLE project_records_new RENAME TO project_records")
+                connection.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_project_records_parentProjectId ON project_records(parentProjectId)"
+                )
+
+                // task_intervals
+                connection.execSQL(
+                    """
+                    CREATE TABLE task_intervals_new (
+                        intervalId INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        parentTaskId TEXT NOT NULL,
+                        startDateTimeUtc TEXT NOT NULL,
+                        endDateTimeUtc TEXT,
+                        durationMillis INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                connection.execSQL(
+                    """
+                    INSERT INTO task_intervals_new
+                      (intervalId, parentTaskId, startDateTimeUtc, endDateTimeUtc, durationMillis)
+                    SELECT intervalId, parentTaskId,
+                           strftime('%Y-%m-%dT%H:%M:%fZ', startDateTimeEpochMs/1000.0, 'unixepoch'),
+                           CASE WHEN endDateTimeEpochMs IS NULL THEN NULL
+                                ELSE strftime('%Y-%m-%dT%H:%M:%fZ', endDateTimeEpochMs/1000.0, 'unixepoch') END,
+                           durationMillis
+                    FROM task_intervals
+                    """.trimIndent()
+                )
+                connection.execSQL("DROP TABLE task_intervals")
+                connection.execSQL("ALTER TABLE task_intervals_new RENAME TO task_intervals")
+            }
+        }
+
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(connection: SQLiteConnection) {
+                // task_intervals.intervalId: INTEGER AUTOINCREMENT → TEXT (UUID).
+                // Existing integer ids are CAST to TEXT; only new intervals will be real UUIDs.
+                connection.execSQL(
+                    """
+                    CREATE TABLE task_intervals_new (
+                        intervalId TEXT NOT NULL PRIMARY KEY,
+                        parentTaskId TEXT NOT NULL,
+                        startDateTimeUtc TEXT NOT NULL,
+                        endDateTimeUtc TEXT,
+                        durationMillis INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                connection.execSQL(
+                    """
+                    INSERT INTO task_intervals_new
+                      (intervalId, parentTaskId, startDateTimeUtc, endDateTimeUtc, durationMillis)
+                    SELECT CAST(intervalId AS TEXT), parentTaskId,
+                           startDateTimeUtc, endDateTimeUtc, durationMillis
+                    FROM task_intervals
+                    """.trimIndent()
+                )
+                connection.execSQL("DROP TABLE task_intervals")
+                connection.execSQL("ALTER TABLE task_intervals_new RENAME TO task_intervals")
             }
         }
     }

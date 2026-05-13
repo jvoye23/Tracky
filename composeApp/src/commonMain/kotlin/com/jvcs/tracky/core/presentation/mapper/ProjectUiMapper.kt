@@ -17,6 +17,7 @@ import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
 
 private val dateTimeFormat = LocalDate.Format {
     monthName(MonthNames.ENGLISH_ABBREVIATED)
@@ -29,12 +30,12 @@ private val dateTimeFormat = LocalDate.Format {
 @OptIn(ExperimentalTime::class)
 fun Project.toProjectUi(): ProjectUi {
 
-    val startDateTimeInLocalDateTime = startDateTimeUtc
+    val startDateTimeInLocalDateTime = Instant.parse(startDateTimeUtc)
         .toLocalDateTime(TimeZone.currentSystemDefault())
-        
+
 
     val endDateTimeInLocalDateTime = endDateTimeUtc
-        ?.toLocalDateTime(TimeZone.currentSystemDefault())
+        ?.let { Instant.parse(it).toLocalDateTime(TimeZone.currentSystemDefault()) }
 
     return ProjectUi(
         projectId = projectId,
@@ -58,21 +59,22 @@ fun ProjectUi.toProject(): Project {
         description = description,
         colorArgb = color?.toArgb(),
         totalDurationMillis = parseDuration(totalDuration).inWholeMilliseconds,
-        startDateTimeUtc = LocalDate.parse(startDateTimeUtc, dateTimeFormat).atStartOfDayIn(TimeZone.currentSystemDefault()),
+        startDateTimeUtc = LocalDate.parse(startDateTimeUtc, dateTimeFormat).atStartOfDayIn(TimeZone.currentSystemDefault()).toString(),
         isFinished = isFinished,
         useLightTextColor = useLightTextColor,
-        endDateTimeUtc = endDateTimeUtc?.let { LocalDate.parse(it, dateTimeFormat).atStartOfDayIn(TimeZone.currentSystemDefault()) },
+        endDateTimeUtc = endDateTimeUtc?.let { LocalDate.parse(it, dateTimeFormat).atStartOfDayIn(TimeZone.currentSystemDefault()).toString() },
         projectTasks = projectTasks?.map { it.toProjectTask(projectId ?: "") }
     )
 }
 
+@OptIn(ExperimentalTime::class)
 fun ProjectTask.toProjectTaskUi(): ProjectTaskUi {
     return ProjectTaskUi(
         id = projectTaskId,
         title = title,
         formattedDuration = formatDuration(durationMillis?.milliseconds ?: Duration.ZERO),
-        formattedStateDateTime = startDateTimeUtc.toLocalDateTime(TimeZone.currentSystemDefault()).date.format(dateTimeFormat),
-        formattedEndDateTimeUtc = endDateTimeUtc?.toLocalDateTime(TimeZone.currentSystemDefault())?.date?.format(dateTimeFormat) ?: "",
+        formattedStateDateTime = Instant.parse(startDateTimeUtc).toLocalDateTime(TimeZone.currentSystemDefault()).date.format(dateTimeFormat),
+        formattedEndDateTimeUtc = endDateTimeUtc?.let { Instant.parse(it).toLocalDateTime(TimeZone.currentSystemDefault()).date.format(dateTimeFormat) } ?: "",
         isTimerRunning = isTimerRunning
     )
 }
@@ -83,9 +85,9 @@ fun ProjectTaskUi.toProjectTask(parentProjectId: String): ProjectTask {
         projectTaskId = id ?: "",
         title = title,
         durationMillis = parseDuration(formattedDuration).inWholeMilliseconds,
-        startDateTimeUtc = LocalDate.parse(formattedStateDateTime, dateTimeFormat).atStartOfDayIn(TimeZone.currentSystemDefault()),
+        startDateTimeUtc = LocalDate.parse(formattedStateDateTime, dateTimeFormat).atStartOfDayIn(TimeZone.currentSystemDefault()).toString(),
         endDateTimeUtc = if (formattedEndDateTimeUtc.isNotEmpty()) {
-            LocalDate.parse(formattedEndDateTimeUtc, dateTimeFormat).atStartOfDayIn(TimeZone.currentSystemDefault())
+            LocalDate.parse(formattedEndDateTimeUtc, dateTimeFormat).atStartOfDayIn(TimeZone.currentSystemDefault()).toString()
         } else null,
         isFinished = !isTimerRunning,
         parentProjectId = parentProjectId,

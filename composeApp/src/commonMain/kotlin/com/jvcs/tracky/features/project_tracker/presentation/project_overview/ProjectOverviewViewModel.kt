@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalUuidApi::class)
+
 package com.jvcs.tracky.features.project_tracker.presentation.project_overview
 
 import androidx.compose.foundation.text.input.TextFieldState
@@ -17,6 +19,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.time.Clock
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 class ProjectOverviewViewModel(
     private val projectRepository: ProjectRepository
@@ -97,7 +101,7 @@ class ProjectOverviewViewModel(
 
     private fun addProject(projectTitle: String) {
         viewModelScope.launch {
-        val newProjectId = Clock.System.now().toString().takeLast(6).dropLast(1)
+        val newProjectId = Uuid.random().toString()
 
         val newProject = Project(
             projectId = newProjectId,
@@ -105,7 +109,7 @@ class ProjectOverviewViewModel(
             description = null,
             colorArgb = null,
             totalDurationMillis = null,
-            startDateTimeUtc = Clock.System.now(),
+            startDateTimeUtc = Clock.System.now().toString(),
             isFinished = false,
             endDateTimeUtc = null,
             projectTasks = null

@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalUuidApi::class)
+
 package com.jvcs.tracky.features.project_tracker.data
 
 import com.jvcs.tracky.core.database.dao.ProjectDao
@@ -5,22 +7,27 @@ import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 import com.jvcs.tracky.core.domain.model.Project
 import com.jvcs.tracky.core.domain.model.ProjectTask
 import com.jvcs.tracky.core.domain.model.TaskInterval
-import com.jvcs.tracky.core.domain.util.EmptyResult
-import com.jvcs.tracky.core.mapper.toProject
-import com.jvcs.tracky.features.project_tracker.domain.ProjectRepository
-import kotlinx.coroutines.flow.Flow
 import com.jvcs.tracky.core.domain.util.DataError
+import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
+import com.jvcs.tracky.core.mapper.toProject
 import com.jvcs.tracky.core.mapper.toProjectEntity
 import com.jvcs.tracky.core.mapper.toProjectSession
 import com.jvcs.tracky.core.mapper.toProjectSessionEntity
 import com.jvcs.tracky.core.mapper.toSessionInterval
 import com.jvcs.tracky.core.mapper.toSessionIntervalEntity
+import com.jvcs.tracky.features.project_tracker.domain.LocalProjectDataSource
+import com.jvcs.tracky.features.project_tracker.domain.ProjectId
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlin.time.Clock
+import kotlin.time.Instant
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 class RoomLocalProjectDataSource (
     private val projectDao: ProjectDao
-): ProjectRepository {
+): LocalProjectDataSource {
     override fun getProjects(): Flow<List<Project>> {
         val projects = projectDao.getProjects()
             .map { projectEntity -> projectEntity.map { it.toProject() } }
@@ -37,30 +44,29 @@ class RoomLocalProjectDataSource (
         return projectDao.getProjectWithTasksById(projectId)?.toProject()
     }
 
-    override suspend fun upsertProject(project: Project): Result<String, DataError> {
+    override suspend fun upsertProject(project: Project): Result<ProjectId, DataError.Local> {
         return try {
-            val result = projectDao.upsertProject(project.toProjectEntity())
-            Result.Success(result.toString())
+            projectDao.upsertProject(project.toProjectEntity())
+            Result.Success(data = project.projectId)
 
         } catch (e: Exception) {
             Result.Error(DataError.Local.DISK_FULL)
         }
     }
 
-    override suspend fun upsertProjectTask(projectTask: ProjectTask): Result<String, DataError> {
+    override suspend fun upsertProjects(projects: List<Project>): Result<String, DataError> {
+        return try {
+            projectDao.upsertProjects(projects.map { it.toProjectEntity() })
+            Result.Success("")
+        } catch (e: Exception) {
+            Result.Error(DataError.Local.DISK_FULL)
+        }
+    }
+
+    override suspend fun upsertProjectTask(projectTask: ProjectTask): Result<String, DataError.Local> {
         return try {
             val result = projectDao.upsertProjectRecord(projectTask.toProjectSessionEntity())
             Result.Success(result.toString())
-        } catch (e: Exception) {
-            Result.Error(DataError.Local.DISK_FULL)
-        }
-    }
-
-    override suspend fun updateProject(project: Project): EmptyResult<DataError> {
-        return try {
-            val result = projectDao.upsertProject(project.toProjectEntity())
-            Result.Success(result)
-
         } catch (e: Exception) {
             Result.Error(DataError.Local.DISK_FULL)
         }
@@ -76,7 +82,6 @@ class RoomLocalProjectDataSource (
 
     override suspend fun deleteAllProjects() {
         projectDao.deleteAllProjects()
-
     }
 
     override suspend fun updateTaskDuration(
@@ -91,8 +96,13 @@ class RoomLocalProjectDataSource (
             .map { it?.toProjectSession() }
     }
 
-    override suspend fun upsertTaskInterval(interval: TaskInterval) {
-        projectDao.upsertTaskInterval(interval.toSessionIntervalEntity())
+    override suspend fun upsertTaskInterval(interval: TaskInterval): EmptyResult<DataError> {
+        return try {
+            projectDao.upsertTaskInterval(interval.toSessionIntervalEntity())
+            Result.Success(Unit)
+        } catch (e: Exception) {
+            Result.Error(DataError.Local.DISK_FULL)
+        }
     }
 
     override suspend fun getOpenIntervalByTaskId(taskId: String): TaskInterval? {
@@ -100,11 +110,12 @@ class RoomLocalProjectDataSource (
     }
 
     override suspend fun startTask(taskId: String) {
-        val now = kotlin.time.Clock.System.now().toEpochMilliseconds()
+        val now = Clock.System.now()
         val interval = TaskIntervalEntity(
+            intervalId = Uuid.random().toString(),
             parentTaskId = taskId,
-            startDateTimeEpochMs = now,
-            endDateTimeEpochMs = null,
+            startDateTimeUtc = now.toString(),
+            endDateTimeUtc = null,
             durationMillis = 0L
         )
         projectDao.upsertTaskInterval(interval)
@@ -114,14 +125,15 @@ class RoomLocalProjectDataSource (
     override suspend fun stopTask(taskId: String) {
         val openInterval = projectDao.getOpenIntervalBySessionId(taskId)
         if (openInterval != null) {
-            val now = kotlin.time.Clock.System.now().toEpochMilliseconds()
-            val duration = now - openInterval.startDateTimeEpochMs
+            val now = Clock.System.now()
+            val startInstant = Instant.parse(openInterval.startDateTimeUtc)
+            val duration = (now - startInstant).inWholeMilliseconds
             val updatedInterval = openInterval.copy(
-                endDateTimeEpochMs = now,
+                endDateTimeUtc = now.toString(),
                 durationMillis = duration
             )
             projectDao.upsertTaskInterval(updatedInterval)
-            
+
             projectDao.addTaskDuration(taskId, duration)
         }
         projectDao.updateSessionTimerStatus(taskId, false)
@@ -130,5 +142,4 @@ class RoomLocalProjectDataSource (
     override suspend fun updateTaskTitle(taskId: String, title: String) {
         projectDao.updateTaskTitle(taskId, title)
     }
-
 }

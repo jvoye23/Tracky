@@ -2,9 +2,11 @@ package com.jvcs.tracky
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jvcs.tracky.core.domain.auth.AuthService
 import com.jvcs.tracky.core.domain.auth.SessionStorage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -18,7 +20,8 @@ data class MainState(
 )
 
 class MainViewModel(
-    private val sessionStorage: SessionStorage
+    private val sessionStorage: SessionStorage,
+    private val authService: AuthService
 ) : ViewModel() {
 
     private var hasLoadedInitialData = false
@@ -35,7 +38,12 @@ class MainViewModel(
 
     fun logout() {
         viewModelScope.launch {
+            val refreshToken = sessionStorage.observeAuthInfo().firstOrNull()?.refreshToken
+            if (!refreshToken.isNullOrBlank()) {
+                authService.logout(refreshToken)
+            }
             sessionStorage.set(null)
+            authService.clearTokenCache()
         }
     }
 
