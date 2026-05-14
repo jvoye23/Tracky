@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import org.jetbrains.compose.resources.vectorResource
 import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.apple_logo
+import tracky.composeapp.generated.resources.archive_icon
 import tracky.composeapp.generated.resources.arrow_left
 import tracky.composeapp.generated.resources.book_open_01
 import tracky.composeapp.generated.resources.check
@@ -13,16 +14,21 @@ import tracky.composeapp.generated.resources.chevron_down
 import tracky.composeapp.generated.resources.chevron_left
 import tracky.composeapp.generated.resources.chevron_right
 import tracky.composeapp.generated.resources.chevron_up
+import tracky.composeapp.generated.resources.delete_icon
 import tracky.composeapp.generated.resources.error_circle
 import tracky.composeapp.generated.resources.eye
 import tracky.composeapp.generated.resources.eye_off
+import tracky.composeapp.generated.resources.file_export_icon
 import tracky.composeapp.generated.resources.google_logo
+import tracky.composeapp.generated.resources.help_icon
+import tracky.composeapp.generated.resources.info_icon
 import tracky.composeapp.generated.resources.lock
 import tracky.composeapp.generated.resources.mail
 import tracky.composeapp.generated.resources.minus
 import tracky.composeapp.generated.resources.phone
 import tracky.composeapp.generated.resources.phone_filled
 import tracky.composeapp.generated.resources.plus
+import tracky.composeapp.generated.resources.settings_icon
 import tracky.composeapp.generated.resources.timer
 import tracky.composeapp.generated.resources.trash_04
 import tracky.composeapp.generated.resources.user_03
@@ -119,3 +125,27 @@ val Icon_GoogleLogo: ImageVector
 val Icon_AppleLogo: ImageVector
     @Composable
     get() = vectorResource(Res.drawable.apple_logo)
+
+val Icon_Delete: ImageVector
+    @Composable
+    get() = vectorResource(Res.drawable.delete_icon)
+
+val Icon_Archive: ImageVector
+    @Composable
+    get() = vectorResource(Res.drawable.archive_icon)
+
+val Icon_Settings: ImageVector
+    @Composable
+    get() = vectorResource(Res.drawable.settings_icon)
+
+val Icon_Help: ImageVector
+    @Composable
+    get() = vectorResource(Res.drawable.help_icon)
+
+val Icon_Info: ImageVector
+    @Composable
+    get() = vectorResource(Res.drawable.info_icon)
+
+val Icon_File_Export: ImageVector
+    @Composable
+    get() = vectorResource(Res.drawable.file_export_icon)
