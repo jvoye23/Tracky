@@ -1,7 +1,9 @@
 package com.jvcs.tracky.features.project_tracker.presentation.project_overview.components
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,6 +19,7 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -33,6 +36,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jvcs.tracky.core.presentation.model.ProjectUi
+import com.jvcs.tracky.design_system.Icon_CheckCircle
 import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.design_system.theme.timerStyle
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.ProjectOverviewAction
@@ -45,19 +49,44 @@ import tracky.composeapp.generated.resources.in_progress
 import tracky.composeapp.generated.resources.start_date
 import kotlin.time.DurationUnit
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ProjectCard(
     modifier: Modifier = Modifier,
     onAction: (ProjectOverviewAction) -> Unit,
-    projectUi: ProjectUi
+    projectUi: ProjectUi,
+    isEditModeActive: Boolean = false,
+    isSelected: Boolean = false
 ) {
     val contentColor = if (projectUi.useLightTextColor) Color.White else MaterialTheme.colorScheme.onSurface
+    val cardShape = CardDefaults.elevatedShape
+    val selectionBorder = if (isSelected) {
+        Modifier.border(
+            width = 2.dp,
+            color = MaterialTheme.colorScheme.primary,
+            shape = cardShape
+        )
+    } else {
+        Modifier
+    }
 
     ElevatedCard(
         modifier = modifier
-            .clickable {
-                onAction(ProjectOverviewAction.OnProjectCardClick(projectId = projectUi.projectId!!))
-            },
+            .combinedClickable(
+                onLongClick = {
+                    val id = projectUi.projectId ?: return@combinedClickable
+                    onAction(ProjectOverviewAction.OnProjectCardLongPress(id))
+                },
+                onClick = {
+                    val id = projectUi.projectId ?: return@combinedClickable
+                    if (isEditModeActive) {
+                        onAction(ProjectOverviewAction.OnProjectCardToggleSelection(id))
+                    } else {
+                        onAction(ProjectOverviewAction.OnProjectCardClick(projectId = id))
+                    }
+                }
+            )
+            .then(selectionBorder),
         colors = CardDefaults.elevatedCardColors(
             containerColor = projectUi.color ?: MaterialTheme.colorScheme.surfaceContainerLow
         ),
@@ -73,9 +102,19 @@ fun ProjectCard(
             // HEADER: Title & Status
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Top,
+                verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                if (isEditModeActive) {
+                    Checkbox(
+                        checked = isSelected ,
+                        onCheckedChange = {
+                            onAction(ProjectOverviewAction.OnProjectCardToggleSelection(projectUi.projectId ?: return@Checkbox))
+                        },
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+
                 Text(
                     text = projectUi.title,
                     style = MaterialTheme.typography.titleLarge,
@@ -238,6 +277,21 @@ fun ProjectCardPreview() {
                         endDateTimeUtc = null,
                     ),
                     onAction = {}
+                )
+                ProjectCard(
+                    projectUi = ProjectUi(
+                        projectId = "1",
+                        title = "Project Title",
+                        description = "Description of the project",
+                        color = Color.Yellow,
+                        totalDuration = DurationUnit.HOURS.toString(),
+                        startDateTimeUtc = LocalDateTime(2025, 12, 1, 10, 0,0).toString(),
+                        isFinished = true,
+                        endDateTimeUtc = null,
+                    ),
+                    onAction = {},
+                    isSelected = false,
+                    isEditModeActive = true
                 )
             }
         }

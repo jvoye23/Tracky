@@ -1,7 +1,11 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 
 package com.jvcs.tracky.features.project_tracker.presentation.project_overview
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -15,29 +19,42 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.jvcs.tracky.design_system.Icon_Delete
 import com.jvcs.tracky.design_system.util.ObserveAsEvents
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.AddNewProjectBottomSheet
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectCard
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectOverViewTopBar
+import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectOverviewEditModeTopBar
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import tracky.composeapp.generated.resources.Res
+import tracky.composeapp.generated.resources.cancel
+import tracky.composeapp.generated.resources.confirm
 import tracky.composeapp.generated.resources.current_projects
+import tracky.composeapp.generated.resources.delete_one_project_confirmation
+import tracky.composeapp.generated.resources.delete_project_title
+import tracky.composeapp.generated.resources.delete_projects_confirmation
+import tracky.composeapp.generated.resources.delete_projects_title
+import tracky.composeapp.generated.resources.delete_selected
 import tracky.composeapp.generated.resources.new_project
 import tracky.composeapp.generated.resources.search_results
 
@@ -75,10 +92,17 @@ fun ProjectOverviewScreenRoot(
 
         }
     }
+
+    BackHandler(enabled = state.isEditModeActive) {
+        viewModel.onAction(ProjectOverviewAction.OnExitEditMode)
+    }
+
     ProjectOverviewScreen(
         onAction = { action ->
             when(action) {
-                is ProjectOverviewAction.OnProjectCardClick -> onNavigateToDetailScreen(action.projectId)
+                is ProjectOverviewAction.OnProjectCardClick -> {
+                    if (!state.isEditModeActive) onNavigateToDetailScreen(action.projectId)
+                }
                 else -> Unit
             }
             viewModel.onAction(action)
@@ -107,15 +131,30 @@ fun ProjectOverviewScreen(
             .fillMaxSize()
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            ProjectOverViewTopBar(
-                modifier = Modifier.padding(horizontal = 10.dp),
-                onAction = onAction,
-                state = state,
-                onLogout = onLogout,
-                username = username,
-                email = email,
-                scrollBehavior = scrollBehavior
-            )
+            AnimatedContent(
+                targetState = state.isEditModeActive,
+                transitionSpec = { fadeIn() togetherWith fadeOut() },
+                label = "topBarSwap"
+            ) { editMode ->
+                if (editMode) {
+                    ProjectOverviewEditModeTopBar(
+                        modifier = Modifier.padding(horizontal = 10.dp),
+                        state = state,
+                        onAction = onAction,
+                        scrollBehavior = scrollBehavior
+                    )
+                } else {
+                    ProjectOverViewTopBar(
+                        modifier = Modifier.padding(horizontal = 10.dp),
+                        onAction = onAction,
+                        state = state,
+                        onLogout = onLogout,
+                        username = username,
+                        email = email,
+                        scrollBehavior = scrollBehavior
+                    )
+                }
+            }
         },
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         contentWindowInsets = WindowInsets.safeDrawing,
@@ -167,6 +206,8 @@ fun ProjectOverviewScreen(
             ) { item ->
                 ProjectCard(
                     projectUi = item,
+                    isEditModeActive = state.isEditModeActive,
+                    isSelected = item.projectId != null && item.projectId in state.selectedProjectIds,
                     onAction = onAction
                 )
 
@@ -177,6 +218,45 @@ fun ProjectOverviewScreen(
             AddNewProjectBottomSheet(
                 state = state,
                 onAction = onAction
+            )
+        }
+        if (state.isDeleteConfirmationDialogVisible) {
+            AlertDialog(
+                onDismissRequest = { onAction(ProjectOverviewAction.OnDismissDeleteDialog) },
+                icon = {
+                    Icon(
+                        imageVector = Icon_Delete,
+                        contentDescription = stringResource(Res.string.delete_selected),
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+
+                },
+                title = {
+                    Text(
+                        text = if(state.selectedProjectIds.size != 1)
+                            stringResource(Res.string.delete_projects_title)
+                        else stringResource(Res.string.delete_project_title)
+                    )
+                },
+                text = {
+                    Text(
+                        text = if(state.selectedProjectIds.size != 1)
+                            stringResource(
+                            Res.string.delete_projects_confirmation,
+                            state.selectedProjectIds.size
+                        ) else stringResource(Res.string.delete_one_project_confirmation)
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = { onAction(ProjectOverviewAction.OnConfirmDelete) }) {
+                        Text(text = stringResource(Res.string.confirm))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { onAction(ProjectOverviewAction.OnDismissDeleteDialog) }) {
+                        Text(text = stringResource(Res.string.cancel))
+                    }
+                }
             )
         }
     }

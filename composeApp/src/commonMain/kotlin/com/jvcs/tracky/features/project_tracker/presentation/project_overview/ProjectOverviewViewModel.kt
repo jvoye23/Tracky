@@ -71,6 +71,53 @@ class ProjectOverviewViewModel(
             ProjectOverviewAction.OnToggleViewMode -> {
                 _state.update { it.copy(isGridView = !it.isGridView) }
             }
+            is ProjectOverviewAction.OnProjectCardLongPress -> {
+                _state.update { it.copy(
+                    isEditModeActive = true,
+                    selectedProjectIds = it.selectedProjectIds + action.projectId
+                ) }
+            }
+            is ProjectOverviewAction.OnProjectCardToggleSelection -> {
+                _state.update {
+                    val updated = if (action.projectId in it.selectedProjectIds) {
+                        it.selectedProjectIds - action.projectId
+                    } else {
+                        it.selectedProjectIds + action.projectId
+                    }
+                    it.copy(
+                        selectedProjectIds = updated,
+                        isEditModeActive = updated.isNotEmpty()
+                    )
+                }
+            }
+            ProjectOverviewAction.OnExitEditMode -> {
+                _state.update { it.copy(
+                    isEditModeActive = false,
+                    selectedProjectIds = emptySet(),
+                    isDeleteConfirmationDialogVisible = false
+                ) }
+            }
+            ProjectOverviewAction.OnDeleteSelectedClick -> {
+                _state.update { it.copy(isDeleteConfirmationDialogVisible = true) }
+            }
+            ProjectOverviewAction.OnDismissDeleteDialog -> {
+                _state.update { it.copy(isDeleteConfirmationDialogVisible = false) }
+            }
+            ProjectOverviewAction.OnConfirmDelete -> {
+                deleteSelectedProjects()
+            }
+        }
+    }
+
+    private fun deleteSelectedProjects() {
+        val ids = _state.value.selectedProjectIds
+        viewModelScope.launch {
+            ids.forEach { projectRepository.deleteProject(it) }
+            _state.update { it.copy(
+                isEditModeActive = false,
+                selectedProjectIds = emptySet(),
+                isDeleteConfirmationDialogVisible = false
+            ) }
         }
     }
 

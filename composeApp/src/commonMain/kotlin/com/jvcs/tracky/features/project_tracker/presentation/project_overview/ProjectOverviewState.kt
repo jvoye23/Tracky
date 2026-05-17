@@ -11,5 +11,8 @@ data class ProjectOverviewState(
     val searchQuery: String = "",
     val projects: List<ProjectUi>? = null,
     val filteredProjects: List<ProjectUi>? = null,
-    val isGridView: Boolean = false
+    val isGridView: Boolean = false,
+    val isEditModeActive: Boolean = false,
+    val selectedProjectIds: Set<String> = emptySet(),
+    val isDeleteConfirmationDialogVisible: Boolean = false
 )

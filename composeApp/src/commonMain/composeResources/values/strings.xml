@@ -132,4 +132,15 @@
     <string name="select_color">Select Color</string>
     <string name="select">Select</string>
 
+    <!-- Edit mode -->
+    <string name="delete">Delete</string>
+    <string name="delete_projects_title">Delete selected projects?</string>
+    <string name="delete_project_title">Delete selected project?</string>
+    <string name="delete_projects_confirmation">Please confirm to delete %1$d projects. All selected projects will be moved to the trash bin and permanently removed from your account and all synced devices after 30 days.</string>
+    <string name="delete_one_project_confirmation">Please confirm to delete the selected project. It will be moved to the trash bin and permanently removed from your account and all synced devices after 30 days.</string>
+    <string name="exit_edit_mode">Exit edit mode</string>
+    <string name="delete_selected">Delete selected</string>
+    <string name="archive_selected">Archive selected</string>
+    <string name="file_export_selected">File export selected</string>
+
 </resources>

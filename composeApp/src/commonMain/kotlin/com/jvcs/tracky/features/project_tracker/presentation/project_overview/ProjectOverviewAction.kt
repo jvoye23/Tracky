@@ -13,4 +13,11 @@ sealed interface ProjectOverviewAction {
     data object OnMenuClick: ProjectOverviewAction
     data class OnSearchQueryChange(val query: String): ProjectOverviewAction
     data object OnToggleViewMode: ProjectOverviewAction
+
+    data class OnProjectCardLongPress(val projectId: String): ProjectOverviewAction
+    data class OnProjectCardToggleSelection(val projectId: String): ProjectOverviewAction
+    data object OnExitEditMode: ProjectOverviewAction
+    data object OnDeleteSelectedClick: ProjectOverviewAction
+    data object OnDismissDeleteDialog: ProjectOverviewAction
+    data object OnConfirmDelete: ProjectOverviewAction
 }
