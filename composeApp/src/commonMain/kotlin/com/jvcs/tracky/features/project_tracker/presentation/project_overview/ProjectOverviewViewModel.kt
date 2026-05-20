@@ -156,10 +156,11 @@ class ProjectOverviewViewModel(
             description = null,
             colorArgb = null,
             totalDurationMillis = null,
-            startDateTimeUtc = Clock.System.now().toString(),
+            startDateTimeUtc = Clock.System.now(),
             isFinished = false,
             endDateTimeUtc = null,
-            projectTasks = null
+            isArchived = false,
+            trashedAt = null
         )
 
 

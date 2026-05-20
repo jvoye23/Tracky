@@ -9,5 +9,5 @@ data class CreateProjectRequest(
     val description: String,
     val color: Int,
     val startDateTimeUtc: String,
-    val useLightTextColor: Boolean
+    val useLightTextColor: Boolean,
 )

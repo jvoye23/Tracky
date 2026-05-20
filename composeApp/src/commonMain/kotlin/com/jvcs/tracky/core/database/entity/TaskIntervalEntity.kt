@@ -8,7 +8,7 @@ data class TaskIntervalEntity(
     @PrimaryKey(autoGenerate = false)
     val intervalId: String,
     val parentTaskId: String,
-    val startDateTimeUtc: String,
-    val endDateTimeUtc: String?,
+    val startDateTimeEpochMs: Long,
+    val endDateTimeEpochMs: Long?,
     val durationMillis: Long
 )

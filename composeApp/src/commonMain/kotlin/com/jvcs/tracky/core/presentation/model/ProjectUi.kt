@@ -6,7 +6,7 @@ import com.jvcs.tracky.design_system.util.parseDuration
 import kotlin.time.Duration
 
 data class ProjectUi(
-    val projectId: String?, // null when creating a new project
+    val projectId: String,
     val title: String,
     val description: String?,
     val color: Color?,

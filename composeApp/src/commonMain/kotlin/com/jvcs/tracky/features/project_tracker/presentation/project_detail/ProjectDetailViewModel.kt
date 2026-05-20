@@ -149,16 +149,16 @@ class ProjectDetailViewModel(
 
     private fun createProjectTask(projectTaskTitle: String) {
         viewModelScope.launch {
-            val currentProject = state.value.project
+            val currentProject = state.value.project ?: return@launch
 
             val newProjectTask = ProjectTask(
                 projectTaskId = Uuid.random().toString(),
                 title = projectTaskTitle,
                 durationMillis = 0L,
-                startDateTimeUtc = Clock.System.now().toString(),
+                startDateTimeUtc = Clock.System.now(),
                 endDateTimeUtc = null,
                 isFinished = false,
-                parentProjectId = state.value.project?.projectId!!,
+                parentProjectId = currentProject.projectId,
                 isTimerRunning = false
             )
 
