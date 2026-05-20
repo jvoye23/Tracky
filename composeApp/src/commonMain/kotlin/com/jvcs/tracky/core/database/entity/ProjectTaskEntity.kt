@@ -25,8 +25,8 @@ data class ProjectTaskEntity(
     val parentProjectId: String, // The Foreign Key link
     val description: String,
     val durationMillis: Long,
-    val startDateTimeUtc: String,
-    val endDateTimeUtc: String?,
+    val startDateTimeEpochMs: Long,
+    val endDateTimeEpochMs: Long?,
     val isFinished: Boolean,
     val isTimerRunning: Boolean
 )

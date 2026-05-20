@@ -1,6 +1,5 @@
 package com.jvcs.tracky.core.data.networking.dto
 
-import com.jvcs.tracky.core.domain.model.ProjectTask
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -12,8 +11,35 @@ data class ProjectDto(
     val totalDuration: Long?,
     val startDateTimeUtc: String,
     val useLightTextColor: Boolean,
+    val endDateTimeUtc: String? = null,
+    val tasks: List<ProjectTaskDto>?,
+    val finished: Boolean = false,
+    val isArchived: Boolean = false,
+    val trashedAt: String? = null,
+    val isPinned: Boolean = false
+)
+
+@Serializable
+data class ProjectTaskDto(
+    val projectTaskId: String,
+    val title: String,
+    val durationMillis: Long?,
+    val startDateTimeUtc: String,
+    val endDateTimeUtc: String? = null,
+    val isFinished: Boolean = false,
+    val parentProjectId: String,
+    val isTimerRunning: Boolean,
+    val intervals: List<TaskIntervalDto> = emptyList()
+
+)
+
+
+@Serializable
+data class TaskIntervalDto(
+    val intervalId: String,
+    val parentSessionId: String,
+    val startDateTimeUtc: String,
     val endDateTimeUtc: String?,
-    val tasks: List<ProjectTask>?,
-    val finished: Boolean = false
+    val durationMillis: Long
 
 )

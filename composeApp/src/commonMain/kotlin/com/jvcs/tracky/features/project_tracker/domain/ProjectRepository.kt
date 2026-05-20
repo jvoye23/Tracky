@@ -17,7 +17,6 @@ interface ProjectRepository {
     suspend fun getProjectWithTasksByProjectId(projectId: String): Project?
     suspend fun upsertProject(project: Project): EmptyResult<DataError>
     suspend fun upsertProjectTask(projectTask: ProjectTask): EmptyResult<DataError>
-    suspend fun updateProject(project: Project): Result<String, DataError>
     suspend fun deleteProject(projectId: String)
     suspend fun deleteProjectTask(taskId: String)
     suspend fun deleteAllProjects()
@@ -31,5 +30,4 @@ interface ProjectRepository {
     suspend fun startTask(taskId: String)
     suspend fun stopTask(taskId: String)
     suspend fun updateTaskTitle(taskId: String, title: String)
-
 }

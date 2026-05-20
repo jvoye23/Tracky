@@ -18,7 +18,7 @@ import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
         ProjectTaskEntity::class,
         TaskIntervalEntity::class
     ],
-    version = 6,
+    version = 8,
 )
 @TypeConverters(RoomConverters::class)
 @ConstructedBy(TrackyDatabaseConstructor::class)
@@ -179,6 +179,121 @@ abstract class TrackyDatabase: RoomDatabase() {
                 )
                 connection.execSQL("DROP TABLE task_intervals")
                 connection.execSQL("ALTER TABLE task_intervals_new RENAME TO task_intervals")
+            }
+        }
+
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(connection: SQLiteConnection) {
+                // All three tables: convert ISO-8601 TEXT date columns to INTEGER epoch ms,
+                // rename them with the EpochMs suffix. projects also gains isArchived and
+                // trashedAtEpochMs columns. ISO strings are converted via julianday so
+                // millisecond precision is preserved.
+
+                // projects
+                connection.execSQL(
+                    """
+                    CREATE TABLE projects_new (
+                        projectId TEXT NOT NULL PRIMARY KEY,
+                        title TEXT NOT NULL,
+                        description TEXT,
+                        color INTEGER,
+                        totalDuration INTEGER,
+                        startDateTimeEpochMs INTEGER NOT NULL,
+                        isFinished INTEGER NOT NULL,
+                        useLightTextColor INTEGER NOT NULL DEFAULT 0,
+                        endDateTimeEpochMs INTEGER,
+                        isArchived INTEGER NOT NULL DEFAULT 0,
+                        trashedAtEpochMs INTEGER
+                    )
+                    """.trimIndent()
+                )
+                connection.execSQL(
+                    """
+                    INSERT INTO projects_new
+                      (projectId, title, description, color, totalDuration,
+                       startDateTimeEpochMs, isFinished, useLightTextColor, endDateTimeEpochMs,
+                       isArchived, trashedAtEpochMs)
+                    SELECT projectId, title, description, color, totalDuration,
+                           CAST(round((julianday(startDateTimeUtc) - 2440587.5) * 86400000) AS INTEGER),
+                           isFinished, useLightTextColor,
+                           CASE WHEN endDateTimeUtc IS NULL THEN NULL
+                                ELSE CAST(round((julianday(endDateTimeUtc) - 2440587.5) * 86400000) AS INTEGER) END,
+                           0, NULL
+                    FROM projects
+                    """.trimIndent()
+                )
+                connection.execSQL("DROP TABLE projects")
+                connection.execSQL("ALTER TABLE projects_new RENAME TO projects")
+
+                // project_records (ProjectTaskEntity)
+                connection.execSQL(
+                    """
+                    CREATE TABLE project_records_new (
+                        recordId TEXT NOT NULL PRIMARY KEY,
+                        parentProjectId TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        durationMillis INTEGER NOT NULL,
+                        startDateTimeEpochMs INTEGER NOT NULL,
+                        endDateTimeEpochMs INTEGER,
+                        isFinished INTEGER NOT NULL,
+                        isTimerRunning INTEGER NOT NULL,
+                        FOREIGN KEY(parentProjectId) REFERENCES projects(projectId) ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                connection.execSQL(
+                    """
+                    INSERT INTO project_records_new
+                      (recordId, parentProjectId, description, durationMillis,
+                       startDateTimeEpochMs, endDateTimeEpochMs, isFinished, isTimerRunning)
+                    SELECT recordId, parentProjectId, description, durationMillis,
+                           CAST(round((julianday(startDateTimeUtc) - 2440587.5) * 86400000) AS INTEGER),
+                           CASE WHEN endDateTimeUtc IS NULL THEN NULL
+                                ELSE CAST(round((julianday(endDateTimeUtc) - 2440587.5) * 86400000) AS INTEGER) END,
+                           isFinished, isTimerRunning
+                    FROM project_records
+                    """.trimIndent()
+                )
+                connection.execSQL("DROP TABLE project_records")
+                connection.execSQL("ALTER TABLE project_records_new RENAME TO project_records")
+                connection.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_project_records_parentProjectId ON project_records(parentProjectId)"
+                )
+
+                // task_intervals
+                connection.execSQL(
+                    """
+                    CREATE TABLE task_intervals_new (
+                        intervalId TEXT NOT NULL PRIMARY KEY,
+                        parentTaskId TEXT NOT NULL,
+                        startDateTimeEpochMs INTEGER NOT NULL,
+                        endDateTimeEpochMs INTEGER,
+                        durationMillis INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                connection.execSQL(
+                    """
+                    INSERT INTO task_intervals_new
+                      (intervalId, parentTaskId, startDateTimeEpochMs, endDateTimeEpochMs, durationMillis)
+                    SELECT intervalId, parentTaskId,
+                           CAST(round((julianday(startDateTimeUtc) - 2440587.5) * 86400000) AS INTEGER),
+                           CASE WHEN endDateTimeUtc IS NULL THEN NULL
+                                ELSE CAST(round((julianday(endDateTimeUtc) - 2440587.5) * 86400000) AS INTEGER) END,
+                           durationMillis
+                    FROM task_intervals
+                    """.trimIndent()
+                )
+                connection.execSQL("DROP TABLE task_intervals")
+                connection.execSQL("ALTER TABLE task_intervals_new RENAME TO task_intervals")
+            }
+        }
+
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL(
+                    "ALTER TABLE projects ADD COLUMN isPinned INTEGER NOT NULL DEFAULT 0"
+                )
             }
         }
     }

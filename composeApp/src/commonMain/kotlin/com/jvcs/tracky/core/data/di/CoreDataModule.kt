@@ -53,6 +53,8 @@ val coreDataModule = module {
                 TrackyDatabase.MIGRATION_3_4,
                 TrackyDatabase.MIGRATION_4_5,
                 TrackyDatabase.MIGRATION_5_6,
+                TrackyDatabase.MIGRATION_6_7,
+                TrackyDatabase.MIGRATION_7_8,
             )
             .setDriver(BundledSQLiteDriver())
             .build()

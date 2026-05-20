@@ -1,6 +1,5 @@
 package com.jvcs.tracky.features.project_tracker.data
 
-import com.jvcs.tracky.core.data.networking.mappers.toProject
 import com.jvcs.tracky.core.domain.RemoteProjectDataSource
 import com.jvcs.tracky.core.domain.model.Project
 import com.jvcs.tracky.core.domain.model.ProjectTask
@@ -48,8 +47,7 @@ class OfflineFirstProjectRepository(
         if (localResult !is Result.Success) {
             return localResult.asEmptyDataResult()
         }
-        val projectWithId = project.copy(projectId = localResult.data)
-        return when (val remoteResult = remoteProjectDataSource.postProject(projectWithId)) {
+        return when (val remoteResult = remoteProjectDataSource.postProject(project)) {
             is Result.Error -> remoteResult.asEmptyDataResult()
             is Result.Success -> {
                 applicationScope.async {
@@ -65,10 +63,9 @@ class OfflineFirstProjectRepository(
         if (localResult !is Result.Success) {
             return localResult.asEmptyDataResult()
         }
-        val projectTaskWithId = projectTask.copy(projectTaskId = localResult.data)
         return when (val remoteResult = remoteProjectDataSource.postTaskByProjectId(
-            projectId = projectTaskWithId.parentProjectId,
-            task = projectTaskWithId
+            projectId = projectTask.parentProjectId,
+            task = projectTask
         )) {
             is Result.Error -> remoteResult.asEmptyDataResult()
             is Result.Success -> {
@@ -78,10 +75,6 @@ class OfflineFirstProjectRepository(
                 Result.Success(Unit)
             }
         }
-    }
-
-    override suspend fun updateProject(project: Project): Result<String, DataError> {
-        return localProjectDataSource.upsertProject(project)
     }
 
     override suspend fun deleteProject(projectId: String) {

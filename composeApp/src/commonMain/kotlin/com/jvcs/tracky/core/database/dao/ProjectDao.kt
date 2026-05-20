@@ -7,7 +7,7 @@ import androidx.room.Upsert
 import com.jvcs.tracky.core.database.entity.ProjectEntity
 import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
-import com.jvcs.tracky.core.database.relation.ProjectWithTasks
+import com.jvcs.tracky.core.database.relation.ProjectWithTasksEntity
 import com.jvcs.tracky.core.database.relation.TaskWithIntervals
 import kotlinx.coroutines.flow.Flow
 
@@ -33,11 +33,11 @@ interface ProjectDao {
 
     @Transaction
     @Query("SELECT * FROM projects")
-    fun getProjectsWithTasks(): Flow<List<ProjectWithTasks>>
+    fun getProjectsWithTasks(): Flow<List<ProjectWithTasksEntity>>
 
     @Transaction
     @Query("SELECT * FROM projects WHERE projectId = :projectId")
-    suspend fun getProjectWithTasksById(projectId: String): ProjectWithTasks?
+    suspend fun getProjectWithTasksById(projectId: String): ProjectWithTasksEntity?
 
     @Upsert
     suspend fun upsertProjectRecord(record: ProjectTaskEntity)
@@ -58,7 +58,7 @@ interface ProjectDao {
     @Query("DELETE FROM task_intervals WHERE parentTaskId = :taskId")
     suspend fun deleteIntervalsByTaskId(taskId: String)
 
-    @Query("SELECT * FROM task_intervals WHERE parentTaskId = :sessionId AND endDateTimeUtc IS NULL LIMIT 1")
+    @Query("SELECT * FROM task_intervals WHERE parentTaskId = :sessionId AND endDateTimeEpochMs IS NULL LIMIT 1")
     suspend fun getOpenIntervalBySessionId(sessionId: String): TaskIntervalEntity?
 
     @Query("UPDATE project_records SET isTimerRunning = :isRunning WHERE recordId = :sessionId")

@@ -18,6 +18,7 @@ import com.jvcs.tracky.core.mapper.toSessionInterval
 import com.jvcs.tracky.core.mapper.toSessionIntervalEntity
 import com.jvcs.tracky.features.project_tracker.domain.LocalProjectDataSource
 import com.jvcs.tracky.features.project_tracker.domain.ProjectId
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlin.time.Clock
@@ -44,30 +45,33 @@ class RoomLocalProjectDataSource (
         return projectDao.getProjectWithTasksById(projectId)?.toProject()
     }
 
-    override suspend fun upsertProject(project: Project): Result<ProjectId, DataError.Local> {
+    override suspend fun upsertProject(project: Project): EmptyResult<DataError> {
         return try {
             projectDao.upsertProject(project.toProjectEntity())
-            Result.Success(data = project.projectId)
+            Result.Success(Unit)
 
         } catch (e: Exception) {
+            if(e is CancellationException) throw e
             Result.Error(DataError.Local.DISK_FULL)
         }
     }
 
-    override suspend fun upsertProjects(projects: List<Project>): Result<String, DataError> {
+    override suspend fun upsertProjects(projects: List<Project>): EmptyResult<DataError> {
         return try {
             projectDao.upsertProjects(projects.map { it.toProjectEntity() })
-            Result.Success("")
+            Result.Success(Unit)
         } catch (e: Exception) {
+            if(e is CancellationException) throw e
             Result.Error(DataError.Local.DISK_FULL)
         }
     }
 
-    override suspend fun upsertProjectTask(projectTask: ProjectTask): Result<String, DataError.Local> {
+    override suspend fun upsertProjectTask(projectTask: ProjectTask): EmptyResult<DataError> {
         return try {
             val result = projectDao.upsertProjectRecord(projectTask.toProjectSessionEntity())
-            Result.Success(result.toString())
+            Result.Success(Unit)
         } catch (e: Exception) {
+            if(e is CancellationException) throw e
             Result.Error(DataError.Local.DISK_FULL)
         }
     }
@@ -101,6 +105,7 @@ class RoomLocalProjectDataSource (
             projectDao.upsertTaskInterval(interval.toSessionIntervalEntity())
             Result.Success(Unit)
         } catch (e: Exception) {
+            if(e is CancellationException) throw e
             Result.Error(DataError.Local.DISK_FULL)
         }
     }
@@ -114,8 +119,8 @@ class RoomLocalProjectDataSource (
         val interval = TaskIntervalEntity(
             intervalId = Uuid.random().toString(),
             parentTaskId = taskId,
-            startDateTimeUtc = now.toString(),
-            endDateTimeUtc = null,
+            startDateTimeEpochMs = now.toEpochMilliseconds(),
+            endDateTimeEpochMs = null,
             durationMillis = 0L
         )
         projectDao.upsertTaskInterval(interval)
@@ -126,10 +131,10 @@ class RoomLocalProjectDataSource (
         val openInterval = projectDao.getOpenIntervalBySessionId(taskId)
         if (openInterval != null) {
             val now = Clock.System.now()
-            val startInstant = Instant.parse(openInterval.startDateTimeUtc)
+            val startInstant = Instant.fromEpochMilliseconds(openInterval.startDateTimeEpochMs)
             val duration = (now - startInstant).inWholeMilliseconds
             val updatedInterval = openInterval.copy(
-                endDateTimeUtc = now.toString(),
+                endDateTimeEpochMs = now.toEpochMilliseconds(),
                 durationMillis = duration
             )
             projectDao.upsertTaskInterval(updatedInterval)

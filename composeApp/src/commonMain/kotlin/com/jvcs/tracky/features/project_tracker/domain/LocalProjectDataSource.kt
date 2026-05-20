@@ -14,9 +14,9 @@ interface LocalProjectDataSource {
     fun getProjects(): Flow<List<Project>>
     suspend fun getProjectById(projectId: String): Project?
     suspend fun getProjectWithTasksByProjectId(projectId: String): Project?
-    suspend fun upsertProject(project: Project): Result<ProjectId, DataError.Local>
-    suspend fun upsertProjects(projects: List<Project>): Result<String, DataError>
-    suspend fun upsertProjectTask(projectTask: ProjectTask): Result<String, DataError>
+    suspend fun upsertProject(project: Project): EmptyResult<DataError>
+    suspend fun upsertProjects(projects: List<Project>): EmptyResult<DataError>
+    suspend fun upsertProjectTask(projectTask: ProjectTask): EmptyResult<DataError>
     suspend fun deleteProject(projectId: String)
     suspend fun deleteProjectTask(taskId: String)
     suspend fun deleteAllProjects()

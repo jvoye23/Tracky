@@ -1,5 +1,6 @@
 package com.jvcs.tracky.core.data.networking
 
+import com.jvcs.tracky.core.data.networking.dto.TaskIntervalDto
 import com.jvcs.tracky.core.domain.model.TaskInterval
 import kotlinx.serialization.Serializable
 
@@ -9,7 +10,7 @@ data class CreateProjectTaskRequest(
     val durationMillis: Long,
     val startDateTimeUtc: String,
     val endDateTimeUtc: String?,
-    val intervals: List<TaskInterval>,
+    val intervals: List<TaskIntervalDto>,
     val finished: Boolean,
     val timerRunning: Boolean
 )

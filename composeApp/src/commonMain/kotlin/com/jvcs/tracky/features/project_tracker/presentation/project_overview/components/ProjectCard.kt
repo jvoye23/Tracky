@@ -36,7 +36,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jvcs.tracky.core.presentation.model.ProjectUi
-import com.jvcs.tracky.design_system.Icon_CheckCircle
 import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.design_system.theme.timerStyle
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.ProjectOverviewAction
@@ -74,11 +73,11 @@ fun ProjectCard(
         modifier = modifier
             .combinedClickable(
                 onLongClick = {
-                    val id = projectUi.projectId ?: return@combinedClickable
+                    val id = projectUi.projectId
                     onAction(ProjectOverviewAction.OnProjectCardLongPress(id))
                 },
                 onClick = {
-                    val id = projectUi.projectId ?: return@combinedClickable
+                    val id = projectUi.projectId
                     if (isEditModeActive) {
                         onAction(ProjectOverviewAction.OnProjectCardToggleSelection(id))
                     } else {
@@ -109,7 +108,7 @@ fun ProjectCard(
                     Checkbox(
                         checked = isSelected ,
                         onCheckedChange = {
-                            onAction(ProjectOverviewAction.OnProjectCardToggleSelection(projectUi.projectId ?: return@Checkbox))
+                            onAction(ProjectOverviewAction.OnProjectCardToggleSelection(projectUi.projectId))
                         },
                     )
                     Spacer(modifier = Modifier.width(8.dp))
