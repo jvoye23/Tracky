@@ -31,6 +31,8 @@ fun Project.toProjectEntity(): ProjectEntity {
         isArchived = isArchived,
         trashedAtEpochMs = trashedAt?.toEpochMilliseconds(),
         isPinned = isPinned,
+        isSynced = isSynced,
+        isDeleted = isDeleted,
     )
 }
 
@@ -48,6 +50,8 @@ fun ProjectEntity.toProject(): Project {
         isArchived = isArchived,
         trashedAt = trashedAtEpochMs?.let(Instant::fromEpochMilliseconds),
         isPinned = isPinned,
+        isSynced = isSynced,
+        isDeleted = isDeleted,
     )
 }
 
@@ -66,6 +70,8 @@ fun ProjectWithTasksEntity.toProject(): Project {
         isArchived = project.isArchived,
         trashedAt = project.trashedAtEpochMs?.let(Instant::fromEpochMilliseconds),
         isPinned = project.isPinned,
+        isSynced = project.isSynced,
+        isDeleted = project.isDeleted,
     )
 }
 
@@ -78,7 +84,9 @@ fun ProjectTaskEntity.toProjectSession(): ProjectTask {
         endDateTimeUtc = endDateTimeEpochMs?.let(Instant::fromEpochMilliseconds),
         isFinished = isFinished,
         parentProjectId = parentProjectId,
-        isTimerRunning = isTimerRunning
+        isTimerRunning = isTimerRunning,
+        isSynced = isSynced,
+        isDeleted = isDeleted
     )
 }
 
@@ -92,7 +100,9 @@ fun TaskWithIntervals.toProjectSession(): ProjectTask {
         isFinished = task.isFinished,
         parentProjectId = task.parentProjectId,
         isTimerRunning = task.isTimerRunning,
-        intervals = intervals.map { it.toSessionInterval() }
+        intervals = intervals.map { it.toSessionInterval() },
+        isSynced = task.isSynced,
+        isDeleted = task.isDeleted
     )
 }
 
@@ -105,7 +115,9 @@ fun ProjectTask.toProjectSessionEntity(): ProjectTaskEntity {
         startDateTimeEpochMs = startDateTimeUtc.toEpochMilliseconds(),
         endDateTimeEpochMs = endDateTimeUtc?.toEpochMilliseconds(),
         isFinished = isFinished,
-        isTimerRunning = isTimerRunning
+        isTimerRunning = isTimerRunning,
+        isSynced = isSynced,
+        isDeleted = isDeleted
     )
 }
 
@@ -148,8 +160,8 @@ fun Project.toUpdateProjectRequest(): UpdateProjectRequest {
         totalDuration = totalDurationMillis,
         startDateTimeUtc = startDateTimeUtc.toString(),
         useLightTextColor = useLightTextColor,
-        endDateTimeUtc = endDateTimeUtc.toString(),
-        trashedAtUtc = trashedAt.toString(),
+        endDateTimeUtc = endDateTimeUtc?.toString(),
+        trashedAtUtc = trashedAt?.toString(),
         pinned = isPinned,
         finished = isFinished,
         archived = isArchived

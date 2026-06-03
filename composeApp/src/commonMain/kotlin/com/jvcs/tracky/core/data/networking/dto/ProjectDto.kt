@@ -21,16 +21,14 @@ data class ProjectDto(
 
 @Serializable
 data class ProjectTaskDto(
-    val projectTaskId: String,
-    val title: String,
-    val durationMillis: Long?,
+    val id: String,
+    val description: String? = null,
+    val durationMillis: Long? = null,
     val startDateTimeUtc: String,
     val endDateTimeUtc: String? = null,
     val isFinished: Boolean = false,
-    val parentProjectId: String,
-    val isTimerRunning: Boolean,
+    val isTimerRunning: Boolean = false,
     val intervals: List<TaskIntervalDto> = emptyList()
-
 )
 
 

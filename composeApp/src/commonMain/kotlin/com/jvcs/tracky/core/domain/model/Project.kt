@@ -17,6 +17,8 @@ data class Project(
     val isArchived: Boolean = false,
     val trashedAt: Instant? = null,
     val isPinned: Boolean = false,
+    val isSynced: Boolean = false,
+    val isDeleted: Boolean = false,
 )
 
 data class ProjectWithTask(
@@ -33,7 +35,9 @@ data class ProjectTask(
     val isFinished: Boolean = false,
     val parentProjectId: String,
     val isTimerRunning: Boolean,
-    val intervals: List<TaskInterval> = emptyList()
+    val intervals: List<TaskInterval> = emptyList(),
+    val isSynced: Boolean = false,
+    val isDeleted: Boolean = false
 )
 
 data class TaskInterval(

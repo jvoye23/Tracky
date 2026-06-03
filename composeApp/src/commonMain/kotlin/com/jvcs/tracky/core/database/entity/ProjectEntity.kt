@@ -18,4 +18,6 @@ data class ProjectEntity(
     val isArchived: Boolean = false,
     val trashedAtEpochMs: Long? = null,
     val isPinned: Boolean = false,
+    val isSynced: Boolean = false,
+    val isDeleted: Boolean = false,
 )

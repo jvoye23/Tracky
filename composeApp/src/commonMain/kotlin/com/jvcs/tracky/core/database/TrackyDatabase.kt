@@ -18,7 +18,7 @@ import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
         ProjectTaskEntity::class,
         TaskIntervalEntity::class
     ],
-    version = 8,
+    version = 9,
 )
 @TypeConverters(RoomConverters::class)
 @ConstructedBy(TrackyDatabaseConstructor::class)
@@ -294,6 +294,15 @@ abstract class TrackyDatabase: RoomDatabase() {
                 connection.execSQL(
                     "ALTER TABLE projects ADD COLUMN isPinned INTEGER NOT NULL DEFAULT 0"
                 )
+            }
+        }
+
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE projects ADD COLUMN isSynced INTEGER NOT NULL DEFAULT 0")
+                connection.execSQL("ALTER TABLE projects ADD COLUMN isDeleted INTEGER NOT NULL DEFAULT 0")
+                connection.execSQL("ALTER TABLE project_records ADD COLUMN isSynced INTEGER NOT NULL DEFAULT 0")
+                connection.execSQL("ALTER TABLE project_records ADD COLUMN isDeleted INTEGER NOT NULL DEFAULT 0")
             }
         }
     }

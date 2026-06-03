@@ -25,11 +25,16 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
@@ -44,6 +49,7 @@ import com.jvcs.tracky.features.project_tracker.presentation.project_overview.co
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectCard
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectOverViewTopBar
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectOverviewEditModeTopBar
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import tracky.composeapp.generated.resources.Res
@@ -69,24 +75,26 @@ fun ProjectOverviewScreenRoot(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    // TODO: Handle context for Toast
-    //val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
     ObserveAsEvents(viewModel.events) { event ->
         when(event) {
             is ProjectOverviewEvent.Error -> {
-                /* Toast.makeText(
-                    context,
-                    event.error.asString(context),
-                    Toast.LENGTH_LONG
-                ).show()*/
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar(
+                        message = event.error.toString(),
+                        duration = SnackbarDuration.Short
+                    )
+                }
             }
             is ProjectOverviewEvent.NewProjectSaved -> {
-                /*Toast.makeText(
-                    context,
-                    R.string.tasky_item_saved,
-                    Toast.LENGTH_LONG
-                ).show()*/
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar(
+                        message = "Project saved successfully!",
+                        duration = SnackbarDuration.Short
+                    )
+                }
                 onNavigateToDetailScreen(event.projectId)
             }
 
@@ -110,7 +118,8 @@ fun ProjectOverviewScreenRoot(
         state = state,
         username = username,
         email = email,
-        onLogout = onLogout
+        onLogout = onLogout,
+        snackbarHostState = snackbarHostState
     )
 }
 
@@ -121,12 +130,16 @@ fun ProjectOverviewScreen(
     username: String?,
     email: String?,
     onLogout: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    snackbarHostState: SnackbarHostState
 ) {
 
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
     Scaffold(
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState)
+        },
         modifier = Modifier
             .fillMaxSize()
             .nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -271,6 +284,7 @@ fun ProjectOverviewScreenPreview() {
         state = ProjectOverviewState(),
         username = "JoergVoye",
         email = "joerg@example.com",
-        onLogout = {}
+        onLogout = {},
+        snackbarHostState = SnackbarHostState()
     )
 }

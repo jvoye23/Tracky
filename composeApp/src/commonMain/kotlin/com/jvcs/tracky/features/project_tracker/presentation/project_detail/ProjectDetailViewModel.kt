@@ -170,7 +170,7 @@ class ProjectDetailViewModel(
                     _state.update { it.copy(
                         isAddNewProjectTaskBottomSheetVisible = false,
                         addProjectTaskTextFieldState = TextFieldState(),
-                        project = currentProject?.copy(
+                        project = currentProject.copy(
                             projectTasks = currentProject.projectTasks?.plus(newProjectTask.toProjectTaskUi())
                         )
                     ) }
