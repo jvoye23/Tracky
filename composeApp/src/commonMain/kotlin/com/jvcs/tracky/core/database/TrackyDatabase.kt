@@ -7,7 +7,9 @@ import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.execSQL
+import com.jvcs.tracky.core.database.dao.PendingSyncDao
 import com.jvcs.tracky.core.database.dao.ProjectDao
+import com.jvcs.tracky.core.database.entity.PendingSyncEntity
 import com.jvcs.tracky.core.database.entity.ProjectEntity
 import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
@@ -16,7 +18,8 @@ import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
     entities = [
         ProjectEntity::class,
         ProjectTaskEntity::class,
-        TaskIntervalEntity::class
+        TaskIntervalEntity::class,
+        PendingSyncEntity::class
     ],
     version = 9,
 )
@@ -24,6 +27,7 @@ import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 @ConstructedBy(TrackyDatabaseConstructor::class)
 abstract class TrackyDatabase: RoomDatabase() {
     abstract val projectDao: ProjectDao
+    abstract val pendingSyncDao: PendingSyncDao
 
     companion object {
         const val DB_NAME = "tracky.db"
@@ -299,10 +303,17 @@ abstract class TrackyDatabase: RoomDatabase() {
 
         val MIGRATION_8_9 = object : Migration(8, 9) {
             override fun migrate(connection: SQLiteConnection) {
-                connection.execSQL("ALTER TABLE projects ADD COLUMN isSynced INTEGER NOT NULL DEFAULT 0")
-                connection.execSQL("ALTER TABLE projects ADD COLUMN isDeleted INTEGER NOT NULL DEFAULT 0")
-                connection.execSQL("ALTER TABLE project_records ADD COLUMN isSynced INTEGER NOT NULL DEFAULT 0")
-                connection.execSQL("ALTER TABLE project_records ADD COLUMN isDeleted INTEGER NOT NULL DEFAULT 0")
+                connection.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS pending_sync_operations (
+                        operationId TEXT NOT NULL PRIMARY KEY,
+                        entityId TEXT NOT NULL,
+                        entityType TEXT NOT NULL,
+                        operationType TEXT NOT NULL,
+                        createdAtEpochMs INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
             }
         }
     }

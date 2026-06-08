@@ -28,7 +28,5 @@ data class ProjectTaskEntity(
     val startDateTimeEpochMs: Long,
     val endDateTimeEpochMs: Long?,
     val isFinished: Boolean,
-    val isTimerRunning: Boolean,
-    val isSynced: Boolean = false,
-    val isDeleted: Boolean = false
+    val isTimerRunning: Boolean
 )

@@ -1,6 +1,5 @@
 package com.jvcs.tracky.features.project_tracker.data
 
-import com.jvcs.tracky.core.data.networking.safeCall
 import com.jvcs.tracky.core.domain.RemoteProjectDataSource
 import com.jvcs.tracky.core.domain.model.Project
 import com.jvcs.tracky.core.domain.model.ProjectTask
@@ -9,11 +8,8 @@ import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.asEmptyDataResult
-import com.jvcs.tracky.core.domain.util.onFailure
-import com.jvcs.tracky.core.domain.util.onSuccess
 import com.jvcs.tracky.features.project_tracker.domain.LocalProjectDataSource
 import com.jvcs.tracky.features.project_tracker.domain.ProjectRepository
-import io.ktor.http.cio.Response
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
@@ -48,14 +44,16 @@ class OfflineFirstProjectRepository(
     }
 
     override suspend fun upsertProject(project: Project): EmptyResult<DataError> {
-        localProjectDataSource.upsertProject(project)
+        val localResult = localProjectDataSource.upsertProject(project)
+        if (localResult !is Result.Success) {
+            return localResult.asEmptyDataResult()
+        }
+
         return when (val remoteResult = remoteProjectDataSource.postProject(project)) {
             is Result.Error -> remoteResult.asEmptyDataResult()
             is Result.Success -> {
                 applicationScope.launch {
-                    localProjectDataSource.upsertProject(project.copy(
-                        isSynced = true
-                    ))
+                    localProjectDataSource.upsertProject(project)
                 }
                 Result.Success(Unit)
             }
@@ -63,7 +61,10 @@ class OfflineFirstProjectRepository(
     }
 
     override suspend fun upsertProjectTask(projectTask: ProjectTask): EmptyResult<DataError> {
-        localProjectDataSource.upsertProjectTask(projectTask)
+        val localResult = localProjectDataSource.upsertProjectTask(projectTask)
+        if (localResult !is Result.Success) {
+            return localResult.asEmptyDataResult()
+        }
         return when (val remoteResult = remoteProjectDataSource.postTaskByProjectId(
             projectId = projectTask.parentProjectId,
             task = projectTask
@@ -71,9 +72,7 @@ class OfflineFirstProjectRepository(
             is Result.Error -> remoteResult.asEmptyDataResult()
             is Result.Success -> {
                 applicationScope.launch {
-                    localProjectDataSource.upsertProjectTask(projectTask.copy(
-                        isSynced = true
-                    ))
+                    localProjectDataSource.upsertProjectTask(projectTask)
                 }
                 Result.Success(Unit)
             }

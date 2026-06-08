@@ -28,6 +28,7 @@ val coreDataModule = module {
     includes(platformCoreDataModule)
 
     single { get<TrackyDatabase>().projectDao }
+    single { get<TrackyDatabase>().pendingSyncDao }
 
     singleOf(::RoomLocalProjectDataSource) bind LocalProjectDataSource::class
     singleOf(::KtorRemoteProjectDataSource) bind RemoteProjectDataSource::class
