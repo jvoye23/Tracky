@@ -28,6 +28,7 @@ val coreDataModule = module {
     includes(platformCoreDataModule)
 
     single { get<TrackyDatabase>().projectDao }
+    single { get<TrackyDatabase>().pendingSyncDao }
 
     singleOf(::RoomLocalProjectDataSource) bind LocalProjectDataSource::class
     singleOf(::KtorRemoteProjectDataSource) bind RemoteProjectDataSource::class
@@ -55,6 +56,7 @@ val coreDataModule = module {
                 TrackyDatabase.MIGRATION_5_6,
                 TrackyDatabase.MIGRATION_6_7,
                 TrackyDatabase.MIGRATION_7_8,
+                TrackyDatabase.MIGRATION_8_9,
             )
             .setDriver(BundledSQLiteDriver())
             .build()

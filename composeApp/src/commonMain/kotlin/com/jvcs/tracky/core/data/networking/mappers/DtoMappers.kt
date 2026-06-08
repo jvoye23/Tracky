@@ -22,17 +22,17 @@ fun ProjectDto.toProject(): Project {
         isFinished = finished,
         useLightTextColor = useLightTextColor,
         endDateTimeUtc = endDateTimeUtc?.let(Instant::parse),
-        projectTasks = tasks?.map { it.toProjectTask() } ?: emptyList(),
+        projectTasks = tasks?.map { it.toProjectTask(id) } ?: emptyList(),
         isArchived = isArchived,
         trashedAt = trashedAt?.let(Instant::parse),
         isPinned = isPinned,
     )
 }
 
-fun ProjectTaskDto.toProjectTask(): ProjectTask {
+fun ProjectTaskDto.toProjectTask(parentProjectId: String): ProjectTask {
     return ProjectTask(
-        projectTaskId = projectTaskId,
-        title = title,
+        projectTaskId = id,
+        title = description ?: "",
         durationMillis = durationMillis,
         startDateTimeUtc = Instant.parse(startDateTimeUtc),
         endDateTimeUtc = endDateTimeUtc?.let(Instant::parse),
@@ -73,13 +73,12 @@ fun Project.toProjectDto(): ProjectDto {
 
 fun ProjectTask.toProjectTaskDto(): ProjectTaskDto {
     return ProjectTaskDto(
-        projectTaskId = projectTaskId,
-        title = title,
+        id = projectTaskId,
+        description = title,
         durationMillis = durationMillis,
         startDateTimeUtc = startDateTimeUtc.toString(),
-        endDateTimeUtc = endDateTimeUtc.toString(),
+        endDateTimeUtc = endDateTimeUtc?.toString(),
         isFinished = isFinished,
-        parentProjectId = parentProjectId,
         isTimerRunning = isTimerRunning,
         intervals = intervals.map { it.toTaskIntervalDto() }
     )
@@ -90,7 +89,7 @@ fun TaskInterval.toTaskIntervalDto(): TaskIntervalDto {
         intervalId = intervalId,
         parentSessionId = parentSessionId,
         startDateTimeUtc = startDateTimeUtc.toString(),
-        endDateTimeUtc = endDateTimeUtc.toString(),
+        endDateTimeUtc = endDateTimeUtc?.toString(),
         durationMillis = durationMillis
     )
 }

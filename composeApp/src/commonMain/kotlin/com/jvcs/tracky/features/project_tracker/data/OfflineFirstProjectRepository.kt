@@ -13,6 +13,7 @@ import com.jvcs.tracky.features.project_tracker.domain.ProjectRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 
 class OfflineFirstProjectRepository(
     private val localProjectDataSource: LocalProjectDataSource,
@@ -47,12 +48,13 @@ class OfflineFirstProjectRepository(
         if (localResult !is Result.Success) {
             return localResult.asEmptyDataResult()
         }
+
         return when (val remoteResult = remoteProjectDataSource.postProject(project)) {
             is Result.Error -> remoteResult.asEmptyDataResult()
             is Result.Success -> {
-                applicationScope.async {
-                    // TODO: handle is synced later
-                }.await()
+                applicationScope.launch {
+                    localProjectDataSource.upsertProject(project)
+                }
                 Result.Success(Unit)
             }
         }
@@ -69,9 +71,9 @@ class OfflineFirstProjectRepository(
         )) {
             is Result.Error -> remoteResult.asEmptyDataResult()
             is Result.Success -> {
-                applicationScope.async {
-                    // TODO: handle is synced later
-                }.await()
+                applicationScope.launch {
+                    localProjectDataSource.upsertProjectTask(projectTask)
+                }
                 Result.Success(Unit)
             }
         }

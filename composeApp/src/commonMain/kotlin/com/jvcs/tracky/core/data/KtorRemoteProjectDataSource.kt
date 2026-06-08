@@ -59,14 +59,14 @@ class KtorRemoteProjectDataSource(
         return httpClient.get<List<ProjectTaskDto>>(
             route = "/api/projects/${projectId}/tasks"
         ).map {
-            it.map { projectTaskDto -> projectTaskDto.toProjectTask() }
+            it.map { projectTaskDto -> projectTaskDto.toProjectTask(projectId) }
         }
     }
 
     override suspend fun postTaskByProjectId(projectId: String, task: ProjectTask): Result<ProjectTask, DataError.Network> {
-        return httpClient.post<CreateProjectTaskRequest, ProjectTask>(
+        return httpClient.post<CreateProjectTaskRequest, ProjectTaskDto>(
             route = "/api/projects/${projectId}/tasks",
             body = task.toCreateProjectTaskRequest()
-        )
+        ).map { it.toProjectTask(projectId) }
     }
 }

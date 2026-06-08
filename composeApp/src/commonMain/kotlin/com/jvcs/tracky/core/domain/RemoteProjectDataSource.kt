@@ -5,6 +5,7 @@ import com.jvcs.tracky.core.domain.model.ProjectTask
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
+import io.ktor.client.statement.HttpResponse
 
 interface RemoteProjectDataSource {
     suspend fun getProjects(): Result<List<Project>, DataError.Network>

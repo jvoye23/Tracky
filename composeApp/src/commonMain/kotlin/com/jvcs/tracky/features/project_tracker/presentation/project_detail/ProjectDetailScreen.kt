@@ -46,12 +46,17 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -70,11 +75,14 @@ import com.jvcs.tracky.core.presentation.model.ProjectUi
 import com.jvcs.tracky.design_system.Icon_ChevronRight
 import com.jvcs.tracky.design_system.components.DurationHeroCard
 import com.jvcs.tracky.design_system.theme.TrackyTheme
+import com.jvcs.tracky.design_system.util.ObserveAsEvents
 import com.jvcs.tracky.features.project_tracker.domain.EditTextType
 import com.jvcs.tracky.features.project_tracker.presentation.project_detail.components.AddNewProjectTaskBottomSheet
 import com.jvcs.tracky.features.project_tracker.presentation.project_detail.components.ColorInfoCard
 import com.jvcs.tracky.features.project_tracker.presentation.project_detail.components.InfoCard
 import com.jvcs.tracky.features.project_tracker.presentation.project_detail.components.TrackyColorPicker
+import com.jvcs.tracky.features.project_tracker.presentation.project_overview.ProjectOverviewEvent
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import tracky.composeapp.generated.resources.Res
@@ -96,6 +104,31 @@ fun ProjectDetailScreenRoot(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+
+    ObserveAsEvents(viewModel.events) { event ->
+        when(event) {
+            is ProjectDetailEvent.Error -> {
+                viewModel.onAction(ProjectDetailAction.OnToggleAddNewProjectSessionBottomSheet)
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar(
+                        message = event.error.toString(),
+                        duration = SnackbarDuration.Short
+                    )
+                }
+            }
+            is ProjectDetailEvent.NewProjectSessionSaved -> {
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar(
+                        message = "Task saved successfully!",
+                        duration = SnackbarDuration.Short
+                    )
+                }
+            }
+        }
+    }
+
     NewProjectDetailScreen(
         state = state,
         onAction = { action ->
@@ -106,7 +139,8 @@ fun ProjectDetailScreenRoot(
                 else -> Unit
             }
             viewModel.onAction(action)
-        }
+        },
+        snackbarHostState = snackbarHostState
     )
 }
 
@@ -114,11 +148,15 @@ fun ProjectDetailScreenRoot(
 @Composable
 fun NewProjectDetailScreen(
     state: ProjectDetailState,
-    onAction: (ProjectDetailAction) -> Unit
+    onAction: (ProjectDetailAction) -> Unit,
+    snackbarHostState: SnackbarHostState
 ) {
     val project = state.project
 
     Scaffold(
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState)
+        },
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
@@ -152,7 +190,7 @@ fun NewProjectDetailScreen(
                 }
             )
         },
-        containerColor = Color(0xFFFDFBFF)
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
     ) { paddingValues ->
         if (project == null) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -451,10 +489,10 @@ private fun TaskItem(
             .fillMaxWidth()
             .clickable { onCardClick() },
         shape = RoundedCornerShape(12.dp),
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
         border = BorderStroke(
             1.dp,
-            if (task.isTimerRunning) projectColor.copy(0.2f) else Color.Transparent
+            if (task.isTimerRunning) projectColor.copy(0.2f) else MaterialTheme.colorScheme.outlineVariant
         ),
         shadowElevation = if (task.isTimerRunning) 4.dp else 0.dp
     ) {
@@ -559,7 +597,8 @@ private fun NewProjectDetailScreenPreview() {
                     projectTasks = projectSessionsPreview
                 ),
                 isEditMode = true
-            )
+            ),
+            snackbarHostState = SnackbarHostState()
         )
     }
 }

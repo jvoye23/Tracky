@@ -148,8 +148,8 @@ fun Project.toUpdateProjectRequest(): UpdateProjectRequest {
         totalDuration = totalDurationMillis,
         startDateTimeUtc = startDateTimeUtc.toString(),
         useLightTextColor = useLightTextColor,
-        endDateTimeUtc = endDateTimeUtc.toString(),
-        trashedAtUtc = trashedAt.toString(),
+        endDateTimeUtc = endDateTimeUtc?.toString(),
+        trashedAtUtc = trashedAt?.toString(),
         pinned = isPinned,
         finished = isFinished,
         archived = isArchived
