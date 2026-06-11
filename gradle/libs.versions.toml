@@ -31,6 +31,8 @@ uiToolingPreview = "1.10.3"
 uuid = "0.8.4"
 sqlite = "2.6.2"
 adaptive = "1.2.0"
+work = "2.10.0"
+lifecycleProcess = "2.8.7"
 
 # For Compose Multiplatform
 cmpNavigation3 = "1.1.0"
@@ -87,6 +89,10 @@ sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sql
 jetbrains-navigation3-ui = { module = "org.jetbrains.androidx.navigation3:navigation3-ui", version.ref = "cmpNavigation3" }
 jetbrains-lifecycle-viewmodel-nav3 = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-navigation3", version.ref = "androidx-lifecycle" }
 jetbrains-lifecycle-viewmodel = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel", version.ref = "androidx-lifecycle"}
+
+# Android background sync
+androidx-work-runtime = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
+androidx-lifecycle-process = { module = "androidx.lifecycle:lifecycle-process", version.ref = "lifecycleProcess" }
 
 # iOS Specific:
 ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }

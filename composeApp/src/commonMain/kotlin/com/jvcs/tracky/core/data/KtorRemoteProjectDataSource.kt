@@ -3,6 +3,7 @@ package com.jvcs.tracky.core.data
 import com.jvcs.tracky.core.data.networking.CreateProjectRequest
 import com.jvcs.tracky.core.data.networking.CreateProjectTaskRequest
 import com.jvcs.tracky.core.data.networking.UpdateProjectRequest
+import com.jvcs.tracky.core.data.networking.UpdateProjectTaskRequest
 import com.jvcs.tracky.core.data.networking.delete
 import com.jvcs.tracky.core.data.networking.dto.ProjectDto
 import com.jvcs.tracky.core.data.networking.dto.ProjectTaskDto
@@ -21,6 +22,7 @@ import com.jvcs.tracky.core.domain.util.map
 import com.jvcs.tracky.core.mapper.toCreateProjectRequest
 import com.jvcs.tracky.core.mapper.toCreateProjectTaskRequest
 import com.jvcs.tracky.core.mapper.toUpdateProjectRequest
+import com.jvcs.tracky.core.mapper.toUpdateProjectTaskRequest
 import io.ktor.client.HttpClient
 
 class KtorRemoteProjectDataSource(
@@ -68,5 +70,18 @@ class KtorRemoteProjectDataSource(
             route = "/api/projects/${projectId}/tasks",
             body = task.toCreateProjectTaskRequest()
         ).map { it.toProjectTask(projectId) }
+    }
+
+    override suspend fun updateTaskByProjectId(projectId: String, task: ProjectTask): Result<ProjectTask, DataError.Network> {
+        return httpClient.put<UpdateProjectTaskRequest, ProjectTaskDto>(
+            route = "/api/projects/${projectId}/tasks/${task.projectTaskId}",
+            body = task.toUpdateProjectTaskRequest()
+        ).map { it.toProjectTask(projectId) }
+    }
+
+    override suspend fun deleteTask(projectId: String, taskId: String): EmptyResult<DataError.Network> {
+        return httpClient.delete(
+            route = "/api/projects/$projectId/tasks/$taskId"
+        )
     }
 }

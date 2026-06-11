@@ -8,6 +8,7 @@ import com.jvcs.tracky.core.data.networking.dto.TaskIntervalDto
 import com.jvcs.tracky.core.domain.model.Project
 import com.jvcs.tracky.core.domain.model.ProjectTask
 import com.jvcs.tracky.core.domain.model.TaskInterval
+import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
@@ -26,6 +27,7 @@ fun ProjectDto.toProject(): Project {
         isArchived = isArchived,
         trashedAt = trashedAt?.let(Instant::parse),
         isPinned = isPinned,
+        updatedAt = updatedAt?.let(Instant::parse) ?: Clock.System.now(),
     )
 }
 
@@ -39,7 +41,8 @@ fun ProjectTaskDto.toProjectTask(parentProjectId: String): ProjectTask {
         isFinished = isFinished,
         parentProjectId = parentProjectId,
         isTimerRunning = isTimerRunning,
-        intervals = intervals.map { it.toTaskInterval() }
+        intervals = intervals.map { it.toTaskInterval() },
+        updatedAt = updatedAt?.let(Instant::parse) ?: Clock.System.now(),
     )
 }
 
@@ -67,7 +70,8 @@ fun Project.toProjectDto(): ProjectDto {
         tasks = projectTasks?.map { it.toProjectTaskDto() },
         isArchived = isArchived,
         trashedAt = trashedAt?.toString(),
-        isPinned = isPinned
+        isPinned = isPinned,
+        updatedAt = updatedAt.toString()
     )
 }
 
@@ -80,7 +84,8 @@ fun ProjectTask.toProjectTaskDto(): ProjectTaskDto {
         endDateTimeUtc = endDateTimeUtc?.toString(),
         isFinished = isFinished,
         isTimerRunning = isTimerRunning,
-        intervals = intervals.map { it.toTaskIntervalDto() }
+        intervals = intervals.map { it.toTaskIntervalDto() },
+        updatedAt = updatedAt.toString()
     )
 }
 

@@ -21,7 +21,7 @@ import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
         TaskIntervalEntity::class,
         PendingSyncEntity::class
     ],
-    version = 9,
+    version = 10,
 )
 @TypeConverters(RoomConverters::class)
 @ConstructedBy(TrackyDatabaseConstructor::class)
@@ -313,6 +313,22 @@ abstract class TrackyDatabase: RoomDatabase() {
                         createdAtEpochMs INTEGER NOT NULL
                     )
                     """.trimIndent()
+                )
+            }
+        }
+
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(connection: SQLiteConnection) {
+                // Add updatedAtEpochMs to projects and project_records for last-write-wins sync.
+                connection.execSQL(
+                    "ALTER TABLE projects ADD COLUMN updatedAtEpochMs INTEGER NOT NULL DEFAULT 0"
+                )
+                connection.execSQL(
+                    "ALTER TABLE project_records ADD COLUMN updatedAtEpochMs INTEGER NOT NULL DEFAULT 0"
+                )
+                // parentEntityId lets task DELETE ops retain their parent project id.
+                connection.execSQL(
+                    "ALTER TABLE pending_sync_operations ADD COLUMN parentEntityId TEXT"
                 )
             }
         }

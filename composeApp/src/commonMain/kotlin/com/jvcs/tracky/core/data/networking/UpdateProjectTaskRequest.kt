@@ -3,8 +3,7 @@ package com.jvcs.tracky.core.data.networking
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class CreateProjectTaskRequest(
-    val id: String,
+data class UpdateProjectTaskRequest(
     val description: String,
     val durationMillis: Long,
     val startDateTimeUtc: String,

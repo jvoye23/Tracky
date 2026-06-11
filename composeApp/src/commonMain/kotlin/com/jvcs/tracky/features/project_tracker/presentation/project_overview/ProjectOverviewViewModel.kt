@@ -6,6 +6,7 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jvcs.tracky.core.domain.model.Project
+import com.jvcs.tracky.core.domain.sync.ProjectSyncManager
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.presentation.mapper.toProjectUi
 import com.jvcs.tracky.design_system.util.asUiText
@@ -23,7 +24,8 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 class ProjectOverviewViewModel(
-    private val projectRepository: ProjectRepository
+    private val projectRepository: ProjectRepository,
+    private val projectSyncManager: ProjectSyncManager
 ): ViewModel() {
 
     private val _state = MutableStateFlow(ProjectOverviewState())
@@ -36,6 +38,12 @@ class ProjectOverviewViewModel(
         .onStart {
             if (!hasLoadedInitialData) {
                 getProjects()
+                // Reactive online+foreground sync, plus a one-shot drain + pull on open.
+                projectSyncManager.start()
+                viewModelScope.launch {
+                    projectRepository.syncPendingOperations()
+                    projectRepository.fetchProjects()
+                }
                 hasLoadedInitialData = true
             }
         }
