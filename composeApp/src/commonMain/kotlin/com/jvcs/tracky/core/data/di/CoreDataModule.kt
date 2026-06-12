@@ -1,5 +1,6 @@
 package com.jvcs.tracky.core.data.di
 
+import androidx.room.RoomDatabase
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.jvcs.tracky.core.data.KtorRemoteProjectDataSource
 import com.jvcs.tracky.core.data.auth.DataStoreSessionStorage
@@ -11,6 +12,7 @@ import com.jvcs.tracky.core.domain.RemoteProjectDataSource
 import com.jvcs.tracky.core.domain.auth.AuthService
 import com.jvcs.tracky.core.domain.auth.SessionStorage
 import com.jvcs.tracky.core.domain.auth.SocialAuthProvider
+import com.jvcs.tracky.core.domain.sync.ProjectSyncManager
 import com.jvcs.tracky.features.project_tracker.data.OfflineFirstProjectRepository
 import com.jvcs.tracky.features.project_tracker.data.RoomLocalProjectDataSource
 import com.jvcs.tracky.features.project_tracker.domain.LocalProjectDataSource
@@ -36,6 +38,16 @@ val coreDataModule = module {
         OfflineFirstProjectRepository(
             localProjectDataSource = get(),
             remoteProjectDataSource = get(),
+            pendingSyncDao = get(),
+            syncScheduler = get(),
+            applicationScope = get(qualifier = named("AppScope"))
+        )
+    }
+    single {
+        ProjectSyncManager(
+            connectivityObserver = get(),
+            appLifecycleObserver = get(),
+            projectRepository = get(),
             applicationScope = get(qualifier = named("AppScope"))
         )
     }
@@ -57,8 +69,14 @@ val coreDataModule = module {
                 TrackyDatabase.MIGRATION_6_7,
                 TrackyDatabase.MIGRATION_7_8,
                 TrackyDatabase.MIGRATION_8_9,
+                TrackyDatabase.MIGRATION_9_10,
             )
             .setDriver(BundledSQLiteDriver())
+            // Single connection (no WAL reader pool). The reactive sync (ProjectSyncManager) does
+            // bulk writes on AppScope concurrently with the timer's interval writes; the bundled
+            // driver's multi-connection WAL pool corrupts the file under that load (SQLITE_NOTADB).
+            // TRUNCATE forces one connection so Room serializes all access.
+            .setJournalMode(RoomDatabase.JournalMode.TRUNCATE)
             .build()
     }
 

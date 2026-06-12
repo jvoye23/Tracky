@@ -10,4 +10,15 @@ data class PendingSyncEntity(
     val entityType: String,    // "project" | "project_task"
     val operationType: String, // "CREATE" | "UPDATE" | "DELETE"
     val createdAtEpochMs: Long,
-)
+    // For task DELETE ops we still need the parent project id after the task row is gone.
+    val parentEntityId: String? = null,
+) {
+    companion object {
+        const val ENTITY_PROJECT = "project"
+        const val ENTITY_TASK = "project_task"
+
+        const val OP_CREATE = "CREATE"
+        const val OP_UPDATE = "UPDATE"
+        const val OP_DELETE = "DELETE"
+    }
+}

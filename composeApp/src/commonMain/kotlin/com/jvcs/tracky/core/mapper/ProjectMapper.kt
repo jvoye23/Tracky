@@ -5,7 +5,7 @@ package com.jvcs.tracky.core.mapper
 import com.jvcs.tracky.core.data.networking.CreateProjectRequest
 import com.jvcs.tracky.core.data.networking.CreateProjectTaskRequest
 import com.jvcs.tracky.core.data.networking.UpdateProjectRequest
-import com.jvcs.tracky.core.data.networking.mappers.toTaskIntervalDto
+import com.jvcs.tracky.core.data.networking.UpdateProjectTaskRequest
 import com.jvcs.tracky.core.database.entity.ProjectEntity
 import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
@@ -31,6 +31,7 @@ fun Project.toProjectEntity(): ProjectEntity {
         isArchived = isArchived,
         trashedAtEpochMs = trashedAt?.toEpochMilliseconds(),
         isPinned = isPinned,
+        updatedAtEpochMs = updatedAt.toEpochMilliseconds(),
     )
 }
 
@@ -48,6 +49,7 @@ fun ProjectEntity.toProject(): Project {
         isArchived = isArchived,
         trashedAt = trashedAtEpochMs?.let(Instant::fromEpochMilliseconds),
         isPinned = isPinned,
+        updatedAt = Instant.fromEpochMilliseconds(updatedAtEpochMs),
     )
 }
 
@@ -66,6 +68,7 @@ fun ProjectWithTasksEntity.toProject(): Project {
         isArchived = project.isArchived,
         trashedAt = project.trashedAtEpochMs?.let(Instant::fromEpochMilliseconds),
         isPinned = project.isPinned,
+        updatedAt = Instant.fromEpochMilliseconds(project.updatedAtEpochMs),
     )
 }
 
@@ -78,7 +81,8 @@ fun ProjectTaskEntity.toProjectSession(): ProjectTask {
         endDateTimeUtc = endDateTimeEpochMs?.let(Instant::fromEpochMilliseconds),
         isFinished = isFinished,
         parentProjectId = parentProjectId,
-        isTimerRunning = isTimerRunning
+        isTimerRunning = isTimerRunning,
+        updatedAt = Instant.fromEpochMilliseconds(updatedAtEpochMs),
     )
 }
 
@@ -92,7 +96,8 @@ fun TaskWithIntervals.toProjectSession(): ProjectTask {
         isFinished = task.isFinished,
         parentProjectId = task.parentProjectId,
         isTimerRunning = task.isTimerRunning,
-        intervals = intervals.map { it.toSessionInterval() }
+        intervals = intervals.map { it.toSessionInterval() },
+        updatedAt = Instant.fromEpochMilliseconds(task.updatedAtEpochMs),
     )
 }
 
@@ -105,7 +110,8 @@ fun ProjectTask.toProjectSessionEntity(): ProjectTaskEntity {
         startDateTimeEpochMs = startDateTimeUtc.toEpochMilliseconds(),
         endDateTimeEpochMs = endDateTimeUtc?.toEpochMilliseconds(),
         isFinished = isFinished,
-        isTimerRunning = isTimerRunning
+        isTimerRunning = isTimerRunning,
+        updatedAtEpochMs = updatedAt.toEpochMilliseconds(),
     )
 }
 
@@ -136,7 +142,8 @@ fun Project.toCreateProjectRequest(): CreateProjectRequest {
         description = description ?: "",
         color = colorArgb ?: 0,
         startDateTimeUtc = startDateTimeUtc.toString(),
-        useLightTextColor = useLightTextColor
+        useLightTextColor = useLightTextColor,
+        updatedAtUtc = updatedAt.toString()
     )
 }
 
@@ -152,18 +159,30 @@ fun Project.toUpdateProjectRequest(): UpdateProjectRequest {
         trashedAtUtc = trashedAt?.toString(),
         pinned = isPinned,
         finished = isFinished,
-        archived = isArchived
+        archived = isArchived,
+        updatedAtUtc = updatedAt.toString()
     )
 }
 
 fun ProjectTask.toCreateProjectTaskRequest(): CreateProjectTaskRequest {
     return CreateProjectTaskRequest(
         id = projectTaskId,
+        description = title,
         durationMillis = durationMillis ?: 0,
         startDateTimeUtc = startDateTimeUtc.toString(),
         endDateTimeUtc = endDateTimeUtc?.toString(),
-        intervals = intervals.map { it.toTaskIntervalDto() },
         finished = isFinished,
-        timerRunning = isTimerRunning
+        timerRunning = isTimerRunning,
+    )
+}
+
+fun ProjectTask.toUpdateProjectTaskRequest(): UpdateProjectTaskRequest {
+    return UpdateProjectTaskRequest(
+        description = title,
+        durationMillis = durationMillis ?: 0,
+        startDateTimeUtc = startDateTimeUtc.toString(),
+        endDateTimeUtc = endDateTimeUtc?.toString(),
+        finished = isFinished,
+        timerRunning = isTimerRunning,
     )
 }

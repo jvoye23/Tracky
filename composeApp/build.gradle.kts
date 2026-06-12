@@ -74,6 +74,8 @@ kotlin {
             implementation(libs.koin.compose)
             implementation(libs.androidx.core.splashscreen)
             implementation(libs.ktor.client.okhttp)
+            implementation(libs.androidx.work.runtime)
+            implementation(libs.androidx.lifecycle.process)
 
         }
         commonMain.dependencies {

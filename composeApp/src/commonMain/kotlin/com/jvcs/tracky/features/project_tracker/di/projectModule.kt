@@ -9,7 +9,8 @@ import org.koin.dsl.module
 val projectModule = module {
     viewModel {
         ProjectOverviewViewModel(
-            projectRepository = get()
+            projectRepository = get(),
+            projectSyncManager = get()
         )
     }
 
