@@ -21,7 +21,7 @@ data class Project(
     val isArchived: Boolean = false,
     val trashedAt: Instant? = null,
     val isPinned: Boolean = false,
-    val updatedAt: Instant = Clock.System.now(),
+    val updatedAt: Instant? = null
 )
 
 data class ProjectWithTask(
@@ -39,7 +39,7 @@ data class ProjectTask(
     val parentProjectId: String,
     val isTimerRunning: Boolean,
     val intervals: List<TaskInterval> = emptyList(),
-    val updatedAt: Instant = Clock.System.now(),
+    val updatedAt: Instant? = null
 )
 
 data class TaskInterval(

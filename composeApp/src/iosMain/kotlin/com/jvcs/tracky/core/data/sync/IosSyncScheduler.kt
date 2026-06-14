@@ -17,15 +17,20 @@ import platform.Foundation.dateWithTimeIntervalSinceNow
  */
 class IosSyncScheduler : SyncScheduler {
 
-    override suspend fun scheduleSync() {
+    override suspend fun schedulePeriodicSync() {
         try {
             val request = BGAppRefreshTaskRequest(identifier = TASK_IDENTIFIER)
-            request.earliestBeginDate = NSDate.dateWithTimeIntervalSinceNow(15 * 60.0)
+            request.earliestBeginDate = NSDate.dateWithTimeIntervalSinceNow(60.0 * 60.0 * 6 )
             BGTaskScheduler.sharedScheduler.submitTaskRequest(request, error = null)
         } catch (e: Throwable) {
             // Identifier not registered / scheduler unavailable — ignore, foreground sync covers it.
         }
     }
+
+    // iOS can't honor a fixed 15-minute interval (BGTaskScheduler timing is OS-controlled), so app
+    // start reuses the same best-effort BG refresh request. Foreground ProjectSyncManager is the
+    // dependable path here.
+    override suspend fun schedulePeriodicSyncOnStart() = schedulePeriodicSync()
 
     override suspend fun cancelAllSyncs() {
         BGTaskScheduler.sharedScheduler.cancelAllTaskRequests()

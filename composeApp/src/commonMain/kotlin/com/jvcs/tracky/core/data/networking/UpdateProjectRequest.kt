@@ -15,5 +15,5 @@ data class UpdateProjectRequest(
     val pinned: Boolean,
     val finished: Boolean,
     val archived: Boolean,
-    val updatedAtUtc: String,
+    val updatedAtUtc: String? = null,
 )

@@ -10,11 +10,6 @@ import kotlinx.coroutines.flow.Flow
 
 interface ProjectRepository {
 
-    suspend fun fetchProjects(): EmptyResult<DataError>
-
-    /** Drains the pending-sync queue, pushing queued creates/updates/deletes to the backend. */
-    suspend fun syncPendingOperations()
-
     fun getProjects(): Flow<List<Project>>
     suspend fun getProjectById(projectId: String): Project?
     suspend fun getProjectWithTasksByProjectId(projectId: String): Project?

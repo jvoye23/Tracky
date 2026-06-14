@@ -13,7 +13,10 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 /**
  * Reactive, portable foreground sync. Whenever the device is online and the app is in the
@@ -23,10 +26,11 @@ import kotlin.time.Duration.Companion.seconds
 class ProjectSyncManager(
     private val connectivityObserver: ConnectivityObserver,
     private val appLifecycleObserver: AppLifecycleObserver,
-    private val projectRepository: ProjectRepository,
+    private val syncRepository: SyncRepository,
     private val applicationScope: CoroutineScope
 ) {
     private var started = false
+    private var lastPull: Instant = Instant.DISTANT_PAST
 
     fun start() {
         if (started) return
@@ -39,8 +43,11 @@ class ProjectSyncManager(
             .distinctUntilChanged()
             .filter { it }
             .onEach {
-                projectRepository.syncPendingOperations()
-                projectRepository.fetchProjects()
+                syncRepository.syncPendingOperations()
+                if (Clock.System.now() - lastPull > 5.minutes) {
+                    syncRepository.fetchProjects()
+                    lastPull = Clock.System.now()
+                }
             }
             .launchIn(applicationScope)
     }

@@ -13,6 +13,7 @@ import com.jvcs.tracky.core.domain.auth.AuthService
 import com.jvcs.tracky.core.domain.auth.SessionStorage
 import com.jvcs.tracky.core.domain.auth.SocialAuthProvider
 import com.jvcs.tracky.core.domain.sync.ProjectSyncManager
+import com.jvcs.tracky.core.domain.sync.SyncRepository
 import com.jvcs.tracky.features.project_tracker.data.OfflineFirstProjectRepository
 import com.jvcs.tracky.features.project_tracker.data.RoomLocalProjectDataSource
 import com.jvcs.tracky.features.project_tracker.domain.LocalProjectDataSource
@@ -22,6 +23,7 @@ import org.koin.core.module.Module
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.qualifier.named
 import org.koin.dsl.bind
+import org.koin.dsl.binds
 import org.koin.dsl.module
 
 expect val platformCoreDataModule: Module
@@ -34,7 +36,7 @@ val coreDataModule = module {
 
     singleOf(::RoomLocalProjectDataSource) bind LocalProjectDataSource::class
     singleOf(::KtorRemoteProjectDataSource) bind RemoteProjectDataSource::class
-    single<ProjectRepository> {
+    single {
         OfflineFirstProjectRepository(
             localProjectDataSource = get(),
             remoteProjectDataSource = get(),
@@ -42,12 +44,13 @@ val coreDataModule = module {
             syncScheduler = get(),
             applicationScope = get(qualifier = named("AppScope"))
         )
-    }
-    single {
+    } binds arrayOf(ProjectRepository::class, SyncRepository::class)
+
+    single(createdAtStart = true) {
         ProjectSyncManager(
             connectivityObserver = get(),
             appLifecycleObserver = get(),
-            projectRepository = get(),
+            syncRepository = get(),
             applicationScope = get(qualifier = named("AppScope"))
         )
     }
@@ -76,7 +79,9 @@ val coreDataModule = module {
             // bulk writes on AppScope concurrently with the timer's interval writes; the bundled
             // driver's multi-connection WAL pool corrupts the file under that load (SQLITE_NOTADB).
             // TRUNCATE forces one connection so Room serializes all access.
-            .setJournalMode(RoomDatabase.JournalMode.TRUNCATE)
+
+            //.setJournalMode(RoomDatabase.JournalMode.TRUNCATE)
+
             .build()
     }
 

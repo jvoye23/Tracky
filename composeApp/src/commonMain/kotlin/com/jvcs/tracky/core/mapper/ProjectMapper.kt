@@ -31,7 +31,7 @@ fun Project.toProjectEntity(): ProjectEntity {
         isArchived = isArchived,
         trashedAtEpochMs = trashedAt?.toEpochMilliseconds(),
         isPinned = isPinned,
-        updatedAtEpochMs = updatedAt.toEpochMilliseconds(),
+        updatedAtEpochMs = updatedAt?.toEpochMilliseconds() ?: 0L,
     )
 }
 
@@ -111,7 +111,7 @@ fun ProjectTask.toProjectSessionEntity(): ProjectTaskEntity {
         endDateTimeEpochMs = endDateTimeUtc?.toEpochMilliseconds(),
         isFinished = isFinished,
         isTimerRunning = isTimerRunning,
-        updatedAtEpochMs = updatedAt.toEpochMilliseconds(),
+        updatedAtEpochMs = updatedAt?.toEpochMilliseconds() ?: 0L,
     )
 }
 
@@ -143,7 +143,7 @@ fun Project.toCreateProjectRequest(): CreateProjectRequest {
         color = colorArgb ?: 0,
         startDateTimeUtc = startDateTimeUtc.toString(),
         useLightTextColor = useLightTextColor,
-        updatedAtUtc = updatedAt.toString()
+        updatedAtUtc = updatedAt?.toString()
     )
 }
 
@@ -160,7 +160,7 @@ fun Project.toUpdateProjectRequest(): UpdateProjectRequest {
         pinned = isPinned,
         finished = isFinished,
         archived = isArchived,
-        updatedAtUtc = updatedAt.toString()
+        updatedAtUtc = updatedAt?.toString()
     )
 }
 

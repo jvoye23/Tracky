@@ -19,8 +19,11 @@ import com.jvcs.tracky.core.mapper.toSessionIntervalEntity
 import com.jvcs.tracky.features.project_tracker.domain.LocalProjectDataSource
 import com.jvcs.tracky.features.project_tracker.domain.ProjectId
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
@@ -29,6 +32,9 @@ import kotlin.uuid.Uuid
 class RoomLocalProjectDataSource (
     private val projectDao: ProjectDao
 ): LocalProjectDataSource {
+
+    private val dbWriteDispatcher = Dispatchers.IO.limitedParallelism(1)
+
     override fun getProjects(): Flow<List<Project>> {
         val projects = projectDao.getProjects()
             .map { projectEntity -> projectEntity.map { it.toProject() } }
@@ -47,7 +53,9 @@ class RoomLocalProjectDataSource (
 
     override suspend fun upsertProject(project: Project): EmptyResult<DataError> {
         return try {
-            projectDao.upsertProject(project.toProjectEntity())
+            withContext(dbWriteDispatcher) {
+                projectDao.upsertProject(project.toProjectEntity())
+            }
             Result.Success(Unit)
 
         } catch (e: Exception) {
@@ -58,7 +66,9 @@ class RoomLocalProjectDataSource (
 
     override suspend fun upsertProjects(projects: List<Project>): EmptyResult<DataError> {
         return try {
-            projectDao.upsertProjects(projects.map { it.toProjectEntity() })
+            withContext(dbWriteDispatcher) {
+                projectDao.upsertProjects(projects.map { it.toProjectEntity() })
+            }
             Result.Success(Unit)
         } catch (e: Exception) {
             if(e is CancellationException) throw e
@@ -68,7 +78,9 @@ class RoomLocalProjectDataSource (
 
     override suspend fun upsertProjectTask(projectTask: ProjectTask): EmptyResult<DataError> {
         return try {
-            val result = projectDao.upsertProjectRecord(projectTask.toProjectSessionEntity())
+            withContext(dbWriteDispatcher) {
+                projectDao.upsertProjectRecord(projectTask.toProjectSessionEntity())
+            }
             Result.Success(Unit)
         } catch (e: Exception) {
             if(e is CancellationException) throw e
@@ -76,22 +88,22 @@ class RoomLocalProjectDataSource (
         }
     }
 
-    override suspend fun deleteProject(projectId: String) {
+    override suspend fun deleteProject(projectId: String) = withContext(dbWriteDispatcher) {
         projectDao.deleteProject(projectId)
     }
 
-    override suspend fun deleteProjectTask(taskId: String) {
+    override suspend fun deleteProjectTask(taskId: String) = withContext(dbWriteDispatcher) {
         projectDao.deleteProjectRecord(taskId)
     }
 
-    override suspend fun deleteAllProjects() {
+    override suspend fun deleteAllProjects() = withContext(dbWriteDispatcher) {
         projectDao.deleteAllProjects()
     }
 
     override suspend fun updateTaskDuration(
         taskId: String,
         newDurationMillis: Long
-    ) {
+    ) = withContext(dbWriteDispatcher) {
         projectDao.updateTaskDuration(taskId, newDurationMillis)
     }
 
@@ -102,7 +114,9 @@ class RoomLocalProjectDataSource (
 
     override suspend fun upsertTaskInterval(interval: TaskInterval): EmptyResult<DataError> {
         return try {
-            projectDao.upsertTaskInterval(interval.toSessionIntervalEntity())
+            withContext(dbWriteDispatcher) {
+                projectDao.upsertTaskInterval(interval.toSessionIntervalEntity())
+            }
             Result.Success(Unit)
         } catch (e: Exception) {
             if(e is CancellationException) throw e
@@ -114,7 +128,7 @@ class RoomLocalProjectDataSource (
         return projectDao.getOpenIntervalBySessionId(taskId)?.toSessionInterval()
     }
 
-    override suspend fun startTask(taskId: String) {
+    override suspend fun startTask(taskId: String) = withContext(dbWriteDispatcher) {
         val now = Clock.System.now()
         val interval = TaskIntervalEntity(
             intervalId = Uuid.random().toString(),
@@ -127,7 +141,7 @@ class RoomLocalProjectDataSource (
         projectDao.updateSessionTimerStatus(taskId, true)
     }
 
-    override suspend fun stopTask(taskId: String) {
+    override suspend fun stopTask(taskId: String) = withContext(dbWriteDispatcher) {
         val openInterval = projectDao.getOpenIntervalBySessionId(taskId)
         if (openInterval != null) {
             val now = Clock.System.now()
@@ -144,7 +158,7 @@ class RoomLocalProjectDataSource (
         projectDao.updateSessionTimerStatus(taskId, false)
     }
 
-    override suspend fun updateTaskTitle(taskId: String, title: String) {
+    override suspend fun updateTaskTitle(taskId: String, title: String) = withContext(dbWriteDispatcher) {
         projectDao.updateTaskTitle(taskId, title)
     }
 }
