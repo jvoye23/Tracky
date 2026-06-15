@@ -21,7 +21,7 @@ import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
         TaskIntervalEntity::class,
         PendingSyncEntity::class
     ],
-    version = 10,
+    version = 11,
 )
 @TypeConverters(RoomConverters::class)
 @ConstructedBy(TrackyDatabaseConstructor::class)
@@ -330,6 +330,24 @@ abstract class TrackyDatabase: RoomDatabase() {
                 connection.execSQL(
                     "ALTER TABLE pending_sync_operations ADD COLUMN parentEntityId TEXT"
                 )
+            }
+        }
+
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(connection: SQLiteConnection) {
+                // updatedAtEpochMs: NOT NULL DEFAULT 0 -> nullable, treating the legacy 0
+                // ("never updated") as NULL. SQLite can't drop a NOT NULL constraint in place,
+                // so add a nullable temp column, convert via NULLIF, drop, and rename.
+                // projects
+                connection.execSQL("ALTER TABLE projects ADD COLUMN updatedAtEpochMs_tmp INTEGER")
+                connection.execSQL("UPDATE projects SET updatedAtEpochMs_tmp = NULLIF(updatedAtEpochMs, 0)")
+                connection.execSQL("ALTER TABLE projects DROP COLUMN updatedAtEpochMs")
+                connection.execSQL("ALTER TABLE projects RENAME COLUMN updatedAtEpochMs_tmp TO updatedAtEpochMs")
+                // project_records
+                connection.execSQL("ALTER TABLE project_records ADD COLUMN updatedAtEpochMs_tmp INTEGER")
+                connection.execSQL("UPDATE project_records SET updatedAtEpochMs_tmp = NULLIF(updatedAtEpochMs, 0)")
+                connection.execSQL("ALTER TABLE project_records DROP COLUMN updatedAtEpochMs")
+                connection.execSQL("ALTER TABLE project_records RENAME COLUMN updatedAtEpochMs_tmp TO updatedAtEpochMs")
             }
         }
     }

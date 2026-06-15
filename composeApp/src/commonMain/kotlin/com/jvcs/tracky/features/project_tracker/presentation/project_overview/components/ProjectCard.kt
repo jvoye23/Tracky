@@ -35,6 +35,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.jvcs.tracky.core.presentation.model.ProjectTaskUi
 import com.jvcs.tracky.core.presentation.model.ProjectUi
 import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.design_system.theme.timerStyle
@@ -123,12 +124,14 @@ fun ProjectCard(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.width(12.dp))
+                if (projectUi.anyTimerRunning || projectUi.allTasksDone) {
+                    Spacer(modifier = Modifier.width(12.dp))
 
-                ProjectStatusBadge(
-                    isActive = !projectUi.isFinished,
-                    useLightTextColor = projectUi.useLightTextColor
-                )
+                    ProjectStatusBadge(
+                        isActive = projectUi.anyTimerRunning,
+                        useLightTextColor = projectUi.useLightTextColor
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -251,46 +254,93 @@ fun ProjectCardPreview() {
             color = MaterialTheme.colorScheme.surface
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                // Timer running -> "In Progress" badge
                 ProjectCard(
                     projectUi = ProjectUi(
                         projectId = "1",
-                        title = "Project Title",
+                        title = "Running Project",
                         description = "Description of the project",
                         color = Color.Cyan,
                         totalDuration = DurationUnit.HOURS.toString(),
                         startDateTimeUtc = LocalDateTime(2025, 12, 1, 10, 0,0).toString(),
                         isFinished = false,
                         endDateTimeUtc = null,
+                        projectTasks = listOf(
+                            ProjectTaskUi(
+                                id = "t1",
+                                title = "Task 1",
+                                formattedDuration = "1h 0m",
+                                formattedStateDateTime = "10:00",
+                                formattedEndDateTimeUtc = "",
+                                isTimerRunning = true
+                            )
+                        )
                     ),
                     onAction = {}
                 )
+                // All tasks done -> "Done" badge
                 ProjectCard(
                     projectUi = ProjectUi(
-                        projectId = "1",
-                        title = "Project Title",
+                        projectId = "2",
+                        title = "Completed Project",
                         description = "Description of the project",
                         color = Color.Blue,
                         totalDuration = DurationUnit.HOURS.toString(),
                         startDateTimeUtc = LocalDateTime(2025, 12, 1, 10, 0,0).toString(),
                         isFinished = true,
                         endDateTimeUtc = null,
+                        projectTasks = listOf(
+                            ProjectTaskUi(
+                                id = "t1",
+                                title = "Task 1",
+                                formattedDuration = "1h 0m",
+                                formattedStateDateTime = "10:00",
+                                formattedEndDateTimeUtc = "11:00",
+                                isTimerRunning = false
+                            )
+                        )
                     ),
                     onAction = {}
                 )
+                // Neither running nor all done -> no badge
                 ProjectCard(
                     projectUi = ProjectUi(
-                        projectId = "1",
-                        title = "Project Title",
+                        projectId = "3",
+                        title = "Idle Project",
                         description = "Description of the project",
                         color = Color.Yellow,
                         totalDuration = DurationUnit.HOURS.toString(),
                         startDateTimeUtc = LocalDateTime(2025, 12, 1, 10, 0,0).toString(),
-                        isFinished = true,
+                        isFinished = false,
                         endDateTimeUtc = null,
+                        projectTasks = listOf(
+                            ProjectTaskUi(
+                                id = "t1",
+                                title = "Task 1",
+                                formattedDuration = "1h 0m",
+                                formattedStateDateTime = "10:00",
+                                formattedEndDateTimeUtc = "",
+                                isTimerRunning = false
+                            )
+                        )
                     ),
                     onAction = {},
                     isSelected = false,
                     isEditModeActive = true
+                )
+                // No tasks -> no badge
+                ProjectCard(
+                    projectUi = ProjectUi(
+                        projectId = "4",
+                        title = "Empty Project",
+                        description = "Description of the project",
+                        color = Color.Magenta,
+                        totalDuration = DurationUnit.HOURS.toString(),
+                        startDateTimeUtc = LocalDateTime(2025, 12, 1, 10, 0,0).toString(),
+                        isFinished = false,
+                        endDateTimeUtc = null,
+                    ),
+                    onAction = {}
                 )
             }
         }

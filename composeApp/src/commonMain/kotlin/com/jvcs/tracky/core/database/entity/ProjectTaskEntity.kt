@@ -29,5 +29,5 @@ data class ProjectTaskEntity(
     val endDateTimeEpochMs: Long?,
     val isFinished: Boolean,
     val isTimerRunning: Boolean,
-    val updatedAtEpochMs: Long = 0L,
+    val updatedAtEpochMs: Long? = null,
 )

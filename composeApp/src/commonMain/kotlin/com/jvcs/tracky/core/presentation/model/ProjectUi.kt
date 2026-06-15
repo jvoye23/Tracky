@@ -28,6 +28,13 @@ data class ProjectUi(
             // 3. Format the total Duration back to String
             return formatDuration(total)
         }
+
+    val anyTimerRunning: Boolean
+        get() = projectTasks?.any { it.isTimerRunning } ?: false
+
+    val allTasksDone: Boolean
+        get() = !projectTasks.isNullOrEmpty() &&
+                projectTasks.all { it.formattedEndDateTimeUtc.isNotBlank() }
 }
 
 data class ProjectTaskUi(

@@ -18,5 +18,5 @@ data class ProjectEntity(
     val isArchived: Boolean = false,
     val trashedAtEpochMs: Long? = null,
     val isPinned: Boolean = false,
-    val updatedAtEpochMs: Long = 0L,
+    val updatedAtEpochMs: Long? = null,
 )

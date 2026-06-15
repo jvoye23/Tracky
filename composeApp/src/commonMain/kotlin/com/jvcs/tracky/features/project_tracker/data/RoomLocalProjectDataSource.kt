@@ -36,10 +36,8 @@ class RoomLocalProjectDataSource (
     private val dbWriteDispatcher = Dispatchers.IO.limitedParallelism(1)
 
     override fun getProjects(): Flow<List<Project>> {
-        val projects = projectDao.getProjects()
-            .map { projectEntity -> projectEntity.map { it.toProject() } }
-
-        return projects
+        return projectDao.getProjectsWithTasks()
+            .map { list -> list.map { it.toProject() } }
     }
 
     override suspend fun getProjectById(projectId: String): Project? {

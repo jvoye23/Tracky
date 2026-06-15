@@ -4,10 +4,9 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.jvcs.tracky.core.domain.sync.SyncRepository
-import com.jvcs.tracky.features.project_tracker.domain.ProjectRepository
-import io.ktor.utils.io.CancellationException
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Drains the pending-sync queue in the background. Resolves the repository from the global Koin
