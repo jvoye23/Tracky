@@ -3,17 +3,23 @@
 package com.jvcs.tracky.features.project_tracker.presentation.project_overview
 
 import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jvcs.tracky.core.domain.model.Project
 import com.jvcs.tracky.core.domain.sync.ProjectSyncManager
 import com.jvcs.tracky.core.domain.util.Result
+import com.jvcs.tracky.core.domain.util.TimeManager
+import com.jvcs.tracky.core.domain.util.TimerState
 import com.jvcs.tracky.core.presentation.mapper.toProjectUi
+import com.jvcs.tracky.core.presentation.model.ProjectUi
+import com.jvcs.tracky.design_system.theme.defaultProjectColor
 import com.jvcs.tracky.design_system.util.asUiText
 import com.jvcs.tracky.features.project_tracker.domain.ProjectRepository
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -25,7 +31,8 @@ import kotlin.uuid.Uuid
 
 class ProjectOverviewViewModel(
     private val projectRepository: ProjectRepository,
-    private val projectSyncManager: ProjectSyncManager
+    private val projectSyncManager: ProjectSyncManager,
+    private val timeManager: TimeManager
 ): ViewModel() {
 
     private val _state = MutableStateFlow(ProjectOverviewState())
@@ -135,17 +142,42 @@ class ProjectOverviewViewModel(
 
     private fun getProjects() {
         viewModelScope.launch {
-            projectRepository.getProjects()
-                .collect { projectList ->
-                    val uiProjects = projectList.map { it.toProjectUi() }
-                    _state.update { it ->
-                        it.copy(
-                            projects = uiProjects,
-                            filteredProjects = if (it.searchQuery.isEmpty()) uiProjects else uiProjects.filter { p -> p.title.contains(it.searchQuery, ignoreCase = true) }
-                        )
-                    }
+            combine(
+                projectRepository.getProjects(),
+                timeManager.taskStates
+            ) { projectList, activeTimers ->
+                // Only one timer can run at a time across all tasks/projects.
+                val runningTimer = activeTimers.entries
+                    .firstOrNull { it.value.isRunning }
+                    ?.let { it.key to it.value }
+                projectList.map { it.toProjectUi().withRunningTimer(runningTimer) }
+            }.collect { uiProjects ->
+                _state.update { state ->
+                    state.copy(
+                        projects = uiProjects,
+                        filteredProjects = if (state.searchQuery.isEmpty()) uiProjects else uiProjects.filter { p -> p.title.contains(state.searchQuery, ignoreCase = true) }
+                    )
                 }
+            }
         }
+    }
+
+    private fun ProjectUi.withRunningTimer(runningTimer: Pair<String, TimerState>?): ProjectUi {
+        if (runningTimer == null) return this
+        val (runningTaskId, timerState) = runningTimer
+        if (projectTasks?.none { it.id == runningTaskId } == true) return this
+
+        val updatedTasks = projectTasks?.map { task ->
+            if (task.id == runningTaskId) {
+                task.copy(
+                    formattedDuration = timerState.formattedTime,
+                    isTimerRunning = true
+                )
+            } else {
+                task
+            }
+        }
+        return copy(projectTasks = updatedTasks)
     }
 
     private fun addProject(projectTitle: String) {
@@ -156,7 +188,7 @@ class ProjectOverviewViewModel(
             projectId = newProjectId,
             title = projectTitle,
             description = null,
-            colorArgb = null,
+            colorArgb = defaultProjectColor.toArgb(),
             totalDurationMillis = null,
             startDateTimeUtc = Clock.System.now(),
             isFinished = false,

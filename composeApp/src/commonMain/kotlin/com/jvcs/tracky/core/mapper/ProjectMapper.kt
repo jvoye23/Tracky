@@ -31,7 +31,7 @@ fun Project.toProjectEntity(): ProjectEntity {
         isArchived = isArchived,
         trashedAtEpochMs = trashedAt?.toEpochMilliseconds(),
         isPinned = isPinned,
-        updatedAtEpochMs = updatedAt?.toEpochMilliseconds() ?: 0L,
+        updatedAtEpochMs = updatedAt?.toEpochMilliseconds(),
     )
 }
 
@@ -49,7 +49,7 @@ fun ProjectEntity.toProject(): Project {
         isArchived = isArchived,
         trashedAt = trashedAtEpochMs?.let(Instant::fromEpochMilliseconds),
         isPinned = isPinned,
-        updatedAt = Instant.fromEpochMilliseconds(updatedAtEpochMs),
+        updatedAt = updatedAtEpochMs?.let(Instant::fromEpochMilliseconds),
     )
 }
 
@@ -68,7 +68,7 @@ fun ProjectWithTasksEntity.toProject(): Project {
         isArchived = project.isArchived,
         trashedAt = project.trashedAtEpochMs?.let(Instant::fromEpochMilliseconds),
         isPinned = project.isPinned,
-        updatedAt = Instant.fromEpochMilliseconds(project.updatedAtEpochMs),
+        updatedAt = project.updatedAtEpochMs?.let(Instant::fromEpochMilliseconds),
     )
 }
 
@@ -82,7 +82,7 @@ fun ProjectTaskEntity.toProjectSession(): ProjectTask {
         isFinished = isFinished,
         parentProjectId = parentProjectId,
         isTimerRunning = isTimerRunning,
-        updatedAt = Instant.fromEpochMilliseconds(updatedAtEpochMs),
+        updatedAt = updatedAtEpochMs?.let(Instant::fromEpochMilliseconds),
     )
 }
 
@@ -97,7 +97,7 @@ fun TaskWithIntervals.toProjectSession(): ProjectTask {
         parentProjectId = task.parentProjectId,
         isTimerRunning = task.isTimerRunning,
         intervals = intervals.map { it.toSessionInterval() },
-        updatedAt = Instant.fromEpochMilliseconds(task.updatedAtEpochMs),
+        updatedAt = task.updatedAtEpochMs?.let(Instant::fromEpochMilliseconds),
     )
 }
 
@@ -111,7 +111,7 @@ fun ProjectTask.toProjectSessionEntity(): ProjectTaskEntity {
         endDateTimeEpochMs = endDateTimeUtc?.toEpochMilliseconds(),
         isFinished = isFinished,
         isTimerRunning = isTimerRunning,
-        updatedAtEpochMs = updatedAt?.toEpochMilliseconds() ?: 0L,
+        updatedAtEpochMs = updatedAt?.toEpochMilliseconds(),
     )
 }
 
