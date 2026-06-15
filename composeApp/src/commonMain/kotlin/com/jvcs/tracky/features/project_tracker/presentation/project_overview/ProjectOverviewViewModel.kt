@@ -38,12 +38,6 @@ class ProjectOverviewViewModel(
         .onStart {
             if (!hasLoadedInitialData) {
                 getProjects()
-                // Reactive online+foreground sync, plus a one-shot drain + pull on open.
-                projectSyncManager.start()
-                viewModelScope.launch {
-                    projectRepository.syncPendingOperations()
-                    projectRepository.fetchProjects()
-                }
                 hasLoadedInitialData = true
             }
         }

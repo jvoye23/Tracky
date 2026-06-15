@@ -27,7 +27,7 @@ fun ProjectDto.toProject(): Project {
         isArchived = isArchived,
         trashedAt = trashedAt?.let(Instant::parse),
         isPinned = isPinned,
-        updatedAt = updatedAt?.let(Instant::parse) ?: Clock.System.now(),
+        updatedAt = updatedAt?.let(Instant::parse)
     )
 }
 
@@ -42,7 +42,7 @@ fun ProjectTaskDto.toProjectTask(parentProjectId: String): ProjectTask {
         parentProjectId = parentProjectId,
         isTimerRunning = isTimerRunning,
         intervals = intervals.map { it.toTaskInterval() },
-        updatedAt = updatedAt?.let(Instant::parse) ?: Clock.System.now(),
+        updatedAt = updatedAt?.let(Instant::parse)
     )
 }
 
@@ -71,7 +71,7 @@ fun Project.toProjectDto(): ProjectDto {
         isArchived = isArchived,
         trashedAt = trashedAt?.toString(),
         isPinned = isPinned,
-        updatedAt = updatedAt.toString()
+        updatedAt = updatedAt?.toString()
     )
 }
 
@@ -85,7 +85,7 @@ fun ProjectTask.toProjectTaskDto(): ProjectTaskDto {
         isFinished = isFinished,
         isTimerRunning = isTimerRunning,
         intervals = intervals.map { it.toTaskIntervalDto() },
-        updatedAt = updatedAt.toString()
+        updatedAt = updatedAt?.toString()
     )
 }
 

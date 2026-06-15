@@ -18,7 +18,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -197,6 +196,7 @@ private class FakePendingSyncDao : PendingSyncDao {
 
 private class FakeSyncScheduler : SyncScheduler {
     var scheduleCount = 0
-    override suspend fun scheduleSync() { scheduleCount++ }
+    override suspend fun schedulePeriodicSync() { scheduleCount++ }
+    override suspend fun schedulePeriodicSyncOnStart() = Unit
     override suspend fun cancelAllSyncs() = Unit
 }

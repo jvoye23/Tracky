@@ -13,6 +13,7 @@ import com.jvcs.tracky.core.domain.RemoteProjectDataSource
 import com.jvcs.tracky.core.domain.model.Project
 import com.jvcs.tracky.core.domain.model.ProjectTask
 import com.jvcs.tracky.core.domain.model.TaskInterval
+import com.jvcs.tracky.core.domain.sync.SyncRepository
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
@@ -39,7 +40,7 @@ class OfflineFirstProjectRepository(
     private val pendingSyncDao: PendingSyncDao,
     private val syncScheduler: SyncScheduler,
     private val applicationScope: CoroutineScope
-): ProjectRepository {
+): ProjectRepository, SyncRepository {
 
     // PULL: network → Room. The Room Flow the UI observes emits automatically.
     override suspend fun fetchProjects(): EmptyResult<DataError> {
@@ -86,9 +87,7 @@ class OfflineFirstProjectRepository(
         return when (remoteResult) {
             is Result.Success -> {
                 // Server is canonical (server-wins on the happy path).
-                applicationScope.async {
-                    localProjectDataSource.upsertProject(remoteResult.data)
-                }.await()
+                localProjectDataSource.upsertProject(remoteResult.data)
                 Result.Success(Unit)
             }
             is Result.Error -> when {
@@ -243,8 +242,10 @@ class OfflineFirstProjectRepository(
         return when (op.entityType) {
             ENTITY_PROJECT -> when (op.operationType) {
                 OP_CREATE, OP_UPDATE -> {
-                    val project = localProjectDataSource.getProjectById(op.entityId)
-                        ?: return SyncOutcome.DROP // gone locally, nothing to push
+                    val project = when (val r = dbResult { localProjectDataSource.getProjectById(op.entityId) }) {
+                        is Result.Success -> r.data ?: return SyncOutcome.DROP
+                        is Result.Error -> return SyncOutcome.RETRY
+                    }
                     val result = if (op.operationType == OP_CREATE) {
                         remoteProjectDataSource.postProject(project)
                     } else {
@@ -292,7 +293,7 @@ class OfflineFirstProjectRepository(
             is Result.Error -> return r.asEmptyDataResult()
         } ?: return remoteProjectDataSource.postProject(local).asEmptyDataResult() // server has none → push local
 
-        return if (local.updatedAt > server.updatedAt) {
+        return if (local.updatedAt != null && (server.updatedAt == null || local.updatedAt > server.updatedAt)) {
             when (val pushed = remoteProjectDataSource.updateProject(local)) {
                 is Result.Success -> {
                     applicationScope.async { localProjectDataSource.upsertProject(pushed.data) }.await()
@@ -312,7 +313,7 @@ class OfflineFirstProjectRepository(
             is Result.Error -> return r.asEmptyDataResult()
         } ?: return remoteProjectDataSource.postTaskByProjectId(local.parentProjectId, local).asEmptyDataResult()
 
-        return if (local.updatedAt > server.updatedAt) {
+        return if ((local.updatedAt != null) && ((server.updatedAt == null) || (local.updatedAt > server.updatedAt))) {
             when (val pushed = remoteProjectDataSource.updateTaskByProjectId(local.parentProjectId, local)) {
                 is Result.Success -> {
                     applicationScope.async { localProjectDataSource.upsertProjectTask(pushed.data) }.await()
@@ -346,29 +347,7 @@ class OfflineFirstProjectRepository(
         operationType: String,
         parentEntityId: String?
     ): EmptyResult<DataError> = dbResult {
-        val existing = pendingSyncDao.getOperationsByEntityId(entityId)
-        when (operationType) {
-            OP_CREATE -> insertOperation(entityId, entityType, OP_CREATE, parentEntityId)
-            OP_UPDATE -> {
-                // A pending CREATE/UPDATE already pushes the latest local state — no new op needed.
-                val alreadyQueued = existing.any { it.operationType == OP_CREATE || it.operationType == OP_UPDATE }
-                if (!alreadyQueued) insertOperation(entityId, entityType, OP_UPDATE, parentEntityId)
-            }
-            OP_DELETE -> {
-                val hadPendingCreate = existing.any { it.operationType == OP_CREATE }
-                pendingSyncDao.deleteOperationsByEntityId(entityId)
-                if (!hadPendingCreate) insertOperation(entityId, entityType, OP_DELETE, parentEntityId)
-            }
-        }
-    }.asEmptyDataResult()
-
-    private suspend fun insertOperation(
-        entityId: String,
-        entityType: String,
-        operationType: String,
-        parentEntityId: String?
-    ) {
-        pendingSyncDao.upsertOperation(
+        pendingSyncDao.enqueueDeduped(
             PendingSyncEntity(
                 operationId = Uuid.random().toString(),
                 entityId = entityId,
@@ -378,7 +357,7 @@ class OfflineFirstProjectRepository(
                 parentEntityId = parentEntityId
             )
         )
-    }
+    }.asEmptyDataResult()
 
     /**
      * Runs a Room call, converting any failure (e.g. a corrupt/unavailable database) into a
@@ -400,7 +379,7 @@ class OfflineFirstProjectRepository(
     }
 
     private suspend fun scheduleSync() {
-        applicationScope.launch { syncScheduler.scheduleSync() }.join()
+        applicationScope.launch { syncScheduler.schedulePeriodicSync() }.join()
     }
 
     private enum class SyncOutcome { SUCCESS, RETRY, DROP }
