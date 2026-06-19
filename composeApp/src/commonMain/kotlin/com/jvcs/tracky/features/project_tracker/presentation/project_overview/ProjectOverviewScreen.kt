@@ -49,6 +49,7 @@ import com.jvcs.tracky.features.project_tracker.presentation.project_overview.co
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectCard
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectOverViewTopBar
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectOverviewEditModeTopBar
+import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.SortBottomSheet
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -66,7 +67,6 @@ import tracky.composeapp.generated.resources.search_results
 
 @Composable
 fun ProjectOverviewScreenRoot(
-    modifier: Modifier = Modifier,
     username: String?,
     email: String?,
     onLogout: () -> Unit,
@@ -97,7 +97,6 @@ fun ProjectOverviewScreenRoot(
                 }
                 onNavigateToDetailScreen(event.projectId)
             }
-
         }
     }
 
@@ -215,12 +214,12 @@ fun ProjectOverviewScreen(
 
             items(
                 items = state.filteredProjects ?: emptyList(),
-                key = { it.projectId!! }
+                key = { it.projectId }
             ) { item ->
                 ProjectCard(
                     projectUi = item,
                     isEditModeActive = state.isEditModeActive,
-                    isSelected = item.projectId != null && item.projectId in state.selectedProjectIds,
+                    isSelected = item.projectId in state.selectedProjectIds,
                     onAction = onAction
                 )
 
@@ -229,6 +228,12 @@ fun ProjectOverviewScreen(
         }
         if (state.isAddNewProjectBottomSheetVisible) {
             AddNewProjectBottomSheet(
+                state = state,
+                onAction = onAction
+            )
+        }
+        if (state.isSortBottomSheetVisible) {
+            SortBottomSheet(
                 state = state,
                 onAction = onAction
             )
@@ -273,7 +278,6 @@ fun ProjectOverviewScreen(
             )
         }
     }
-
 }
 
 @Preview

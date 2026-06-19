@@ -2,7 +2,9 @@
 
 package com.jvcs.tracky.features.project_tracker.presentation.project_overview.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -36,15 +38,21 @@ import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.jvcs.tracky.design_system.Icon_Swap_Vert_Down
+import com.jvcs.tracky.design_system.Icon_Swap_Vert_Up
 import com.jvcs.tracky.design_system.components.UserProfileButton
 import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.ProjectOverviewAction
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.ProjectOverviewState
+import com.jvcs.tracky.features.project_tracker.presentation.project_overview.SortOption
 import org.jetbrains.compose.resources.stringResource
 import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.search_in_projects
@@ -97,14 +105,31 @@ fun ProjectOverViewTopBar(
                             innerTextField()
                         }
                     )
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Sort,
-                        contentDescription = "Sort",
+                    val isSortActive = state.sortOption != SortOption.CUSTOM
+                    Box(
                         modifier = Modifier
-                            .size(20.dp)
-                            .clickable { /* Handle sort */ },
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (isSortActive) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                                else Color.Transparent
+                            )
+                            .clickable { onAction(ProjectOverviewAction.OnToggleSortBottomSheet) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icon_Swap_Vert_Up,
+                            contentDescription = "Sort",
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Icon(
+                            imageVector = Icon_Swap_Vert_Down,
+                            contentDescription = "Sort",
+                            modifier = Modifier.size(20.dp),
+                            tint = if (isSortActive) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         },

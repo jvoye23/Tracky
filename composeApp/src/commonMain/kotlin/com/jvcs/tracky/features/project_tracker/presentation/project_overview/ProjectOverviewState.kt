@@ -14,5 +14,7 @@ data class ProjectOverviewState(
     val isGridView: Boolean = false,
     val isEditModeActive: Boolean = false,
     val selectedProjectIds: Set<String> = emptySet(),
-    val isDeleteConfirmationDialogVisible: Boolean = false
+    val isDeleteConfirmationDialogVisible: Boolean = false,
+    val isSortBottomSheetVisible: Boolean = false,
+    val sortOption: SortOption = SortOption.CUSTOM
 )
