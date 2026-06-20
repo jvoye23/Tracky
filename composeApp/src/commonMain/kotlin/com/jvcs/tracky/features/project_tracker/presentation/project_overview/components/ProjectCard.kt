@@ -58,7 +58,7 @@ fun ProjectCard(
     isEditModeActive: Boolean = false,
     isSelected: Boolean = false
 ) {
-    val contentColor = if (projectUi.useLightTextColor) Color.White else MaterialTheme.colorScheme.onSurface
+    val contentColor = if (projectUi.useLightTextColor) Color.White else Color.Black
     val cardShape = CardDefaults.elevatedShape
     val selectionBorder = if (isSelected) {
         Modifier.border(
@@ -140,7 +140,7 @@ fun ProjectCard(
             Text(
                 text = projectUi.description ?: "",
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (projectUi.useLightTextColor) contentColor.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                color = contentColor.copy(alpha = 0.7f),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
@@ -322,7 +322,8 @@ fun ProjectCardPreview() {
                                 formattedEndDateTimeUtc = "",
                                 isTimerRunning = false
                             )
-                        )
+                        ),
+                        useLightTextColor = false
                     ),
                     onAction = {},
                     isSelected = false,
@@ -339,6 +340,7 @@ fun ProjectCardPreview() {
                         startDateTimeUtc = LocalDateTime(2025, 12, 1, 10, 0,0).toString(),
                         isFinished = false,
                         endDateTimeUtc = null,
+                        useLightTextColor = true
                     ),
                     onAction = {}
                 )

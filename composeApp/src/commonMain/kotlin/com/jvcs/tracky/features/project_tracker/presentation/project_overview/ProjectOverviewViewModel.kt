@@ -20,6 +20,8 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -115,7 +117,24 @@ class ProjectOverviewViewModel(
             ProjectOverviewAction.OnConfirmDelete -> {
                 deleteSelectedProjects()
             }
+            ProjectOverviewAction.OnToggleSortBottomSheet -> {
+                _state.update { it.copy(
+                    isSortBottomSheetVisible = !it.isSortBottomSheetVisible
+                ) }
+            }
+            is ProjectOverviewAction.OnSortOptionSelected -> {
+                _state.update { it.copy(
+                    sortOption = action.sortOption,
+                    isSortBottomSheetVisible = false
+                ) }
+            }
         }
+    }
+
+    private fun List<Project>.sortedForOption(option: SortOption) = when (option) {
+        SortOption.CUSTOM -> this
+        SortOption.CREATION_DATE -> sortedByDescending { it.startDateTimeUtc }
+        SortOption.MODIFICATION_DATE -> sortedByDescending { it.updatedAt ?: it.startDateTimeUtc }
     }
 
     private fun deleteSelectedProjects() {
@@ -144,13 +163,16 @@ class ProjectOverviewViewModel(
         viewModelScope.launch {
             combine(
                 projectRepository.getProjects(),
-                timeManager.taskStates
-            ) { projectList, activeTimers ->
+                timeManager.taskStates,
+                _state.map { it.sortOption }.distinctUntilChanged()
+            ) { projectList, activeTimers, sortOption ->
                 // Only one timer can run at a time across all tasks/projects.
                 val runningTimer = activeTimers.entries
                     .firstOrNull { it.value.isRunning }
                     ?.let { it.key to it.value }
-                projectList.map { it.toProjectUi().withRunningTimer(runningTimer) }
+                projectList
+                    .sortedForOption(sortOption)
+                    .map { it.toProjectUi().withRunningTimer(runningTimer) }
             }.collect { uiProjects ->
                 _state.update { state ->
                     state.copy(

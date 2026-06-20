@@ -20,4 +20,6 @@ sealed interface ProjectOverviewAction {
     data object OnDeleteSelectedClick: ProjectOverviewAction
     data object OnDismissDeleteDialog: ProjectOverviewAction
     data object OnConfirmDelete: ProjectOverviewAction
+    data object OnToggleSortBottomSheet: ProjectOverviewAction
+    data class OnSortOptionSelected(val sortOption: SortOption): ProjectOverviewAction
 }

@@ -2,6 +2,7 @@
     <string name="app_name">Tracky</string>
     <string name="add_project">Add new project</string>
     <string name="add">Add</string>
+    <string name="check_icon">Check icon</string>
     <string name="new_project">New Project</string>
     <string name="search_in_projects">Search in projects</string>
     <string name="enter_new_title">Enter new title</string>
@@ -27,6 +28,10 @@
     <string name="duration">Duration</string>
     <string name="current_projects">Current projects</string>
     <string name="search_results">Search results</string>
+    <string name="sort_by">Sort by</string>
+    <string name="sort_custom">Custom</string>
+    <string name="sort_creation_date">Creation date</string>
+    <string name="sort_modification_date">Modification date</string>
     <string name="project_duration">PROJECT DURATION</string>
     <string name="project_color">PROJECT COLOR</string>
     <string name="session_duration">SESSION DURATION</string>
