@@ -7,24 +7,31 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DrawerState
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -35,21 +42,32 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigationevent.NavigationEventInfo
+import androidx.navigationevent.compose.NavigationBackHandler
+import androidx.navigationevent.compose.NavigationEventHandler
+import androidx.navigationevent.compose.rememberNavigationEventState
+import com.jvcs.tracky.core.presentation.model.ProjectTaskUi
+import com.jvcs.tracky.core.presentation.model.ProjectUi
 import com.jvcs.tracky.design_system.Icon_Delete
+import com.jvcs.tracky.design_system.theme.TrackyTheme
+import com.jvcs.tracky.design_system.util.DevicePreviews
 import com.jvcs.tracky.design_system.util.ObserveAsEvents
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.AddNewProjectBottomSheet
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectCard
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectOverViewTopBar
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectOverviewEditModeTopBar
+import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectOverviewNavDrawer
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.SortBottomSheet
+import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.SortSheetContent
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -74,6 +92,7 @@ fun ProjectOverviewScreenRoot(
     viewModel: ProjectOverviewViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val sortOption by viewModel.sortOption.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
@@ -118,7 +137,8 @@ fun ProjectOverviewScreenRoot(
         username = username,
         email = email,
         onLogout = onLogout,
-        snackbarHostState = snackbarHostState
+        snackbarHostState = snackbarHostState,
+        sortOption = sortOption
     )
 }
 
@@ -130,11 +150,24 @@ fun ProjectOverviewScreen(
     email: String?,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
-    snackbarHostState: SnackbarHostState
+    snackbarHostState: SnackbarHostState,
+    sortOption: SortOption = SortOption.CUSTOM,
+    drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed)
 ) {
 
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+    val drawerScope = rememberCoroutineScope()
+    val backState = rememberNavigationEventState(NavigationEventInfo.None)
 
+    NavigationBackHandler(
+        state = backState,
+        isBackEnabled = drawerState.isOpen,
+        onBackCompleted = {
+            drawerScope.launch { drawerState.close() }
+        }
+    )
+
+    ProjectOverviewNavDrawer(drawerState = drawerState) {
     Scaffold(
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState)
@@ -161,6 +194,7 @@ fun ProjectOverviewScreen(
                         onAction = onAction,
                         state = state,
                         onLogout = onLogout,
+                        onMenuClick = { drawerScope.launch { drawerState.open() } },
                         username = username,
                         email = email,
                         scrollBehavior = scrollBehavior
@@ -217,6 +251,7 @@ fun ProjectOverviewScreen(
                 key = { it.projectId }
             ) { item ->
                 ProjectCard(
+                    modifier = Modifier.animateItem(),
                     projectUi = item,
                     isEditModeActive = state.isEditModeActive,
                     isSelected = item.projectId in state.selectedProjectIds,
@@ -234,7 +269,7 @@ fun ProjectOverviewScreen(
         }
         if (state.isSortBottomSheetVisible) {
             SortBottomSheet(
-                state = state,
+                sortOption = sortOption,
                 onAction = onAction
             )
         }
@@ -278,17 +313,170 @@ fun ProjectOverviewScreen(
             )
         }
     }
+    }
 }
 
-@Preview
-@Composable
-fun ProjectOverviewScreenPreview() {
-    ProjectOverviewScreen(
-        onAction = {},
-        state = ProjectOverviewState(),
-        username = "JoergVoye",
-        email = "joerg@example.com",
-        onLogout = {},
-        snackbarHostState = SnackbarHostState()
+private fun previewProjects(): List<ProjectUi> = listOf(
+    ProjectUi(
+        projectId = "1",
+        title = "Running Project",
+        description = "Currently tracking time",
+        color = Color(0xFF4CAF50),
+        totalDuration = "2h 30m",
+        startDateTimeUtc = "2025-12-01T10:00",
+        isFinished = false,
+        endDateTimeUtc = null,
+        projectTasks = listOf(
+            ProjectTaskUi(
+                id = "t1",
+                title = "Task 1",
+                formattedDuration = "2h 30m",
+                formattedStateDateTime = "10:00",
+                formattedEndDateTimeUtc = "",
+                isTimerRunning = true
+            )
+        )
+    ),
+    ProjectUi(
+        projectId = "2",
+        title = "Completed Project",
+        description = "All tasks done",
+        color = Color(0xFF2196F3),
+        totalDuration = "5h 15m",
+        startDateTimeUtc = "2025-11-20T09:00",
+        isFinished = true,
+        endDateTimeUtc = "2025-11-25T17:00",
+        projectTasks = listOf(
+            ProjectTaskUi(
+                id = "t2",
+                title = "Task 2",
+                formattedDuration = "5h 15m",
+                formattedStateDateTime = "09:00",
+                formattedEndDateTimeUtc = "17:00",
+                isTimerRunning = false
+            )
+        )
+    ),
+    ProjectUi(
+        projectId = "3",
+        title = "Idle Project",
+        description = "Not started yet",
+        color = Color(0xFFFFC107),
+        totalDuration = "0h 0m",
+        startDateTimeUtc = "2025-12-05T08:00",
+        isFinished = false,
+        endDateTimeUtc = null,
+        projectTasks = emptyList()
     )
+)
+
+@DevicePreviews
+@Composable
+private fun ProjectOverviewDefaultPreview() {
+    TrackyTheme {
+        ProjectOverviewScreen(
+            onAction = {},
+            state = ProjectOverviewState(
+                projects = previewProjects(),
+                filteredProjects = previewProjects()
+            ),
+            username = "JoergVoye",
+            email = "joerg@example.com",
+            onLogout = {},
+            snackbarHostState = remember { SnackbarHostState() }
+        )
+    }
+}
+
+@DevicePreviews
+@Composable
+private fun ProjectOverviewSearchPreview() {
+    TrackyTheme {
+        ProjectOverviewScreen(
+            onAction = {},
+            state = ProjectOverviewState(
+                projects = previewProjects(),
+                filteredProjects = previewProjects().filter { it.title.contains("Run", ignoreCase = true) },
+                searchQuery = "Run"
+            ),
+            username = "JoergVoye",
+            email = "joerg@example.com",
+            onLogout = {},
+            snackbarHostState = remember { SnackbarHostState() }
+        )
+    }
+}
+
+@DevicePreviews
+@Composable
+private fun ProjectOverviewEditModePreview() {
+    TrackyTheme {
+        ProjectOverviewScreen(
+            onAction = {},
+            state = ProjectOverviewState(
+                projects = previewProjects(),
+                filteredProjects = previewProjects(),
+                isEditModeActive = true,
+                selectedProjectIds = setOf("1", "3")
+            ),
+            username = "JoergVoye",
+            email = "joerg@example.com",
+            onLogout = {},
+            snackbarHostState = remember { SnackbarHostState() }
+        )
+    }
+}
+
+@DevicePreviews
+@Composable
+private fun ProjectOverviewDrawerOpenPreview() {
+    TrackyTheme {
+        ProjectOverviewScreen(
+            onAction = {},
+            state = ProjectOverviewState(
+                projects = previewProjects(),
+                filteredProjects = previewProjects()
+            ),
+            username = "JoergVoye",
+            email = "joerg@example.com",
+            onLogout = {},
+            snackbarHostState = remember { SnackbarHostState() },
+            drawerState = rememberDrawerState(DrawerValue.Open)
+        )
+    }
+}
+
+@DevicePreviews
+@Composable
+private fun ProjectOverviewSortSheetVisiblePreview() {
+    TrackyTheme {
+        // ModalBottomSheet does not render in static previews, so the sort sheet
+        // content is overlaid at the bottom to approximate the visible state.
+        Box(modifier = Modifier.fillMaxSize()) {
+            ProjectOverviewScreen(
+                onAction = {},
+                state = ProjectOverviewState(
+                    projects = previewProjects(),
+                    filteredProjects = previewProjects()
+                ),
+                username = "JoergVoye",
+                email = "joerg@example.com",
+                onLogout = {},
+                snackbarHostState = remember { SnackbarHostState() }
+            )
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surface,
+                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                shadowElevation = 8.dp
+            ) {
+                SortSheetContent(
+                    selectedOption = SortOption.CREATION_DATE,
+                    onOptionSelected = {}
+                )
+            }
+        }
+    }
 }
