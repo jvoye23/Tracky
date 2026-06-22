@@ -66,6 +66,7 @@ fun ProjectOverViewTopBar(
     state: ProjectOverviewState,
     scrollBehavior: TopAppBarScrollBehavior,
     onLogout: () -> Unit,
+    onMenuClick: () -> Unit,
     username: String?,
     email: String?,
 ) {
@@ -105,7 +106,7 @@ fun ProjectOverViewTopBar(
                             innerTextField()
                         }
                     )
-                    val isSortActive = state.sortOption != SortOption.CUSTOM
+                    val isSortActive = !state.isSortOptionCustom
                     Box(
                         modifier = Modifier
                             .size(36.dp)
@@ -135,11 +136,13 @@ fun ProjectOverViewTopBar(
         },
         modifier = modifier,
         navigationIcon = {
-            Icon(
-                imageVector = Icons.Default.Menu,
-                contentDescription = "Menu",
-                tint = MaterialTheme.colorScheme.onSurface
-            )
+            IconButton(onClick = onMenuClick) {
+                Icon(
+                    imageVector = Icons.Default.Menu,
+                    contentDescription = "Menu",
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
         },
         actions = {
             if (username != null && email != null) {
@@ -166,6 +169,7 @@ private fun ProjectOverviewTopBarPreview() {
             onAction = {},
             state = ProjectOverviewState(),
             onLogout = {},
+            onMenuClick = {},
             username = "Jay V",
             email = "j.voye@jv-coding-solutions.com",
             scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()

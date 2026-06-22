@@ -20,6 +20,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,6 +32,7 @@ import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.ProjectOverviewAction
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.ProjectOverviewState
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.SortOption
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import tracky.composeapp.generated.resources.Res
@@ -44,10 +46,11 @@ import tracky.composeapp.generated.resources.sort_modification_date
 @Composable
 fun SortBottomSheet(
     modifier: Modifier = Modifier,
-    state: ProjectOverviewState,
+    sortOption: SortOption,
     onAction: (ProjectOverviewAction) -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState()
+    val scope = rememberCoroutineScope()
 
     ModalBottomSheet(
         onDismissRequest = { onAction(ProjectOverviewAction.OnToggleSortBottomSheet) },
@@ -57,14 +60,20 @@ fun SortBottomSheet(
         dragHandle = {}
     ) {
         SortSheetContent(
-            selectedOption = state.sortOption,
-            onOptionSelected = { onAction(ProjectOverviewAction.OnSortOptionSelected(it)) }
+            selectedOption = sortOption,
+            onOptionSelected = { option ->
+                scope.launch { sheetState.hide() }.invokeOnCompletion {
+                    if (!sheetState.isVisible) {
+                        onAction(ProjectOverviewAction.OnSortOptionSelected(option))
+                    }
+                }
+            }
         )
     }
 }
 
 @Composable
-private fun SortSheetContent(
+internal fun SortSheetContent(
     modifier: Modifier = Modifier,
     selectedOption: SortOption,
     onOptionSelected: (SortOption) -> Unit,
@@ -72,33 +81,38 @@ private fun SortSheetContent(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(top = 20.dp, bottom = 8.dp),
+            .padding(top = 20.dp),
     ) {
-        Text(
-            modifier = Modifier.padding(start = 20.dp, bottom = 20.dp),
-            text = stringResource(Res.string.sort_by),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        HorizontalDivider(
-            modifier = Modifier.fillMaxWidth(),
-            thickness = 1.dp,
-            color = MaterialTheme.colorScheme.surfaceVariant
-        )
-    }
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(bottom = 16.dp)
-            .padding(horizontal = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        SortOption.entries.forEach { option ->
-            SortOptionRow(
-                selected = option == selectedOption,
-                label = stringResource(option.labelRes),
-                onClick = { onOptionSelected(option) }
+        Column(
+            modifier = Modifier
+                .padding(bottom = 8.dp)
+        ) {
+            Text(
+                modifier = Modifier.padding(start = 20.dp, bottom = 20.dp),
+                text = stringResource(Res.string.sort_by),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
             )
+            HorizontalDivider(
+                modifier = Modifier.fillMaxWidth(),
+                thickness = 1.dp,
+                color = MaterialTheme.colorScheme.surfaceVariant
+            )
+        }
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
+                .padding(horizontal = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            SortOption.entries.forEach { option ->
+                SortOptionRow(
+                    selected = option == selectedOption,
+                    label = stringResource(option.labelRes),
+                    onClick = { onOptionSelected(option) }
+                )
+            }
         }
     }
 }

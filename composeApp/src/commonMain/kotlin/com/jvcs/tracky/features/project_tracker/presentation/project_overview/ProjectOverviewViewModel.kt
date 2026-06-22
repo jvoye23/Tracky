@@ -19,9 +19,8 @@ import com.jvcs.tracky.features.project_tracker.domain.ProjectRepository
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -38,6 +37,8 @@ class ProjectOverviewViewModel(
 ): ViewModel() {
 
     private val _state = MutableStateFlow(ProjectOverviewState())
+    private val _sortOption = MutableStateFlow(SortOption.CUSTOM)
+    val sortOption = _sortOption.asStateFlow()
 
     private val eventChannel = Channel<ProjectOverviewEvent>()
     val events = eventChannel.receiveAsFlow()
@@ -123,8 +124,10 @@ class ProjectOverviewViewModel(
                 ) }
             }
             is ProjectOverviewAction.OnSortOptionSelected -> {
+                _sortOption.update { action.sortOption }
+                val isSortOptionCustom = action.sortOption.name == "CUSTOM"
                 _state.update { it.copy(
-                    sortOption = action.sortOption,
+                    isSortOptionCustom = isSortOptionCustom,
                     isSortBottomSheetVisible = false
                 ) }
             }
@@ -164,7 +167,7 @@ class ProjectOverviewViewModel(
             combine(
                 projectRepository.getProjects(),
                 timeManager.taskStates,
-                _state.map { it.sortOption }.distinctUntilChanged()
+                _sortOption
             ) { projectList, activeTimers, sortOption ->
                 // Only one timer can run at a time across all tasks/projects.
                 val runningTimer = activeTimers.entries
