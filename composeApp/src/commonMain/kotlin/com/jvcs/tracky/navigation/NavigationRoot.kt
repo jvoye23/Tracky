@@ -30,6 +30,7 @@ import com.jvcs.tracky.features.auth.presentation.reset_password.ResetPasswordVi
 import com.jvcs.tracky.features.project_tracker.presentation.project_detail.EditTextScreenRoot
 import com.jvcs.tracky.features.project_tracker.presentation.project_detail.ProjectDetailAction
 import com.jvcs.tracky.features.project_archive.presentation.project_archive.ProjectArchiveScreenRoot
+import com.jvcs.tracky.features.project_archive.presentation.project_archive_detail.ProjectArchiveDetailScreen
 import com.jvcs.tracky.features.project_tracker.presentation.project_detail.ProjectDetailScreenRoot
 import com.jvcs.tracky.features.project_tracker.presentation.project_detail.ProjectDetailViewModel
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.ProjectOverviewScreenRoot
@@ -75,6 +76,7 @@ fun NavigationRoot(
                     subclass(Route.AuthRoute.ResetPassword::class, Route.AuthRoute.ResetPassword.serializer())
                     subclass(Route.ProjectRoute.ProjectOverview::class, Route.ProjectRoute.ProjectOverview.serializer())
                     subclass(Route.ProjectRoute.ProjectArchive::class, Route.ProjectRoute.ProjectArchive.serializer())
+                    subclass(Route.ProjectRoute.ProjectArchiveDetail::class, Route.ProjectRoute.ProjectArchiveDetail.serializer())
                     subclass(Route.ProjectRoute.ProjectDetail::class, Route.ProjectRoute.ProjectDetail.serializer())
                     subclass(Route.ProjectRoute.TaskDetail::class, Route.ProjectRoute.TaskDetail.serializer())
                 }
@@ -194,9 +196,19 @@ fun NavigationRoot(
             }
             entry<Route.ProjectRoute.ProjectArchive> {
                 ProjectArchiveScreenRoot(
-                    onNavigateToDetail = { /* wired in PR 3 */ },
+                    onNavigateToDetail = { projectId ->
+                        backStack.add(Route.ProjectRoute.ProjectArchiveDetail(projectId))
+                    },
                     onNavigateToProjects = {
                         backStack.removeLastOrNull()
+                    }
+                )
+            }
+            entry<Route.ProjectRoute.ProjectArchiveDetail> { key ->
+                ProjectArchiveDetailScreen(
+                    projectId = key.projectId,
+                    onNavigateBack = {
+                        backStack.remove(key)
                     }
                 )
             }
