@@ -11,6 +11,8 @@
     <string name="check_icon">Check icon</string>
     <string name="new_project">New Project</string>
     <string name="search_in_projects">Search in projects</string>
+    <string name="archive_title">Archive</string>
+    <string name="search_in_archive">Search in archive</string>
     <string name="enter_new_title">Enter new title</string>
     <string name="confirm">Confirm</string>
     <string name="enter_session_name">Enter session name</string>
