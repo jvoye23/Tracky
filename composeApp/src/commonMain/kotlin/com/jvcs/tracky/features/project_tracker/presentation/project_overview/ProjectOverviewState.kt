@@ -17,5 +17,4 @@ data class ProjectOverviewState(
     val isDeleteConfirmationDialogVisible: Boolean = false,
     val isSortBottomSheetVisible: Boolean = false,
     val sortOption: SortOption = SortOption.CUSTOM
-    //val isSortOptionCustom: Boolean = true
 )

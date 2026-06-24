@@ -12,8 +12,8 @@ data class UpdateProjectRequest(
     val useLightTextColor: Boolean,
     val endDateTimeUtc: String?,
     val trashedAtUtc: String?,
-    val pinned: Boolean,
-    val finished: Boolean,
-    val archived: Boolean,
+    val isPinned: Boolean,
+    val isFinished: Boolean,
+    val isArchived: Boolean,
     val updatedAtUtc: String? = null,
 )

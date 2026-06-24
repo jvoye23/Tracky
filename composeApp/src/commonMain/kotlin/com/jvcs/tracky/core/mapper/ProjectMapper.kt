@@ -157,9 +157,9 @@ fun Project.toUpdateProjectRequest(): UpdateProjectRequest {
         useLightTextColor = useLightTextColor,
         endDateTimeUtc = endDateTimeUtc?.toString(),
         trashedAtUtc = trashedAt?.toString(),
-        pinned = isPinned,
-        finished = isFinished,
-        archived = isArchived,
+        isPinned = isPinned,
+        isFinished = isFinished,
+        isArchived = isArchived,
         updatedAtUtc = updatedAt?.toString()
     )
 }

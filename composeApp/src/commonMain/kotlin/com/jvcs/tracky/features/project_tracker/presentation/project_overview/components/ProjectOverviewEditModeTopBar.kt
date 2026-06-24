@@ -54,8 +54,7 @@ fun ProjectOverviewEditModeTopBar(
             )
         },
         actions = {
-            //TODO("Implement Archive action")
-            IconButton(onClick = {  }) {
+            IconButton(onClick = { onAction(ProjectOverviewAction.OnArchiveSelectedClick) }) {
                 Icon(
                     imageVector = Icon_Archive,
                     contentDescription = stringResource(Res.string.archive_selected),
