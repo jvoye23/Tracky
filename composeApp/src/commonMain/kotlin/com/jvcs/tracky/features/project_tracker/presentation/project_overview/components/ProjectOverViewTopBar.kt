@@ -106,7 +106,7 @@ fun ProjectOverViewTopBar(
                             innerTextField()
                         }
                     )
-                    val isSortActive = !state.isSortOptionCustom
+                    val isSortActive = state.sortOption != SortOption.CUSTOM
                     Box(
                         modifier = Modifier
                             .size(36.dp)
