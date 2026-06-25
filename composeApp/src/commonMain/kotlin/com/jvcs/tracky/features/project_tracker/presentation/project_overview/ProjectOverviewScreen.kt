@@ -58,8 +58,6 @@ import androidx.navigationevent.compose.rememberNavigationEventState
 import com.jvcs.tracky.core.presentation.model.ProjectTaskUi
 import com.jvcs.tracky.core.presentation.model.ProjectUi
 import com.jvcs.tracky.design_system.Icon_Delete
-import com.jvcs.tracky.design_system.components.MainNavDrawerItem
-import com.jvcs.tracky.design_system.components.MainNavigationDrawer
 import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.design_system.util.DevicePreviews
 import com.jvcs.tracky.design_system.util.ObserveAsEvents
@@ -67,6 +65,7 @@ import com.jvcs.tracky.features.project_tracker.presentation.project_overview.co
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectCard
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectOverViewTopBar
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectOverviewEditModeTopBar
+import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectOverviewNavDrawer
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.SortBottomSheet
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.SortSheetContent
 import kotlinx.coroutines.launch
@@ -90,7 +89,6 @@ fun ProjectOverviewScreenRoot(
     email: String?,
     onLogout: () -> Unit,
     onNavigateToDetailScreen: (String) -> Unit,
-    onNavigateToArchive: () -> Unit = {},
     viewModel: ProjectOverviewViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -139,7 +137,6 @@ fun ProjectOverviewScreenRoot(
         username = username,
         email = email,
         onLogout = onLogout,
-        onNavigateToArchive = onNavigateToArchive,
         snackbarHostState = snackbarHostState,
         sortOption = sortOption
     )
@@ -153,7 +150,6 @@ fun ProjectOverviewScreen(
     email: String?,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
-    onNavigateToArchive: () -> Unit = {},
     snackbarHostState: SnackbarHostState,
     sortOption: SortOption = SortOption.CUSTOM,
     drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed)
@@ -171,11 +167,7 @@ fun ProjectOverviewScreen(
         }
     )
 
-    MainNavigationDrawer(
-        drawerState = drawerState,
-        selectedItem = MainNavDrawerItem.PROJECTS,
-        onArchiveClick = onNavigateToArchive
-    ) {
+    ProjectOverviewNavDrawer(drawerState = drawerState) {
     Scaffold(
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState)
@@ -261,11 +253,9 @@ fun ProjectOverviewScreen(
                 ProjectCard(
                     modifier = Modifier.animateItem(),
                     projectUi = item,
-                    onClick = { onAction(ProjectOverviewAction.OnProjectCardClick(item.projectId)) },
-                    onLongClick = { onAction(ProjectOverviewAction.OnProjectCardLongPress(item.projectId)) },
-                    onToggleSelection = { onAction(ProjectOverviewAction.OnProjectCardToggleSelection(item.projectId)) },
                     isEditModeActive = state.isEditModeActive,
-                    isSelected = item.projectId in state.selectedProjectIds
+                    isSelected = item.projectId in state.selectedProjectIds,
+                    onAction = onAction
                 )
 
             }

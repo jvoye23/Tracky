@@ -39,6 +39,7 @@ import com.jvcs.tracky.core.presentation.model.ProjectTaskUi
 import com.jvcs.tracky.core.presentation.model.ProjectUi
 import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.design_system.theme.timerStyle
+import com.jvcs.tracky.features.project_tracker.presentation.project_overview.ProjectOverviewAction
 import kotlinx.datetime.LocalDateTime
 import org.jetbrains.compose.resources.stringResource
 import tracky.composeapp.generated.resources.Res
@@ -52,10 +53,8 @@ import kotlin.time.DurationUnit
 @Composable
 fun ProjectCard(
     modifier: Modifier = Modifier,
+    onAction: (ProjectOverviewAction) -> Unit,
     projectUi: ProjectUi,
-    onClick: () -> Unit = {},
-    onLongClick: () -> Unit = {},
-    onToggleSelection: () -> Unit = {},
     isEditModeActive: Boolean = false,
     isSelected: Boolean = false
 ) {
@@ -74,12 +73,16 @@ fun ProjectCard(
     ElevatedCard(
         modifier = modifier
             .combinedClickable(
-                onLongClick = onLongClick,
+                onLongClick = {
+                    val id = projectUi.projectId
+                    onAction(ProjectOverviewAction.OnProjectCardLongPress(id))
+                },
                 onClick = {
+                    val id = projectUi.projectId
                     if (isEditModeActive) {
-                        onToggleSelection()
+                        onAction(ProjectOverviewAction.OnProjectCardToggleSelection(id))
                     } else {
-                        onClick()
+                        onAction(ProjectOverviewAction.OnProjectCardClick(projectId = id))
                     }
                 }
             )
@@ -105,7 +108,9 @@ fun ProjectCard(
                 if (isEditModeActive) {
                     Checkbox(
                         checked = isSelected ,
-                        onCheckedChange = { onToggleSelection() },
+                        onCheckedChange = {
+                            onAction(ProjectOverviewAction.OnProjectCardToggleSelection(projectUi.projectId))
+                        },
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                 }
@@ -270,7 +275,8 @@ fun ProjectCardPreview() {
                                 isTimerRunning = true
                             )
                         )
-                    )
+                    ),
+                    onAction = {}
                 )
                 // All tasks done -> "Done" badge
                 ProjectCard(
@@ -293,7 +299,8 @@ fun ProjectCardPreview() {
                                 isTimerRunning = false
                             )
                         )
-                    )
+                    ),
+                    onAction = {}
                 )
                 // Neither running nor all done -> no badge
                 ProjectCard(
@@ -318,6 +325,7 @@ fun ProjectCardPreview() {
                         ),
                         useLightTextColor = false
                     ),
+                    onAction = {},
                     isSelected = false,
                     isEditModeActive = true
                 )
@@ -333,7 +341,8 @@ fun ProjectCardPreview() {
                         isFinished = false,
                         endDateTimeUtc = null,
                         useLightTextColor = true
-                    )
+                    ),
+                    onAction = {}
                 )
             }
         }
