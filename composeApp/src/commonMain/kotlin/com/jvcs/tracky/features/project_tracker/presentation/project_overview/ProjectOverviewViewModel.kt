@@ -109,6 +109,9 @@ class ProjectOverviewViewModel(
                     isDeleteConfirmationDialogVisible = false
                 ) }
             }
+            ProjectOverviewAction.OnArchiveSelectedClick -> {
+                archiveSelectedProjects()
+            }
             ProjectOverviewAction.OnDeleteSelectedClick -> {
                 _state.update { it.copy(isDeleteConfirmationDialogVisible = true) }
             }
@@ -136,6 +139,19 @@ class ProjectOverviewViewModel(
         SortOption.CUSTOM -> this
         SortOption.CREATION_DATE -> sortedByDescending { it.startDateTimeUtc }
         SortOption.MODIFICATION_DATE -> sortedByDescending { it.updatedAt ?: it.startDateTimeUtc }
+    }
+
+    private fun archiveSelectedProjects() {
+        val ids = _state.value.selectedProjectIds
+        viewModelScope.launch {
+            ids.forEach { id ->
+                projectRepository.setProjectArchived(id, isArchived = true)
+            }
+            _state.update { it.copy(
+                isEditModeActive = false,
+                selectedProjectIds = emptySet()
+            ) }
+        }
     }
 
     private fun deleteSelectedProjects() {
@@ -175,6 +191,7 @@ class ProjectOverviewViewModel(
                     .firstOrNull { it.value.isRunning }
                     ?.let { it.key to it.value }
                 projectList
+                    .filter { !it.isArchived }
                     .sortedForOption(sortOption)
                     .map { it.toProjectUi().withRunningTimer(runningTimer) }
             }.collect { uiProjects ->
