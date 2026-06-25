@@ -29,6 +29,7 @@ import com.jvcs.tracky.features.auth.presentation.reset_password.ResetPasswordSc
 import com.jvcs.tracky.features.auth.presentation.reset_password.ResetPasswordViewModel
 import com.jvcs.tracky.features.project_tracker.presentation.project_detail.EditTextScreenRoot
 import com.jvcs.tracky.features.project_tracker.presentation.project_detail.ProjectDetailAction
+import com.jvcs.tracky.features.project_archive.presentation.project_archive.ProjectArchiveScreenRoot
 import com.jvcs.tracky.features.project_tracker.presentation.project_detail.ProjectDetailScreenRoot
 import com.jvcs.tracky.features.project_tracker.presentation.project_detail.ProjectDetailViewModel
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.ProjectOverviewScreenRoot
@@ -73,6 +74,7 @@ fun NavigationRoot(
                     subclass(Route.AuthRoute.ForgotPassword::class, Route.AuthRoute.ForgotPassword.serializer())
                     subclass(Route.AuthRoute.ResetPassword::class, Route.AuthRoute.ResetPassword.serializer())
                     subclass(Route.ProjectRoute.ProjectOverview::class, Route.ProjectRoute.ProjectOverview.serializer())
+                    subclass(Route.ProjectRoute.ProjectArchive::class, Route.ProjectRoute.ProjectArchive.serializer())
                     subclass(Route.ProjectRoute.ProjectDetail::class, Route.ProjectRoute.ProjectDetail.serializer())
                     subclass(Route.ProjectRoute.TaskDetail::class, Route.ProjectRoute.TaskDetail.serializer())
                 }
@@ -184,6 +186,17 @@ fun NavigationRoot(
                                 projectId = projectId
                             )
                         )
+                    },
+                    onNavigateToArchive = {
+                        backStack.add(Route.ProjectRoute.ProjectArchive)
+                    }
+                )
+            }
+            entry<Route.ProjectRoute.ProjectArchive> {
+                ProjectArchiveScreenRoot(
+                    onNavigateToDetail = { /* wired in PR 3 */ },
+                    onNavigateToProjects = {
+                        backStack.removeLastOrNull()
                     }
                 )
             }

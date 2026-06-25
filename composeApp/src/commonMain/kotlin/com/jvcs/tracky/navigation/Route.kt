@@ -36,6 +36,9 @@ sealed interface Route : NavKey {
         data object ProjectOverview : Route, NavKey
 
         @Serializable
+        data object ProjectArchive : Route, NavKey
+
+        @Serializable
         data class ProjectDetail(
             val isEditMode: Boolean,
             val projectId: String? = null,
