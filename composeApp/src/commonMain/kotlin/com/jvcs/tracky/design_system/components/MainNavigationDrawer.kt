@@ -1,4 +1,4 @@
-package com.jvcs.tracky.features.project_tracker.presentation.project_overview.components
+package com.jvcs.tracky.design_system.components
 
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -23,10 +23,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.jvcs.tracky.design_system.Icon_Archive
+import com.jvcs.tracky.design_system.Icon_Delete
 import com.jvcs.tracky.design_system.Icon_Help
 import com.jvcs.tracky.design_system.Icon_Settings
-import com.jvcs.tracky.design_system.Icon_Trash
-import com.jvcs.tracky.design_system.components.Wordmark
 import com.jvcs.tracky.design_system.theme.TrackyTheme
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
@@ -37,12 +36,17 @@ import tracky.composeapp.generated.resources.drawer_archive
 import tracky.composeapp.generated.resources.drawer_projects
 import tracky.composeapp.generated.resources.drawer_reminders
 import tracky.composeapp.generated.resources.drawer_settings
-import tracky.composeapp.generated.resources.drawer_trash_bin
+import tracky.composeapp.generated.resources.drawer_trash
+
+enum class MainNavDrawerItem { PROJECTS, ARCHIVE }
 
 @Composable
-fun ProjectOverviewNavDrawer(
+fun MainNavigationDrawer(
     drawerState: DrawerState,
+    selectedItem: MainNavDrawerItem,
     modifier: Modifier = Modifier,
+    onProjectsClick: () -> Unit = {},
+    onArchiveClick: () -> Unit = {},
     content: @Composable () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -60,8 +64,8 @@ fun ProjectOverviewNavDrawer(
                 DrawerItem(
                     label = Res.string.drawer_projects,
                     icon = Icons.Outlined.FolderOpen,
-                    selected = true,
-                    onClick = closeDrawer
+                    selected = selectedItem == MainNavDrawerItem.PROJECTS,
+                    onClick = { closeDrawer(); onProjectsClick() }
                 )
                 DrawerItem(
                     label = Res.string.drawer_reminders,
@@ -75,12 +79,12 @@ fun ProjectOverviewNavDrawer(
                 DrawerItem(
                     label = Res.string.drawer_archive,
                     icon = Icon_Archive,
-                    selected = false,
-                    onClick = closeDrawer
+                    selected = selectedItem == MainNavDrawerItem.ARCHIVE,
+                    onClick = { closeDrawer(); onArchiveClick() }
                 )
                 DrawerItem(
-                    label = Res.string.drawer_trash_bin,
-                    icon = Icon_Trash,
+                    label = Res.string.drawer_trash,
+                    icon = Icon_Delete,
                     selected = false,
                     onClick = closeDrawer
                 )
@@ -120,10 +124,11 @@ private fun DrawerItem(
 
 @Preview
 @Composable
-private fun ProjectOverviewNavDrawerPreview() {
+private fun MainNavigationDrawerPreview() {
     TrackyTheme {
-        ProjectOverviewNavDrawer(
-            drawerState = rememberDrawerState(DrawerValue.Open)
+        MainNavigationDrawer(
+            drawerState = rememberDrawerState(DrawerValue.Open),
+            selectedItem = MainNavDrawerItem.PROJECTS
         ) {
             Spacer(modifier = Modifier.height(0.dp))
         }
