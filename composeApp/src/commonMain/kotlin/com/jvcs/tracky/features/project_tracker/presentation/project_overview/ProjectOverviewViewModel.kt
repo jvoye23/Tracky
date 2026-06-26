@@ -125,9 +125,7 @@ class ProjectOverviewViewModel(
             }
             is ProjectOverviewAction.OnSortOptionSelected -> {
                 _sortOption.update { action.sortOption }
-                val isSortOptionCustom = action.sortOption.name == "CUSTOM"
                 _state.update { it.copy(
-                    isSortOptionCustom = isSortOptionCustom,
                     isSortBottomSheetVisible = false
                 ) }
             }
@@ -169,6 +167,9 @@ class ProjectOverviewViewModel(
                 timeManager.taskStates,
                 _sortOption
             ) { projectList, activeTimers, sortOption ->
+                _state.update { it.copy(
+                    sortOption = sortOption
+                ) }
                 // Only one timer can run at a time across all tasks/projects.
                 val runningTimer = activeTimers.entries
                     .firstOrNull { it.value.isRunning }
