@@ -103,6 +103,17 @@ class OfflineFirstProjectRepository(
         }
     }
 
+    // ARCHIVE/UNARCHIVE: flip the flag and route through the offline-first upsert so the change is
+    // pushed to the server immediately when online (and only queued for sync when offline), exactly
+    // like every other write.
+    override suspend fun setProjectArchived(projectId: String, isArchived: Boolean): EmptyResult<DataError> {
+        val project = when (val existing = dbResult { localProjectDataSource.getProjectById(projectId) }) {
+            is Result.Success -> existing.data ?: return Result.Success(Unit) // nothing to archive
+            is Result.Error -> return existing.asEmptyDataResult()
+        }
+        return upsertProject(project.copy(isArchived = isArchived))
+    }
+
     // CREATE/UPDATE task: same optimistic flow as projects.
     override suspend fun upsertProjectTask(projectTask: ProjectTask): EmptyResult<DataError> {
         val isCreate = when (val existing = dbResult { localProjectDataSource.getTaskWithIntervalsById(projectTask.projectTaskId).first() }) {
