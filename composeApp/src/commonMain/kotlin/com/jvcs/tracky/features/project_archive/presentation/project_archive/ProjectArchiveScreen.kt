@@ -1,7 +1,11 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 
 package com.jvcs.tracky.features.project_archive.presentation.project_archive
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
@@ -10,17 +14,27 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
@@ -30,14 +44,26 @@ import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
 import com.jvcs.tracky.core.presentation.model.ProjectUi
+import com.jvcs.tracky.design_system.Icon_Trash
 import com.jvcs.tracky.design_system.components.MainNavDrawerItem
 import com.jvcs.tracky.design_system.components.MainNavigationDrawer
 import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.design_system.util.DevicePreviews
+import com.jvcs.tracky.design_system.util.ObserveAsEvents
+import com.jvcs.tracky.features.project_archive.presentation.project_archive.components.ProjectArchiveEditModeTopBar
 import com.jvcs.tracky.features.project_archive.presentation.project_archive.components.ProjectArchiveTopBar
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectCard
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
+import tracky.composeapp.generated.resources.Res
+import tracky.composeapp.generated.resources.cancel
+import tracky.composeapp.generated.resources.confirm
+import tracky.composeapp.generated.resources.delete_one_project_confirmation
+import tracky.composeapp.generated.resources.delete_project_title
+import tracky.composeapp.generated.resources.delete_projects_confirmation
+import tracky.composeapp.generated.resources.delete_projects_title
+import tracky.composeapp.generated.resources.delete_selected
 
 @Composable
 fun ProjectArchiveScreenRoot(
@@ -47,16 +73,39 @@ fun ProjectArchiveScreenRoot(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+
+    ObserveAsEvents(viewModel.events) { event ->
+        when (event) {
+            is ProjectArchiveEvent.ReactivateError -> {
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar(
+                        message = "Failed to reactivate all selected projects",
+                        duration = SnackbarDuration.Long
+                    )
+                }
+            }
+        }
+    }
+
+    BackHandler(enabled = state.isEditModeActive) {
+        viewModel.onAction(ProjectArchiveAction.OnExitEditMode)
+    }
+
     ProjectArchiveScreen(
         state = state,
         onAction = { action ->
             when (action) {
-                is ProjectArchiveAction.OnProjectCardClick -> onNavigateToDetail(action.projectId)
+                is ProjectArchiveAction.OnProjectCardClick -> {
+                    if (!state.isEditModeActive) onNavigateToDetail(action.projectId)
+                }
                 else -> Unit
             }
             viewModel.onAction(action)
         },
-        onNavigateToProjects = onNavigateToProjects
+        onNavigateToProjects = onNavigateToProjects,
+        snackbarHostState = snackbarHostState
     )
 }
 
@@ -66,6 +115,7 @@ fun ProjectArchiveScreen(
     onAction: (ProjectArchiveAction) -> Unit,
     modifier: Modifier = Modifier,
     onNavigateToProjects: () -> Unit = {},
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed)
 ) {
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
@@ -86,17 +136,35 @@ fun ProjectArchiveScreen(
         onProjectsClick = onNavigateToProjects
     ) {
         Scaffold(
+            snackbarHost = {
+                SnackbarHost(hostState = snackbarHostState)
+            },
             modifier = Modifier
                 .fillMaxSize()
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
             topBar = {
-                ProjectArchiveTopBar(
-                    modifier = Modifier.padding(horizontal = 10.dp),
-                    state = state,
-                    onAction = onAction,
-                    onMenuClick = { drawerScope.launch { drawerState.open() } },
-                    scrollBehavior = scrollBehavior
-                )
+                AnimatedContent(
+                    targetState = state.isEditModeActive,
+                    transitionSpec = { fadeIn() togetherWith fadeOut() },
+                    label = "topBarSwap"
+                ) { editMode ->
+                    if (editMode) {
+                        ProjectArchiveEditModeTopBar(
+                            modifier = Modifier.padding(horizontal = 10.dp),
+                            state = state,
+                            onAction = onAction,
+                            scrollBehavior = scrollBehavior
+                        )
+                    } else {
+                        ProjectArchiveTopBar(
+                            modifier = Modifier.padding(horizontal = 10.dp),
+                            state = state,
+                            onAction = onAction,
+                            onMenuClick = { drawerScope.launch { drawerState.open() } },
+                            scrollBehavior = scrollBehavior
+                        )
+                    }
+                }
             },
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
             contentWindowInsets = WindowInsets.safeDrawing
@@ -119,9 +187,51 @@ fun ProjectArchiveScreen(
                     ProjectCard(
                         modifier = Modifier.animateItem(),
                         projectUi = item,
-                        onClick = { onAction(ProjectArchiveAction.OnProjectCardClick(item.projectId)) }
+                        onClick = { onAction(ProjectArchiveAction.OnProjectCardClick(item.projectId)) },
+                        onLongClick = { onAction(ProjectArchiveAction.OnProjectCardLongPress(item.projectId)) },
+                        onToggleSelection = { onAction(ProjectArchiveAction.OnProjectCardToggleSelection(item.projectId)) },
+                        isEditModeActive = state.isEditModeActive,
+                        isSelected = item.projectId in state.selectedProjectIds
                     )
                 }
+            }
+            if (state.isDeleteConfirmationDialogVisible) {
+                AlertDialog(
+                    onDismissRequest = { onAction(ProjectArchiveAction.OnDismissDeleteDialog) },
+                    icon = {
+                        Icon(
+                            imageVector = Icon_Trash,
+                            contentDescription = stringResource(Res.string.delete_selected),
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    },
+                    title = {
+                        Text(
+                            text = if (state.selectedProjectIds.size != 1)
+                                stringResource(Res.string.delete_projects_title)
+                            else stringResource(Res.string.delete_project_title)
+                        )
+                    },
+                    text = {
+                        Text(
+                            text = if (state.selectedProjectIds.size != 1)
+                                stringResource(
+                                    Res.string.delete_projects_confirmation,
+                                    state.selectedProjectIds.size
+                                ) else stringResource(Res.string.delete_one_project_confirmation)
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { onAction(ProjectArchiveAction.OnConfirmDelete) }) {
+                            Text(text = stringResource(Res.string.confirm))
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { onAction(ProjectArchiveAction.OnDismissDeleteDialog) }) {
+                            Text(text = stringResource(Res.string.cancel))
+                        }
+                    }
+                )
             }
         }
     }

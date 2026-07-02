@@ -58,6 +58,10 @@ class OfflineFirstProjectRepository(
         return localProjectDataSource.getProjects()
     }
 
+    override fun getArchivedProjects(): Flow<List<Project>> {
+        return localProjectDataSource.getArchivedProjects()
+    }
+
     override suspend fun getProjectById(projectId: String): Project? {
         return localProjectDataSource.getProjectById(projectId)
     }
