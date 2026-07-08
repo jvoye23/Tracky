@@ -51,6 +51,7 @@
     <string name="stop_timer">Stop timer</string>
     <string name="light_text_color">Light text color</string>
     <string name="create_new_task">Create new task</string>
+    <string name="project_saved_successfully">Project saved successfully!</string>
 
     <!-- Auth -->
     <string name="welcome_back">Welcome Back</string>
@@ -140,6 +141,7 @@
     <string name="error_serialization">Oops, couldn\'t parse data</string>
     <string name="error_unknown">Oops, an unknown error occurred.</string>
     <string name="error_email_exists">A user with that email already exists.</string>
+    <string name="error_archiving_projects">Failed to archive all selected projects.</string>
 
     <!-- Color Picker -->
     <string name="select_color">Select Color</string>
@@ -154,6 +156,7 @@
     <string name="exit_edit_mode">Exit edit mode</string>
     <string name="delete_selected">Delete selected</string>
     <string name="archive_selected">Archive selected</string>
+    <string name="reactivate_selected">Reactivate selected</string>
     <string name="file_export_selected">File export selected</string>
 
 </resources>

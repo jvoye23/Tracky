@@ -2,11 +2,14 @@ package com.jvcs.tracky.features.project_archive.presentation.project_archive
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.presentation.mapper.toProjectUi
 import com.jvcs.tracky.features.project_tracker.domain.ProjectRepository
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -17,6 +20,9 @@ class ProjectArchiveViewModel(
 
     private val _state = MutableStateFlow(ProjectArchiveState())
     private var hasLoadedInitialData = false
+
+    private val eventChannel = Channel<ProjectArchiveEvent>()
+    val events = eventChannel.receiveAsFlow()
 
     val state = _state
         .onStart {
@@ -49,6 +55,70 @@ class ProjectArchiveViewModel(
                 _state.update { it.copy(searchQuery = action.query) }
                 filterProjects(action.query)
             }
+            is ProjectArchiveAction.OnProjectCardLongPress -> {
+                _state.update { it.copy(
+                    isEditModeActive = true,
+                    selectedProjectIds = it.selectedProjectIds + action.projectId
+                ) }
+            }
+            is ProjectArchiveAction.OnProjectCardToggleSelection -> {
+                _state.update {
+                    val updated = if (action.projectId in it.selectedProjectIds) {
+                        it.selectedProjectIds - action.projectId
+                    } else {
+                        it.selectedProjectIds + action.projectId
+                    }
+                    it.copy(
+                        selectedProjectIds = updated,
+                        isEditModeActive = updated.isNotEmpty()
+                    )
+                }
+            }
+            ProjectArchiveAction.OnExitEditMode -> {
+                _state.update { it.copy(
+                    isEditModeActive = false,
+                    selectedProjectIds = emptySet(),
+                    isDeleteConfirmationDialogVisible = false
+                ) }
+            }
+            ProjectArchiveAction.OnReactivateSelectedClick -> {
+                reactivateSelectedProjects()
+            }
+            ProjectArchiveAction.OnDeleteSelectedClick -> {
+                _state.update { it.copy(isDeleteConfirmationDialogVisible = true) }
+            }
+            ProjectArchiveAction.OnDismissDeleteDialog -> {
+                _state.update { it.copy(isDeleteConfirmationDialogVisible = false) }
+            }
+            ProjectArchiveAction.OnConfirmDelete -> {
+                deleteSelectedProjects()
+            }
+        }
+    }
+
+    private fun reactivateSelectedProjects() {
+        val ids = _state.value.selectedProjectIds
+        viewModelScope.launch {
+            val errors = ids.mapNotNull { id ->
+                (projectRepository.setProjectArchived(id, isArchived = false) as? Result.Error)?.error
+            }
+            _state.update { it.copy(
+                isEditModeActive = false,
+                selectedProjectIds = emptySet()
+            ) }
+            if (errors.isNotEmpty()) eventChannel.send(ProjectArchiveEvent.ReactivateError)
+        }
+    }
+
+    private fun deleteSelectedProjects() {
+        val ids = _state.value.selectedProjectIds
+        viewModelScope.launch {
+            ids.forEach { projectRepository.deleteProject(it) }
+            _state.update { it.copy(
+                isEditModeActive = false,
+                selectedProjectIds = emptySet(),
+                isDeleteConfirmationDialogVisible = false
+            ) }
         }
     }
 
@@ -64,10 +134,8 @@ class ProjectArchiveViewModel(
 
     private fun getArchivedProjects() {
         viewModelScope.launch {
-            projectRepository.getProjects().collect { projectList ->
-                val archived = projectList
-                    .filter { it.isArchived }
-                    .map { it.toProjectUi() }
+            projectRepository.getArchivedProjects().collect { projectList ->
+                val archived = projectList.map { it.toProjectUi() }
                 _state.update { state ->
                     state.copy(
                         projects = archived,

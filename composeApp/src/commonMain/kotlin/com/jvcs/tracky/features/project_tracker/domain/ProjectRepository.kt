@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.Flow
 interface ProjectRepository {
 
     fun getProjects(): Flow<List<Project>>
+    fun getArchivedProjects(): Flow<List<Project>>
     suspend fun getProjectById(projectId: String): Project?
     suspend fun getProjectWithTasksByProjectId(projectId: String): Project?
     suspend fun upsertProject(project: Project): EmptyResult<DataError>

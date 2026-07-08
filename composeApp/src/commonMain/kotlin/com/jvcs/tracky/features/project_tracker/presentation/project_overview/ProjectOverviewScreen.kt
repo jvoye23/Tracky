@@ -63,6 +63,7 @@ import com.jvcs.tracky.design_system.components.MainNavigationDrawer
 import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.design_system.util.DevicePreviews
 import com.jvcs.tracky.design_system.util.ObserveAsEvents
+import com.jvcs.tracky.design_system.util.UiText
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.AddNewProjectBottomSheet
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectCard
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectOverViewTopBar
@@ -82,6 +83,7 @@ import tracky.composeapp.generated.resources.delete_projects_confirmation
 import tracky.composeapp.generated.resources.delete_projects_title
 import tracky.composeapp.generated.resources.delete_selected
 import tracky.composeapp.generated.resources.new_project
+import tracky.composeapp.generated.resources.project_saved_successfully
 import tracky.composeapp.generated.resources.search_results
 
 @Composable
@@ -109,11 +111,19 @@ fun ProjectOverviewScreenRoot(
                     )
                 }
             }
+            is ProjectOverviewEvent.ArchiveError -> {
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar(
+                        message = "Failed to archive all selected projects",
+                        duration = SnackbarDuration.Long
+                    )
+                }
+            }
             is ProjectOverviewEvent.NewProjectSaved -> {
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar(
                         message = "Project saved successfully!",
-                        duration = SnackbarDuration.Short
+                        duration = SnackbarDuration.Long
                     )
                 }
                 onNavigateToDetailScreen(event.projectId)

@@ -144,13 +144,14 @@ class ProjectOverviewViewModel(
     private fun archiveSelectedProjects() {
         val ids = _state.value.selectedProjectIds
         viewModelScope.launch {
-            ids.forEach { id ->
-                projectRepository.setProjectArchived(id, isArchived = true)
+            val errors = ids.mapNotNull { id ->
+                (projectRepository.setProjectArchived(id, isArchived = true) as? Result.Error)?.error
             }
             _state.update { it.copy(
                 isEditModeActive = false,
                 selectedProjectIds = emptySet()
             ) }
+            if (errors.isNotEmpty()) eventChannel.send(ProjectOverviewEvent.ArchiveError)
         }
     }
 
@@ -183,21 +184,20 @@ class ProjectOverviewViewModel(
                 timeManager.taskStates,
                 _sortOption
             ) { projectList, activeTimers, sortOption ->
-                _state.update { it.copy(
-                    sortOption = sortOption
-                ) }
                 // Only one timer can run at a time across all tasks/projects.
                 val runningTimer = activeTimers.entries
                     .firstOrNull { it.value.isRunning }
                     ?.let { it.key to it.value }
-                projectList
+                val uiProjects = projectList
                     .filter { !it.isArchived }
                     .sortedForOption(sortOption)
                     .map { it.toProjectUi().withRunningTimer(runningTimer) }
-            }.collect { uiProjects ->
+                uiProjects to sortOption
+            }.collect { (uiProjects, sortOption) ->
                 _state.update { state ->
                     state.copy(
                         projects = uiProjects,
+                        sortOption = sortOption,
                         filteredProjects = if (state.searchQuery.isEmpty()) uiProjects else uiProjects.filter { p -> p.title.contains(state.searchQuery, ignoreCase = true) }
                     )
                 }

@@ -40,6 +40,11 @@ class RoomLocalProjectDataSource (
             .map { list -> list.map { it.toProject() } }
     }
 
+    override fun getArchivedProjects(): Flow<List<Project>> {
+        return projectDao.getArchivedProjectsWithTasks()
+            .map { list -> list.map { it.toProject() } }
+    }
+
     override suspend fun getProjectById(projectId: String): Project? {
         return projectDao.getProjectById(projectId)?.toProject()
 
