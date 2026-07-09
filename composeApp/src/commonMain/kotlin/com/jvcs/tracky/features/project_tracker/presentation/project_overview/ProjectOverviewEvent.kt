@@ -8,4 +8,5 @@ interface ProjectOverviewEvent {
     data class NewProjectSaved(val projectId: String): ProjectOverviewEvent
     data class Error(val error: UiText): ProjectOverviewEvent
     data object ArchiveError: ProjectOverviewEvent
+    data object PinError: ProjectOverviewEvent
 }

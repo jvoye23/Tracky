@@ -17,6 +17,7 @@ sealed interface ProjectOverviewAction {
     data class OnProjectCardLongPress(val projectId: String): ProjectOverviewAction
     data class OnProjectCardToggleSelection(val projectId: String): ProjectOverviewAction
     data object OnExitEditMode: ProjectOverviewAction
+    data object OnPinSelectedClick: ProjectOverviewAction
     data object OnArchiveSelectedClick: ProjectOverviewAction
     data object OnDeleteSelectedClick: ProjectOverviewAction
     data object OnDismissDeleteDialog: ProjectOverviewAction

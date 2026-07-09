@@ -46,7 +46,8 @@ fun Project.toProjectUi(): ProjectUi {
         isFinished = isFinished,
         useLightTextColor = useLightTextColor,
         endDateTimeUtc = endDateTimeInLocalDateTime?.date?.format(dateTimeFormat),
-        projectTasks = projectTasks?.map { it.toProjectTaskUi() }
+        projectTasks = projectTasks?.map { it.toProjectTaskUi() },
+        isPinned = isPinned
     )
 }
 
@@ -64,7 +65,8 @@ fun ProjectUi.toProject(): Project {
         endDateTimeUtc = endDateTimeUtc?.let { LocalDate.parse(it, dateTimeFormat).atStartOfDayIn(TimeZone.currentSystemDefault()) },
         projectTasks = projectTasks?.map { it.toProjectTask(projectId ?: "") },
         isArchived = false,
-        trashedAt = null
+        trashedAt = null,
+        isPinned = isPinned
     )
 }
 

@@ -28,6 +28,7 @@ import tracky.composeapp.generated.resources.minus
 import tracky.composeapp.generated.resources.more_vert_icon
 import tracky.composeapp.generated.resources.phone
 import tracky.composeapp.generated.resources.phone_filled
+import tracky.composeapp.generated.resources.pin_icon
 import tracky.composeapp.generated.resources.plus
 import tracky.composeapp.generated.resources.settings_icon
 import tracky.composeapp.generated.resources.swap_vert_icon
@@ -169,3 +170,7 @@ val Icon_Swap_Vert_Down: ImageVector
 val Icon_More_Vert: ImageVector
     @Composable
     get() = vectorResource(Res.drawable.more_vert_icon)
+
+val Icon_Pin: ImageVector
+    @Composable
+    get() = vectorResource(Res.drawable.pin_icon)

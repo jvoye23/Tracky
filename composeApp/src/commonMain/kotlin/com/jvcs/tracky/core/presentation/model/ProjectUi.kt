@@ -15,7 +15,8 @@ data class ProjectUi(
     val isFinished: Boolean,
     val useLightTextColor: Boolean = false,
     val endDateTimeUtc: String?,
-    val projectTasks: List<ProjectTaskUi>? = null
+    val projectTasks: List<ProjectTaskUi>? = null,
+    val isPinned: Boolean = false
 ) {
     val totalProjectDuration: String
         get() {

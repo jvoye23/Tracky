@@ -150,7 +150,7 @@ fun ProjectOverViewTopBar(
                     username = username,
                     email = email,
                     onLogoutClick = onLogout,
-                    modifier = Modifier.padding(start = 8.dp)
+                    modifier = Modifier.padding(start = 8.dp, end = 10.dp)
                 )
             }
         },
