@@ -109,6 +109,9 @@ class ProjectOverviewViewModel(
                     isDeleteConfirmationDialogVisible = false
                 ) }
             }
+            ProjectOverviewAction.OnPinSelectedClick -> {
+                pinSelectedProjects()
+            }
             ProjectOverviewAction.OnArchiveSelectedClick -> {
                 archiveSelectedProjects()
             }
@@ -152,6 +155,24 @@ class ProjectOverviewViewModel(
                 selectedProjectIds = emptySet()
             ) }
             if (errors.isNotEmpty()) eventChannel.send(ProjectOverviewEvent.ArchiveError)
+        }
+    }
+
+    private fun pinSelectedProjects() {
+        val ids = _state.value.selectedProjectIds
+        // Smart toggle: if any selected project is currently unpinned, pin all of them;
+        // otherwise (all already pinned) unpin all.
+        val selected = _state.value.projects?.filter { it.projectId in ids } ?: emptyList()
+        val targetPinned = selected.any { !it.isPinned }
+        viewModelScope.launch {
+            val errors = ids.mapNotNull { id ->
+                (projectRepository.setProjectPinned(id, isPinned = targetPinned) as? Result.Error)?.error
+            }
+            _state.update { it.copy(
+                isEditModeActive = false,
+                selectedProjectIds = emptySet()
+            ) }
+            if (errors.isNotEmpty()) eventChannel.send(ProjectOverviewEvent.PinError)
         }
     }
 

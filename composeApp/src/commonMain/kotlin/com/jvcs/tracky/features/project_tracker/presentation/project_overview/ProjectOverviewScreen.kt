@@ -9,16 +9,17 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyItemScope
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -27,6 +28,7 @@ import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -39,9 +41,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -71,6 +76,7 @@ import com.jvcs.tracky.features.project_tracker.presentation.project_overview.co
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.SortBottomSheet
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.SortSheetContent
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import tracky.composeapp.generated.resources.Res
@@ -82,7 +88,12 @@ import tracky.composeapp.generated.resources.delete_project_title
 import tracky.composeapp.generated.resources.delete_projects_confirmation
 import tracky.composeapp.generated.resources.delete_projects_title
 import tracky.composeapp.generated.resources.delete_selected
+import tracky.composeapp.generated.resources.email_verified_failed
+import tracky.composeapp.generated.resources.error_archiving_projects
+import tracky.composeapp.generated.resources.error_pinning_projects
 import tracky.composeapp.generated.resources.new_project
+import tracky.composeapp.generated.resources.other
+import tracky.composeapp.generated.resources.pinned
 import tracky.composeapp.generated.resources.project_saved_successfully
 import tracky.composeapp.generated.resources.search_results
 
@@ -113,8 +124,18 @@ fun ProjectOverviewScreenRoot(
             }
             is ProjectOverviewEvent.ArchiveError -> {
                 coroutineScope.launch {
+                    val errorMessage = getString(Res.string.error_archiving_projects)
                     snackbarHostState.showSnackbar(
-                        message = "Failed to archive all selected projects",
+                        message = errorMessage,
+                        duration = SnackbarDuration.Long
+                    )
+                }
+            }
+            is ProjectOverviewEvent.PinError -> {
+                coroutineScope.launch {
+                    val errorMessage = getString(Res.string.error_pinning_projects)
+                    snackbarHostState.showSnackbar(
+                        message = errorMessage,
                         duration = SnackbarDuration.Long
                     )
                 }
@@ -169,7 +190,12 @@ fun ProjectOverviewScreen(
     drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed)
 ) {
 
-    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+    val enterAlwaysScrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+    val pinnedScrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+    val scrollBehavior =
+        if (state.isEditModeActive) pinnedScrollBehavior else enterAlwaysScrollBehavior
+    val listState = rememberLazyListState()
+    val fabExpanded = listState.isScrollingUp()
     val drawerScope = rememberCoroutineScope()
     val backState = rememberNavigationEventState(NavigationEventInfo.None)
 
@@ -201,14 +227,12 @@ fun ProjectOverviewScreen(
             ) { editMode ->
                 if (editMode) {
                     ProjectOverviewEditModeTopBar(
-                        modifier = Modifier.padding(horizontal = 10.dp),
                         state = state,
                         onAction = onAction,
                         scrollBehavior = scrollBehavior
                     )
                 } else {
                     ProjectOverViewTopBar(
-                        modifier = Modifier.padding(horizontal = 10.dp),
                         onAction = onAction,
                         state = state,
                         onLogout = onLogout,
@@ -227,23 +251,26 @@ fun ProjectOverviewScreen(
                 onClick = {
                     onAction(ProjectOverviewAction.OnFabClick)
                 },
-
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Add",
-                    modifier = Modifier.size(26.dp)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = stringResource(Res.string.new_project),
-                    style = MaterialTheme.typography.bodyLarge
-                )
-            }
+                expanded = fabExpanded,
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = stringResource(Res.string.new_project),
+                        modifier = Modifier.size(26.dp)
+                    )
+                },
+                text = {
+                    Text(
+                        text = stringResource(Res.string.new_project),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+            )
         }
 
     ) { innerPadding ->
         LazyColumn(
+            state = listState,
             modifier = modifier
                 .fillMaxSize()
                 .padding(horizontal = 10.dp)
@@ -254,30 +281,33 @@ fun ProjectOverviewScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            val allProjects = state.filteredProjects ?: emptyList()
+            val pinnedProjects = allProjects.filter { it.isPinned }
+            val currentProjects = allProjects.filterNot { it.isPinned }
+
+            if (pinnedProjects.isNotEmpty()) {
+                item {
+                    ProjectSectionHeader(text = stringResource(Res.string.pinned))
+                }
+                items(
+                    items = pinnedProjects,
+                    key = { it.projectId }
+                ) { item ->
+                    ProjectListCard(item = item, state = state, onAction = onAction)
+                }
+            }
+
             item {
-                Text(
-                    modifier = Modifier
-                        .padding(bottom = 8.dp, top = 8.dp, start = 8.dp),
-                    text = if (state.searchQuery.isEmpty()) stringResource(Res.string.current_projects) else stringResource(Res.string.search_results),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                ProjectSectionHeader(
+                    text = if (state.searchQuery.isEmpty()) stringResource(Res.string.other) else stringResource(Res.string.search_results)
                 )
             }
 
             items(
-                items = state.filteredProjects ?: emptyList(),
+                items = currentProjects,
                 key = { it.projectId }
             ) { item ->
-                ProjectCard(
-                    modifier = Modifier.animateItem(),
-                    projectUi = item,
-                    onClick = { onAction(ProjectOverviewAction.OnProjectCardClick(item.projectId)) },
-                    onLongClick = { onAction(ProjectOverviewAction.OnProjectCardLongPress(item.projectId)) },
-                    onToggleSelection = { onAction(ProjectOverviewAction.OnProjectCardToggleSelection(item.projectId)) },
-                    isEditModeActive = state.isEditModeActive,
-                    isSelected = item.projectId in state.selectedProjectIds
-                )
-
+                ProjectListCard(item = item, state = state, onAction = onAction)
             }
 
         }
@@ -336,6 +366,57 @@ fun ProjectOverviewScreen(
     }
 }
 
+/**
+ * Returns `true` while the list is being scrolled toward the top (its beginning).
+ * Canonical Google Compose-samples pattern: tracks the first visible item index and
+ * offset across recompositions and derives the direction from their deltas.
+ */
+@Composable
+private fun LazyListState.isScrollingUp(): Boolean {
+    var previousIndex by remember(this) { mutableStateOf(firstVisibleItemIndex) }
+    var previousScrollOffset by remember(this) { mutableStateOf(firstVisibleItemScrollOffset) }
+    return remember(this) {
+        derivedStateOf {
+            if (previousIndex != firstVisibleItemIndex) {
+                previousIndex > firstVisibleItemIndex
+            } else {
+                previousScrollOffset >= firstVisibleItemScrollOffset
+            }.also {
+                previousIndex = firstVisibleItemIndex
+                previousScrollOffset = firstVisibleItemScrollOffset
+            }
+        }
+    }.value
+}
+
+@Composable
+private fun ProjectSectionHeader(text: String) {
+    Text(
+        modifier = Modifier
+            .padding(bottom = 8.dp, top = 8.dp, start = 8.dp),
+        text = text,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+}
+
+@Composable
+private fun LazyItemScope.ProjectListCard(
+    item: ProjectUi,
+    state: ProjectOverviewState,
+    onAction: (ProjectOverviewAction) -> Unit
+) {
+    ProjectCard(
+        modifier = Modifier.animateItem(),
+        projectUi = item,
+        onClick = { onAction(ProjectOverviewAction.OnProjectCardClick(item.projectId)) },
+        onLongClick = { onAction(ProjectOverviewAction.OnProjectCardLongPress(item.projectId)) },
+        onToggleSelection = { onAction(ProjectOverviewAction.OnProjectCardToggleSelection(item.projectId)) },
+        isEditModeActive = state.isEditModeActive,
+        isSelected = item.projectId in state.selectedProjectIds
+    )
+}
+
 private fun previewProjects(): List<ProjectUi> = listOf(
     ProjectUi(
         projectId = "1",
@@ -366,6 +447,7 @@ private fun previewProjects(): List<ProjectUi> = listOf(
         startDateTimeUtc = "2025-11-20T09:00",
         isFinished = true,
         endDateTimeUtc = "2025-11-25T17:00",
+        isPinned = true,
         projectTasks = listOf(
             ProjectTaskUi(
                 id = "t2",

@@ -15,10 +15,14 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Devices
+import androidx.compose.ui.tooling.preview.Preview
 import com.jvcs.tracky.design_system.Icon_Archive
 import com.jvcs.tracky.design_system.Icon_Delete
 import com.jvcs.tracky.design_system.Icon_File_Export
+import com.jvcs.tracky.design_system.Icon_Pin
 import com.jvcs.tracky.design_system.Icon_Trash
+import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.ProjectOverviewAction
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.ProjectOverviewState
 import org.jetbrains.compose.resources.stringResource
@@ -27,6 +31,7 @@ import tracky.composeapp.generated.resources.archive_selected
 import tracky.composeapp.generated.resources.delete_selected
 import tracky.composeapp.generated.resources.exit_edit_mode
 import tracky.composeapp.generated.resources.file_export_selected
+import tracky.composeapp.generated.resources.pin_selected
 
 @Composable
 fun ProjectOverviewEditModeTopBar(
@@ -54,6 +59,13 @@ fun ProjectOverviewEditModeTopBar(
             )
         },
         actions = {
+            IconButton(onClick = { onAction(ProjectOverviewAction.OnPinSelectedClick) }) {
+                Icon(
+                    imageVector = Icon_Pin,
+                    contentDescription = stringResource(Res.string.pin_selected),
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
             IconButton(onClick = { onAction(ProjectOverviewAction.OnArchiveSelectedClick) }) {
                 Icon(
                     imageVector = Icon_Archive,
@@ -82,4 +94,16 @@ fun ProjectOverviewEditModeTopBar(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         )
     )
+}
+
+@Preview(showSystemUi = true, device = Devices.PIXEL_9_PRO)
+@Composable
+private fun ProjectOverviewEditModeTopBarPreview() {
+    TrackyTheme {
+        ProjectOverviewEditModeTopBar(
+            onAction = {},
+            state = ProjectOverviewState(),
+            scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+        )
+    }
 }

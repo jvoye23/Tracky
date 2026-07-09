@@ -35,6 +35,8 @@
     <string name="in_progress">In progress</string>
     <string name="duration">Duration</string>
     <string name="current_projects">Current projects</string>
+    <string name="other">Other</string>
+    <string name="pinned">Pinned</string>
     <string name="search_results">Search results</string>
     <string name="sort_by">Sort by</string>
     <string name="sort_custom">Custom</string>
@@ -142,6 +144,7 @@
     <string name="error_unknown">Oops, an unknown error occurred.</string>
     <string name="error_email_exists">A user with that email already exists.</string>
     <string name="error_archiving_projects">Failed to archive all selected projects.</string>
+    <string name="error_pinning_projects">Failed to pin all selected projects.</string>
 
     <!-- Color Picker -->
     <string name="select_color">Select Color</string>
@@ -158,5 +161,6 @@
     <string name="archive_selected">Archive selected</string>
     <string name="reactivate_selected">Reactivate selected</string>
     <string name="file_export_selected">File export selected</string>
+    <string name="pin_selected">Pin selected</string>
 
 </resources>

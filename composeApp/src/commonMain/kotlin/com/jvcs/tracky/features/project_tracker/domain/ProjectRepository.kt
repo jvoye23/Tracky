@@ -16,6 +16,7 @@ interface ProjectRepository {
     suspend fun getProjectWithTasksByProjectId(projectId: String): Project?
     suspend fun upsertProject(project: Project): EmptyResult<DataError>
     suspend fun setProjectArchived(projectId: String, isArchived: Boolean): EmptyResult<DataError>
+    suspend fun setProjectPinned(projectId: String, isPinned: Boolean): EmptyResult<DataError>
     suspend fun upsertProjectTask(projectTask: ProjectTask): EmptyResult<DataError>
     suspend fun deleteProject(projectId: String)
     suspend fun deleteProjectTask(taskId: String)

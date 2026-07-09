@@ -15,8 +15,13 @@ import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.tooling.preview.Devices
+import androidx.compose.ui.tooling.preview.Preview
 import com.jvcs.tracky.design_system.Icon_Archive
+import com.jvcs.tracky.design_system.Icon_Delete
+import com.jvcs.tracky.design_system.Icon_Plus
 import com.jvcs.tracky.design_system.Icon_Trash
+import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.features.project_archive.presentation.project_archive.ProjectArchiveAction
 import com.jvcs.tracky.features.project_archive.presentation.project_archive.ProjectArchiveState
 import org.jetbrains.compose.resources.stringResource
@@ -53,7 +58,7 @@ fun ProjectArchiveEditModeTopBar(
         actions = {
             IconButton(onClick = { onAction(ProjectArchiveAction.OnDeleteSelectedClick) }) {
                 Icon(
-                    imageVector = Icon_Trash,
+                    imageVector = Icon_Delete,
                     contentDescription = stringResource(Res.string.delete_selected),
                     tint = MaterialTheme.colorScheme.onSurface
                 )
@@ -72,4 +77,18 @@ fun ProjectArchiveEditModeTopBar(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         )
     )
+}
+
+@Preview(showSystemUi = true, device = Devices.PIXEL_9_PRO)
+@Composable
+private fun ProjectArchiveEditModeTopBarPreview() {
+    TrackyTheme {
+        ProjectArchiveEditModeTopBar(
+            state = ProjectArchiveState(
+                isEditModeActive = true
+            ),
+            onAction = {},
+            scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+        )
+    }
 }

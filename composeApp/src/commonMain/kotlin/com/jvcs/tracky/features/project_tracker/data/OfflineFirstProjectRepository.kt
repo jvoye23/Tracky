@@ -118,6 +118,15 @@ class OfflineFirstProjectRepository(
         return upsertProject(project.copy(isArchived = isArchived))
     }
 
+    // PIN/UNPIN: flip the flag and route through the offline-first upsert, exactly like archive.
+    override suspend fun setProjectPinned(projectId: String, isPinned: Boolean): EmptyResult<DataError> {
+        val project = when (val existing = dbResult { localProjectDataSource.getProjectById(projectId) }) {
+            is Result.Success -> existing.data ?: return Result.Success(Unit) // nothing to pin
+            is Result.Error -> return existing.asEmptyDataResult()
+        }
+        return upsertProject(project.copy(isPinned = isPinned))
+    }
+
     // CREATE/UPDATE task: same optimistic flow as projects.
     override suspend fun upsertProjectTask(projectTask: ProjectTask): EmptyResult<DataError> {
         val isCreate = when (val existing = dbResult { localProjectDataSource.getTaskWithIntervalsById(projectTask.projectTaskId).first() }) {
