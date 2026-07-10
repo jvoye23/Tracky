@@ -45,6 +45,15 @@ class RoomLocalProjectDataSource (
             .map { list -> list.map { it.toProject() } }
     }
 
+    override fun getTrashedProjects(): Flow<List<Project>> {
+        return projectDao.getTrashedProjectsWithTasks()
+            .map { list -> list.map { it.toProject() } }
+    }
+
+    override suspend fun getExpiredTrashedProjectIds(cutoff: Instant): List<String> {
+        return projectDao.getExpiredTrashedProjectIds(cutoff.toEpochMilliseconds())
+    }
+
     override suspend fun getProjectById(projectId: String): Project? {
         return projectDao.getProjectById(projectId)?.toProject()
 

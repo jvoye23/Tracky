@@ -36,8 +36,15 @@ interface ProjectDao {
     fun getProjectsWithTasks(): Flow<List<ProjectWithTasksEntity>>
 
 
-    @Query("SELECT * FROM projects WHERE isArchived = 1 ORDER BY projectId ASC")
+    @Query("SELECT * FROM projects WHERE isArchived = 1 AND trashedAtEpochMs IS NULL ORDER BY projectId ASC")
     fun getArchivedProjectsWithTasks(): Flow<List<ProjectWithTasksEntity>>
+
+    @Transaction
+    @Query("SELECT * FROM projects WHERE trashedAtEpochMs IS NOT NULL ORDER BY trashedAtEpochMs DESC")
+    fun getTrashedProjectsWithTasks(): Flow<List<ProjectWithTasksEntity>>
+
+    @Query("SELECT projectId FROM projects WHERE trashedAtEpochMs IS NOT NULL AND trashedAtEpochMs < :cutoffEpochMs")
+    suspend fun getExpiredTrashedProjectIds(cutoffEpochMs: Long): List<String>
 
     @Transaction
     @Query("SELECT * FROM projects WHERE projectId = :projectId")

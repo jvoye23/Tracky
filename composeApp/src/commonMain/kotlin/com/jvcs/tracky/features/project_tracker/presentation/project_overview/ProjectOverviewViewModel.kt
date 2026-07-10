@@ -176,10 +176,12 @@ class ProjectOverviewViewModel(
         }
     }
 
+    // Soft delete: stamp trashedAt with the current time so the project is moved to the trash bin
+    // (and purged permanently after 30 days) instead of being removed immediately.
     private fun deleteSelectedProjects() {
         val ids = _state.value.selectedProjectIds
         viewModelScope.launch {
-            ids.forEach { projectRepository.deleteProject(it) }
+            ids.forEach { projectRepository.setProjectTrashed(it, Clock.System.now()) }
             _state.update { it.copy(
                 isEditModeActive = false,
                 selectedProjectIds = emptySet(),
@@ -210,7 +212,7 @@ class ProjectOverviewViewModel(
                     .firstOrNull { it.value.isRunning }
                     ?.let { it.key to it.value }
                 val uiProjects = projectList
-                    .filter { !it.isArchived }
+                    .filter { !it.isArchived && it.trashedAt == null }
                     .sortedForOption(sortOption)
                     .map { it.toProjectUi().withRunningTimer(runningTimer) }
                 uiProjects to sortOption

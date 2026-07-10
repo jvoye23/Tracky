@@ -18,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -117,6 +118,12 @@ private class FakeLocalProjectDataSource : LocalProjectDataSource {
     private fun emit() { projectsFlow.value = projects.values.toList() }
 
     override fun getProjects(): Flow<List<Project>> = projectsFlow
+    override fun getArchivedProjects(): Flow<List<Project>> =
+        projectsFlow.map { list -> list.filter { it.isArchived && it.trashedAt == null } }
+    override fun getTrashedProjects(): Flow<List<Project>> =
+        projectsFlow.map { list -> list.filter { it.trashedAt != null } }
+    override suspend fun getExpiredTrashedProjectIds(cutoff: Instant): List<String> =
+        projects.values.filter { it.trashedAt != null && it.trashedAt!! < cutoff }.map { it.projectId }
     override suspend fun getProjectById(projectId: String): Project? = projects[projectId]
     override suspend fun getProjectWithTasksByProjectId(projectId: String): Project? = projects[projectId]
 
