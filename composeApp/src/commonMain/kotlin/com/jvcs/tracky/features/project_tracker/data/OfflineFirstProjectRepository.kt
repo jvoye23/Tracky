@@ -31,6 +31,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -60,6 +61,10 @@ class OfflineFirstProjectRepository(
 
     override fun getArchivedProjects(): Flow<List<Project>> {
         return localProjectDataSource.getArchivedProjects()
+    }
+
+    override fun getTrashedProjects(): Flow<List<Project>> {
+        return localProjectDataSource.getTrashedProjects()
     }
 
     override suspend fun getProjectById(projectId: String): Project? {
@@ -116,6 +121,26 @@ class OfflineFirstProjectRepository(
             is Result.Error -> return existing.asEmptyDataResult()
         }
         return upsertProject(project.copy(isArchived = isArchived))
+    }
+
+    // SOFT-DELETE/RESTORE: stamp (or clear) trashedAt and route through the offline-first upsert so
+    // the change is pushed to the server immediately when online (and queued when offline), exactly
+    // like archive. A non-null trashedAt trashes the project; null restores it.
+    override suspend fun setProjectTrashed(projectId: String, trashedAt: Instant?): EmptyResult<DataError> {
+        val project = when (val existing = dbResult { localProjectDataSource.getProjectById(projectId) }) {
+            is Result.Success -> existing.data ?: return Result.Success(Unit) // nothing to trash
+            is Result.Error -> return existing.asEmptyDataResult()
+        }
+        return upsertProject(project.copy(trashedAt = trashedAt))
+    }
+
+    // PURGE: permanently delete every project whose trashedAt is older than the cutoff, locally and
+    // on the server. Reuses deleteProject so each removal gets the server DELETE + offline fallback.
+    override suspend fun purgeExpiredTrashedProjects(cutoff: Instant) {
+        val expiredIds = dbResult {
+            localProjectDataSource.getExpiredTrashedProjectIds(cutoff)
+        }.getOrDefault(emptyList())
+        expiredIds.forEach { deleteProject(it) }
     }
 
     // PIN/UNPIN: flip the flag and route through the offline-first upsert, exactly like archive.
