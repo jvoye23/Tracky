@@ -163,4 +163,14 @@
     <string name="file_export_selected">File export selected</string>
     <string name="pin_selected">Pin selected</string>
 
+    <!-- Trash -->
+    <string name="trash_title">Trash</string>
+    <string name="search_in_trash">Search in trash</string>
+    <string name="restore_selected">Restore selected</string>
+    <string name="delete_permanently">Delete permanently</string>
+    <string name="permanently_delete_projects_title">Permanently delete projects?</string>
+    <string name="permanently_delete_project_title">Permanently delete project?</string>
+    <string name="permanently_delete_projects_confirmation">Please confirm to permanently delete %1$d projects. This cannot be undone — they will be removed from your account and all synced devices immediately.</string>
+    <string name="permanently_delete_one_project_confirmation">Please confirm to permanently delete the selected project. This cannot be undone — it will be removed from your account and all synced devices immediately.</string>
+
 </resources>
