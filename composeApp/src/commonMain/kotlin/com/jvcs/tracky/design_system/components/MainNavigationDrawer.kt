@@ -38,7 +38,7 @@ import tracky.composeapp.generated.resources.drawer_reminders
 import tracky.composeapp.generated.resources.drawer_settings
 import tracky.composeapp.generated.resources.drawer_trash
 
-enum class MainNavDrawerItem { PROJECTS, ARCHIVE }
+enum class MainNavDrawerItem { PROJECTS, ARCHIVE, TRASH }
 
 @Composable
 fun MainNavigationDrawer(
@@ -47,6 +47,7 @@ fun MainNavigationDrawer(
     modifier: Modifier = Modifier,
     onProjectsClick: () -> Unit = {},
     onArchiveClick: () -> Unit = {},
+    onTrashClick: () -> Unit = {},
     content: @Composable () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -85,8 +86,8 @@ fun MainNavigationDrawer(
                 DrawerItem(
                     label = Res.string.drawer_trash,
                     icon = Icon_Delete,
-                    selected = false,
-                    onClick = closeDrawer
+                    selected = selectedItem == MainNavDrawerItem.TRASH,
+                    onClick = { closeDrawer(); onTrashClick() }
                 )
                 DrawerItem(
                     label = Res.string.drawer_settings,

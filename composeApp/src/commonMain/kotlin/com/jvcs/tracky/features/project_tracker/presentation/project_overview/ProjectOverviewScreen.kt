@@ -104,6 +104,7 @@ fun ProjectOverviewScreenRoot(
     onLogout: () -> Unit,
     onNavigateToDetailScreen: (String) -> Unit,
     onNavigateToArchive: () -> Unit = {},
+    onNavigateToTrash: () -> Unit = {},
     viewModel: ProjectOverviewViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -171,6 +172,7 @@ fun ProjectOverviewScreenRoot(
         email = email,
         onLogout = onLogout,
         onNavigateToArchive = onNavigateToArchive,
+        onNavigateToTrash = onNavigateToTrash,
         snackbarHostState = snackbarHostState,
         sortOption = sortOption
     )
@@ -185,6 +187,7 @@ fun ProjectOverviewScreen(
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
     onNavigateToArchive: () -> Unit = {},
+    onNavigateToTrash: () -> Unit = {},
     snackbarHostState: SnackbarHostState,
     sortOption: SortOption = SortOption.CUSTOM,
     drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed)
@@ -210,7 +213,8 @@ fun ProjectOverviewScreen(
     MainNavigationDrawer(
         drawerState = drawerState,
         selectedItem = MainNavDrawerItem.PROJECTS,
-        onArchiveClick = onNavigateToArchive
+        onArchiveClick = onNavigateToArchive,
+        onTrashClick = onNavigateToTrash
     ) {
     Scaffold(
         snackbarHost = {
@@ -297,10 +301,12 @@ fun ProjectOverviewScreen(
                 }
             }
 
-            item {
-                ProjectSectionHeader(
-                    text = if (state.searchQuery.isEmpty()) stringResource(Res.string.other) else stringResource(Res.string.search_results)
-                )
+            if (currentProjects.isNotEmpty()) {
+                item {
+                    ProjectSectionHeader(
+                        text = if (state.searchQuery.isEmpty()) stringResource(Res.string.other) else stringResource(Res.string.search_results)
+                    )
+                }
             }
 
             items(

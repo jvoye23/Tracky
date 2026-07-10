@@ -31,6 +31,7 @@ import com.jvcs.tracky.features.project_tracker.presentation.project_detail.Edit
 import com.jvcs.tracky.features.project_tracker.presentation.project_detail.ProjectDetailAction
 import com.jvcs.tracky.features.project_archive.presentation.project_archive.ProjectArchiveScreenRoot
 import com.jvcs.tracky.features.project_archive.presentation.project_archive_detail.ProjectArchiveDetailScreen
+import com.jvcs.tracky.features.project_trash.presentation.project_trash.ProjectTrashScreenRoot
 import com.jvcs.tracky.features.project_tracker.presentation.project_detail.ProjectDetailScreenRoot
 import com.jvcs.tracky.features.project_tracker.presentation.project_detail.ProjectDetailViewModel
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.ProjectOverviewScreenRoot
@@ -77,6 +78,7 @@ fun NavigationRoot(
                     subclass(Route.ProjectRoute.ProjectOverview::class, Route.ProjectRoute.ProjectOverview.serializer())
                     subclass(Route.ProjectRoute.ProjectArchive::class, Route.ProjectRoute.ProjectArchive.serializer())
                     subclass(Route.ProjectRoute.ProjectArchiveDetail::class, Route.ProjectRoute.ProjectArchiveDetail.serializer())
+                    subclass(Route.ProjectRoute.ProjectTrash::class, Route.ProjectRoute.ProjectTrash.serializer())
                     subclass(Route.ProjectRoute.ProjectDetail::class, Route.ProjectRoute.ProjectDetail.serializer())
                     subclass(Route.ProjectRoute.TaskDetail::class, Route.ProjectRoute.TaskDetail.serializer())
                 }
@@ -191,6 +193,9 @@ fun NavigationRoot(
                     },
                     onNavigateToArchive = {
                         backStack.add(Route.ProjectRoute.ProjectArchive)
+                    },
+                    onNavigateToTrash = {
+                        backStack.add(Route.ProjectRoute.ProjectTrash)
                     }
                 )
             }
@@ -199,6 +204,13 @@ fun NavigationRoot(
                     onNavigateToDetail = { projectId ->
                         backStack.add(Route.ProjectRoute.ProjectArchiveDetail(projectId))
                     },
+                    onNavigateToProjects = {
+                        backStack.removeLastOrNull()
+                    }
+                )
+            }
+            entry<Route.ProjectRoute.ProjectTrash> {
+                ProjectTrashScreenRoot(
                     onNavigateToProjects = {
                         backStack.removeLastOrNull()
                     }
