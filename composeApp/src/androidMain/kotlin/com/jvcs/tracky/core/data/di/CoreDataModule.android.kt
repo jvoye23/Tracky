@@ -4,10 +4,12 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import com.jvcs.tracky.core.data.sync.AndroidSyncScheduler
+import com.jvcs.tracky.core.data.sync.AndroidTrashCleanupScheduler
 import com.jvcs.tracky.core.database.DatabaseFactory
 import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
 import com.jvcs.tracky.core.domain.lifecycle.AppLifecycleObserver
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
+import com.jvcs.tracky.core.domain.sync.TrashCleanupScheduler
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.okhttp.OkHttp
 import okio.Path.Companion.toPath
@@ -20,6 +22,7 @@ actual val platformCoreDataModule = module {
     single { ConnectivityObserver(androidContext()) }
     single { AppLifecycleObserver() }
     single { AndroidSyncScheduler(androidContext()) } bind SyncScheduler::class
+    single { AndroidTrashCleanupScheduler(androidContext()) } bind TrashCleanupScheduler::class
     single<HttpClientEngine> { OkHttp.create() }
     single<DataStore<Preferences>> {
         PreferenceDataStoreFactory.createWithPath(

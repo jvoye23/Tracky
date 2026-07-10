@@ -4,10 +4,12 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import com.jvcs.tracky.core.data.sync.IosSyncScheduler
+import com.jvcs.tracky.core.data.sync.IosTrashCleanupScheduler
 import com.jvcs.tracky.core.database.DatabaseFactory
 import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
 import com.jvcs.tracky.core.domain.lifecycle.AppLifecycleObserver
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
+import com.jvcs.tracky.core.domain.sync.TrashCleanupScheduler
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.darwin.Darwin
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -24,6 +26,7 @@ actual val platformCoreDataModule = module {
     single { ConnectivityObserver() }
     single { AppLifecycleObserver() }
     single { IosSyncScheduler() } bind SyncScheduler::class
+    single { IosTrashCleanupScheduler() } bind TrashCleanupScheduler::class
     single<HttpClientEngine> { Darwin.create() }
     single<DataStore<Preferences>> {
         PreferenceDataStoreFactory.createWithPath(
