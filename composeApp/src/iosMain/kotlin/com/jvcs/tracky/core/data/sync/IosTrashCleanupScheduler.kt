@@ -5,6 +5,7 @@ package com.jvcs.tracky.core.data.sync
 import com.jvcs.tracky.core.domain.sync.TrashCleanupScheduler
 import kotlinx.cinterop.ExperimentalForeignApi
 import platform.BackgroundTasks.BGProcessingTaskRequest
+import platform.BackgroundTasks.BGTaskRequest
 import platform.BackgroundTasks.BGTaskScheduler
 import platform.Foundation.NSDate
 import platform.Foundation.dateWithTimeIntervalSinceNow
@@ -18,15 +19,22 @@ import platform.Foundation.dateWithTimeIntervalSinceNow
 class IosTrashCleanupScheduler : TrashCleanupScheduler {
 
     override suspend fun scheduleCleanup() {
-        try {
-            val request = BGProcessingTaskRequest(identifier = TASK_IDENTIFIER)
-            request.requiresNetworkConnectivity = true
-            request.requiresExternalPower = false
-            // Earliest one day out; the OS decides the actual run time.
-            request.earliestBeginDate = NSDate.dateWithTimeIntervalSinceNow(60.0 * 60.0 * 24)
-            BGTaskScheduler.sharedScheduler.submitTaskRequest(request, error = null)
-        } catch (e: Throwable) {
-            // Identifier not registered / scheduler unavailable — ignore.
+        BGTaskScheduler.sharedScheduler.getPendingTaskRequestsWithCompletionHandler { pending ->
+            val alreadyScheduled = pending.orEmpty().any {
+                (it as? BGTaskRequest)?.identifier == TASK_IDENTIFIER
+            }
+            if (alreadyScheduled) return@getPendingTaskRequestsWithCompletionHandler
+
+            try {
+                val request = BGProcessingTaskRequest(identifier = TASK_IDENTIFIER)
+                request.requiresNetworkConnectivity = true
+                request.requiresExternalPower = false
+                // Earliest one day out; the OS decides the actual run time.
+                request.earliestBeginDate = NSDate.dateWithTimeIntervalSinceNow(60.0 * 60.0 * 24)
+                BGTaskScheduler.sharedScheduler.submitTaskRequest(request, error = null)
+            } catch (e: Throwable) {
+                // Identifier not registered / scheduler unavailable, ignore.
+            }
         }
     }
 

@@ -9,4 +9,5 @@ sealed interface ProjectOverviewEvent {
     data class Error(val error: UiText): ProjectOverviewEvent
     data object ArchiveError: ProjectOverviewEvent
     data object PinError: ProjectOverviewEvent
+    data object AddToTrashError: ProjectOverviewEvent
 }

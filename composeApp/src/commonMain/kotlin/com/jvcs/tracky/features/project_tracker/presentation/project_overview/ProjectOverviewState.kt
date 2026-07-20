@@ -10,11 +10,17 @@ data class ProjectOverviewState(
     val addProjectTextFieldState: TextFieldState = TextFieldState(),
     val searchQuery: String = "",
     val projects: List<ProjectUi>? = null,
-    val filteredProjects: List<ProjectUi>? = null,
     val isGridView: Boolean = false,
     val isEditModeActive: Boolean = false,
     val selectedProjectIds: Set<String> = emptySet(),
     val isDeleteConfirmationDialogVisible: Boolean = false,
     val isSortBottomSheetVisible: Boolean = false,
     val sortOption: SortOption = SortOption.CUSTOM
-)
+) {
+    val filteredProjects: List<ProjectUi>?
+        get() = projects?.let { list ->
+            if (searchQuery.isBlank()) list
+            else list.filter { it.title.contains(searchQuery, ignoreCase = true) }
+        }
+
+}

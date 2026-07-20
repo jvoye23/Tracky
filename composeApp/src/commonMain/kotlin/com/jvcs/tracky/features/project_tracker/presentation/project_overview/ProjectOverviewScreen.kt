@@ -28,18 +28,17 @@ import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -58,7 +57,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
-import androidx.navigationevent.compose.NavigationEventHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
 import com.jvcs.tracky.core.presentation.model.ProjectTaskUi
 import com.jvcs.tracky.core.presentation.model.ProjectUi
@@ -68,11 +66,10 @@ import com.jvcs.tracky.design_system.components.MainNavigationDrawer
 import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.design_system.util.DevicePreviews
 import com.jvcs.tracky.design_system.util.ObserveAsEvents
-import com.jvcs.tracky.design_system.util.UiText
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.AddNewProjectBottomSheet
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectCard
-import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectOverViewTopBar
-import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectOverviewEditModeTopBar
+import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectOverviewSearchTopAppBar
+import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectOverviewSelectionTopAppBar
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.SortBottomSheet
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.SortSheetContent
 import kotlinx.coroutines.launch
@@ -82,19 +79,17 @@ import org.koin.compose.viewmodel.koinViewModel
 import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.cancel
 import tracky.composeapp.generated.resources.confirm
-import tracky.composeapp.generated.resources.current_projects
 import tracky.composeapp.generated.resources.delete_one_project_confirmation
 import tracky.composeapp.generated.resources.delete_project_title
 import tracky.composeapp.generated.resources.delete_projects_confirmation
 import tracky.composeapp.generated.resources.delete_projects_title
 import tracky.composeapp.generated.resources.delete_selected
-import tracky.composeapp.generated.resources.email_verified_failed
+import tracky.composeapp.generated.resources.error_add_to_trash
 import tracky.composeapp.generated.resources.error_archiving_projects
 import tracky.composeapp.generated.resources.error_pinning_projects
 import tracky.composeapp.generated.resources.new_project
 import tracky.composeapp.generated.resources.other
 import tracky.composeapp.generated.resources.pinned
-import tracky.composeapp.generated.resources.project_saved_successfully
 import tracky.composeapp.generated.resources.search_results
 
 @Composable
@@ -149,6 +144,15 @@ fun ProjectOverviewScreenRoot(
                     )
                 }
                 onNavigateToDetailScreen(event.projectId)
+            }
+            is ProjectOverviewEvent.AddToTrashError -> {
+                coroutineScope.launch {
+                    val errorMessage = getString(Res.string.error_add_to_trash)
+                    snackbarHostState.showSnackbar(
+                        message = errorMessage,
+                        duration = SnackbarDuration.Long
+                    )
+                }
             }
         }
     }
@@ -230,13 +234,13 @@ fun ProjectOverviewScreen(
                 label = "topBarSwap"
             ) { editMode ->
                 if (editMode) {
-                    ProjectOverviewEditModeTopBar(
+                    ProjectOverviewSelectionTopAppBar(
                         state = state,
                         onAction = onAction,
                         scrollBehavior = scrollBehavior
                     )
                 } else {
-                    ProjectOverViewTopBar(
+                    ProjectOverviewSearchTopAppBar(
                         onAction = onAction,
                         state = state,
                         onLogout = onLogout,
@@ -486,7 +490,6 @@ private fun ProjectOverviewDefaultPreview() {
             onAction = {},
             state = ProjectOverviewState(
                 projects = previewProjects(),
-                filteredProjects = previewProjects()
             ),
             username = "JoergVoye",
             email = "joerg@example.com",
@@ -504,7 +507,6 @@ private fun ProjectOverviewSearchPreview() {
             onAction = {},
             state = ProjectOverviewState(
                 projects = previewProjects(),
-                filteredProjects = previewProjects().filter { it.title.contains("Run", ignoreCase = true) },
                 searchQuery = "Run"
             ),
             username = "JoergVoye",
@@ -523,7 +525,6 @@ private fun ProjectOverviewEditModePreview() {
             onAction = {},
             state = ProjectOverviewState(
                 projects = previewProjects(),
-                filteredProjects = previewProjects(),
                 isEditModeActive = true,
                 selectedProjectIds = setOf("1", "3")
             ),
@@ -543,7 +544,6 @@ private fun ProjectOverviewDrawerOpenPreview() {
             onAction = {},
             state = ProjectOverviewState(
                 projects = previewProjects(),
-                filteredProjects = previewProjects()
             ),
             username = "JoergVoye",
             email = "joerg@example.com",
@@ -565,7 +565,6 @@ private fun ProjectOverviewSortSheetVisiblePreview() {
                 onAction = {},
                 state = ProjectOverviewState(
                     projects = previewProjects(),
-                    filteredProjects = previewProjects()
                 ),
                 username = "JoergVoye",
                 email = "joerg@example.com",

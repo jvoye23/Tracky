@@ -25,6 +25,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -136,11 +138,13 @@ class OfflineFirstProjectRepository(
 
     // PURGE: permanently delete every project whose trashedAt is older than the cutoff, locally and
     // on the server. Reuses deleteProject so each removal gets the server DELETE + offline fallback.
-    override suspend fun purgeExpiredTrashedProjects(cutoff: Instant) {
-        val expiredIds = dbResult {
-            localProjectDataSource.getExpiredTrashedProjectIds(cutoff)
-        }.getOrDefault(emptyList())
-        expiredIds.forEach { deleteProject(it) }
+    override suspend fun purgeExpiredTrashedProjects(cutoff: Instant): EmptyResult<DataError> = coroutineScope {
+        val expiredIds = when (val result = dbResult { localProjectDataSource.getExpiredTrashedProjectIds(cutoff) }) {
+            is Result.Success -> result.data
+            is Result.Error -> return@coroutineScope result.asEmptyDataResult()
+        }
+        expiredIds.map { async { deleteProject(it) } }.awaitAll()
+        Result.Success(Unit)
     }
 
     // PIN/UNPIN: flip the flag and route through the offline-first upsert, exactly like archive.
@@ -191,28 +195,43 @@ class OfflineFirstProjectRepository(
     }
 
     // DELETE project: local first, then remote; handle offline-create-then-delete (ghost) case.
-    override suspend fun deleteProject(projectId: String) {
+    override suspend fun deleteProject(projectId: String): EmptyResult<DataError> {
         val hadPendingCreate = dbResult {
             pendingSyncDao.getOperationsByEntityId(projectId).any { it.operationType == OP_CREATE }
         }.getOrDefault(false)
 
-        dbResult { localProjectDataSource.deleteProject(projectId) }
+        val localResult = dbResult { localProjectDataSource.deleteProject(projectId) }
+        if (localResult is Result.Error) {
+            return localResult.asEmptyDataResult()
+        }
 
         if (hadPendingCreate) {
             // Created offline and deleted before it ever reached the server → just drop the queue.
             dbResult { pendingSyncDao.deleteOperationsByEntityId(projectId) }
-            return
+            return Result.Success(Unit)
         }
 
         val remoteResult = applicationScope.async {
             remoteProjectDataSource.deleteProject(projectId)
         }.await()
-        if (remoteResult is Result.Error && remoteResult.error.isTransient()) {
-            if (enqueueProjectOperation(projectId, OP_DELETE) is Result.Success) scheduleSync()
+        return when (remoteResult) {
+            is Result.Success -> Result.Success(Unit)
+            is Result.Error -> when {
+                remoteResult.error.isTransient() -> {
+                    // Local delete already succeeded; only surface an error if queuing the sync fails.
+                    val queued = enqueueProjectOperation(projectId, OP_DELETE)
+                    if (queued is Result.Success) scheduleSync()
+                    queued
+                }
+                // Server already has no such project → the delete is effectively done.
+                remoteResult.error == DataError.Network.NOT_FOUND -> Result.Success(Unit)
+                else -> remoteResult.asEmptyDataResult()
+            }
         }
     }
 
     override suspend fun deleteProjectTask(taskId: String) {
+
         val parentProjectId = dbResult {
             localProjectDataSource.getTaskWithIntervalsById(taskId).first()?.parentProjectId
         }.getOrDefault(null)

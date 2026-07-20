@@ -54,6 +54,7 @@
     <string name="light_text_color">Light text color</string>
     <string name="create_new_task">Create new task</string>
     <string name="project_saved_successfully">Project saved successfully!</string>
+    <string name="navigation_menu">Navigation menu</string>
 
     <!-- Auth -->
     <string name="welcome_back">Welcome Back</string>
@@ -145,6 +146,7 @@
     <string name="error_email_exists">A user with that email already exists.</string>
     <string name="error_archiving_projects">Failed to archive all selected projects.</string>
     <string name="error_pinning_projects">Failed to pin all selected projects.</string>
+    <string name="error_add_to_trash">Failed to add all selected projects to trash bin.</string>
 
     <!-- Color Picker -->
     <string name="select_color">Select Color</string>
@@ -172,5 +174,7 @@
     <string name="permanently_delete_project_title">Permanently delete project?</string>
     <string name="permanently_delete_projects_confirmation">Please confirm to permanently delete %1$d projects. This cannot be undone — they will be removed from your account and all synced devices immediately.</string>
     <string name="permanently_delete_one_project_confirmation">Please confirm to permanently delete the selected project. This cannot be undone — it will be removed from your account and all synced devices immediately.</string>
+    <string name="failed_to_restore_all_selected_projects">Failed to restore all selected projects.</string>
+    <string name="failed_to_delete_all_selected_projects">Failed to delete all selected projects.</string>
 
 </resources>
