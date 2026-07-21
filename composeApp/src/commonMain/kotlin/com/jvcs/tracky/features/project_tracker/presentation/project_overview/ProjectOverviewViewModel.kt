@@ -7,15 +7,20 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jvcs.tracky.core.domain.model.Project
+import com.jvcs.tracky.core.domain.model.ProjectStatus
+import com.jvcs.tracky.core.domain.model.status
 import com.jvcs.tracky.core.domain.sync.ProjectSyncManager
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeManager
 import com.jvcs.tracky.core.domain.util.TimerState
+import com.jvcs.tracky.core.domain.util.onFailure
 import com.jvcs.tracky.core.presentation.mapper.toProjectUi
 import com.jvcs.tracky.core.presentation.model.ProjectUi
 import com.jvcs.tracky.design_system.theme.defaultProjectColor
 import com.jvcs.tracky.design_system.util.asUiText
 import com.jvcs.tracky.features.project_tracker.domain.ProjectRepository
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -78,7 +83,6 @@ class ProjectOverviewViewModel(
             ProjectOverviewAction.OnMenuClick -> { /* Handle menu */ }
             is ProjectOverviewAction.OnSearchQueryChange -> {
                 _state.update { it.copy(searchQuery = action.query) }
-                filterProjects(action.query)
             }
             ProjectOverviewAction.OnToggleViewMode -> {
                 _state.update { it.copy(isGridView = !it.isGridView) }
@@ -181,23 +185,18 @@ class ProjectOverviewViewModel(
     private fun deleteSelectedProjects() {
         val ids = _state.value.selectedProjectIds
         viewModelScope.launch {
-            ids.forEach { projectRepository.setProjectTrashed(it, Clock.System.now()) }
+            val results = ids.map { id ->
+                async { projectRepository.setProjectTrashed(id, Clock.System.now()) }
+            }.awaitAll()
+            results.forEach { it.onFailure {
+                eventChannel.send(ProjectOverviewEvent.AddToTrashError)
+            } }
             _state.update { it.copy(
                 isEditModeActive = false,
                 selectedProjectIds = emptySet(),
                 isDeleteConfirmationDialogVisible = false
             ) }
         }
-    }
-
-    private fun filterProjects(query: String) {
-        val projects = _state.value.projects ?: return
-        val filtered = if (query.isEmpty()) {
-            projects
-        } else {
-            projects.filter { it.title.contains(query, ignoreCase = true) }
-        }
-        _state.update { it.copy(filteredProjects = filtered) }
     }
 
     private fun getProjects() {
@@ -212,7 +211,7 @@ class ProjectOverviewViewModel(
                     .firstOrNull { it.value.isRunning }
                     ?.let { it.key to it.value }
                 val uiProjects = projectList
-                    .filter { !it.isArchived && it.trashedAt == null }
+                    .filter { it.status == ProjectStatus.ACTIVE }
                     .sortedForOption(sortOption)
                     .map { it.toProjectUi().withRunningTimer(runningTimer) }
                 uiProjects to sortOption
@@ -221,7 +220,6 @@ class ProjectOverviewViewModel(
                     state.copy(
                         projects = uiProjects,
                         sortOption = sortOption,
-                        filteredProjects = if (state.searchQuery.isEmpty()) uiProjects else uiProjects.filter { p -> p.title.contains(state.searchQuery, ignoreCase = true) }
                     )
                 }
             }

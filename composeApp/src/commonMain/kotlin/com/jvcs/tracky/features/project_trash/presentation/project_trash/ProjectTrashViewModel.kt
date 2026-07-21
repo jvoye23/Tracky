@@ -3,8 +3,11 @@ package com.jvcs.tracky.features.project_trash.presentation.project_trash
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jvcs.tracky.core.domain.util.Result
+import com.jvcs.tracky.core.domain.util.onFailure
 import com.jvcs.tracky.core.presentation.mapper.toProjectUi
 import com.jvcs.tracky.features.project_tracker.domain.ProjectRepository
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -47,13 +50,11 @@ class ProjectTrashViewModel(
                     it.copy(
                         isSearchActive = active,
                         searchQuery = if (active) it.searchQuery else "",
-                        filteredProjects = if (active) it.filteredProjects else it.projects
                     )
                 }
             }
             is ProjectTrashAction.OnSearchQueryChange -> {
                 _state.update { it.copy(searchQuery = action.query) }
-                filterProjects(action.query)
             }
             is ProjectTrashAction.OnProjectCardLongPress -> {
                 _state.update { it.copy(
@@ -91,7 +92,7 @@ class ProjectTrashViewModel(
                 _state.update { it.copy(isDeleteConfirmationDialogVisible = false) }
             }
             ProjectTrashAction.OnConfirmDelete -> {
-                deleteSelectedProjects()
+                hardDeleteSelectedProjects()
             }
         }
     }
@@ -100,22 +101,29 @@ class ProjectTrashViewModel(
     private fun restoreSelectedProjects() {
         val ids = _state.value.selectedProjectIds
         viewModelScope.launch {
-            val errors = ids.mapNotNull { id ->
-                (projectRepository.setProjectTrashed(id, trashedAt = null) as? Result.Error)?.error
-            }
+            val results = ids.map { id ->
+                async { projectRepository.setProjectTrashed(projectId = id, trashedAt = null ) }
+            }.awaitAll()
+            results.forEach { it.onFailure {
+                eventChannel.send(ProjectTrashEvent.RestoreError)
+            } }
             _state.update { it.copy(
                 isEditModeActive = false,
                 selectedProjectIds = emptySet()
             ) }
-            if (errors.isNotEmpty()) eventChannel.send(ProjectTrashEvent.RestoreError)
         }
     }
 
     // Permanent delete now: hard delete from the local DB and the server.
-    private fun deleteSelectedProjects() {
+    private fun hardDeleteSelectedProjects() {
         val ids = _state.value.selectedProjectIds
         viewModelScope.launch {
-            ids.forEach { projectRepository.deleteProject(it) }
+            val results = ids.map { id ->
+                async { projectRepository.deleteProject(id) }
+            }.awaitAll()
+            results.forEach { it.onFailure {
+                eventChannel.send(ProjectTrashEvent.HardDeleteError)
+            } }
             _state.update { it.copy(
                 isEditModeActive = false,
                 selectedProjectIds = emptySet(),
@@ -131,7 +139,6 @@ class ProjectTrashViewModel(
         } else {
             projects.filter { it.title.contains(query, ignoreCase = true) }
         }
-        _state.update { it.copy(filteredProjects = filtered) }
     }
 
     private fun getTrashedProjects() {
@@ -141,11 +148,6 @@ class ProjectTrashViewModel(
                 _state.update { state ->
                     state.copy(
                         projects = trashed,
-                        filteredProjects = if (state.searchQuery.isEmpty()) {
-                            trashed
-                        } else {
-                            trashed.filter { it.title.contains(state.searchQuery, ignoreCase = true) }
-                        }
                     )
                 }
             }

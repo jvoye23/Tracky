@@ -50,24 +50,29 @@ import com.jvcs.tracky.design_system.components.MainNavigationDrawer
 import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.design_system.util.DevicePreviews
 import com.jvcs.tracky.design_system.util.ObserveAsEvents
-import com.jvcs.tracky.features.project_trash.presentation.project_trash.components.ProjectTrashEditModeTopBar
-import com.jvcs.tracky.features.project_trash.presentation.project_trash.components.ProjectTrashTopBar
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectCard
+import com.jvcs.tracky.features.project_trash.presentation.project_trash.components.ProjectTrashSearchTopAppBar
+import com.jvcs.tracky.features.project_trash.presentation.project_trash.components.ProjectTrashSelectionTopAppBar
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.cancel
 import tracky.composeapp.generated.resources.confirm
 import tracky.composeapp.generated.resources.delete_permanently
+import tracky.composeapp.generated.resources.failed_to_delete_all_selected_projects
+import tracky.composeapp.generated.resources.failed_to_restore_all_selected_projects
 import tracky.composeapp.generated.resources.permanently_delete_one_project_confirmation
 import tracky.composeapp.generated.resources.permanently_delete_project_title
 import tracky.composeapp.generated.resources.permanently_delete_projects_confirmation
 import tracky.composeapp.generated.resources.permanently_delete_projects_title
+import tracky.composeapp.generated.resources.trash_title
 
 @Composable
 fun ProjectTrashScreenRoot(
     onNavigateToProjects: () -> Unit,
+    onNavigateToArchive: () -> Unit,
     viewModel: ProjectTrashViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -80,7 +85,15 @@ fun ProjectTrashScreenRoot(
             is ProjectTrashEvent.RestoreError -> {
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar(
-                        message = "Failed to restore all selected projects",
+                        message = getString(Res.string.failed_to_restore_all_selected_projects),
+                        duration = SnackbarDuration.Long
+                    )
+                }
+            }
+            is ProjectTrashEvent.HardDeleteError -> {
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar(
+                        message = getString(Res.string.failed_to_delete_all_selected_projects),
                         duration = SnackbarDuration.Long
                     )
                 }
@@ -96,6 +109,7 @@ fun ProjectTrashScreenRoot(
         state = state,
         onAction = viewModel::onAction,
         onNavigateToProjects = onNavigateToProjects,
+        onNavigateToArchive = onNavigateToArchive,
         snackbarHostState = snackbarHostState
     )
 }
@@ -106,6 +120,7 @@ fun ProjectTrashScreen(
     onAction: (ProjectTrashAction) -> Unit,
     modifier: Modifier = Modifier,
     onNavigateToProjects: () -> Unit = {},
+    onNavigateToArchive: () -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed)
 ) {
@@ -124,7 +139,8 @@ fun ProjectTrashScreen(
     MainNavigationDrawer(
         drawerState = drawerState,
         selectedItem = MainNavDrawerItem.TRASH,
-        onProjectsClick = onNavigateToProjects
+        onProjectsClick = onNavigateToProjects,
+        onArchiveClick = onNavigateToArchive
     ) {
         Scaffold(
             snackbarHost = {
@@ -140,14 +156,15 @@ fun ProjectTrashScreen(
                     label = "topBarSwap"
                 ) { editMode ->
                     if (editMode) {
-                        ProjectTrashEditModeTopBar(
+                        ProjectTrashSelectionTopAppBar(
                             modifier = Modifier.padding(horizontal = 10.dp),
                             state = state,
                             onAction = onAction,
                             scrollBehavior = scrollBehavior
                         )
                     } else {
-                        ProjectTrashTopBar(
+                        ProjectTrashSearchTopAppBar(
+                            title = stringResource(Res.string.trash_title),
                             modifier = Modifier.padding(horizontal = 10.dp),
                             state = state,
                             onAction = onAction,
@@ -260,7 +277,6 @@ private fun ProjectTrashDefaultPreview() {
         ProjectTrashScreen(
             state = ProjectTrashState(
                 projects = previewTrashedProjects(),
-                filteredProjects = previewTrashedProjects()
             ),
             onAction = {}
         )
@@ -274,7 +290,6 @@ private fun ProjectTrashEmptyPreview() {
         ProjectTrashScreen(
             state = ProjectTrashState(
                 projects = emptyList(),
-                filteredProjects = emptyList()
             ),
             onAction = {}
         )

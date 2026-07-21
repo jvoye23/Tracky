@@ -47,13 +47,11 @@ class ProjectArchiveViewModel(
                     it.copy(
                         isSearchActive = active,
                         searchQuery = if (active) it.searchQuery else "",
-                        filteredProjects = if (active) it.filteredProjects else it.projects
                     )
                 }
             }
             is ProjectArchiveAction.OnSearchQueryChange -> {
                 _state.update { it.copy(searchQuery = action.query) }
-                filterProjects(action.query)
             }
             is ProjectArchiveAction.OnProjectCardLongPress -> {
                 _state.update { it.copy(
@@ -122,28 +120,13 @@ class ProjectArchiveViewModel(
         }
     }
 
-    private fun filterProjects(query: String) {
-        val projects = _state.value.projects ?: return
-        val filtered = if (query.isEmpty()) {
-            projects
-        } else {
-            projects.filter { it.title.contains(query, ignoreCase = true) }
-        }
-        _state.update { it.copy(filteredProjects = filtered) }
-    }
-
     private fun getArchivedProjects() {
         viewModelScope.launch {
             projectRepository.getArchivedProjects().collect { projectList ->
                 val archived = projectList.map { it.toProjectUi() }
                 _state.update { state ->
                     state.copy(
-                        projects = archived,
-                        filteredProjects = if (state.searchQuery.isEmpty()) {
-                            archived
-                        } else {
-                            archived.filter { it.title.contains(state.searchQuery, ignoreCase = true) }
-                        }
+                        projects = archived
                     )
                 }
             }

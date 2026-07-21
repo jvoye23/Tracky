@@ -50,13 +50,14 @@ import com.jvcs.tracky.design_system.components.MainNavigationDrawer
 import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.design_system.util.DevicePreviews
 import com.jvcs.tracky.design_system.util.ObserveAsEvents
-import com.jvcs.tracky.features.project_archive.presentation.project_archive.components.ProjectArchiveEditModeTopBar
-import com.jvcs.tracky.features.project_archive.presentation.project_archive.components.ProjectArchiveTopBar
+import com.jvcs.tracky.features.project_archive.presentation.project_archive.components.ProjectArchiveSearchTopAppBar
+import com.jvcs.tracky.features.project_archive.presentation.project_archive.components.ProjectArchiveSelectionTopAppBar
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectCard
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import tracky.composeapp.generated.resources.Res
+import tracky.composeapp.generated.resources.archive_title
 import tracky.composeapp.generated.resources.cancel
 import tracky.composeapp.generated.resources.confirm
 import tracky.composeapp.generated.resources.delete_one_project_confirmation
@@ -69,6 +70,7 @@ import tracky.composeapp.generated.resources.delete_selected
 fun ProjectArchiveScreenRoot(
     onNavigateToDetail: (String) -> Unit,
     onNavigateToProjects: () -> Unit,
+    onNavigateToTrash: () -> Unit,
     viewModel: ProjectArchiveViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -105,6 +107,7 @@ fun ProjectArchiveScreenRoot(
             viewModel.onAction(action)
         },
         onNavigateToProjects = onNavigateToProjects,
+        onNavigateToTrash = onNavigateToTrash,
         snackbarHostState = snackbarHostState
     )
 }
@@ -115,6 +118,7 @@ fun ProjectArchiveScreen(
     onAction: (ProjectArchiveAction) -> Unit,
     modifier: Modifier = Modifier,
     onNavigateToProjects: () -> Unit = {},
+    onNavigateToTrash: () -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed)
 ) {
@@ -133,7 +137,8 @@ fun ProjectArchiveScreen(
     MainNavigationDrawer(
         drawerState = drawerState,
         selectedItem = MainNavDrawerItem.ARCHIVE,
-        onProjectsClick = onNavigateToProjects
+        onProjectsClick = onNavigateToProjects,
+        onTrashClick = onNavigateToTrash
     ) {
         Scaffold(
             snackbarHost = {
@@ -149,19 +154,20 @@ fun ProjectArchiveScreen(
                     label = "topBarSwap"
                 ) { editMode ->
                     if (editMode) {
-                        ProjectArchiveEditModeTopBar(
+                        ProjectArchiveSelectionTopAppBar(
                             modifier = Modifier.padding(horizontal = 10.dp),
                             state = state,
                             onAction = onAction,
                             scrollBehavior = scrollBehavior
                         )
                     } else {
-                        ProjectArchiveTopBar(
+                        ProjectArchiveSearchTopAppBar(
+                            title = stringResource(Res.string.archive_title),
                             modifier = Modifier.padding(horizontal = 10.dp),
                             state = state,
                             onAction = onAction,
                             onMenuClick = { drawerScope.launch { drawerState.open() } },
-                            scrollBehavior = scrollBehavior
+                            scrollBehavior = scrollBehavior,
                         )
                     }
                 }
@@ -269,7 +275,6 @@ private fun ProjectArchiveDefaultPreview() {
         ProjectArchiveScreen(
             state = ProjectArchiveState(
                 projects = previewArchivedProjects(),
-                filteredProjects = previewArchivedProjects()
             ),
             onAction = {}
         )
@@ -283,7 +288,6 @@ private fun ProjectArchiveEmptyPreview() {
         ProjectArchiveScreen(
             state = ProjectArchiveState(
                 projects = emptyList(),
-                filteredProjects = emptyList()
             ),
             onAction = {}
         )
@@ -297,7 +301,6 @@ private fun ProjectArchiveSearchPreview() {
         ProjectArchiveScreen(
             state = ProjectArchiveState(
                 projects = previewArchivedProjects(),
-                filteredProjects = previewArchivedProjects().filter { it.title.contains("Legacy", ignoreCase = true) },
                 isSearchActive = true,
                 searchQuery = "Legacy"
             ),

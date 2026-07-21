@@ -206,6 +206,10 @@ fun NavigationRoot(
                     },
                     onNavigateToProjects = {
                         backStack.removeLastOrNull()
+                    },
+                    onNavigateToTrash = {
+                        backStack.removeLastOrNull()
+                        backStack.add(Route.ProjectRoute.ProjectTrash)
                     }
                 )
             }
@@ -213,6 +217,10 @@ fun NavigationRoot(
                 ProjectTrashScreenRoot(
                     onNavigateToProjects = {
                         backStack.removeLastOrNull()
+                    },
+                    onNavigateToArchive = {
+                        backStack.removeLastOrNull()
+                        backStack.add(Route.ProjectRoute.ProjectArchive)
                     }
                 )
             }

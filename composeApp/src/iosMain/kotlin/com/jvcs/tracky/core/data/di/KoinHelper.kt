@@ -8,6 +8,7 @@ import com.jvcs.tracky.di.appModule
 import com.jvcs.tracky.di.initKoin
 import com.jvcs.tracky.features.project_tracker.di.projectModule
 import com.jvcs.tracky.features.project_tracker.domain.ProjectRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.koin.core.qualifier.named
@@ -40,6 +41,8 @@ fun runTrashCleanup(onComplete: (Boolean) -> Unit) {
         val success = try {
             koin.get<ProjectRepository>().purgeExpiredTrashedProjects(TrashRetention.cutoff())
             true
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Throwable) {
             false
         }

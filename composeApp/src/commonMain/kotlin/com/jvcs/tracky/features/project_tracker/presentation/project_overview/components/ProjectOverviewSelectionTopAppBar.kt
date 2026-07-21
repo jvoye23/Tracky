@@ -2,15 +2,10 @@
 
 package com.jvcs.tracky.features.project_tracker.presentation.project_overview.components
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
@@ -21,7 +16,7 @@ import com.jvcs.tracky.design_system.Icon_Archive
 import com.jvcs.tracky.design_system.Icon_Delete
 import com.jvcs.tracky.design_system.Icon_File_Export
 import com.jvcs.tracky.design_system.Icon_Pin
-import com.jvcs.tracky.design_system.Icon_Trash
+import com.jvcs.tracky.design_system.components.SelectionTopAppBar
 import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.ProjectOverviewAction
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.ProjectOverviewState
@@ -29,35 +24,21 @@ import org.jetbrains.compose.resources.stringResource
 import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.archive_selected
 import tracky.composeapp.generated.resources.delete_selected
-import tracky.composeapp.generated.resources.exit_edit_mode
 import tracky.composeapp.generated.resources.file_export_selected
 import tracky.composeapp.generated.resources.pin_selected
 
 @Composable
-fun ProjectOverviewEditModeTopBar(
+fun ProjectOverviewSelectionTopAppBar(
     modifier: Modifier = Modifier,
     state: ProjectOverviewState,
     onAction: (ProjectOverviewAction) -> Unit,
     scrollBehavior: TopAppBarScrollBehavior
 ) {
-    TopAppBar(
+    SelectionTopAppBar(
+        selectedCount = state.selectedProjectIds.size,
+        onExit = { onAction(ProjectOverviewAction.OnExitEditMode)},
+        scrollBehavior = scrollBehavior,
         modifier = modifier,
-        navigationIcon = {
-            IconButton(onClick = { onAction(ProjectOverviewAction.OnExitEditMode) }) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = stringResource(Res.string.exit_edit_mode),
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
-            }
-        },
-        title = {
-            Text(
-                text = state.selectedProjectIds.size.toString(),
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        },
         actions = {
             IconButton(onClick = { onAction(ProjectOverviewAction.OnPinSelectedClick) }) {
                 Icon(
@@ -88,19 +69,15 @@ fun ProjectOverviewEditModeTopBar(
                     tint = MaterialTheme.colorScheme.onSurface
                 )
             }
-        },
-        scrollBehavior = scrollBehavior,
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        )
+        }
     )
 }
 
 @Preview(showSystemUi = true, device = Devices.PIXEL_9_PRO)
 @Composable
-private fun ProjectOverviewEditModeTopBarPreview() {
+private fun ProjectOverviewSelectionTopAppBarPreview() {
     TrackyTheme {
-        ProjectOverviewEditModeTopBar(
+        ProjectOverviewSelectionTopAppBar(
             onAction = {},
             state = ProjectOverviewState(),
             scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
