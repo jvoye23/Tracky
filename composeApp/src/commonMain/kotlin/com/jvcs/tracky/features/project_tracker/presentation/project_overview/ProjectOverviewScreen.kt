@@ -40,8 +40,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -51,9 +53,11 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
@@ -68,6 +72,8 @@ import com.jvcs.tracky.design_system.util.DevicePreviews
 import com.jvcs.tracky.design_system.util.ObserveAsEvents
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.AddNewProjectBottomSheet
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectCard
+import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectDragDropState
+import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.rememberProjectDragDropState
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectOverviewSearchTopAppBar
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectOverviewSelectionTopAppBar
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.SortBottomSheet
@@ -87,6 +93,7 @@ import tracky.composeapp.generated.resources.delete_selected
 import tracky.composeapp.generated.resources.error_add_to_trash
 import tracky.composeapp.generated.resources.error_archiving_projects
 import tracky.composeapp.generated.resources.error_pinning_projects
+import tracky.composeapp.generated.resources.error_reordering_projects
 import tracky.composeapp.generated.resources.new_project
 import tracky.composeapp.generated.resources.other
 import tracky.composeapp.generated.resources.pinned
@@ -154,6 +161,15 @@ fun ProjectOverviewScreenRoot(
                     )
                 }
             }
+            is ProjectOverviewEvent.ReorderError -> {
+                coroutineScope.launch {
+                    val errorMessage = getString(Res.string.error_reordering_projects)
+                    snackbarHostState.showSnackbar(
+                        message = errorMessage,
+                        duration = SnackbarDuration.Long
+                    )
+                }
+            }
         }
     }
 
@@ -205,6 +221,57 @@ fun ProjectOverviewScreen(
     val fabExpanded = listState.isScrollingUp()
     val drawerScope = rememberCoroutineScope()
     val backState = rememberNavigationEventState(NavigationEventInfo.None)
+
+    // Drag-to-reorder is only available under the Custom sort filter and while not searching.
+    val reorderEnabled = sortOption == SortOption.CUSTOM && state.searchQuery.isBlank()
+    val source = state.filteredProjects ?: emptyList()
+    // Mirror lists the LazyColumn renders from. Reordered live during a drag; otherwise kept in sync
+    // with the ViewModel's (already sorted) project list.
+    val pinnedItems = remember { mutableStateListOf<ProjectUi>() }
+    val otherItems = remember { mutableStateListOf<ProjectUi>() }
+    val dragDropState = rememberProjectDragDropState(
+        lazyListState = listState,
+        onMove = { fromKey, toKey ->
+            val list = when {
+                pinnedItems.any { it.projectId == fromKey } &&
+                    pinnedItems.any { it.projectId == toKey } -> pinnedItems
+                otherItems.any { it.projectId == fromKey } &&
+                    otherItems.any { it.projectId == toKey } -> otherItems
+                else -> null // cross-section move: reject, pin state must not change
+            }
+            list?.let {
+                val from = it.indexOfFirst { p -> p.projectId == fromKey }
+                val to = it.indexOfFirst { p -> p.projectId == toKey }
+                if (from != -1 && to != -1) it.add(to, it.removeAt(from))
+            }
+        }
+    )
+    val isReordering = dragDropState.draggingItemKey != null || dragDropState.settlingItemKey != null
+    val sourcePinned = source.filter { it.isPinned }
+    val sourceOther = source.filterNot { it.isPinned }
+    // The LazyColumn always renders the mirror lists. On a sort change (or when leaving Custom /
+    // entering search) the manual order no longer applies, so adopt the freshly sorted source order
+    // outright.
+    LaunchedEffect(sortOption, reorderEnabled) {
+        if (!isReordering) {
+            pinnedItems.resetTo(sourcePinned)
+            otherItems.resetTo(sourceOther)
+        }
+    }
+    // On every source emission, fold the update into the mirrors: keep the current (possibly
+    // just-reordered) display order for projects that still exist, drop removed ones, and slot new
+    // ones in at their source position. This refreshes content without reverting a just-committed
+    // reorder before the DB re-emits it — which otherwise replayed the whole move on release.
+    LaunchedEffect(source) {
+        if (isReordering) return@LaunchedEffect
+        if (reorderEnabled) {
+            pinnedItems.reconcileTo(sourcePinned)
+            otherItems.reconcileTo(sourceOther)
+        } else {
+            pinnedItems.resetTo(sourcePinned)
+            otherItems.resetTo(sourceOther)
+        }
+    }
 
     NavigationBackHandler(
         state = backState,
@@ -289,23 +356,26 @@ fun ProjectOverviewScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            val allProjects = state.filteredProjects ?: emptyList()
-            val pinnedProjects = allProjects.filter { it.isPinned }
-            val currentProjects = allProjects.filterNot { it.isPinned }
-
-            if (pinnedProjects.isNotEmpty()) {
+            if (pinnedItems.isNotEmpty()) {
                 item {
                     ProjectSectionHeader(text = stringResource(Res.string.pinned))
                 }
                 items(
-                    items = pinnedProjects,
+                    items = pinnedItems,
                     key = { it.projectId }
                 ) { item ->
-                    ProjectListCard(item = item, state = state, onAction = onAction)
+                    ProjectListCard(
+                        item = item,
+                        state = state,
+                        onAction = onAction,
+                        reorderEnabled = reorderEnabled,
+                        dragDropState = dragDropState,
+                        sectionIds = { pinnedItems.map { it.projectId } }
+                    )
                 }
             }
 
-            if (currentProjects.isNotEmpty()) {
+            if (otherItems.isNotEmpty()) {
                 item {
                     ProjectSectionHeader(
                         text = if (state.searchQuery.isEmpty()) stringResource(Res.string.other) else stringResource(Res.string.search_results)
@@ -314,10 +384,17 @@ fun ProjectOverviewScreen(
             }
 
             items(
-                items = currentProjects,
+                items = otherItems,
                 key = { it.projectId }
             ) { item ->
-                ProjectListCard(item = item, state = state, onAction = onAction)
+                ProjectListCard(
+                    item = item,
+                    state = state,
+                    onAction = onAction,
+                    reorderEnabled = reorderEnabled,
+                    dragDropState = dragDropState,
+                    sectionIds = { otherItems.map { it.projectId } }
+                )
             }
 
         }
@@ -414,17 +491,83 @@ private fun ProjectSectionHeader(text: String) {
 private fun LazyItemScope.ProjectListCard(
     item: ProjectUi,
     state: ProjectOverviewState,
-    onAction: (ProjectOverviewAction) -> Unit
+    onAction: (ProjectOverviewAction) -> Unit,
+    reorderEnabled: Boolean,
+    dragDropState: ProjectDragDropState,
+    sectionIds: () -> List<String>
 ) {
+    // The dragged card (and the one settling back after release) drives its own translation and rides
+    // above the rest; every other card animates to its new slot via animateItem().
+    val isActive = item.projectId == dragDropState.draggingItemKey ||
+        item.projectId == dragDropState.settlingItemKey
+    val cardModifier = if (isActive) {
+        Modifier
+            .zIndex(1f)
+            .graphicsLayer {
+                translationY = if (item.projectId == dragDropState.draggingItemKey) {
+                    dragDropState.draggingItemOffset
+                } else {
+                    dragDropState.settlingItemOffset
+                }
+            }
+    } else {
+        Modifier.animateItem()
+    }
     ProjectCard(
-        modifier = Modifier.animateItem(),
+        modifier = cardModifier,
         projectUi = item,
         onClick = { onAction(ProjectOverviewAction.OnProjectCardClick(item.projectId)) },
         onLongClick = { onAction(ProjectOverviewAction.OnProjectCardLongPress(item.projectId)) },
         onToggleSelection = { onAction(ProjectOverviewAction.OnProjectCardToggleSelection(item.projectId)) },
         isEditModeActive = state.isEditModeActive,
-        isSelected = item.projectId in state.selectedProjectIds
+        isSelected = item.projectId in state.selectedProjectIds,
+        isReorderable = reorderEnabled,
+        onReorderDragStart = {
+            // Long-press enters edit mode (as before) and arms the drag.
+            onAction(ProjectOverviewAction.OnProjectCardLongPress(item.projectId))
+            dragDropState.onDragStart(item.projectId)
+        },
+        onReorderDrag = { dragAmountY ->
+            // First movement turns the long-press into a reorder: leave edit mode.
+            if (!dragDropState.hasMoved) onAction(ProjectOverviewAction.OnReorderDragStart)
+            dragDropState.onDrag(dragAmountY)
+        },
+        onReorderDragEnd = {
+            if (dragDropState.hasMoved) {
+                onAction(ProjectOverviewAction.OnReorderCommit(sectionIds()))
+            }
+            dragDropState.onDragEnd()
+        },
+        onReorderDragCancel = { dragDropState.onDragCancel() }
     )
+}
+
+// Replace the mirror's contents with [latest] outright (used for sort changes / non-reorder sorts).
+private fun MutableList<ProjectUi>.resetTo(latest: List<ProjectUi>) {
+    if (this == latest) return
+    clear()
+    addAll(latest)
+}
+
+// Fold a source emission into the mirror while preserving the current display order: projects still
+// present keep their mirror order (with refreshed content), removed ones are dropped, and projects new
+// to the mirror are inserted at their source position (e.g. a newly created project at the top).
+private fun MutableList<ProjectUi>.reconcileTo(latest: List<ProjectUi>) {
+    val latestById = latest.associateBy { it.projectId }
+    val mirrorIds = this.mapTo(HashSet()) { it.projectId }
+    val common = ArrayDeque(this.mapNotNull { latestById[it.projectId] })
+    val result = ArrayList<ProjectUi>(latest.size)
+    for (item in latest) {
+        if (item.projectId in mirrorIds) {
+            if (common.isNotEmpty()) result.add(common.removeFirst())
+        } else {
+            result.add(item)
+        }
+    }
+    if (this != result) {
+        clear()
+        addAll(result)
+    }
 }
 
 private fun previewProjects(): List<ProjectUi> = listOf(
