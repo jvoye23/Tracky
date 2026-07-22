@@ -21,6 +21,7 @@ interface ProjectRepository {
     suspend fun setProjectTrashed(projectId: String, trashedAt: Instant?): EmptyResult<DataError>
     suspend fun purgeExpiredTrashedProjects(cutoff: Instant): EmptyResult<DataError>
     suspend fun setProjectPinned(projectId: String, isPinned: Boolean): EmptyResult<DataError>
+    suspend fun reorderProjects(orderedProjectIds: List<String>): EmptyResult<DataError>
     suspend fun upsertProjectTask(projectTask: ProjectTask): EmptyResult<DataError>
     suspend fun deleteProject(projectId: String): EmptyResult<DataError>
     suspend fun deleteProjectTask(taskId: String)

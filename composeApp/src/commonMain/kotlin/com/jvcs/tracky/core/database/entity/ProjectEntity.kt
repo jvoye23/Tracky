@@ -19,4 +19,5 @@ data class ProjectEntity(
     val trashedAtEpochMs: Long? = null,
     val isPinned: Boolean = false,
     val updatedAtEpochMs: Long? = null,
+    val sortIndex: Long? = null,
 )

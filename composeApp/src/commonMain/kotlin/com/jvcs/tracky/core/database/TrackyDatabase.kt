@@ -21,7 +21,7 @@ import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
         TaskIntervalEntity::class,
         PendingSyncEntity::class
     ],
-    version = 11,
+    version = 12,
 )
 @TypeConverters(RoomConverters::class)
 @ConstructedBy(TrackyDatabaseConstructor::class)
@@ -348,6 +348,14 @@ abstract class TrackyDatabase: RoomDatabase() {
                 connection.execSQL("UPDATE project_records SET updatedAtEpochMs_tmp = NULLIF(updatedAtEpochMs, 0)")
                 connection.execSQL("ALTER TABLE project_records DROP COLUMN updatedAtEpochMs")
                 connection.execSQL("ALTER TABLE project_records RENAME COLUMN updatedAtEpochMs_tmp TO updatedAtEpochMs")
+            }
+        }
+
+        val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(connection: SQLiteConnection) {
+                // sortIndex: persisted manual order for the Custom sort filter. Nullable so existing
+                // rows keep their date-based order until the user first reorders them.
+                connection.execSQL("ALTER TABLE projects ADD COLUMN sortIndex INTEGER")
             }
         }
     }

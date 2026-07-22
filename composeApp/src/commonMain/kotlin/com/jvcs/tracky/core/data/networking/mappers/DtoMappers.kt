@@ -27,7 +27,8 @@ fun ProjectDto.toProject(): Project {
         isArchived = isArchived,
         trashedAt = trashedAt?.let(Instant::parse),
         isPinned = isPinned,
-        updatedAt = updatedAt?.let(Instant::parse)
+        updatedAt = updatedAt?.let(Instant::parse),
+        sortIndex = sortIndex
     )
 }
 
@@ -71,7 +72,8 @@ fun Project.toProjectDto(): ProjectDto {
         isArchived = isArchived,
         trashedAt = trashedAt?.toString(),
         isPinned = isPinned,
-        updatedAt = updatedAt?.toString()
+        updatedAt = updatedAt?.toString(),
+        sortIndex = sortIndex
     )
 }
 

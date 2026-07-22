@@ -16,4 +16,5 @@ data class UpdateProjectRequest(
     val isFinished: Boolean,
     val isArchived: Boolean,
     val updatedAtUtc: String? = null,
+    val sortIndex: Long? = null,
 )

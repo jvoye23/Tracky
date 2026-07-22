@@ -21,7 +21,8 @@ data class Project(
     val isArchived: Boolean = false,
     val trashedAt: Instant? = null,
     val isPinned: Boolean = false,
-    val updatedAt: Instant? = null
+    val updatedAt: Instant? = null,
+    val sortIndex: Long? = null
 )
 
 data class ProjectWithTask(
