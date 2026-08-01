@@ -5,10 +5,12 @@ package com.jvcs.tracky.features.project_tracker.data
 import com.jvcs.tracky.core.database.dao.PendingSyncDao
 import com.jvcs.tracky.core.database.entity.PendingSyncEntity
 import com.jvcs.tracky.core.database.entity.PendingSyncEntity.Companion.ENTITY_PROJECT
+import com.jvcs.tracky.core.database.entity.PendingSyncEntity.Companion.ENTITY_PROJECT_ORDER
 import com.jvcs.tracky.core.database.entity.PendingSyncEntity.Companion.ENTITY_TASK
 import com.jvcs.tracky.core.database.entity.PendingSyncEntity.Companion.OP_CREATE
 import com.jvcs.tracky.core.database.entity.PendingSyncEntity.Companion.OP_DELETE
 import com.jvcs.tracky.core.database.entity.PendingSyncEntity.Companion.OP_UPDATE
+import com.jvcs.tracky.core.database.entity.PendingSyncEntity.Companion.PROJECT_ORDER_ENTITY_ID
 import com.jvcs.tracky.core.domain.RemoteProjectDataSource
 import com.jvcs.tracky.core.domain.model.Project
 import com.jvcs.tracky.core.domain.model.ProjectTask
@@ -97,8 +99,9 @@ class OfflineFirstProjectRepository(
         }
         return when (remoteResult) {
             is Result.Success -> {
-                // Server is canonical (server-wins on the happy path)
-                localProjectDataSource.upsertProject(remoteResult.data)
+                // Server is canonical (server-wins on the happy path), except that an echo without a
+                // sortIndex must not wipe the manual order — same guard as resolveProjectConflict.
+                localProjectDataSource.upsertProject(remoteResult.data.withLocalSortIndexFallback(stamped))
                 Result.Success(Unit)
             }
             is Result.Error -> when {
@@ -158,24 +161,43 @@ class OfflineFirstProjectRepository(
 
     // REORDER: persist the manual order shown under the Custom sort filter. orderedProjectIds is the
     // new order of a single section (Pinned or Other); each project's sortIndex is set to its position
-    // in that list. Only projects whose sortIndex actually changed are written, so a drag routes just
-    // the shifted cards through the offline-first upsert (and on to the server), exactly like pin.
+    // in that list. A drag is one action for the user, so it is one action here too: one read of the
+    // current indices, one transactional local write, one network call. Writing card by card would
+    // let a failure halfway through leave two projects sharing an index, which no retry can repair.
     override suspend fun reorderProjects(orderedProjectIds: List<String>): EmptyResult<DataError> {
-        var firstError: DataError? = null
-        orderedProjectIds.forEachIndexed { index, projectId ->
-            val project = when (val existing = dbResult { localProjectDataSource.getProjectById(projectId) }) {
-                is Result.Success -> existing.data ?: return@forEachIndexed // nothing to reorder
-                is Result.Error -> {
-                    if (firstError == null) firstError = existing.error
-                    return@forEachIndexed
+        val current = when (val existing = dbResult { localProjectDataSource.getSortIndices() }) {
+            is Result.Success -> existing.data
+            is Result.Error -> return existing.asEmptyDataResult()
+        }
+        // Only ids that still exist locally and whose index actually moves.
+        val changed = buildMap {
+            orderedProjectIds.forEachIndexed { index, projectId ->
+                val newIndex = index.toLong()
+                if (current.containsKey(projectId) && current[projectId] != newIndex) {
+                    put(projectId, newIndex)
                 }
             }
-            val newIndex = index.toLong()
-            if (project.sortIndex == newIndex) return@forEachIndexed
-            val result = upsertProject(project.copy(sortIndex = newIndex))
-            if (result is Result.Error && firstError == null) firstError = result.error
         }
-        return firstError?.let { Result.Error(it) } ?: Result.Success(Unit)
+        if (changed.isEmpty()) return Result.Success(Unit)
+
+        val updatedAt = Clock.System.now()
+        val localResult = localProjectDataSource.updateSortIndices(changed, updatedAt)
+        if (localResult !is Result.Success) {
+            return localResult.asEmptyDataResult()
+        }
+
+        return when (val remoteResult = remoteProjectDataSource.reorderProjects(changed, updatedAt)) {
+            is Result.Success -> Result.Success(Unit)
+            is Result.Error -> when {
+                remoteResult.error.isTransient() -> {
+                    // Local write already succeeded; only surface an error if queuing the sync fails.
+                    val queued = enqueueReorderOperation()
+                    if (queued is Result.Success) scheduleSync()
+                    queued
+                }
+                else -> remoteResult.asEmptyDataResult()
+            }
+        }
     }
 
     // CREATE/UPDATE task: same optimistic flow as projects.
@@ -342,7 +364,7 @@ class OfflineFirstProjectRepository(
                         remoteProjectDataSource.updateProject(project)
                     }
                     result.toSyncOutcome(
-                        onSuccess = { localProjectDataSource.upsertProject(it) },
+                        onSuccess = { localProjectDataSource.upsertProject(it.withLocalSortIndexFallback(project)) },
                         onConflict = { resolveProjectConflict(project) }
                     )
                 }
@@ -369,6 +391,16 @@ class OfflineFirstProjectRepository(
                 }
                 else -> SyncOutcome.DROP
             }
+            // The queued row is just a marker: the order itself is rebuilt from current local state,
+            // so projects deleted meanwhile drop out and repeated offline reorders collapse into one push.
+            ENTITY_PROJECT_ORDER -> {
+                val indices = when (val r = dbResult { localProjectDataSource.getSortIndices() }) {
+                    is Result.Success -> r.data.mapNotNull { (id, index) -> index?.let { id to it } }.toMap()
+                    is Result.Error -> return SyncOutcome.RETRY
+                }
+                if (indices.isEmpty()) return SyncOutcome.DROP
+                remoteProjectDataSource.reorderProjects(indices, Clock.System.now()).toSyncOutcome()
+            }
             else -> SyncOutcome.DROP
         }
     }
@@ -386,8 +418,7 @@ class OfflineFirstProjectRepository(
         return if (local.updatedAt != null && (server.updatedAt == null || local.updatedAt > server.updatedAt)) {
             when (val pushed = remoteProjectDataSource.updateProject(local)) {
                 is Result.Success -> {
-                    // Preserve the local order if the backend echoes sortIndex back as null.
-                    val merged = pushed.data.copy(sortIndex = pushed.data.sortIndex ?: local.sortIndex)
+                    val merged = pushed.data.withLocalSortIndexFallback(local)
                     applicationScope.async { localProjectDataSource.upsertProject(merged) }.await()
                     Result.Success(Unit)
                 }
@@ -395,11 +426,18 @@ class OfflineFirstProjectRepository(
             }
         } else {
             // Server wins on freshness, but keep the local sortIndex when the server has none.
-            val merged = server.copy(sortIndex = server.sortIndex ?: local.sortIndex)
+            val merged = server.withLocalSortIndexFallback(local)
             applicationScope.async { localProjectDataSource.upsertProject(merged) }.await()
             Result.Success(Unit)
         }
     }
+
+    /**
+     * Keeps the locally known order when the server has no sortIndex of its own. Without this, any
+     * ordinary edit (pin, rename, archive) would silently wipe the order the user just dragged.
+     */
+    private fun Project.withLocalSortIndexFallback(local: Project): Project =
+        if (sortIndex != null) this else copy(sortIndex = local.sortIndex)
 
     private suspend fun resolveTaskConflict(local: ProjectTask): EmptyResult<DataError> {
         val server = when (val r = remoteProjectDataSource.getTasksByProjectId(local.parentProjectId)) {
@@ -427,6 +465,12 @@ class OfflineFirstProjectRepository(
 
     private suspend fun enqueueProjectOperation(projectId: String, operationType: String): EmptyResult<DataError> {
         return enqueueOperation(projectId, ENTITY_PROJECT, operationType, parentEntityId = null)
+    }
+
+    // One row for the whole order, not one per moved project. enqueueDeduped's OP_UPDATE rule then
+    // collapses further offline reorders into this same row.
+    private suspend fun enqueueReorderOperation(): EmptyResult<DataError> {
+        return enqueueOperation(PROJECT_ORDER_ENTITY_ID, ENTITY_PROJECT_ORDER, OP_UPDATE, parentEntityId = null)
     }
 
     private suspend fun enqueueTaskOperation(taskId: String, parentProjectId: String, operationType: String): EmptyResult<DataError> {

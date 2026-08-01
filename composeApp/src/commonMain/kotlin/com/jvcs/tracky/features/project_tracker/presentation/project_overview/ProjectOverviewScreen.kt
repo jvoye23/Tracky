@@ -97,6 +97,7 @@ import tracky.composeapp.generated.resources.error_reordering_projects
 import tracky.composeapp.generated.resources.new_project
 import tracky.composeapp.generated.resources.other
 import tracky.composeapp.generated.resources.pinned
+import tracky.composeapp.generated.resources.project_saved_successfully
 import tracky.composeapp.generated.resources.search_results
 
 @Composable
@@ -121,7 +122,7 @@ fun ProjectOverviewScreenRoot(
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar(
                         message = event.error.toString(),
-                        duration = SnackbarDuration.Short
+                        duration = SnackbarDuration.Long
                     )
                 }
             }
@@ -145,8 +146,9 @@ fun ProjectOverviewScreenRoot(
             }
             is ProjectOverviewEvent.NewProjectSaved -> {
                 coroutineScope.launch {
+                    val confirmMessage = getString(Res.string.project_saved_successfully)
                     snackbarHostState.showSnackbar(
-                        message = "Project saved successfully!",
+                        message = confirmMessage,
                         duration = SnackbarDuration.Long
                     )
                 }
