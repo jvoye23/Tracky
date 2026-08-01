@@ -18,6 +18,10 @@ interface LocalProjectDataSource {
     suspend fun getExpiredTrashedProjectIds(cutoff: Instant): List<String>
     suspend fun getProjectById(projectId: String): Project?
     suspend fun getProjectWithTasksByProjectId(projectId: String): Project?
+    /** Current sortIndex per project id. A null value means the project was never manually ordered. */
+    suspend fun getSortIndices(): Map<String, Long?>
+    /** Writes every index in one transaction, so a reorder can never land half-applied. */
+    suspend fun updateSortIndices(indices: Map<String, Long>, updatedAt: Instant): EmptyResult<DataError>
     suspend fun upsertProject(project: Project): EmptyResult<DataError>
     suspend fun upsertProjects(projects: List<Project>): EmptyResult<DataError>
     suspend fun upsertProjectTask(projectTask: ProjectTask): EmptyResult<DataError>

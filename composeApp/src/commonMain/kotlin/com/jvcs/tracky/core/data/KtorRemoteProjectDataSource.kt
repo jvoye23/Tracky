@@ -2,6 +2,8 @@ package com.jvcs.tracky.core.data
 
 import com.jvcs.tracky.core.data.networking.CreateProjectRequest
 import com.jvcs.tracky.core.data.networking.CreateProjectTaskRequest
+import com.jvcs.tracky.core.data.networking.ProjectSortOrderDto
+import com.jvcs.tracky.core.data.networking.ReorderProjectsRequest
 import com.jvcs.tracky.core.data.networking.UpdateProjectRequest
 import com.jvcs.tracky.core.data.networking.UpdateProjectTaskRequest
 import com.jvcs.tracky.core.data.networking.delete
@@ -24,6 +26,7 @@ import com.jvcs.tracky.core.mapper.toCreateProjectTaskRequest
 import com.jvcs.tracky.core.mapper.toUpdateProjectRequest
 import com.jvcs.tracky.core.mapper.toUpdateProjectTaskRequest
 import io.ktor.client.HttpClient
+import kotlin.time.Instant
 
 class KtorRemoteProjectDataSource(
     private val httpClient: HttpClient
@@ -54,6 +57,20 @@ class KtorRemoteProjectDataSource(
     override suspend fun deleteProject(projectId: String): EmptyResult<DataError.Network> {
         return httpClient.delete(
             route = "api/projects/$projectId"
+        )
+    }
+
+    // One request for the whole sort gesture. The endpoint answers 204, so nothing comes back that could
+    // overwrite the order we just wrote locally.
+    override suspend fun reorderProjects(indices: Map<String, Long>, updatedAt: Instant): EmptyResult<DataError.Network> {
+        return httpClient.put<ReorderProjectsRequest, Unit>(
+            route = "/api/projects/sort",
+            body = ReorderProjectsRequest(
+                updatedAtUtc = updatedAt.toString(),
+                items = indices.map { (projectId, sortIndex) ->
+                    ProjectSortOrderDto(projectId = projectId, sortIndex = sortIndex)
+                }
+            )
         )
     }
 

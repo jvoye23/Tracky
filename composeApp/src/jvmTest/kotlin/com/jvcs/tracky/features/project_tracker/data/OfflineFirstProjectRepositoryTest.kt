@@ -92,16 +92,20 @@ class OfflineFirstProjectRepositoryTest {
         assertTrue(remote.postedProjectIds.contains("p1"))
     }
 
+    /** Seeds three projects already carrying a contiguous order 0,1,2. */
+    private fun FakeLocalProjectDataSource.seedOrderedProjects() {
+        projects["p1"] = project("p1").copy(sortIndex = 0)
+        projects["p2"] = project("p2").copy(sortIndex = 1)
+        projects["p3"] = project("p3").copy(sortIndex = 2)
+    }
+
     @Test
-    fun reorderProjects_writesNewSortIndex_onlyForShiftedProjects() = runBlocking {
+    fun reorderProjects_writesShiftedIndices_inASingleLocalWrite() = runBlocking {
         val local = FakeLocalProjectDataSource()
         val remote = FakeRemoteProjectDataSource() // online
         val dao = FakePendingSyncDao()
         val scheduler = FakeSyncScheduler()
-        // Seed three projects already carrying a contiguous order 0,1,2.
-        local.projects["p1"] = project("p1").copy(sortIndex = 0)
-        local.projects["p2"] = project("p2").copy(sortIndex = 1)
-        local.projects["p3"] = project("p3").copy(sortIndex = 2)
+        local.seedOrderedProjects()
 
         // Move p3 to the middle -> new order p1, p3, p2.
         val result = repo(local, remote, dao, scheduler)
@@ -111,9 +115,136 @@ class OfflineFirstProjectRepositoryTest {
         assertEquals(0L, local.projects["p1"]!!.sortIndex)
         assertEquals(1L, local.projects["p3"]!!.sortIndex)
         assertEquals(2L, local.projects["p2"]!!.sortIndex)
-        // p1 kept index 0, so it must not have been rewritten; only p3 and p2 shifted.
-        assertFalse(local.upsertedProjectIds.contains("p1"))
-        assertTrue(local.upsertedProjectIds.containsAll(listOf("p2", "p3")))
+        // The whole gesture is one transaction, carrying only the two cards that actually moved.
+        assertEquals(1, local.sortIndexWrites.size)
+        assertEquals(mapOf("p3" to 1L, "p2" to 2L), local.sortIndexWrites.single())
+    }
+
+    @Test
+    fun reorderProjects_makesExactlyOneNetworkCall() = runBlocking {
+        val local = FakeLocalProjectDataSource()
+        val remote = FakeRemoteProjectDataSource()
+        val dao = FakePendingSyncDao()
+        val scheduler = FakeSyncScheduler()
+        local.seedOrderedProjects()
+
+        repo(local, remote, dao, scheduler).reorderProjects(listOf("p1", "p3", "p2"))
+
+        // One drag must not fan out into one PUT per shifted card.
+        assertEquals(1, remote.reorderCalls.size)
+        assertEquals(mapOf("p3" to 1L, "p2" to 2L), remote.reorderCalls.single())
+        assertTrue(remote.updatedProjectIds.isEmpty())
+    }
+
+    @Test
+    fun reorderProjects_whenNothingMoved_writesNothing() = runBlocking {
+        val local = FakeLocalProjectDataSource()
+        val remote = FakeRemoteProjectDataSource()
+        val dao = FakePendingSyncDao()
+        val scheduler = FakeSyncScheduler()
+        local.seedOrderedProjects()
+
+        val result = repo(local, remote, dao, scheduler)
+            .reorderProjects(listOf("p1", "p2", "p3")) // already the stored order
+
+        assertTrue(result is Result.Success)
+        assertTrue(local.sortIndexWrites.isEmpty())
+        assertTrue(remote.reorderCalls.isEmpty())
+    }
+
+    @Test
+    fun reorderProjects_whenLocalWriteFails_doesNotHitNetwork_andLeavesOrderUntouched() = runBlocking {
+        val local = FakeLocalProjectDataSource().apply { failSortIndexWrite = true }
+        val remote = FakeRemoteProjectDataSource()
+        val dao = FakePendingSyncDao()
+        val scheduler = FakeSyncScheduler()
+        local.seedOrderedProjects()
+
+        val result = repo(local, remote, dao, scheduler)
+            .reorderProjects(listOf("p1", "p3", "p2"))
+
+        assertTrue(result is Result.Error)
+        assertTrue(remote.reorderCalls.isEmpty())
+        // Nothing landed: the old order is intact rather than half-applied.
+        assertEquals(0L, local.projects["p1"]!!.sortIndex)
+        assertEquals(1L, local.projects["p2"]!!.sortIndex)
+        assertEquals(2L, local.projects["p3"]!!.sortIndex)
+    }
+
+    @Test
+    fun reorderProjects_whenOffline_queuesOneOrderOp_andReportsSuccess() = runBlocking {
+        val local = FakeLocalProjectDataSource()
+        val remote = FakeRemoteProjectDataSource().apply { failWith = DataError.Network.NO_INTERNET }
+        val dao = FakePendingSyncDao()
+        val scheduler = FakeSyncScheduler()
+        local.seedOrderedProjects()
+
+        val result = repo(local, remote, dao, scheduler)
+            .reorderProjects(listOf("p1", "p3", "p2"))
+
+        // User sees success because the local write succeeded.
+        assertTrue(result is Result.Success)
+        assertEquals(1L, local.projects["p3"]!!.sortIndex)
+
+        val ops = dao.getAllPendingOperations()
+        assertEquals(1, ops.size)
+        assertEquals(PendingSyncEntity.ENTITY_PROJECT_ORDER, ops[0].entityType)
+        assertEquals(PendingSyncEntity.OP_UPDATE, ops[0].operationType)
+        assertTrue(scheduler.scheduleCount > 0)
+    }
+
+    @Test
+    fun reorderProjects_twiceWhileOffline_stillQueuesOneOrderOp() = runBlocking {
+        val local = FakeLocalProjectDataSource()
+        val remote = FakeRemoteProjectDataSource().apply { failWith = DataError.Network.NO_INTERNET }
+        val dao = FakePendingSyncDao()
+        val scheduler = FakeSyncScheduler()
+        local.seedOrderedProjects()
+        val repository = repo(local, remote, dao, scheduler)
+
+        repository.reorderProjects(listOf("p1", "p3", "p2"))
+        repository.reorderProjects(listOf("p3", "p2", "p1"))
+
+        // The order is a single piece of state — two drags collapse into one queued push.
+        assertEquals(1, dao.getAllPendingOperations().size)
+    }
+
+    @Test
+    fun syncPendingOperations_drainsOrderOp_withOneBatchCall() = runBlocking {
+        val local = FakeLocalProjectDataSource()
+        val remote = FakeRemoteProjectDataSource().apply { failWith = DataError.Network.NO_INTERNET }
+        val dao = FakePendingSyncDao()
+        val scheduler = FakeSyncScheduler()
+        local.seedOrderedProjects()
+        val repository = repo(local, remote, dao, scheduler)
+
+        repository.reorderProjects(listOf("p1", "p3", "p2")) // queued while offline
+        remote.failWith = null                               // back online
+        remote.reorderCalls.clear()
+
+        repository.syncPendingOperations()
+
+        assertTrue(dao.getAllPendingOperations().isEmpty())
+        // The queued row is rebuilt from current local state: the full order, in one call.
+        assertEquals(1, remote.reorderCalls.size)
+        assertEquals(mapOf("p1" to 0L, "p3" to 1L, "p2" to 2L), remote.reorderCalls.single())
+    }
+
+    @Test
+    fun reorderProjects_skipsIdsMissingLocally() = runBlocking {
+        val local = FakeLocalProjectDataSource()
+        val remote = FakeRemoteProjectDataSource()
+        val dao = FakePendingSyncDao()
+        val scheduler = FakeSyncScheduler()
+        local.seedOrderedProjects()
+
+        // "ghost" was deleted on another device but is still in the mirror list the UI committed.
+        val result = repo(local, remote, dao, scheduler)
+            .reorderProjects(listOf("ghost", "p1", "p2", "p3"))
+
+        assertTrue(result is Result.Success)
+        assertFalse(local.sortIndexWrites.single().containsKey("ghost"))
+        assertEquals(mapOf("p1" to 1L, "p2" to 2L, "p3" to 3L), local.sortIndexWrites.single())
     }
 
     @Test
@@ -138,6 +269,9 @@ class OfflineFirstProjectRepositoryTest {
 private class FakeLocalProjectDataSource : LocalProjectDataSource {
     val projects = linkedMapOf<String, Project>()
     val upsertedProjectIds = mutableListOf<String>()
+    /** One entry per updateSortIndices call, so tests can assert a reorder is a single write. */
+    val sortIndexWrites = mutableListOf<Map<String, Long>>()
+    var failSortIndexWrite = false
     private val projectsFlow = MutableStateFlow<List<Project>>(emptyList())
 
     private fun emit() { projectsFlow.value = projects.values.toList() }
@@ -151,6 +285,20 @@ private class FakeLocalProjectDataSource : LocalProjectDataSource {
         projects.values.filter { it.trashedAt != null && it.trashedAt!! < cutoff }.map { it.projectId }
     override suspend fun getProjectById(projectId: String): Project? = projects[projectId]
     override suspend fun getProjectWithTasksByProjectId(projectId: String): Project? = projects[projectId]
+
+    override suspend fun getSortIndices(): Map<String, Long?> =
+        projects.mapValues { (_, project) -> project.sortIndex }
+
+    override suspend fun updateSortIndices(indices: Map<String, Long>, updatedAt: Instant): EmptyResult<DataError> {
+        // All or nothing, like the DAO transaction it stands in for.
+        if (failSortIndexWrite) return Result.Error(DataError.Local.DISK_FULL)
+        sortIndexWrites += indices
+        indices.forEach { (id, index) ->
+            projects[id]?.let { projects[id] = it.copy(sortIndex = index, updatedAt = updatedAt) }
+        }
+        emit()
+        return Result.Success(Unit)
+    }
 
     override suspend fun upsertProject(project: Project): EmptyResult<DataError> {
         upsertedProjectIds += project.projectId
@@ -177,7 +325,10 @@ private class FakeLocalProjectDataSource : LocalProjectDataSource {
 private class FakeRemoteProjectDataSource : RemoteProjectDataSource {
     var failWith: DataError.Network? = null
     val postedProjectIds = mutableListOf<String>()
+    val updatedProjectIds = mutableListOf<String>()
     val deletedProjectIds = mutableListOf<String>()
+    /** One entry per reorderProjects call, so tests can assert a drag is a single network call. */
+    val reorderCalls = mutableListOf<Map<String, Long>>()
 
     override suspend fun getProjects(): Result<List<Project>, DataError.Network> =
         failWith?.let { Result.Error(it) } ?: Result.Success(emptyList())
@@ -188,8 +339,17 @@ private class FakeRemoteProjectDataSource : RemoteProjectDataSource {
         return Result.Success(project)
     }
 
-    override suspend fun updateProject(project: Project): Result<Project, DataError.Network> =
-        failWith?.let { Result.Error(it) } ?: Result.Success(project)
+    override suspend fun updateProject(project: Project): Result<Project, DataError.Network> {
+        failWith?.let { return Result.Error(it) }
+        updatedProjectIds += project.projectId
+        return Result.Success(project)
+    }
+
+    override suspend fun reorderProjects(indices: Map<String, Long>, updatedAt: Instant): EmptyResult<DataError.Network> {
+        failWith?.let { return Result.Error(it) }
+        reorderCalls += indices
+        return Result.Success(Unit)
+    }
 
     override suspend fun deleteProject(projectId: String): EmptyResult<DataError.Network> {
         failWith?.let { return Result.Error(it) }

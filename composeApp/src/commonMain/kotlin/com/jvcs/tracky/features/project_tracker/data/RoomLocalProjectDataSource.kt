@@ -63,6 +63,25 @@ class RoomLocalProjectDataSource (
         return projectDao.getProjectWithTasksById(projectId)?.toProject()
     }
 
+    override suspend fun getSortIndices(): Map<String, Long?> {
+        return projectDao.getSortIndices().associate { it.projectId to it.sortIndex }
+    }
+
+    override suspend fun updateSortIndices(
+        indices: Map<String, Long>,
+        updatedAt: Instant
+    ): EmptyResult<DataError> {
+        return try {
+            withContext(dbWriteDispatcher) {
+                projectDao.updateSortIndices(indices, updatedAt.toEpochMilliseconds())
+            }
+            Result.Success(Unit)
+        } catch (e: Exception) {
+            if(e is CancellationException) throw e
+            Result.Error(DataError.Local.DISK_FULL)
+        }
+    }
+
     override suspend fun upsertProject(project: Project): EmptyResult<DataError> {
         return try {
             withContext(dbWriteDispatcher) {

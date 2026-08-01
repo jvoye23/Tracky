@@ -7,6 +7,7 @@ import androidx.room.Upsert
 import com.jvcs.tracky.core.database.entity.ProjectEntity
 import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
+import com.jvcs.tracky.core.database.relation.ProjectSortIndexEntity
 import com.jvcs.tracky.core.database.relation.ProjectWithTasksEntity
 import com.jvcs.tracky.core.database.relation.TaskWithIntervals
 import kotlinx.coroutines.flow.Flow
@@ -45,6 +46,19 @@ interface ProjectDao {
 
     @Query("SELECT projectId FROM projects WHERE trashedAtEpochMs IS NOT NULL AND trashedAtEpochMs < :cutoffEpochMs")
     suspend fun getExpiredTrashedProjectIds(cutoffEpochMs: Long): List<String>
+
+    @Query("SELECT projectId, sortIndex FROM projects")
+    suspend fun getSortIndices(): List<ProjectSortIndexEntity>
+
+    @Query("UPDATE projects SET sortIndex = :sortIndex, updatedAtEpochMs = :updatedAt WHERE projectId = :projectId")
+    suspend fun setSortIndex(projectId: String, sortIndex: Long, updatedAt: Long)
+
+    // A reorder is one gesture, so it is one write: either every index lands or none does. Doing it
+    // row by row outside a transaction can leave two projects sharing an index if one write fails.
+    @Transaction
+    suspend fun updateSortIndices(indices: Map<String, Long>, updatedAt: Long) {
+        indices.forEach { (id, index) -> setSortIndex(id, index, updatedAt) }
+    }
 
     @Transaction
     @Query("SELECT * FROM projects WHERE projectId = :projectId")
