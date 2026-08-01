@@ -97,7 +97,7 @@ class OfflineFirstProjectRepository(
         }
         return when (remoteResult) {
             is Result.Success -> {
-                // Server is canonical (server-wins on the happy path).
+                // Server is canonical (server-wins on the happy path)
                 localProjectDataSource.upsertProject(remoteResult.data)
                 Result.Success(Unit)
             }
@@ -154,6 +154,28 @@ class OfflineFirstProjectRepository(
             is Result.Error -> return existing.asEmptyDataResult()
         }
         return upsertProject(project.copy(isPinned = isPinned))
+    }
+
+    // REORDER: persist the manual order shown under the Custom sort filter. orderedProjectIds is the
+    // new order of a single section (Pinned or Other); each project's sortIndex is set to its position
+    // in that list. Only projects whose sortIndex actually changed are written, so a drag routes just
+    // the shifted cards through the offline-first upsert (and on to the server), exactly like pin.
+    override suspend fun reorderProjects(orderedProjectIds: List<String>): EmptyResult<DataError> {
+        var firstError: DataError? = null
+        orderedProjectIds.forEachIndexed { index, projectId ->
+            val project = when (val existing = dbResult { localProjectDataSource.getProjectById(projectId) }) {
+                is Result.Success -> existing.data ?: return@forEachIndexed // nothing to reorder
+                is Result.Error -> {
+                    if (firstError == null) firstError = existing.error
+                    return@forEachIndexed
+                }
+            }
+            val newIndex = index.toLong()
+            if (project.sortIndex == newIndex) return@forEachIndexed
+            val result = upsertProject(project.copy(sortIndex = newIndex))
+            if (result is Result.Error && firstError == null) firstError = result.error
+        }
+        return firstError?.let { Result.Error(it) } ?: Result.Success(Unit)
     }
 
     // CREATE/UPDATE task: same optimistic flow as projects.
@@ -364,13 +386,17 @@ class OfflineFirstProjectRepository(
         return if (local.updatedAt != null && (server.updatedAt == null || local.updatedAt > server.updatedAt)) {
             when (val pushed = remoteProjectDataSource.updateProject(local)) {
                 is Result.Success -> {
-                    applicationScope.async { localProjectDataSource.upsertProject(pushed.data) }.await()
+                    // Preserve the local order if the backend echoes sortIndex back as null.
+                    val merged = pushed.data.copy(sortIndex = pushed.data.sortIndex ?: local.sortIndex)
+                    applicationScope.async { localProjectDataSource.upsertProject(merged) }.await()
                     Result.Success(Unit)
                 }
                 is Result.Error -> pushed.asEmptyDataResult()
             }
         } else {
-            applicationScope.async { localProjectDataSource.upsertProject(server) }.await()
+            // Server wins on freshness, but keep the local sortIndex when the server has none.
+            val merged = server.copy(sortIndex = server.sortIndex ?: local.sortIndex)
+            applicationScope.async { localProjectDataSource.upsertProject(merged) }.await()
             Result.Success(Unit)
         }
     }

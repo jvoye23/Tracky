@@ -93,6 +93,30 @@ class OfflineFirstProjectRepositoryTest {
     }
 
     @Test
+    fun reorderProjects_writesNewSortIndex_onlyForShiftedProjects() = runBlocking {
+        val local = FakeLocalProjectDataSource()
+        val remote = FakeRemoteProjectDataSource() // online
+        val dao = FakePendingSyncDao()
+        val scheduler = FakeSyncScheduler()
+        // Seed three projects already carrying a contiguous order 0,1,2.
+        local.projects["p1"] = project("p1").copy(sortIndex = 0)
+        local.projects["p2"] = project("p2").copy(sortIndex = 1)
+        local.projects["p3"] = project("p3").copy(sortIndex = 2)
+
+        // Move p3 to the middle -> new order p1, p3, p2.
+        val result = repo(local, remote, dao, scheduler)
+            .reorderProjects(listOf("p1", "p3", "p2"))
+
+        assertTrue(result is Result.Success)
+        assertEquals(0L, local.projects["p1"]!!.sortIndex)
+        assertEquals(1L, local.projects["p3"]!!.sortIndex)
+        assertEquals(2L, local.projects["p2"]!!.sortIndex)
+        // p1 kept index 0, so it must not have been rewritten; only p3 and p2 shifted.
+        assertFalse(local.upsertedProjectIds.contains("p1"))
+        assertTrue(local.upsertedProjectIds.containsAll(listOf("p2", "p3")))
+    }
+
+    @Test
     fun deleteProject_droppedLocally_whenStillPendingCreate_neverHitsServer() = runBlocking {
         val local = FakeLocalProjectDataSource()
         val remote = FakeRemoteProjectDataSource().apply { failWith = DataError.Network.NO_INTERNET }
@@ -113,6 +137,7 @@ class OfflineFirstProjectRepositoryTest {
 
 private class FakeLocalProjectDataSource : LocalProjectDataSource {
     val projects = linkedMapOf<String, Project>()
+    val upsertedProjectIds = mutableListOf<String>()
     private val projectsFlow = MutableStateFlow<List<Project>>(emptyList())
 
     private fun emit() { projectsFlow.value = projects.values.toList() }
@@ -128,6 +153,7 @@ private class FakeLocalProjectDataSource : LocalProjectDataSource {
     override suspend fun getProjectWithTasksByProjectId(projectId: String): Project? = projects[projectId]
 
     override suspend fun upsertProject(project: Project): EmptyResult<DataError> {
+        upsertedProjectIds += project.projectId
         projects[project.projectId] = project; emit(); return Result.Success(Unit)
     }
 

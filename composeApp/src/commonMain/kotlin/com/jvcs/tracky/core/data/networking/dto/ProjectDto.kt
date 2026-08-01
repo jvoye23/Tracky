@@ -18,7 +18,8 @@ data class ProjectDto(
     val isArchived: Boolean = false,
     @SerialName("trashedAtUtc") val trashedAt: String? = null,
     val isPinned: Boolean = false,
-    @SerialName("updatedAtUtc") val updatedAt: String? = null
+    @SerialName("updatedAtUtc") val updatedAt: String? = null,
+    val sortIndex: Long? = null
 )
 
 @Serializable

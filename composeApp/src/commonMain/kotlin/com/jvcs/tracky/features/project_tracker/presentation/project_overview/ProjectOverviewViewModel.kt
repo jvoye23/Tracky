@@ -139,11 +139,35 @@ class ProjectOverviewViewModel(
                     isSortBottomSheetVisible = false
                 ) }
             }
+            ProjectOverviewAction.OnReorderDragStart -> {
+                // The card started moving: leave edit mode so it becomes a pure reorder drag.
+                _state.update { it.copy(
+                    isEditModeActive = false,
+                    selectedProjectIds = emptySet()
+                ) }
+            }
+            is ProjectOverviewAction.OnReorderCommit -> {
+                reorderProjects(action.orderedProjectIds)
+            }
+        }
+    }
+
+    private fun reorderProjects(orderedProjectIds: List<String>) {
+        viewModelScope.launch {
+            projectRepository.reorderProjects(orderedProjectIds)
+                .onFailure { eventChannel.send(ProjectOverviewEvent.ReorderError) }
         }
     }
 
     private fun List<Project>.sortedForOption(option: SortOption) = when (option) {
-        SortOption.CUSTOM -> this
+        // Manual order: projects that have been reordered sort by their persisted sortIndex. Projects
+        // with no sortIndex yet (newly created, or before any reorder) sort FIRST, newest first, so a
+        // new project lands at the top of the list. startDateTimeUtc also breaks ties among indexed
+        // projects, keeping the order deterministic (the read query has no ORDER BY).
+        SortOption.CUSTOM -> sortedWith(
+            compareBy<Project, Long?>(nullsFirst<Long>()) { it.sortIndex }
+                .thenByDescending { it.startDateTimeUtc }
+        )
         SortOption.CREATION_DATE -> sortedByDescending { it.startDateTimeUtc }
         SortOption.MODIFICATION_DATE -> sortedByDescending { it.updatedAt ?: it.startDateTimeUtc }
     }

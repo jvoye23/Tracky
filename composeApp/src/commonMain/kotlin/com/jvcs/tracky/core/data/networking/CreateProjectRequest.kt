@@ -11,4 +11,5 @@ data class CreateProjectRequest(
     val startDateTimeUtc: String,
     val useLightTextColor: Boolean,
     val updatedAtUtc: String? = null,
+    val sortIndex: Long? = null,
 )

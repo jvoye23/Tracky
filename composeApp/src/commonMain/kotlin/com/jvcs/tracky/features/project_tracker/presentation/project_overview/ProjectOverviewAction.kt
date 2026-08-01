@@ -24,4 +24,10 @@ sealed interface ProjectOverviewAction {
     data object OnConfirmDelete: ProjectOverviewAction
     data object OnToggleSortBottomSheet: ProjectOverviewAction
     data class OnSortOptionSelected(val sortOption: SortOption): ProjectOverviewAction
+
+    // Reorder-by-drag (Custom sort only). Fired the moment a card starts moving so edit mode is
+    // dropped and the gesture becomes a pure reorder.
+    data object OnReorderDragStart: ProjectOverviewAction
+    // Fired on drop with the new order of the dragged section (Pinned or Other).
+    data class OnReorderCommit(val orderedProjectIds: List<String>): ProjectOverviewAction
 }

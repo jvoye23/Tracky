@@ -32,6 +32,7 @@ fun Project.toProjectEntity(): ProjectEntity {
         trashedAtEpochMs = trashedAt?.toEpochMilliseconds(),
         isPinned = isPinned,
         updatedAtEpochMs = updatedAt?.toEpochMilliseconds(),
+        sortIndex = sortIndex,
     )
 }
 
@@ -50,6 +51,7 @@ fun ProjectEntity.toProject(): Project {
         trashedAt = trashedAtEpochMs?.let(Instant::fromEpochMilliseconds),
         isPinned = isPinned,
         updatedAt = updatedAtEpochMs?.let(Instant::fromEpochMilliseconds),
+        sortIndex = sortIndex,
     )
 }
 
@@ -69,6 +71,7 @@ fun ProjectWithTasksEntity.toProject(): Project {
         trashedAt = project.trashedAtEpochMs?.let(Instant::fromEpochMilliseconds),
         isPinned = project.isPinned,
         updatedAt = project.updatedAtEpochMs?.let(Instant::fromEpochMilliseconds),
+        sortIndex = project.sortIndex,
     )
 }
 
@@ -143,7 +146,8 @@ fun Project.toCreateProjectRequest(): CreateProjectRequest {
         color = colorArgb ?: 0,
         startDateTimeUtc = startDateTimeUtc.toString(),
         useLightTextColor = useLightTextColor,
-        updatedAtUtc = updatedAt?.toString()
+        updatedAtUtc = updatedAt?.toString(),
+        sortIndex = sortIndex,
     )
 }
 
@@ -160,7 +164,8 @@ fun Project.toUpdateProjectRequest(): UpdateProjectRequest {
         isPinned = isPinned,
         isFinished = isFinished,
         isArchived = isArchived,
-        updatedAtUtc = updatedAt?.toString()
+        updatedAtUtc = updatedAt?.toString(),
+        sortIndex = sortIndex,
     )
 }
 
