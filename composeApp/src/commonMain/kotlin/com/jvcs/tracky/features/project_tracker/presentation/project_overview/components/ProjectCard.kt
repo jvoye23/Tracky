@@ -4,6 +4,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -30,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -57,7 +59,12 @@ fun ProjectCard(
     onLongClick: () -> Unit = {},
     onToggleSelection: () -> Unit = {},
     isEditModeActive: Boolean = false,
-    isSelected: Boolean = false
+    isSelected: Boolean = false,
+    isReorderable: Boolean = false,
+    onReorderDragStart: () -> Unit = {},
+    onReorderDrag: (dragAmountY: Float) -> Unit = {},
+    onReorderDragEnd: () -> Unit = {},
+    onReorderDragCancel: () -> Unit = {}
 ) {
     val contentColor = if (projectUi.useLightTextColor) Color.White else Color.Black
     val cardShape = CardDefaults.elevatedShape
@@ -82,6 +89,24 @@ fun ProjectCard(
                         onClick()
                     }
                 }
+            )
+            // Long-press also arms a reorder drag (Custom sort only). onLongClick above still enters
+            // edit mode; the drag's first movement clears it (onReorderDrag). A long-press without
+            // movement leaves the card in edit mode, exactly like before.
+            .then(
+                if (isReorderable) {
+                    Modifier.pointerInput(projectUi.projectId) {
+                        detectDragGesturesAfterLongPress(
+                            onDragStart = { onReorderDragStart() },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                onReorderDrag(dragAmount.y)
+                            },
+                            onDragEnd = { onReorderDragEnd() },
+                            onDragCancel = { onReorderDragCancel() }
+                        )
+                    }
+                } else Modifier
             )
             .then(selectionBorder),
         colors = CardDefaults.elevatedCardColors(

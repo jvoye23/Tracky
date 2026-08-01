@@ -10,4 +10,5 @@ sealed interface ProjectOverviewEvent {
     data object ArchiveError: ProjectOverviewEvent
     data object PinError: ProjectOverviewEvent
     data object AddToTrashError: ProjectOverviewEvent
+    data object ReorderError: ProjectOverviewEvent
 }
