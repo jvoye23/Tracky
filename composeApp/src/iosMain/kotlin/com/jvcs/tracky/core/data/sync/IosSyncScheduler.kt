@@ -10,21 +10,22 @@ import platform.Foundation.NSDate
 import platform.Foundation.dateWithTimeIntervalSinceNow
 
 /**
- * Best-effort background sync via BGTaskScheduler. To actually execute, the identifier must be
- * registered in Info.plist (BGTaskSchedulerPermittedIdentifiers) and a handler installed in the
- * Swift AppDelegate that resolves the repository and calls syncPendingOperations(). The reactive
- * foreground sync (ProjectSyncManager) remains the dependable path on iOS.
+ * Best-effort background sync via BGTaskScheduler. To actually execute, [TASK_IDENTIFIER] must be
+ * listed in Info.plist (BGTaskSchedulerPermittedIdentifiers) and a handler installed in the Swift
+ * app that calls KoinHelper.runSync(...). The reactive foreground sync (ProjectSyncManager) remains
+ * the dependable path on iOS.
+ *
+ * Submitting before that handler exists is fatal (see [BackgroundTaskRegistry]), so every submit is
+ * gated on the registration having happened.
  */
 class IosSyncScheduler : SyncScheduler {
 
     override suspend fun schedulePeriodicSync() {
-        try {
-            val request = BGAppRefreshTaskRequest(identifier = TASK_IDENTIFIER)
-            request.earliestBeginDate = NSDate.dateWithTimeIntervalSinceNow(60.0 * 60.0 * 6 )
-            BGTaskScheduler.sharedScheduler.submitTaskRequest(request, error = null)
-        } catch (e: Throwable) {
-            // Identifier not registered / scheduler unavailable — ignore, foreground sync covers it.
-        }
+        if (!BackgroundTaskRegistry.isRegistered(TASK_IDENTIFIER)) return
+
+        val request = BGAppRefreshTaskRequest(identifier = TASK_IDENTIFIER)
+        request.earliestBeginDate = NSDate.dateWithTimeIntervalSinceNow(60.0 * 60.0 * 6)
+        BGTaskScheduler.sharedScheduler.submitTaskRequest(request, error = null)
     }
 
     // iOS can't honor a fixed 15-minute interval (BGTaskScheduler timing is OS-controlled), so app
@@ -32,8 +33,9 @@ class IosSyncScheduler : SyncScheduler {
     // dependable path here.
     override suspend fun schedulePeriodicSyncOnStart() = schedulePeriodicSync()
 
+    // Only our own request — cancelAllTaskRequests() would also drop the pending trash cleanup.
     override suspend fun cancelAllSyncs() {
-        BGTaskScheduler.sharedScheduler.cancelAllTaskRequests()
+        BGTaskScheduler.sharedScheduler.cancelTaskRequestWithIdentifier(TASK_IDENTIFIER)
     }
 
     companion object {

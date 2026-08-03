@@ -40,10 +40,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -226,54 +224,16 @@ fun ProjectOverviewScreen(
 
     // Drag-to-reorder is only available under the Custom sort filter and while not searching.
     val reorderEnabled = sortOption == SortOption.CUSTOM && state.searchQuery.isBlank()
-    val source = state.filteredProjects ?: emptyList()
-    // Mirror lists the LazyColumn renders from. Reordered live during a drag; otherwise kept in sync
-    // with the ViewModel's (already sorted) project list.
-    val pinnedItems = remember { mutableStateListOf<ProjectUi>() }
-    val otherItems = remember { mutableStateListOf<ProjectUi>() }
+    // The displayed order lives in the ViewModel: a move updates it, a cancel or a failed write
+    // re-derives it from what was actually persisted.
+    val pinnedItems = state.pinnedProjects
+    val otherItems = state.otherProjects
     val dragDropState = rememberProjectDragDropState(
         lazyListState = listState,
         onMove = { fromKey, toKey ->
-            val list = when {
-                pinnedItems.any { it.projectId == fromKey } &&
-                    pinnedItems.any { it.projectId == toKey } -> pinnedItems
-                otherItems.any { it.projectId == fromKey } &&
-                    otherItems.any { it.projectId == toKey } -> otherItems
-                else -> null // cross-section move: reject, pin state must not change
-            }
-            list?.let {
-                val from = it.indexOfFirst { p -> p.projectId == fromKey }
-                val to = it.indexOfFirst { p -> p.projectId == toKey }
-                if (from != -1 && to != -1) it.add(to, it.removeAt(from))
-            }
+            onAction(ProjectOverviewAction.OnReorderMove(fromId = fromKey, toId = toKey))
         }
     )
-    val isReordering = dragDropState.draggingItemKey != null || dragDropState.settlingItemKey != null
-    val sourcePinned = source.filter { it.isPinned }
-    val sourceOther = source.filterNot { it.isPinned }
-    // The LazyColumn always renders the mirror lists. On a sort change (or when leaving Custom /
-    // entering search) the manual order no longer applies, so adopt the freshly sorted source order
-    // outright.
-    LaunchedEffect(sortOption, reorderEnabled) {
-        if (!isReordering) {
-            pinnedItems.resetTo(sourcePinned)
-            otherItems.resetTo(sourceOther)
-        }
-    }
-    // On every source emission, fold the update into the mirrors: keep the current (possibly
-    // just-reordered) display order for projects that still exist, drop removed ones, and slot new
-    // ones in at their source position. This refreshes content without reverting a just-committed
-    // reorder before the DB re-emits it — which otherwise replayed the whole move on release.
-    LaunchedEffect(source) {
-        if (isReordering) return@LaunchedEffect
-        if (reorderEnabled) {
-            pinnedItems.reconcileTo(sourcePinned)
-            otherItems.reconcileTo(sourceOther)
-        } else {
-            pinnedItems.resetTo(sourcePinned)
-            otherItems.resetTo(sourceOther)
-        }
-    }
 
     NavigationBackHandler(
         state = backState,
@@ -371,8 +331,7 @@ fun ProjectOverviewScreen(
                         state = state,
                         onAction = onAction,
                         reorderEnabled = reorderEnabled,
-                        dragDropState = dragDropState,
-                        sectionIds = { pinnedItems.map { it.projectId } }
+                        dragDropState = dragDropState
                     )
                 }
             }
@@ -394,8 +353,7 @@ fun ProjectOverviewScreen(
                     state = state,
                     onAction = onAction,
                     reorderEnabled = reorderEnabled,
-                    dragDropState = dragDropState,
-                    sectionIds = { otherItems.map { it.projectId } }
+                    dragDropState = dragDropState
                 )
             }
 
@@ -495,8 +453,7 @@ private fun LazyItemScope.ProjectListCard(
     state: ProjectOverviewState,
     onAction: (ProjectOverviewAction) -> Unit,
     reorderEnabled: Boolean,
-    dragDropState: ProjectDragDropState,
-    sectionIds: () -> List<String>
+    dragDropState: ProjectDragDropState
 ) {
     // The dragged card (and the one settling back after release) drives its own translation and rides
     // above the rest; every other card animates to its new slot via animateItem().
@@ -536,40 +493,29 @@ private fun LazyItemScope.ProjectListCard(
         },
         onReorderDragEnd = {
             if (dragDropState.hasMoved) {
-                onAction(ProjectOverviewAction.OnReorderCommit(sectionIds()))
+                // The ViewModel owns the order, so it reads the section this card sits in itself
+                // rather than trusting a list captured back when this card last recomposed.
+                onAction(ProjectOverviewAction.OnReorderCommit(item.projectId))
             }
             dragDropState.onDragEnd()
         },
-        onReorderDragCancel = { dragDropState.onDragCancel() }
+        onReorderDragCancel = {
+            // Aborted without a drop: discard the preview order before the card settles back.
+            onAction(ProjectOverviewAction.OnReorderCancel)
+            dragDropState.onDragCancel()
+        }
     )
 }
 
-// Replace the mirror's contents with [latest] outright (used for sort changes / non-reorder sorts).
-private fun MutableList<ProjectUi>.resetTo(latest: List<ProjectUi>) {
-    if (this == latest) return
-    clear()
-    addAll(latest)
-}
-
-// Fold a source emission into the mirror while preserving the current display order: projects still
-// present keep their mirror order (with refreshed content), removed ones are dropped, and projects new
-// to the mirror are inserted at their source position (e.g. a newly created project at the top).
-private fun MutableList<ProjectUi>.reconcileTo(latest: List<ProjectUi>) {
-    val latestById = latest.associateBy { it.projectId }
-    val mirrorIds = this.mapTo(HashSet()) { it.projectId }
-    val common = ArrayDeque(this.mapNotNull { latestById[it.projectId] })
-    val result = ArrayList<ProjectUi>(latest.size)
-    for (item in latest) {
-        if (item.projectId in mirrorIds) {
-            if (common.isNotEmpty()) result.add(common.removeFirst())
-        } else {
-            result.add(item)
-        }
-    }
-    if (this != result) {
-        clear()
-        addAll(result)
-    }
+// The ViewModel fills the section lists in production; previews build the state by hand, so they do
+// the same split here.
+private fun ProjectOverviewState.withPreviewSections(): ProjectOverviewState {
+    val visible = projects.orEmpty()
+        .filter { searchQuery.isBlank() || it.title.contains(searchQuery, ignoreCase = true) }
+    return copy(
+        pinnedProjects = visible.filter { it.isPinned },
+        otherProjects = visible.filterNot { it.isPinned }
+    )
 }
 
 private fun previewProjects(): List<ProjectUi> = listOf(
@@ -635,7 +581,7 @@ private fun ProjectOverviewDefaultPreview() {
             onAction = {},
             state = ProjectOverviewState(
                 projects = previewProjects(),
-            ),
+            ).withPreviewSections(),
             username = "JoergVoye",
             email = "joerg@example.com",
             onLogout = {},
@@ -653,7 +599,7 @@ private fun ProjectOverviewSearchPreview() {
             state = ProjectOverviewState(
                 projects = previewProjects(),
                 searchQuery = "Run"
-            ),
+            ).withPreviewSections(),
             username = "JoergVoye",
             email = "joerg@example.com",
             onLogout = {},
@@ -672,7 +618,7 @@ private fun ProjectOverviewEditModePreview() {
                 projects = previewProjects(),
                 isEditModeActive = true,
                 selectedProjectIds = setOf("1", "3")
-            ),
+            ).withPreviewSections(),
             username = "JoergVoye",
             email = "joerg@example.com",
             onLogout = {},
@@ -689,7 +635,7 @@ private fun ProjectOverviewDrawerOpenPreview() {
             onAction = {},
             state = ProjectOverviewState(
                 projects = previewProjects(),
-            ),
+            ).withPreviewSections(),
             username = "JoergVoye",
             email = "joerg@example.com",
             onLogout = {},
@@ -710,7 +656,7 @@ private fun ProjectOverviewSortSheetVisiblePreview() {
                 onAction = {},
                 state = ProjectOverviewState(
                     projects = previewProjects(),
-                ),
+                ).withPreviewSections(),
                 username = "JoergVoye",
                 email = "joerg@example.com",
                 onLogout = {},

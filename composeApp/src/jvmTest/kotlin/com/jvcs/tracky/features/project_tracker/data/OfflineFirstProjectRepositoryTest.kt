@@ -247,6 +247,102 @@ class OfflineFirstProjectRepositoryTest {
         assertEquals(mapOf("p1" to 1L, "p2" to 2L, "p3" to 3L), local.sortIndexWrites.single())
     }
 
+    /** Pinned section p1,p2 (0,1) and Other section p3,p4,p5 (0,1,2) — both numbered from 0. */
+    private fun FakeLocalProjectDataSource.seedTwoSections() {
+        projects["p1"] = project("p1").copy(isPinned = true, sortIndex = 0)
+        projects["p2"] = project("p2").copy(isPinned = true, sortIndex = 1)
+        projects["p3"] = project("p3").copy(sortIndex = 0)
+        projects["p4"] = project("p4").copy(sortIndex = 1)
+        projects["p5"] = project("p5").copy(sortIndex = 2)
+    }
+
+    private fun FakeLocalProjectDataSource.sectionOrder(isPinned: Boolean) =
+        projects.values
+            .filter { it.isPinned == isPinned }
+            .sortedBy { it.sortIndex }
+            .map { it.projectId }
+
+    @Test
+    fun setProjectsPinned_putsPinnedProjectOnTopOfItsNewSection() = runBlocking {
+        val local = FakeLocalProjectDataSource()
+        val remote = FakeRemoteProjectDataSource()
+        val dao = FakePendingSyncDao()
+        val scheduler = FakeSyncScheduler()
+        local.seedTwoSections()
+
+        // p4 sits at index 1 in Other, where p2 already sits at 1 in Pinned. Flipping the flag alone
+        // would leave them sharing an index and let the creation date decide the order.
+        val result = repo(local, remote, dao, scheduler).setProjectsPinned(listOf("p4"), isPinned = true)
+
+        assertTrue(result is Result.Success)
+        assertTrue(local.projects["p4"]!!.isPinned)
+        assertEquals(listOf("p4", "p1", "p2"), local.sectionOrder(isPinned = true))
+        assertEquals(listOf(0L, 1L, 2L), listOf("p4", "p1", "p2").map { local.projects[it]!!.sortIndex })
+    }
+
+    @Test
+    fun setProjectsPinned_keepsRelativeOrder_whenPinningSeveralAtOnce() = runBlocking {
+        val local = FakeLocalProjectDataSource()
+        val remote = FakeRemoteProjectDataSource()
+        val dao = FakePendingSyncDao()
+        val scheduler = FakeSyncScheduler()
+        local.seedTwoSections()
+
+        // Selection order is a Set's, so the repository must fall back on the stored order: p3 (0)
+        // before p5 (2).
+        repo(local, remote, dao, scheduler).setProjectsPinned(listOf("p5", "p3"), isPinned = true)
+
+        assertEquals(listOf("p3", "p5", "p1", "p2"), local.sectionOrder(isPinned = true))
+    }
+
+    @Test
+    fun setProjectsPinned_unpinning_putsProjectOnTopOfOther() = runBlocking {
+        val local = FakeLocalProjectDataSource()
+        val remote = FakeRemoteProjectDataSource()
+        val dao = FakePendingSyncDao()
+        val scheduler = FakeSyncScheduler()
+        local.seedTwoSections()
+
+        repo(local, remote, dao, scheduler).setProjectsPinned(listOf("p1"), isPinned = false)
+
+        assertFalse(local.projects["p1"]!!.isPinned)
+        assertEquals(listOf("p1", "p3", "p4", "p5"), local.sectionOrder(isPinned = false))
+        assertEquals(listOf("p2"), local.sectionOrder(isPinned = true))
+    }
+
+    @Test
+    fun setProjectsPinned_reindexesTheSectionInOneBatchCall() = runBlocking {
+        val local = FakeLocalProjectDataSource()
+        val remote = FakeRemoteProjectDataSource()
+        val dao = FakePendingSyncDao()
+        val scheduler = FakeSyncScheduler()
+        local.seedTwoSections()
+
+        repo(local, remote, dao, scheduler).setProjectsPinned(listOf("p5", "p3"), isPinned = true)
+
+        // One gesture, one /sort request — not one per shifted card. p3 already sat at 0 and stays
+        // there, so it is not part of the write.
+        assertEquals(1, remote.reorderCalls.size)
+        assertEquals(mapOf("p5" to 1L, "p1" to 2L, "p2" to 3L), remote.reorderCalls.single())
+        assertEquals(1, local.sortIndexWrites.size)
+    }
+
+    @Test
+    fun setProjectsPinned_skipsIdsMissingLocally() = runBlocking {
+        val local = FakeLocalProjectDataSource()
+        val remote = FakeRemoteProjectDataSource()
+        val dao = FakePendingSyncDao()
+        val scheduler = FakeSyncScheduler()
+        local.seedTwoSections()
+
+        val result = repo(local, remote, dao, scheduler)
+            .setProjectsPinned(listOf("ghost"), isPinned = true)
+
+        assertTrue(result is Result.Success)
+        assertEquals(listOf("p1", "p2"), local.sectionOrder(isPinned = true))
+        assertTrue(remote.reorderCalls.isEmpty())
+    }
+
     @Test
     fun deleteProject_droppedLocally_whenStillPendingCreate_neverHitsServer() = runBlocking {
         val local = FakeLocalProjectDataSource()

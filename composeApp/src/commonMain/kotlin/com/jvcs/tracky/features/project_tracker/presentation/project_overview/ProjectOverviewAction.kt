@@ -28,6 +28,10 @@ sealed interface ProjectOverviewAction {
     // Reorder-by-drag (Custom sort only). Fired the moment a card starts moving so edit mode is
     // dropped and the gesture becomes a pure reorder.
     data object OnReorderDragStart: ProjectOverviewAction
-    // Fired on drop with the new order of the dragged section (Pinned or Other).
-    data class OnReorderCommit(val orderedProjectIds: List<String>): ProjectOverviewAction
+    // Fired while dragging, each time the dragged card crosses a neighbour.
+    data class OnReorderMove(val fromId: String, val toId: String): ProjectOverviewAction
+    // Fired when the gesture is aborted without a drop: discard the preview order.
+    data object OnReorderCancel: ProjectOverviewAction
+    // Fired on drop. Carries the dragged card so the ViewModel can persist the section it belongs to.
+    data class OnReorderCommit(val projectId: String): ProjectOverviewAction
 }

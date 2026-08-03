@@ -10,7 +10,6 @@ val projectModule = module {
     viewModel {
         ProjectOverviewViewModel(
             projectRepository = get(),
-            projectSyncManager = get(),
             timeManager = get()
         )
     }

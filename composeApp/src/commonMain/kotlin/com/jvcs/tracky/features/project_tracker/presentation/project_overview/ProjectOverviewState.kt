@@ -15,12 +15,10 @@ data class ProjectOverviewState(
     val selectedProjectIds: Set<String> = emptySet(),
     val isDeleteConfirmationDialogVisible: Boolean = false,
     val isSortBottomSheetVisible: Boolean = false,
-    val sortOption: SortOption = SortOption.CUSTOM
-) {
-    val filteredProjects: List<ProjectUi>?
-        get() = projects?.let { list ->
-            if (searchQuery.isBlank()) list
-            else list.filter { it.title.contains(searchQuery, ignoreCase = true) }
-        }
-
-}
+    val sortOption: SortOption = SortOption.CUSTOM,
+    // The two lists the overview renders, in the order the user sees them. Derived from [projects]
+    // (plus the search query) by the ViewModel and reordered there while a card is being dragged, so
+    // a cancelled drag or a reorder that failed to save reverts by re-deriving them.
+    val pinnedProjects: List<ProjectUi> = emptyList(),
+    val otherProjects: List<ProjectUi> = emptyList()
+)
