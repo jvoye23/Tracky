@@ -13,8 +13,10 @@ import com.jvcs.tracky.core.database.entity.PendingSyncEntity.Companion.OP_UPDAT
 import com.jvcs.tracky.core.database.entity.PendingSyncEntity.Companion.PROJECT_ORDER_ENTITY_ID
 import com.jvcs.tracky.core.domain.RemoteProjectDataSource
 import com.jvcs.tracky.core.domain.model.Project
+import com.jvcs.tracky.core.domain.model.ProjectStatus
 import com.jvcs.tracky.core.domain.model.ProjectTask
 import com.jvcs.tracky.core.domain.model.TaskInterval
+import com.jvcs.tracky.core.domain.model.status
 import com.jvcs.tracky.core.domain.sync.SyncRepository
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
 import com.jvcs.tracky.core.domain.util.DataError
@@ -23,6 +25,7 @@ import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.asEmptyDataResult
 import com.jvcs.tracky.features.project_tracker.domain.LocalProjectDataSource
 import com.jvcs.tracky.features.project_tracker.domain.ProjectRepository
+import com.jvcs.tracky.features.project_tracker.domain.sortedByCustomOrder
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -150,13 +153,44 @@ class OfflineFirstProjectRepository(
         Result.Success(Unit)
     }
 
-    // PIN/UNPIN: flip the flag and route through the offline-first upsert, exactly like archive.
-    override suspend fun setProjectPinned(projectId: String, isPinned: Boolean): EmptyResult<DataError> {
-        val project = when (val existing = dbResult { localProjectDataSource.getProjectById(projectId) }) {
-            is Result.Success -> existing.data ?: return Result.Success(Unit) // nothing to pin
-            is Result.Error -> return existing.asEmptyDataResult()
+    // PIN/UNPIN: flip the flag and route through the offline-first upsert, exactly like archive —
+    // then move the affected projects to the top of the section they just entered and re-index the
+    // rest of it. Without that second step a project keeps the index it held in its old section and
+    // collides with whatever already sits there, so it lands wherever its creation date puts it.
+    override suspend fun setProjectsPinned(projectIds: List<String>, isPinned: Boolean): EmptyResult<DataError> {
+        if (projectIds.isEmpty()) return Result.Success(Unit)
+
+        val moved = mutableListOf<String>()
+        var firstError: EmptyResult<DataError>? = null
+        for (projectId in projectIds) {
+            val project = when (val existing = dbResult { localProjectDataSource.getProjectById(projectId) }) {
+                is Result.Success -> existing.data ?: continue // nothing to pin
+                is Result.Error -> {
+                    firstError = firstError ?: existing.asEmptyDataResult()
+                    continue
+                }
+            }
+            when (val flipped = upsertProject(project.copy(isPinned = isPinned))) {
+                is Result.Success -> moved += projectId
+                is Result.Error -> firstError = firstError ?: flipped
+            }
         }
-        return upsertProject(project.copy(isPinned = isPinned))
+        if (moved.isEmpty()) return firstError ?: Result.Success(Unit)
+
+        // The moved projects go first, keeping the relative order they already had; everyone else in
+        // the target section keeps its order behind them. reorderProjects then numbers the whole
+        // section from 0 in one transaction and one request.
+        val section = when (val all = dbResult { localProjectDataSource.getProjects().first() }) {
+            is Result.Success -> all.data.filter { it.status == ProjectStatus.ACTIVE && it.isPinned == isPinned }
+            is Result.Error -> return firstError ?: all.asEmptyDataResult()
+        }
+        val movedIds = moved.toSet()
+        val (front, rest) = section.sortedByCustomOrder()
+            .map { it.projectId }
+            .partition { it in movedIds }
+
+        val reordered = reorderProjects(front + rest)
+        return firstError ?: reordered
     }
 
     // REORDER: persist the manual order shown under the Custom sort filter. orderedProjectIds is the

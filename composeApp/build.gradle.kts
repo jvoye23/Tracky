@@ -121,6 +121,8 @@ kotlin {
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+            // Dispatchers.setMain, so ViewModels backed by viewModelScope are testable off-device.
+            implementation(libs.kotlinx.coroutines.test)
         }
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)

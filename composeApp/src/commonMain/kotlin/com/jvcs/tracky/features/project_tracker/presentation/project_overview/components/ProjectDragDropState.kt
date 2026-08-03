@@ -11,6 +11,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
@@ -143,8 +144,10 @@ fun rememberProjectDragDropState(
     onMove: (fromKey: String, toKey: String) -> Unit
 ): ProjectDragDropState {
     val scope = rememberCoroutineScope()
-    // onMove closes over remembered lists (stable identities), so capturing it once is safe.
+    // The state outlives the lambda: onMove is recreated on every recomposition (it closes over the
+    // screen's onAction), so route through the latest one instead of capturing the first.
+    val currentOnMove by rememberUpdatedState(onMove)
     return remember(lazyListState) {
-        ProjectDragDropState(lazyListState, scope, onMove)
+        ProjectDragDropState(lazyListState, scope) { fromKey, toKey -> currentOnMove(fromKey, toKey) }
     }
 }
