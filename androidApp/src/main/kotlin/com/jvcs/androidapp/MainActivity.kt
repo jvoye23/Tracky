@@ -8,17 +8,29 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.jvcs.tracky.App
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        var shouldShowSplashScreen = true
+
+        installSplashScreen().apply {
+            setKeepOnScreenCondition {
+                shouldShowSplashScreen
+            }
+        }
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT)
         )
         super.onCreate(savedInstanceState)
         setContent {
-            App()
+            App(
+                onAuthenticationChecked = {
+                    shouldShowSplashScreen = false
+                }
+            )
         }
     }
 }

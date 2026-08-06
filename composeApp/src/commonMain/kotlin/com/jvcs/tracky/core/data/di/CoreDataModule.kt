@@ -1,6 +1,5 @@
 package com.jvcs.tracky.core.data.di
 
-import androidx.room.RoomDatabase
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.jvcs.tracky.core.data.KtorRemoteProjectDataSource
 import com.jvcs.tracky.core.data.auth.DataStoreSessionStorage
@@ -25,6 +24,7 @@ import org.koin.core.qualifier.named
 import org.koin.dsl.bind
 import org.koin.dsl.binds
 import org.koin.dsl.module
+import kotlin.time.Clock
 
 expect val platformCoreDataModule: Module
 
@@ -42,7 +42,8 @@ val coreDataModule = module {
             remoteProjectDataSource = get(),
             pendingSyncDao = get(),
             syncScheduler = get(),
-            applicationScope = get(qualifier = named("AppScope"))
+            applicationScope = get(qualifier = named("AppScope")),
+            updatedAt = Clock.System.now()
         )
     } binds arrayOf(ProjectRepository::class, SyncRepository::class)
 

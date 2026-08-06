@@ -26,6 +26,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
@@ -41,7 +42,8 @@ class OfflineFirstProjectRepositoryTest {
         remoteProjectDataSource = remote,
         pendingSyncDao = dao,
         syncScheduler = scheduler,
-        applicationScope = CoroutineScope(Dispatchers.Unconfined)
+        applicationScope = CoroutineScope(Dispatchers.Unconfined),
+        updatedAt = Clock.System.now()
     )
 
     private fun project(id: String) = Project(
