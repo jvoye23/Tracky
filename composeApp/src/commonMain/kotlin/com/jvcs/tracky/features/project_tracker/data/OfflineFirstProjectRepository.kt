@@ -47,7 +47,8 @@ class OfflineFirstProjectRepository(
     private val remoteProjectDataSource: RemoteProjectDataSource,
     private val pendingSyncDao: PendingSyncDao,
     private val syncScheduler: SyncScheduler,
-    private val applicationScope: CoroutineScope
+    private val applicationScope: CoroutineScope,
+    private val updatedAt: Instant
 ): ProjectRepository, SyncRepository {
 
     // PULL: network → Room. The Room Flow the UI observes emits automatically.
@@ -214,7 +215,7 @@ class OfflineFirstProjectRepository(
         }
         if (changed.isEmpty()) return Result.Success(Unit)
 
-        val updatedAt = Clock.System.now()
+        val updatedAt = updatedAt
         val localResult = localProjectDataSource.updateSortIndices(changed, updatedAt)
         if (localResult !is Result.Success) {
             return localResult.asEmptyDataResult()
@@ -240,7 +241,7 @@ class OfflineFirstProjectRepository(
             is Result.Success -> existing.data == null
             is Result.Error -> return existing.asEmptyDataResult()
         }
-        val stamped = projectTask.copy(updatedAt = Clock.System.now())
+        val stamped = projectTask.copy(updatedAt = updatedAt)
 
         val localResult = localProjectDataSource.upsertProjectTask(stamped)
         if (localResult !is Result.Success) {
