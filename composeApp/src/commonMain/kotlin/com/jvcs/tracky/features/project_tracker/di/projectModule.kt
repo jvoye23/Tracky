@@ -10,7 +10,8 @@ val projectModule = module {
     viewModel {
         ProjectOverviewViewModel(
             projectRepository = get(),
-            timeManager = get()
+            timeManager = get(),
+            timeProvider = get()
         )
     }
 
@@ -19,7 +20,8 @@ val projectModule = module {
             isEdit = isEdit,
             projectId = projectId,
             projectRepository = get(),
-            timeManager = get()
+            timeManager = get(),
+            timeProvider = get()
         )
     }
 

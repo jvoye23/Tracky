@@ -5,6 +5,7 @@ import com.jvcs.tracky.core.domain.sync.SyncRepository
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
 import com.jvcs.tracky.core.domain.sync.TrashCleanupScheduler
 import com.jvcs.tracky.core.domain.sync.TrashRetention
+import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.di.initKoin
 import com.jvcs.tracky.features.project_tracker.domain.ProjectRepository
 import kotlinx.coroutines.CancellationException
@@ -33,7 +34,8 @@ fun runTrashCleanup(onComplete: (Boolean) -> Unit) {
     val koin = KoinPlatform.getKoin()
     koin.get<CoroutineScope>(named("AppScope")).launch {
         val success = try {
-            koin.get<ProjectRepository>().purgeExpiredTrashedProjects(TrashRetention.cutoff())
+            koin.get<ProjectRepository>()
+                .purgeExpiredTrashedProjects(TrashRetention.cutoff(koin.get<TimeProvider>().nowInstant))
             true
         } catch (e: CancellationException) {
             throw e

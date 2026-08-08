@@ -7,6 +7,7 @@ import com.jvcs.tracky.core.domain.model.ProjectTask
 import com.jvcs.tracky.core.domain.model.TaskInterval
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
+import com.jvcs.tracky.core.domain.util.FakeTimeProvider
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeManager
 import com.jvcs.tracky.features.project_tracker.domain.ProjectRepository
@@ -65,7 +66,8 @@ class ProjectOverviewViewModelTest {
     private fun TestScope.viewModelWith(repository: FakeProjectRepository): ProjectOverviewViewModel {
         val viewModel = ProjectOverviewViewModel(
             projectRepository = repository,
-            timeManager = TimeManager(CoroutineScope(dispatcher))
+            timeManager = TimeManager(CoroutineScope(dispatcher)),
+            timeProvider = FakeTimeProvider()
         )
         backgroundScope.launch { viewModel.state.collect { } }
         testScheduler.advanceUntilIdle()

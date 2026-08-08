@@ -10,6 +10,7 @@ import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 import com.jvcs.tracky.core.database.relation.ProjectSortIndexEntity
 import com.jvcs.tracky.core.database.relation.ProjectWithTasksEntity
 import com.jvcs.tracky.core.database.relation.TaskWithIntervals
+import com.jvcs.tracky.core.domain.model.ProjectStatus
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -43,6 +44,9 @@ interface ProjectDao {
     @Transaction
     @Query("SELECT * FROM projects WHERE trashedAtEpochMs IS NOT NULL ORDER BY trashedAtEpochMs DESC")
     fun getTrashedProjectsWithTasks(): Flow<List<ProjectWithTasksEntity>>
+
+    @Query("SELECT * FROM projects WHERE isArchived = 0 AND isFinished = 0 AND trashedAtEpochMs IS NULL AND isPinned = 1")
+    fun getPinnedProjectsWithTasks(): Flow<List<ProjectWithTasksEntity>>
 
     @Query("SELECT projectId FROM projects WHERE trashedAtEpochMs IS NOT NULL AND trashedAtEpochMs < :cutoffEpochMs")
     suspend fun getExpiredTrashedProjectIds(cutoffEpochMs: Long): List<String>

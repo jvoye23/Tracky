@@ -10,6 +10,7 @@ import com.jvcs.tracky.core.domain.model.TaskInterval
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
+import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.core.mapper.toProject
 import com.jvcs.tracky.core.mapper.toProjectEntity
 import com.jvcs.tracky.core.mapper.toProjectSession
@@ -24,13 +25,13 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
-import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 class RoomLocalProjectDataSource (
-    private val projectDao: ProjectDao
+    private val projectDao: ProjectDao,
+    private val timeProvider: TimeProvider
 ): LocalProjectDataSource {
 
     private val dbWriteDispatcher = Dispatchers.IO.limitedParallelism(1)
@@ -47,6 +48,11 @@ class RoomLocalProjectDataSource (
 
     override fun getTrashedProjects(): Flow<List<Project>> {
         return projectDao.getTrashedProjectsWithTasks()
+            .map { list -> list.map { it.toProject() } }
+    }
+
+    override fun getPinnedProjects(): Flow<List<Project>> {
+        return projectDao.getPinnedProjectsWithTasks()
             .map { list -> list.map { it.toProject() } }
     }
 
@@ -160,7 +166,7 @@ class RoomLocalProjectDataSource (
     }
 
     override suspend fun startTask(taskId: String) = withContext(dbWriteDispatcher) {
-        val now = Clock.System.now()
+        val now = timeProvider.nowInstant
         val interval = TaskIntervalEntity(
             intervalId = Uuid.random().toString(),
             parentTaskId = taskId,
@@ -175,7 +181,7 @@ class RoomLocalProjectDataSource (
     override suspend fun stopTask(taskId: String) = withContext(dbWriteDispatcher) {
         val openInterval = projectDao.getOpenIntervalBySessionId(taskId)
         if (openInterval != null) {
-            val now = Clock.System.now()
+            val now = timeProvider.nowInstant
             val startInstant = Instant.fromEpochMilliseconds(openInterval.startDateTimeEpochMs)
             val duration = (now - startInstant).inWholeMilliseconds
             val updatedInterval = openInterval.copy(

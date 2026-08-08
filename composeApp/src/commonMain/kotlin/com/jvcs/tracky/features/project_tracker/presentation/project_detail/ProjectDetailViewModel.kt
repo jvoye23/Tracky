@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.jvcs.tracky.core.domain.model.ProjectTask
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeManager
+import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.core.domain.util.TimerState
 import com.jvcs.tracky.core.presentation.mapper.toProject
 import com.jvcs.tracky.core.presentation.mapper.toProjectTaskUi
@@ -26,7 +27,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlin.time.Clock
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -34,7 +34,8 @@ class ProjectDetailViewModel(
     private val isEdit: Boolean,
     private val projectId: String?,
     private val projectRepository: ProjectRepository,
-    private val timeManager: TimeManager
+    private val timeManager: TimeManager,
+    private val timeProvider: TimeProvider
 ): ViewModel() {
 
     private val _state = MutableStateFlow(ProjectDetailState())
@@ -155,7 +156,7 @@ class ProjectDetailViewModel(
                 projectTaskId = Uuid.random().toString(),
                 title = projectTaskTitle,
                 durationMillis = 0L,
-                startDateTimeUtc = Clock.System.now(),
+                startDateTimeUtc = timeProvider.nowInstant,
                 endDateTimeUtc = null,
                 isFinished = false,
                 parentProjectId = currentProject.projectId,
