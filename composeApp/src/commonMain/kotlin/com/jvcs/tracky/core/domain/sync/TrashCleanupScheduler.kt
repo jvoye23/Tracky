@@ -1,6 +1,5 @@
 package com.jvcs.tracky.core.domain.sync
 
-import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
@@ -20,6 +19,10 @@ object TrashRetention {
     /** How long a soft-deleted project stays in the trash before it is permanently removed. */
     val RETENTION: Duration = 30.days
 
-    /** Projects trashed before this instant are eligible for permanent deletion. */
-    fun cutoff(now: Instant = Clock.System.now()): Instant = now - RETENTION
+    /**
+     * Projects trashed before this instant are eligible for permanent deletion. [now] has no default
+     * on purpose — an object cannot take constructor injection, so callers pass their injected
+     * TimeProvider's instant rather than letting this reach for the system clock.
+     */
+    fun cutoff(now: Instant): Instant = now - RETENTION
 }

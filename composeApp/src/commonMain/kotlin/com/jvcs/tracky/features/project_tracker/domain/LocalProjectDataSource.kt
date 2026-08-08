@@ -15,6 +15,7 @@ interface LocalProjectDataSource {
     fun getProjects(): Flow<List<Project>>
     fun getArchivedProjects(): Flow<List<Project>>
     fun getTrashedProjects(): Flow<List<Project>>
+    fun getPinnedProjects(): Flow<List<Project>>
     suspend fun getExpiredTrashedProjectIds(cutoff: Instant): List<String>
     suspend fun getProjectById(projectId: String): Project?
     suspend fun getProjectWithTasksByProjectId(projectId: String): Project?

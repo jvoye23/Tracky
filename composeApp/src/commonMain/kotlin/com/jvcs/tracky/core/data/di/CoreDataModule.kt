@@ -13,6 +13,8 @@ import com.jvcs.tracky.core.domain.auth.SessionStorage
 import com.jvcs.tracky.core.domain.auth.SocialAuthProvider
 import com.jvcs.tracky.core.domain.sync.ProjectSyncManager
 import com.jvcs.tracky.core.domain.sync.SyncRepository
+import com.jvcs.tracky.core.domain.util.SystemTimeProvider
+import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.features.project_tracker.data.OfflineFirstProjectRepository
 import com.jvcs.tracky.features.project_tracker.data.RoomLocalProjectDataSource
 import com.jvcs.tracky.features.project_tracker.domain.LocalProjectDataSource
@@ -24,12 +26,15 @@ import org.koin.core.qualifier.named
 import org.koin.dsl.bind
 import org.koin.dsl.binds
 import org.koin.dsl.module
-import kotlin.time.Clock
 
 expect val platformCoreDataModule: Module
 
 val coreDataModule = module {
     includes(platformCoreDataModule)
+
+    // The one place the app commits to a real clock — everything else takes the TimeProvider
+    // interface so tests can pin time.
+    single<TimeProvider> { SystemTimeProvider }
 
     single { get<TrackyDatabase>().projectDao }
     single { get<TrackyDatabase>().pendingSyncDao }
@@ -43,7 +48,7 @@ val coreDataModule = module {
             pendingSyncDao = get(),
             syncScheduler = get(),
             applicationScope = get(qualifier = named("AppScope")),
-            updatedAt = Clock.System.now()
+            timeProvider = get()
         )
     } binds arrayOf(ProjectRepository::class, SyncRepository::class)
 
@@ -52,7 +57,8 @@ val coreDataModule = module {
             connectivityObserver = get(),
             appLifecycleObserver = get(),
             syncRepository = get(),
-            applicationScope = get(qualifier = named("AppScope"))
+            applicationScope = get(qualifier = named("AppScope")),
+            timeProvider = get()
         )
     }
 

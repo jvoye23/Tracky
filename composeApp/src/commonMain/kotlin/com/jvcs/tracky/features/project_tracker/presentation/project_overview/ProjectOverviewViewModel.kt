@@ -11,6 +11,7 @@ import com.jvcs.tracky.core.domain.model.ProjectStatus
 import com.jvcs.tracky.core.domain.model.status
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeManager
+import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.core.domain.util.TimerState
 import com.jvcs.tracky.core.domain.util.onFailure
 import com.jvcs.tracky.core.presentation.mapper.toProjectUi
@@ -31,13 +32,13 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlin.time.Clock
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 class ProjectOverviewViewModel(
     private val projectRepository: ProjectRepository,
-    private val timeManager: TimeManager
+    private val timeManager: TimeManager,
+    private val timeProvider: TimeProvider
 ): ViewModel() {
 
     private val _state = MutableStateFlow(ProjectOverviewState())
@@ -313,8 +314,10 @@ class ProjectOverviewViewModel(
     private fun deleteSelectedProjects() {
         val ids = _state.value.selectedProjectIds
         viewModelScope.launch {
+            // One stamp for the whole selection — they were deleted by a single user action.
+            val trashedAt = timeProvider.nowInstant
             val results = ids.map { id ->
-                async { projectRepository.setProjectTrashed(id, Clock.System.now()) }
+                async { projectRepository.setProjectTrashed(id, trashedAt) }
             }.awaitAll()
             results.forEach { it.onFailure {
                 eventChannel.send(ProjectOverviewEvent.AddToTrashError)
@@ -390,7 +393,7 @@ class ProjectOverviewViewModel(
             description = null,
             colorArgb = defaultProjectColor.toArgb(),
             totalDurationMillis = null,
-            startDateTimeUtc = Clock.System.now(),
+            startDateTimeUtc = timeProvider.nowInstant,
             isFinished = false,
             endDateTimeUtc = null,
             isArchived = false,

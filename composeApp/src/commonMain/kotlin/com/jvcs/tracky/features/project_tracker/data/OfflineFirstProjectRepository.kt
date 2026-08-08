@@ -22,6 +22,7 @@ import com.jvcs.tracky.core.domain.sync.SyncScheduler
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
+import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.core.domain.util.asEmptyDataResult
 import com.jvcs.tracky.features.project_tracker.domain.LocalProjectDataSource
 import com.jvcs.tracky.features.project_tracker.domain.ProjectRepository
@@ -36,7 +37,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
@@ -48,7 +48,7 @@ class OfflineFirstProjectRepository(
     private val pendingSyncDao: PendingSyncDao,
     private val syncScheduler: SyncScheduler,
     private val applicationScope: CoroutineScope,
-    private val updatedAt: Instant
+    private val timeProvider: TimeProvider
 ): ProjectRepository, SyncRepository {
 
     // PULL: network → Room. The Room Flow the UI observes emits automatically.
@@ -89,7 +89,7 @@ class OfflineFirstProjectRepository(
             is Result.Success -> existing.data == null
             is Result.Error -> return existing.asEmptyDataResult()
         }
-        val stamped = project.copy(updatedAt = Clock.System.now())
+        val stamped = project.copy(updatedAt = timeProvider.nowInstant)
 
         val localResult = localProjectDataSource.upsertProject(stamped)
         if (localResult !is Result.Success) {
@@ -181,9 +181,9 @@ class OfflineFirstProjectRepository(
         // The moved projects go first, keeping the relative order they already had; everyone else in
         // the target section keeps its order behind them. reorderProjects then numbers the whole
         // section from 0 in one transaction and one request.
-        val section = when (val all = dbResult { localProjectDataSource.getProjects().first() }) {
-            is Result.Success -> all.data.filter { it.status == ProjectStatus.ACTIVE && it.isPinned == isPinned }
-            is Result.Error -> return firstError ?: all.asEmptyDataResult()
+        val section = when (val allPinnedProjects = dbResult { localProjectDataSource.getPinnedProjects().first() }) {
+            is Result.Success -> allPinnedProjects.data
+            is Result.Error -> return firstError ?: allPinnedProjects.asEmptyDataResult()
         }
         val movedIds = moved.toSet()
         val (front, rest) = section.sortedByCustomOrder()
@@ -215,13 +215,15 @@ class OfflineFirstProjectRepository(
         }
         if (changed.isEmpty()) return Result.Success(Unit)
 
-        val updatedAt = updatedAt
+        // One timestamp for both writes — reading the clock twice would stamp the local row and the
+        // server row with different values for what is a single reorder.
+        val updatedAt = timeProvider.nowInstant
         val localResult = localProjectDataSource.updateSortIndices(changed, updatedAt)
         if (localResult !is Result.Success) {
             return localResult.asEmptyDataResult()
         }
 
-        return when (val remoteResult = remoteProjectDataSource.reorderProjects(changed, updatedAt)) {
+        return when (val remoteResult = remoteProjectDataSource.reorderProjects(changed, updatedAt  )) {
             is Result.Success -> Result.Success(Unit)
             is Result.Error -> when {
                 remoteResult.error.isTransient() -> {
@@ -241,7 +243,7 @@ class OfflineFirstProjectRepository(
             is Result.Success -> existing.data == null
             is Result.Error -> return existing.asEmptyDataResult()
         }
-        val stamped = projectTask.copy(updatedAt = updatedAt)
+        val stamped = projectTask.copy(updatedAt = timeProvider.nowInstant)
 
         val localResult = localProjectDataSource.upsertProjectTask(stamped)
         if (localResult !is Result.Success) {
@@ -434,7 +436,7 @@ class OfflineFirstProjectRepository(
                     is Result.Error -> return SyncOutcome.RETRY
                 }
                 if (indices.isEmpty()) return SyncOutcome.DROP
-                remoteProjectDataSource.reorderProjects(indices, Clock.System.now()).toSyncOutcome()
+                remoteProjectDataSource.reorderProjects(indices, timeProvider.nowInstant).toSyncOutcome()
             }
             else -> SyncOutcome.DROP
         }
@@ -526,7 +528,7 @@ class OfflineFirstProjectRepository(
                 entityId = entityId,
                 entityType = entityType,
                 operationType = operationType,
-                createdAtEpochMs = Clock.System.now().toEpochMilliseconds(),
+                createdAtEpochMs = timeProvider.nowInstant.toEpochMilliseconds(),
                 parentEntityId = parentEntityId
             )
         )

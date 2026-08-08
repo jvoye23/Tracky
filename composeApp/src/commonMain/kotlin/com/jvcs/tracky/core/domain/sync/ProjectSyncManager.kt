@@ -4,6 +4,7 @@ package com.jvcs.tracky.core.domain.sync
 
 import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
 import com.jvcs.tracky.core.domain.lifecycle.AppLifecycleObserver
+import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.features.project_tracker.domain.ProjectRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
@@ -13,7 +14,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import kotlin.time.Clock
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
@@ -27,7 +27,8 @@ class ProjectSyncManager(
     private val connectivityObserver: ConnectivityObserver,
     private val appLifecycleObserver: AppLifecycleObserver,
     private val syncRepository: SyncRepository,
-    private val applicationScope: CoroutineScope
+    private val applicationScope: CoroutineScope,
+    private val timeProvider: TimeProvider
 ) {
     private var started = false
     private var lastPull: Instant = Instant.DISTANT_PAST
@@ -44,9 +45,10 @@ class ProjectSyncManager(
             .filter { it }
             .onEach {
                 syncRepository.syncPendingOperations()
-                if (Clock.System.now() - lastPull > 5.minutes) {
+                val now = timeProvider.nowInstant
+                if (now - lastPull > 5.minutes) {
                     syncRepository.fetchProjects()
-                    lastPull = Clock.System.now()
+                    lastPull = now
                 }
             }
             .launchIn(applicationScope)

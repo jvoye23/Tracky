@@ -11,6 +11,7 @@ import com.jvcs.tracky.core.domain.model.TaskInterval
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
+import com.jvcs.tracky.core.domain.util.FakeTimeProvider
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.features.project_tracker.domain.LocalProjectDataSource
 import kotlinx.coroutines.CoroutineScope
@@ -26,7 +27,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
@@ -36,14 +36,15 @@ class OfflineFirstProjectRepositoryTest {
         local: FakeLocalProjectDataSource,
         remote: FakeRemoteProjectDataSource,
         dao: FakePendingSyncDao,
-        scheduler: FakeSyncScheduler
+        scheduler: FakeSyncScheduler,
+        time: FakeTimeProvider = FakeTimeProvider()
     ) = OfflineFirstProjectRepository(
         localProjectDataSource = local,
         remoteProjectDataSource = remote,
         pendingSyncDao = dao,
         syncScheduler = scheduler,
         applicationScope = CoroutineScope(Dispatchers.Unconfined),
-        updatedAt = Clock.System.now()
+        timeProvider = time
     )
 
     private fun project(id: String) = Project(
@@ -360,6 +361,35 @@ class OfflineFirstProjectRepositoryTest {
         assertTrue(dao.getAllPendingOperations().isEmpty())
         assertFalse(remote.deletedProjectIds.contains("p1"))
     }
+
+    @Test
+    fun upsertProject_stampsUpdatedAt_fromTheInjectedClock() = runBlocking {
+        val local = FakeLocalProjectDataSource()
+        val remote = FakeRemoteProjectDataSource()
+        val dao = FakePendingSyncDao()
+        val scheduler = FakeSyncScheduler()
+        val time = FakeTimeProvider(now = Instant.fromEpochMilliseconds(1_234_567))
+
+        repo(local, remote, dao, scheduler, time).upsertProject(project("p1"))
+
+        assertEquals(time.now, remote.postedProjects.single().updatedAt)
+    }
+
+    @Test
+    fun reorderProjects_stampsLocalAndRemote_withTheSameInstant() = runBlocking {
+        val local = FakeLocalProjectDataSource()
+        val remote = FakeRemoteProjectDataSource()
+        val dao = FakePendingSyncDao()
+        val scheduler = FakeSyncScheduler()
+        // Every read of the clock advances it, so a second read would produce a different stamp.
+        val time = FakeTimeProvider(now = Instant.fromEpochMilliseconds(1_000), advanceOnReadMillis = 1)
+        local.seedTwoSections()
+
+        repo(local, remote, dao, scheduler, time).reorderProjects(listOf("p2", "p1"))
+
+        assertEquals(Instant.fromEpochMilliseconds(1_000), local.sortIndexWriteTimestamps.single())
+        assertEquals(Instant.fromEpochMilliseconds(1_000), remote.reorderTimestamps.single())
+    }
 }
 
 // --- Fakes ----------------------------------------------------------------------------------------
@@ -369,6 +399,7 @@ private class FakeLocalProjectDataSource : LocalProjectDataSource {
     val upsertedProjectIds = mutableListOf<String>()
     /** One entry per updateSortIndices call, so tests can assert a reorder is a single write. */
     val sortIndexWrites = mutableListOf<Map<String, Long>>()
+    val sortIndexWriteTimestamps = mutableListOf<Instant>()
     var failSortIndexWrite = false
     private val projectsFlow = MutableStateFlow<List<Project>>(emptyList())
 
@@ -391,6 +422,7 @@ private class FakeLocalProjectDataSource : LocalProjectDataSource {
         // All or nothing, like the DAO transaction it stands in for.
         if (failSortIndexWrite) return Result.Error(DataError.Local.DISK_FULL)
         sortIndexWrites += indices
+        sortIndexWriteTimestamps += updatedAt
         indices.forEach { (id, index) ->
             projects[id]?.let { projects[id] = it.copy(sortIndex = index, updatedAt = updatedAt) }
         }
@@ -422,17 +454,20 @@ private class FakeLocalProjectDataSource : LocalProjectDataSource {
 
 private class FakeRemoteProjectDataSource : RemoteProjectDataSource {
     var failWith: DataError.Network? = null
+    val postedProjects = mutableListOf<Project>()
     val postedProjectIds = mutableListOf<String>()
     val updatedProjectIds = mutableListOf<String>()
     val deletedProjectIds = mutableListOf<String>()
     /** One entry per reorderProjects call, so tests can assert a drag is a single network call. */
     val reorderCalls = mutableListOf<Map<String, Long>>()
+    val reorderTimestamps = mutableListOf<Instant>()
 
     override suspend fun getProjects(): Result<List<Project>, DataError.Network> =
         failWith?.let { Result.Error(it) } ?: Result.Success(emptyList())
 
     override suspend fun postProject(project: Project): Result<Project, DataError.Network> {
         failWith?.let { return Result.Error(it) }
+        postedProjects += project
         postedProjectIds += project.projectId
         return Result.Success(project)
     }
@@ -446,6 +481,7 @@ private class FakeRemoteProjectDataSource : RemoteProjectDataSource {
     override suspend fun reorderProjects(indices: Map<String, Long>, updatedAt: Instant): EmptyResult<DataError.Network> {
         failWith?.let { return Result.Error(it) }
         reorderCalls += indices
+        reorderTimestamps += updatedAt
         return Result.Success(Unit)
     }
 

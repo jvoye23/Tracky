@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.jvcs.tracky.core.domain.sync.TrashRetention
+import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.features.project_tracker.domain.ProjectRepository
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -20,10 +21,11 @@ class TrashCleanupWorker(
 ) : CoroutineWorker(context, params), KoinComponent {
 
     private val projectRepository: ProjectRepository by inject()
+    private val timeProvider: TimeProvider by inject()
 
     override suspend fun doWork(): Result {
         return try {
-            projectRepository.purgeExpiredTrashedProjects(TrashRetention.cutoff())
+            projectRepository.purgeExpiredTrashedProjects(TrashRetention.cutoff(timeProvider.nowInstant))
             Result.success()
         } catch (e: CancellationException) {
             throw e
