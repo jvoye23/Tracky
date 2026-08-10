@@ -37,6 +37,9 @@ interface ProjectDao {
     @Query("SELECT * FROM projects")
     fun getProjectsWithTasks(): Flow<List<ProjectWithTasksEntity>>
 
+    @Transaction
+    @Query("SELECT * FROM projects WHERE isArchived = 0 AND isFinished = 0 AND trashedAtEpochMs IS NULL")
+    fun getActiveProjectsWithTasks(): Flow<List<ProjectWithTasksEntity>>
 
     @Query("SELECT * FROM projects WHERE isArchived = 1 AND trashedAtEpochMs IS NULL ORDER BY projectId ASC")
     fun getArchivedProjectsWithTasks(): Flow<List<ProjectWithTasksEntity>>

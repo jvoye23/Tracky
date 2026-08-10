@@ -27,6 +27,7 @@ class ProjectSyncManager(
     private val connectivityObserver: ConnectivityObserver,
     private val appLifecycleObserver: AppLifecycleObserver,
     private val syncRepository: SyncRepository,
+    private val projectRepository: ProjectRepository,
     private val applicationScope: CoroutineScope,
     private val timeProvider: TimeProvider
 ) {
@@ -47,7 +48,7 @@ class ProjectSyncManager(
                 syncRepository.syncPendingOperations()
                 val now = timeProvider.nowInstant
                 if (now - lastPull > 5.minutes) {
-                    syncRepository.fetchProjects()
+                    projectRepository.fetchProjects()
                     lastPull = now
                 }
             }

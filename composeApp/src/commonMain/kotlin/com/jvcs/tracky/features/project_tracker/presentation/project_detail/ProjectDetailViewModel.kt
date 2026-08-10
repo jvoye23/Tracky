@@ -13,7 +13,7 @@ import com.jvcs.tracky.core.domain.util.TimerState
 import com.jvcs.tracky.core.presentation.mapper.toProject
 import com.jvcs.tracky.core.presentation.mapper.toProjectTaskUi
 import com.jvcs.tracky.core.presentation.mapper.toProjectUi
-import com.jvcs.tracky.design_system.util.asUiText
+import com.jvcs.tracky.core.presentation.util.toUiText
 import com.jvcs.tracky.design_system.util.parseDuration
 import com.jvcs.tracky.features.project_tracker.domain.EditTextType
 import com.jvcs.tracky.features.project_tracker.domain.ProjectRepository
@@ -165,7 +165,7 @@ class ProjectDetailViewModel(
 
             when(val result = projectRepository.upsertProjectTask(newProjectTask)) {
                 is Result.Error -> {
-                eventChannel.send(ProjectDetailEvent.Error(result.error.asUiText()))
+                eventChannel.send(ProjectDetailEvent.Error(result.error.toUiText()))
             }
                 is Result.Success-> {
                     _state.update { it.copy(

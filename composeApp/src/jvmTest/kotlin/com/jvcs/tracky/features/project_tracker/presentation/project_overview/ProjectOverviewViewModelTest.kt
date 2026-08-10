@@ -67,7 +67,7 @@ class ProjectOverviewViewModelTest {
         val viewModel = ProjectOverviewViewModel(
             projectRepository = repository,
             timeManager = TimeManager(CoroutineScope(dispatcher)),
-            timeProvider = FakeTimeProvider()
+            timeProvider = FakeTimeProvider(),,
         )
         backgroundScope.launch { viewModel.state.collect { } }
         testScheduler.advanceUntilIdle()

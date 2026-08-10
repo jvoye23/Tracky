@@ -7,7 +7,7 @@ import com.jvcs.tracky.core.domain.auth.AuthService
 import com.jvcs.tracky.core.domain.util.onFailure
 import com.jvcs.tracky.core.domain.util.onSuccess
 import com.jvcs.tracky.core.domain.validation.EmailValidator
-import com.jvcs.tracky.design_system.util.asUiText
+import com.jvcs.tracky.core.presentation.util.toUiText
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
@@ -66,7 +66,7 @@ class ForgotPasswordViewModel(
             ).onSuccess {
                 _state.update { it.copy(isLoading = false, isEmailSentSuccessfully = true) }
             }.onFailure { error ->
-                _state.update { it.copy(errorText = error.asUiText(), isLoading = false) }
+                _state.update { it.copy(errorText = error.toUiText(), isLoading = false) }
             }
         }
     }

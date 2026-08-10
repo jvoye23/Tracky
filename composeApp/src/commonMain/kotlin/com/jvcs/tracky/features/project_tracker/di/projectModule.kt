@@ -11,7 +11,10 @@ val projectModule = module {
         ProjectOverviewViewModel(
             projectRepository = get(),
             timeManager = get(),
-            timeProvider = get()
+            timeProvider = get(),
+            sessionStorage = get(),
+            authService = get(),
+            connectivityObserver = get()
         )
     }
 

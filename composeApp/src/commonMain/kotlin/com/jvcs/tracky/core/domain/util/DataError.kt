@@ -2,7 +2,7 @@ package com.jvcs.tracky.core.domain.util
 
 sealed interface DataError: Error {
 
-    enum class Network: DataError {
+    enum class Remote: DataError {
         REQUEST_TIMEOUT,
         UNAUTHORIZED,
         FORBIDDEN,
@@ -20,6 +20,7 @@ sealed interface DataError: Error {
 
     enum class Local: DataError {
         DISK_FULL,
+        NOT_FOUND,
         UNKNOWN
     }
 }

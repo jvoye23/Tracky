@@ -11,8 +11,8 @@ import com.jvcs.tracky.core.domain.util.onFailure
 import com.jvcs.tracky.core.domain.util.onSuccess
 import com.jvcs.tracky.core.domain.validation.EmailValidator
 import com.jvcs.tracky.core.domain.validation.PasswordValidator
+import com.jvcs.tracky.core.presentation.util.toUiText
 import com.jvcs.tracky.design_system.util.UiText
-import com.jvcs.tracky.design_system.util.asUiText
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -167,8 +167,8 @@ class RegisterViewModel(
                 eventChannel.send(RegisterEvent.Success(email))
             }.onFailure { error ->
                 val errorMessage = when (error) {
-                    DataError.Network.CONFLICT -> UiText.Resource(Res.string.error_account_exists)
-                    else -> error.asUiText()
+                    DataError.Remote.CONFLICT -> UiText.Resource(Res.string.error_account_exists)
+                    else -> error.toUiText()
                 }
                 _state.update { it.copy(registrationError = errorMessage, isRegistering = false) }
             }
@@ -187,11 +187,11 @@ class RegisterViewModel(
                             eventChannel.send(RegisterEvent.Success(""))
                         }
                         .onFailure { error ->
-                            _state.update { it.copy(registrationError = error.asUiText(), isRegistering = false) }
+                            _state.update { it.copy(registrationError = error.toUiText(), isRegistering = false) }
                         }
                 }
                 .onFailure { error ->
-                    _state.update { it.copy(registrationError = error.asUiText(), isRegistering = false) }
+                    _state.update { it.copy(registrationError = error.toUiText(), isRegistering = false) }
                 }
         }
     }
@@ -208,11 +208,11 @@ class RegisterViewModel(
                             eventChannel.send(RegisterEvent.Success(""))
                         }
                         .onFailure { error ->
-                            _state.update { it.copy(registrationError = error.asUiText(), isRegistering = false) }
+                            _state.update { it.copy(registrationError = error.toUiText(), isRegistering = false) }
                         }
                 }
                 .onFailure { error ->
-                    _state.update { it.copy(registrationError = error.asUiText(), isRegistering = false) }
+                    _state.update { it.copy(registrationError = error.toUiText(), isRegistering = false) }
                 }
         }
     }

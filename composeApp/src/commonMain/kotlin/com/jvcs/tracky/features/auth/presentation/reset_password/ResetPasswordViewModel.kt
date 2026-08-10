@@ -8,8 +8,8 @@ import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.onFailure
 import com.jvcs.tracky.core.domain.util.onSuccess
 import com.jvcs.tracky.core.domain.validation.PasswordValidator
+import com.jvcs.tracky.core.presentation.util.toUiText
 import com.jvcs.tracky.design_system.util.UiText
-import com.jvcs.tracky.design_system.util.asUiText
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
@@ -74,9 +74,9 @@ class ResetPasswordViewModel(
                 _state.update { it.copy(isLoading = false, isResetSuccessful = true) }
             }.onFailure { error ->
                 val errorMessage = when (error) {
-                    DataError.Network.UNAUTHORIZED -> UiText.Resource(Res.string.error_reset_password_token_invalid)
-                    DataError.Network.CONFLICT -> UiText.Resource(Res.string.error_same_password)
-                    else -> error.asUiText()
+                    DataError.Remote.UNAUTHORIZED -> UiText.Resource(Res.string.error_reset_password_token_invalid)
+                    DataError.Remote.CONFLICT -> UiText.Resource(Res.string.error_same_password)
+                    else -> error.toUiText()
                 }
                 _state.update { it.copy(errorText = errorMessage, isLoading = false) }
             }

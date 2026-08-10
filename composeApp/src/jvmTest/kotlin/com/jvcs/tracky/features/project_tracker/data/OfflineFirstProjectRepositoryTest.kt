@@ -61,7 +61,7 @@ class OfflineFirstProjectRepositoryTest {
     @Test
     fun upsertProject_queuesCreate_whenRemoteOffline() = runBlocking {
         val local = FakeLocalProjectDataSource()
-        val remote = FakeRemoteProjectDataSource().apply { failWith = DataError.Network.NO_INTERNET }
+        val remote = FakeRemoteProjectDataSource().apply { failWith = DataError.Remote.NO_INTERNET }
         val dao = FakePendingSyncDao()
         val scheduler = FakeSyncScheduler()
 
@@ -81,7 +81,7 @@ class OfflineFirstProjectRepositoryTest {
     @Test
     fun syncPendingOperations_pushesQueuedCreate_andClearsQueue() = runBlocking {
         val local = FakeLocalProjectDataSource()
-        val remote = FakeRemoteProjectDataSource().apply { failWith = DataError.Network.NO_INTERNET }
+        val remote = FakeRemoteProjectDataSource().apply { failWith = DataError.Remote.NO_INTERNET }
         val dao = FakePendingSyncDao()
         val scheduler = FakeSyncScheduler()
         val repository = repo(local, remote, dao, scheduler)
@@ -177,7 +177,7 @@ class OfflineFirstProjectRepositoryTest {
     @Test
     fun reorderProjects_whenOffline_queuesOneOrderOp_andReportsSuccess() = runBlocking {
         val local = FakeLocalProjectDataSource()
-        val remote = FakeRemoteProjectDataSource().apply { failWith = DataError.Network.NO_INTERNET }
+        val remote = FakeRemoteProjectDataSource().apply { failWith = DataError.Remote.NO_INTERNET }
         val dao = FakePendingSyncDao()
         val scheduler = FakeSyncScheduler()
         local.seedOrderedProjects()
@@ -199,7 +199,7 @@ class OfflineFirstProjectRepositoryTest {
     @Test
     fun reorderProjects_twiceWhileOffline_stillQueuesOneOrderOp() = runBlocking {
         val local = FakeLocalProjectDataSource()
-        val remote = FakeRemoteProjectDataSource().apply { failWith = DataError.Network.NO_INTERNET }
+        val remote = FakeRemoteProjectDataSource().apply { failWith = DataError.Remote.NO_INTERNET }
         val dao = FakePendingSyncDao()
         val scheduler = FakeSyncScheduler()
         local.seedOrderedProjects()
@@ -215,7 +215,7 @@ class OfflineFirstProjectRepositoryTest {
     @Test
     fun syncPendingOperations_drainsOrderOp_withOneBatchCall() = runBlocking {
         val local = FakeLocalProjectDataSource()
-        val remote = FakeRemoteProjectDataSource().apply { failWith = DataError.Network.NO_INTERNET }
+        val remote = FakeRemoteProjectDataSource().apply { failWith = DataError.Remote.NO_INTERNET }
         val dao = FakePendingSyncDao()
         val scheduler = FakeSyncScheduler()
         local.seedOrderedProjects()
@@ -349,7 +349,7 @@ class OfflineFirstProjectRepositoryTest {
     @Test
     fun deleteProject_droppedLocally_whenStillPendingCreate_neverHitsServer() = runBlocking {
         val local = FakeLocalProjectDataSource()
-        val remote = FakeRemoteProjectDataSource().apply { failWith = DataError.Network.NO_INTERNET }
+        val remote = FakeRemoteProjectDataSource().apply { failWith = DataError.Remote.NO_INTERNET }
         val dao = FakePendingSyncDao()
         val scheduler = FakeSyncScheduler()
         val repository = repo(local, remote, dao, scheduler)
@@ -453,7 +453,7 @@ private class FakeLocalProjectDataSource : LocalProjectDataSource {
 }
 
 private class FakeRemoteProjectDataSource : RemoteProjectDataSource {
-    var failWith: DataError.Network? = null
+    var failWith: DataError.Remote? = null
     val postedProjects = mutableListOf<Project>()
     val postedProjectIds = mutableListOf<String>()
     val updatedProjectIds = mutableListOf<String>()
@@ -462,45 +462,45 @@ private class FakeRemoteProjectDataSource : RemoteProjectDataSource {
     val reorderCalls = mutableListOf<Map<String, Long>>()
     val reorderTimestamps = mutableListOf<Instant>()
 
-    override suspend fun getProjects(): Result<List<Project>, DataError.Network> =
+    override suspend fun getProjects(): Result<List<Project>, DataError.Remote> =
         failWith?.let { Result.Error(it) } ?: Result.Success(emptyList())
 
-    override suspend fun postProject(project: Project): Result<Project, DataError.Network> {
+    override suspend fun postProject(project: Project): Result<Project, DataError.Remote> {
         failWith?.let { return Result.Error(it) }
         postedProjects += project
         postedProjectIds += project.projectId
         return Result.Success(project)
     }
 
-    override suspend fun updateProject(project: Project): Result<Project, DataError.Network> {
+    override suspend fun updateProject(project: Project): Result<Project, DataError.Remote> {
         failWith?.let { return Result.Error(it) }
         updatedProjectIds += project.projectId
         return Result.Success(project)
     }
 
-    override suspend fun reorderProjects(indices: Map<String, Long>, updatedAt: Instant): EmptyResult<DataError.Network> {
+    override suspend fun reorderProjects(indices: Map<String, Long>, updatedAt: Instant): EmptyResult<DataError.Remote> {
         failWith?.let { return Result.Error(it) }
         reorderCalls += indices
         reorderTimestamps += updatedAt
         return Result.Success(Unit)
     }
 
-    override suspend fun deleteProject(projectId: String): EmptyResult<DataError.Network> {
+    override suspend fun deleteProject(projectId: String): EmptyResult<DataError.Remote> {
         failWith?.let { return Result.Error(it) }
         deletedProjectIds += projectId
         return Result.Success(Unit)
     }
 
-    override suspend fun getTasksByProjectId(projectId: String): Result<List<ProjectTask>, DataError.Network> =
+    override suspend fun getTasksByProjectId(projectId: String): Result<List<ProjectTask>, DataError.Remote> =
         failWith?.let { Result.Error(it) } ?: Result.Success(emptyList())
 
-    override suspend fun postTaskByProjectId(projectId: String, task: ProjectTask): Result<ProjectTask, DataError.Network> =
+    override suspend fun postTaskByProjectId(projectId: String, task: ProjectTask): Result<ProjectTask, DataError.Remote> =
         failWith?.let { Result.Error(it) } ?: Result.Success(task)
 
-    override suspend fun updateTaskByProjectId(projectId: String, task: ProjectTask): Result<ProjectTask, DataError.Network> =
+    override suspend fun updateTaskByProjectId(projectId: String, task: ProjectTask): Result<ProjectTask, DataError.Remote> =
         failWith?.let { Result.Error(it) } ?: Result.Success(task)
 
-    override suspend fun deleteTask(projectId: String, taskId: String): EmptyResult<DataError.Network> =
+    override suspend fun deleteTask(projectId: String, taskId: String): EmptyResult<DataError.Remote> =
         failWith?.let { Result.Error(it) } ?: Result.Success(Unit)
 }
 

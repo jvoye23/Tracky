@@ -11,4 +11,6 @@ sealed interface ProjectOverviewEvent {
     data object PinError: ProjectOverviewEvent
     data object AddToTrashError: ProjectOverviewEvent
     data object ReorderError: ProjectOverviewEvent
+    data class OnLogoutError(val error: UiText): ProjectOverviewEvent
+    data object OnLogoutSuccess: ProjectOverviewEvent
 }

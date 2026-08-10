@@ -6,6 +6,9 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jvcs.tracky.core.domain.auth.AuthService
+import com.jvcs.tracky.core.domain.auth.SessionStorage
+import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
 import com.jvcs.tracky.core.domain.model.Project
 import com.jvcs.tracky.core.domain.model.ProjectStatus
 import com.jvcs.tracky.core.domain.model.status
@@ -14,19 +17,22 @@ import com.jvcs.tracky.core.domain.util.TimeManager
 import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.core.domain.util.TimerState
 import com.jvcs.tracky.core.domain.util.onFailure
+import com.jvcs.tracky.core.domain.util.onSuccess
 import com.jvcs.tracky.core.presentation.mapper.toProjectUi
 import com.jvcs.tracky.core.presentation.model.ProjectUi
+import com.jvcs.tracky.core.presentation.util.toUiText
 import com.jvcs.tracky.design_system.theme.defaultProjectColor
-import com.jvcs.tracky.design_system.util.asUiText
 import com.jvcs.tracky.features.project_tracker.domain.ProjectRepository
 import com.jvcs.tracky.features.project_tracker.domain.sortedByCustomOrder
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -38,27 +44,46 @@ import kotlin.uuid.Uuid
 class ProjectOverviewViewModel(
     private val projectRepository: ProjectRepository,
     private val timeManager: TimeManager,
-    private val timeProvider: TimeProvider
+    private val timeProvider: TimeProvider,
+    private val sessionStorage: SessionStorage,
+    private val authService: AuthService,
+    private val connectivityObserver: ConnectivityObserver,
 ): ViewModel() {
 
-    private val _state = MutableStateFlow(ProjectOverviewState())
     private val _sortOption = MutableStateFlow(SortOption.CUSTOM)
     val sortOption = _sortOption.asStateFlow()
-
     private val eventChannel = Channel<ProjectOverviewEvent>()
-    val events = eventChannel.receiveAsFlow()
-    private var hasLoadedInitialData = false
 
+    val events = eventChannel.receiveAsFlow()
     /**
      * True from the first move of a drag until the reorder it produced is visible in the source
      * again (or is abandoned). Only while this holds may the displayed order outrank the database's.
      */
     private var reorderInFlight = false
-
-    val state = _state
+    private var hasLoadedInitialData = false
+    private val _state = MutableStateFlow(ProjectOverviewState())
+    val state = combine(
+        _state,
+        projectRepository.getActiveProjects(),
+        sessionStorage.observeAuthInfo(),
+    ) {
+        currentState, projects, authInfo ->
+        if (authInfo == null) {
+            return@combine ProjectOverviewState()
+        }
+        currentState.copy(
+            projects = projects.map { it.toProjectUi() },
+            localUser = authInfo.user
+        )
+    }
         .onStart {
             if (!hasLoadedInitialData) {
+
+                loadProjectsFromServer()
                 getProjects()
+                _state.update { it.copy(
+                    isLoading = false
+                ) }
                 hasLoadedInitialData = true
             }
         }
@@ -168,6 +193,9 @@ class ProjectOverviewViewModel(
             is ProjectOverviewAction.OnReorderCommit -> {
                 reorderProjects(action.projectId)
             }
+            is ProjectOverviewAction.OnLogoutClick -> showLogoutConfirmation()
+            is ProjectOverviewAction.OnConfirmLogout -> logout()
+            is ProjectOverviewAction.OnDismissLogoutConfirmation -> dismissLogoutConfirmation()
         }
     }
 
@@ -329,11 +357,16 @@ class ProjectOverviewViewModel(
             ) }
         }
     }
+    private fun loadProjectsFromServer() {
+        viewModelScope.launch {
+            projectRepository.fetchProjects()
+        }
+    }
 
-    private fun getProjects() {
+    private fun getProjects(){
         viewModelScope.launch {
             combine(
-                projectRepository.getProjects(),
+                projectRepository.getActiveProjects(),
                 timeManager.taskStates,
                 _sortOption
             ) { projectList, activeTimers, sortOption ->
@@ -342,7 +375,6 @@ class ProjectOverviewViewModel(
                     .firstOrNull { it.value.isRunning }
                     ?.let { it.key to it.value }
                 val uiProjects = projectList
-                    .filter { it.status == ProjectStatus.ACTIVE }
                     .sortedForOption(sortOption)
                     .map { it.toProjectUi().withRunningTimer(runningTimer) }
                 uiProjects to sortOption
@@ -403,7 +435,7 @@ class ProjectOverviewViewModel(
 
             when(val result = projectRepository.upsertProject(newProject)){
                 is Result.Error -> {
-                    eventChannel.send(ProjectOverviewEvent.Error(result.error.asUiText()))
+                    eventChannel.send(ProjectOverviewEvent.Error(result.error.toUiText()))
                 }
                 is Result.Success -> {
                     _state.update { it.copy(
@@ -414,5 +446,42 @@ class ProjectOverviewViewModel(
                 }
             }
         }
+    }
+    private fun logout() {
+        viewModelScope.launch {
+            _state.update { it.copy(
+                isLoggingOut = true
+            ) }
+            val refreshToken = sessionStorage.observeAuthInfo().firstOrNull()?.refreshToken
+            if (refreshToken.isNullOrBlank()) {
+                clearLocalSession()
+                return@launch
+            }
+            authService.logout(refreshToken)
+                .onSuccess {
+                    clearLocalSession()
+                    projectRepository.deleteAllProjects()
+                    eventChannel.send(ProjectOverviewEvent.OnLogoutSuccess)
+                }
+                .onFailure { error ->
+                    eventChannel.send(ProjectOverviewEvent.OnLogoutError(error.toUiText()))
+                }
+        }
+    }
+    private suspend fun clearLocalSession() {
+        sessionStorage.set(null)
+        authService.clearTokenCache()
+    }
+
+    private fun showLogoutConfirmation() {
+        _state.update { it.copy(
+            showLogoutConfirmation = true
+        ) }
+    }
+
+    private fun dismissLogoutConfirmation() {
+        _state.update { it.copy(
+            showLogoutConfirmation = false
+        ) }
     }
 }
