@@ -6,5 +6,4 @@ import com.jvcs.tracky.core.domain.util.EmptyResult
 interface SyncRepository {
     /** Drains the pending-sync queue, pushing queued creates/updates/deletes to the backend. */
     suspend fun syncPendingOperations()
-    suspend fun fetchProjects(): EmptyResult<DataError>
 }

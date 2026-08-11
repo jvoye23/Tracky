@@ -2,6 +2,9 @@
 
 package com.jvcs.tracky.features.project_tracker.presentation.project_overview
 
+import com.jvcs.tracky.core.domain.auth.FakeAuthService
+import com.jvcs.tracky.core.domain.auth.FakeSessionStorage
+import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
 import com.jvcs.tracky.core.domain.model.Project
 import com.jvcs.tracky.core.domain.model.ProjectTask
 import com.jvcs.tracky.core.domain.model.TaskInterval
@@ -12,10 +15,12 @@ import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeManager
 import com.jvcs.tracky.features.project_tracker.domain.ProjectRepository
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -36,10 +41,10 @@ class ProjectOverviewViewModelTest {
     private val dispatcher = StandardTestDispatcher()
 
     @BeforeTest
-    fun setUp() = kotlinx.coroutines.Dispatchers.setMain(dispatcher)
+    fun setUp() = Dispatchers.setMain(dispatcher)
 
     @AfterTest
-    fun tearDown() = kotlinx.coroutines.Dispatchers.resetMain()
+    fun tearDown() = Dispatchers.resetMain()
 
     /** Pinned: p1, p2 (indices 0, 1). Other: p3, p4 (indices 0, 1). */
     private fun seededProjects() = listOf(
@@ -63,11 +68,22 @@ class ProjectOverviewViewModelTest {
     )
 
     /** Starts the ViewModel with [state] collected, so its `WhileSubscribed` pipeline is running. */
-    private fun TestScope.viewModelWith(repository: FakeProjectRepository): ProjectOverviewViewModel {
+    private fun TestScope.viewModelWith(
+        repository: FakeProjectRepository,
+        sessionStorage: FakeSessionStorage = FakeSessionStorage(),
+        authService: FakeAuthService = FakeAuthService(),
+    ): ProjectOverviewViewModel {
         val viewModel = ProjectOverviewViewModel(
             projectRepository = repository,
             timeManager = TimeManager(CoroutineScope(dispatcher)),
-            timeProvider = FakeTimeProvider()
+            timeProvider = FakeTimeProvider(),
+            sessionStorage = sessionStorage,
+            authService = authService,
+            // An `expect class`, so it cannot be faked; the JVM actual is already always-connected.
+            connectivityObserver = ConnectivityObserver(),
+            // Shares the test scheduler, so `advanceUntilIdle` drives the logout teardown and the
+            // scope dies with the test instead of outliving it.
+            applicationScope = backgroundScope,
         )
         backgroundScope.launch { viewModel.state.collect { } }
         testScheduler.advanceUntilIdle()
@@ -239,6 +255,11 @@ private class FakeProjectRepository(initial: List<Project>) : ProjectRepository 
     fun emit(projects: List<Project>) { projectsFlow.value = projects }
 
     override fun getProjects(): Flow<List<Project>> = projectsFlow
+
+    override fun getActiveProjects(): Flow<List<Project>> = projectsFlow
+        .map { projects -> projects.filter { !it.isArchived && !it.isFinished && it.trashedAt == null } }
+
+    override suspend fun fetchProjects(): EmptyResult<DataError> = Result.Success(Unit)
 
     override suspend fun reorderProjects(orderedProjectIds: List<String>): EmptyResult<DataError> {
         reorderCalls += orderedProjectIds

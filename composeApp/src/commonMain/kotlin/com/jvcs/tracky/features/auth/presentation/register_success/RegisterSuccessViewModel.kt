@@ -6,7 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.jvcs.tracky.core.domain.auth.AuthService
 import com.jvcs.tracky.core.domain.util.onFailure
 import com.jvcs.tracky.core.domain.util.onSuccess
-import com.jvcs.tracky.design_system.util.asUiText
+import com.jvcs.tracky.core.presentation.util.toUiText
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -55,7 +55,7 @@ class RegisterSuccessViewModel(
                     _state.update {
                         it.copy(
                             isResendingVerificationEmail = false,
-                            resendVerificationError = error.asUiText()
+                            resendVerificationError = error.toUiText()
                         )
                     }
                 }

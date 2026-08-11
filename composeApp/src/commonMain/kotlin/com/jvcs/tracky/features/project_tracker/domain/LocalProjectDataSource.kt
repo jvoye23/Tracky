@@ -13,6 +13,7 @@ typealias ProjectId = String
 
 interface LocalProjectDataSource {
     fun getProjects(): Flow<List<Project>>
+    fun getActiveProjects(): Flow<List<Project>>
     fun getArchivedProjects(): Flow<List<Project>>
     fun getTrashedProjects(): Flow<List<Project>>
     fun getPinnedProjects(): Flow<List<Project>>

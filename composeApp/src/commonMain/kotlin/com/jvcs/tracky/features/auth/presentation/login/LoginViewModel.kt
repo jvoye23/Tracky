@@ -10,8 +10,8 @@ import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.onFailure
 import com.jvcs.tracky.core.domain.util.onSuccess
 import com.jvcs.tracky.core.domain.validation.EmailValidator
+import com.jvcs.tracky.core.presentation.util.toUiText
 import com.jvcs.tracky.design_system.util.UiText
-import com.jvcs.tracky.design_system.util.asUiText
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -90,9 +90,9 @@ class LoginViewModel(
                 eventChannel.send(LoginEvent.Success)
             }.onFailure { error ->
                 val errorMessage = when (error) {
-                    DataError.Network.UNAUTHORIZED -> UiText.Resource(Res.string.error_invalid_credentials)
-                    DataError.Network.FORBIDDEN -> UiText.Resource(Res.string.error_email_not_verified)
-                    else -> error.asUiText()
+                    DataError.Remote.UNAUTHORIZED -> UiText.Resource(Res.string.error_invalid_credentials)
+                    DataError.Remote.FORBIDDEN -> UiText.Resource(Res.string.error_email_not_verified)
+                    else -> error.toUiText()
                 }
                 _state.update { it.copy(error = errorMessage, isLoggingIn = false) }
             }
@@ -111,11 +111,11 @@ class LoginViewModel(
                             eventChannel.send(LoginEvent.Success)
                         }
                         .onFailure { error ->
-                            _state.update { it.copy(error = error.asUiText(), isLoggingIn = false) }
+                            _state.update { it.copy(error = error.toUiText(), isLoggingIn = false) }
                         }
                 }
                 .onFailure { error ->
-                    _state.update { it.copy(error = error.asUiText(), isLoggingIn = false) }
+                    _state.update { it.copy(error = error.toUiText(), isLoggingIn = false) }
                 }
         }
     }
@@ -132,11 +132,11 @@ class LoginViewModel(
                             eventChannel.send(LoginEvent.Success)
                         }
                         .onFailure { error ->
-                            _state.update { it.copy(error = error.asUiText(), isLoggingIn = false) }
+                            _state.update { it.copy(error = error.toUiText(), isLoggingIn = false) }
                         }
                 }
                 .onFailure { error ->
-                    _state.update { it.copy(error = error.asUiText(), isLoggingIn = false) }
+                    _state.update { it.copy(error = error.toUiText(), isLoggingIn = false) }
                 }
         }
     }

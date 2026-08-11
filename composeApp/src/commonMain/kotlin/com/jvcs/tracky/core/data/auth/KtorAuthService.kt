@@ -35,7 +35,7 @@ class KtorAuthService(
     override suspend fun login(
         email: String,
         password: String
-    ): Result<AuthInfo, DataError.Network> {
+    ): Result<AuthInfo, DataError.Remote> {
         return httpClient.post<LoginRequest, AuthInfoSerializable>(
             route = "/api/auth/login",
             body = LoginRequest(email = email, password = password)
@@ -47,7 +47,7 @@ class KtorAuthService(
         email: String,
         name: String,
         password: String
-    ): Result<AuthInfo, DataError.Network> {
+    ): Result<AuthInfo, DataError.Remote> {
         return httpClient.post<RegisterRequest, AuthInfoSerializable>(
             route = "/api/auth/register",
             body = RegisterRequest(email = email, name = name, password = password)
@@ -55,7 +55,7 @@ class KtorAuthService(
             .onSuccess { clearTokenCache() }
     }
 
-    override suspend fun loginWithGoogle(idToken: String): Result<AuthInfo, DataError.Network> {
+    override suspend fun loginWithGoogle(idToken: String): Result<AuthInfo, DataError.Remote> {
         return httpClient.post<SocialLoginRequest, AuthInfoSerializable>(
             route = "/api/auth/google",
             body = SocialLoginRequest(idToken = idToken)
@@ -63,7 +63,7 @@ class KtorAuthService(
             .onSuccess { clearTokenCache() }
     }
 
-    override suspend fun loginWithApple(idToken: String): Result<AuthInfo, DataError.Network> {
+    override suspend fun loginWithApple(idToken: String): Result<AuthInfo, DataError.Remote> {
         return httpClient.post<SocialLoginRequest, AuthInfoSerializable>(
             route = "/api/auth/apple",
             body = SocialLoginRequest(idToken = idToken)
@@ -71,21 +71,21 @@ class KtorAuthService(
             .onSuccess { clearTokenCache() }
     }
 
-    override suspend fun resendVerificationEmail(email: String): EmptyResult<DataError.Network> {
+    override suspend fun resendVerificationEmail(email: String): EmptyResult<DataError.Remote> {
         return httpClient.post<EmailRequest, Unit>(
             route = "/api/auth/resend-verification",
             body = EmailRequest(email)
         )
     }
 
-    override suspend fun verifyEmail(token: String): EmptyResult<DataError.Network> {
+    override suspend fun verifyEmail(token: String): EmptyResult<DataError.Remote> {
         return httpClient.get(
             route = "/api/auth/verify",
             queryParams = mapOf("token" to token)
         )
     }
 
-    override suspend fun forgotPassword(email: String): EmptyResult<DataError.Network> {
+    override suspend fun forgotPassword(email: String): EmptyResult<DataError.Remote> {
         return httpClient.post<EmailRequest, Unit>(
             route = "/api/auth/forgot-password",
             body = EmailRequest(email)
@@ -95,14 +95,14 @@ class KtorAuthService(
     override suspend fun resetPassword(
         newPassword: String,
         token: String
-    ): EmptyResult<DataError.Network> {
+    ): EmptyResult<DataError.Remote> {
         return httpClient.post<ResetPasswordRequest, Unit>(
             route = "/api/auth/reset-password",
             body = ResetPasswordRequest(newPassword = newPassword, token = token)
         )
     }
 
-    override suspend fun logout(refreshToken: String): EmptyResult<DataError.Network> {
+    override suspend fun logout(refreshToken: String): EmptyResult<DataError.Remote> {
         return httpClient.post<RefreshRequest, Unit>(
             route = "/api/auth/logout",
             body = RefreshRequest(refreshToken)

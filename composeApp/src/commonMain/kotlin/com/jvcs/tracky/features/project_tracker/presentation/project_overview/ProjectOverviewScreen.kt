@@ -8,10 +8,12 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -22,8 +24,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -38,6 +42,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.compose.material3.adaptive.currentWindowSize
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -55,20 +61,25 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.toSize
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
+import com.jvcs.tracky.core.domain.auth.User
 import com.jvcs.tracky.core.presentation.model.ProjectTaskUi
 import com.jvcs.tracky.core.presentation.model.ProjectUi
 import com.jvcs.tracky.design_system.Icon_Delete
+import com.jvcs.tracky.design_system.Icon_User
+import com.jvcs.tracky.design_system.components.FullScreenLoadingIndicator
 import com.jvcs.tracky.design_system.components.MainNavDrawerItem
 import com.jvcs.tracky.design_system.components.MainNavigationDrawer
 import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.design_system.util.DevicePreviews
 import com.jvcs.tracky.design_system.util.ObserveAsEvents
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.AddNewProjectBottomSheet
+import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.EmptySection
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectCard
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.ProjectDragDropState
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.components.rememberProjectDragDropState
@@ -88,21 +99,26 @@ import tracky.composeapp.generated.resources.delete_project_title
 import tracky.composeapp.generated.resources.delete_projects_confirmation
 import tracky.composeapp.generated.resources.delete_projects_title
 import tracky.composeapp.generated.resources.delete_selected
+import tracky.composeapp.generated.resources.description
+import tracky.composeapp.generated.resources.do_you_want_to_logout
+import tracky.composeapp.generated.resources.do_you_want_to_logout_desc
 import tracky.composeapp.generated.resources.error_add_to_trash
 import tracky.composeapp.generated.resources.error_archiving_projects
 import tracky.composeapp.generated.resources.error_pinning_projects
 import tracky.composeapp.generated.resources.error_reordering_projects
+import tracky.composeapp.generated.resources.log_out
 import tracky.composeapp.generated.resources.new_project
+import tracky.composeapp.generated.resources.no_current_projects
+import tracky.composeapp.generated.resources.no_current_projects_subtitle
 import tracky.composeapp.generated.resources.other
 import tracky.composeapp.generated.resources.pinned
 import tracky.composeapp.generated.resources.project_saved_successfully
 import tracky.composeapp.generated.resources.search_results
+import tracky.composeapp.generated.resources.title
 
 @Composable
 fun ProjectOverviewScreenRoot(
-    username: String?,
-    email: String?,
-    onLogout: () -> Unit,
+    onSuccessfulLogout: () -> Unit,
     onNavigateToDetailScreen: (String) -> Unit,
     onNavigateToArchive: () -> Unit = {},
     onNavigateToTrash: () -> Unit = {},
@@ -170,6 +186,14 @@ fun ProjectOverviewScreenRoot(
                     )
                 }
             }
+            is ProjectOverviewEvent.OnLogoutError -> {
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar(
+                        message = event.error.asStringAsync()
+                    )
+                }
+            }
+            ProjectOverviewEvent.OnLogoutSuccess -> onSuccessfulLogout()
         }
     }
 
@@ -177,35 +201,38 @@ fun ProjectOverviewScreenRoot(
         viewModel.onAction(ProjectOverviewAction.OnExitEditMode)
     }
 
-    ProjectOverviewScreen(
-        onAction = { action ->
-            when(action) {
-                is ProjectOverviewAction.OnProjectCardClick -> {
-                    if (!state.isEditModeActive) onNavigateToDetailScreen(action.projectId)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+    ) {
+        ProjectOverviewScreen(
+            onAction = { action ->
+                when(action) {
+                    is ProjectOverviewAction.OnProjectCardClick -> {
+                        if (!state.isEditModeActive) onNavigateToDetailScreen(action.projectId)
+                    }
+                    else -> Unit
                 }
-                else -> Unit
-            }
-            viewModel.onAction(action)
-        },
-        state = state,
-        username = username,
-        email = email,
-        onLogout = onLogout,
-        onNavigateToArchive = onNavigateToArchive,
-        onNavigateToTrash = onNavigateToTrash,
-        snackbarHostState = snackbarHostState,
-        sortOption = sortOption
-    )
+                viewModel.onAction(action)
+            },
+            state = state,
+            onNavigateToArchive = onNavigateToArchive,
+            onNavigateToTrash = onNavigateToTrash,
+            snackbarHostState = snackbarHostState,
+            sortOption = sortOption
+        )
+
+        if (state.isLoading || state.isLoggingOut) {
+            FullScreenLoadingIndicator()
+        }
+    }
 }
 
 @Composable
 fun ProjectOverviewScreen(
+    modifier: Modifier = Modifier,
     onAction: (ProjectOverviewAction) -> Unit,
     state: ProjectOverviewState,
-    username: String?,
-    email: String?,
-    onLogout: () -> Unit,
-    modifier: Modifier = Modifier,
     onNavigateToArchive: () -> Unit = {},
     onNavigateToTrash: () -> Unit = {},
     snackbarHostState: SnackbarHostState,
@@ -272,10 +299,9 @@ fun ProjectOverviewScreen(
                     ProjectOverviewSearchTopAppBar(
                         onAction = onAction,
                         state = state,
-                        onLogout = onLogout,
                         onMenuClick = { drawerScope.launch { drawerState.open() } },
-                        username = username,
-                        email = email,
+                        username = state.localUser?.username,
+                        email = state.localUser?.email,
                         scrollBehavior = scrollBehavior
                     )
                 }
@@ -306,57 +332,71 @@ fun ProjectOverviewScreen(
         }
 
     ) { innerPadding ->
-        LazyColumn(
-            state = listState,
+        Column(
             modifier = modifier
                 .fillMaxSize()
-                .padding(horizontal = 10.dp)
-                .testTag("project_overview"),
-            contentPadding = PaddingValues(
-                top = innerPadding.calculateTopPadding(),
-                bottom = innerPadding.calculateBottomPadding()
-            ),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(innerPadding),
+            verticalArrangement = Arrangement.Top,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (pinnedItems.isNotEmpty()) {
-                item {
-                    ProjectSectionHeader(text = stringResource(Res.string.pinned))
-                }
-                items(
-                    items = pinnedItems,
-                    key = { it.projectId }
-                ) { item ->
-                    ProjectListCard(
-                        item = item,
-                        state = state,
-                        onAction = onAction,
-                        reorderEnabled = reorderEnabled,
-                        dragDropState = dragDropState
-                    )
-                }
-            }
-
-            if (otherItems.isNotEmpty()) {
-                item {
-                    ProjectSectionHeader(
-                        text = if (state.searchQuery.isEmpty()) stringResource(Res.string.other) else stringResource(Res.string.search_results)
-                    )
-                }
-            }
-
-            items(
-                items = otherItems,
-                key = { it.projectId }
-            ) { item ->
-                ProjectListCard(
-                    item = item,
-                    state = state,
-                    onAction = onAction,
-                    reorderEnabled = reorderEnabled,
-                    dragDropState = dragDropState
+            if (!state.isLoading && state.pinnedProjects.isEmpty() && state.otherProjects.isEmpty()){
+                EmptySection(
+                    title = stringResource(Res.string.no_current_projects),
+                    description = stringResource(Res.string.no_current_projects_subtitle),
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp)
                 )
-            }
+            } else {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 10.dp)
+                        .testTag("project_overview"),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (pinnedItems.isNotEmpty()) {
+                        item {
+                            ProjectSectionHeader(text = stringResource(Res.string.pinned))
+                        }
+                        items(
+                            items = pinnedItems,
+                            key = { it.projectId }
+                        ) { item ->
+                            ProjectListCard(
+                                item = item,
+                                state = state,
+                                onAction = onAction,
+                                reorderEnabled = reorderEnabled,
+                                dragDropState = dragDropState
+                            )
+                        }
+                    }
 
+                    if (otherItems.isNotEmpty()) {
+                        item {
+                            ProjectSectionHeader(
+                                text = if (state.searchQuery.isEmpty()) stringResource(Res.string.other) else stringResource(Res.string.search_results)
+                            )
+                        }
+                    }
+
+                    items(
+                        items = otherItems,
+                        key = { it.projectId }
+                    ) { item ->
+                        ProjectListCard(
+                            item = item,
+                            state = state,
+                            onAction = onAction,
+                            reorderEnabled = reorderEnabled,
+                            dragDropState = dragDropState
+                        )
+                    }
+                }
+            }
         }
         if (state.isAddNewProjectBottomSheetVisible) {
             AddNewProjectBottomSheet(
@@ -404,6 +444,38 @@ fun ProjectOverviewScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = { onAction(ProjectOverviewAction.OnDismissDeleteDialog) }) {
+                        Text(text = stringResource(Res.string.cancel))
+                    }
+                }
+            )
+        }
+        if (state.showLogoutConfirmation) {
+            AlertDialog(
+                onDismissRequest = { onAction(ProjectOverviewAction.OnDismissLogoutConfirmation) },
+                icon = {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Logout,
+                        contentDescription = stringResource(Res.string.log_out),
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                },
+                title = {
+                    Text(
+                        text = stringResource(Res.string.do_you_want_to_logout)
+                    )
+                },
+                text = {
+                    Text(
+                        text = stringResource(Res.string.do_you_want_to_logout_desc)
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = { onAction(ProjectOverviewAction.OnConfirmLogout) }) {
+                        Text(text = stringResource(Res.string.confirm))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { onAction(ProjectOverviewAction.OnDismissLogoutConfirmation) }) {
                         Text(text = stringResource(Res.string.cancel))
                     }
                 }
@@ -581,10 +653,8 @@ private fun ProjectOverviewDefaultPreview() {
             onAction = {},
             state = ProjectOverviewState(
                 projects = previewProjects(),
+                localUser = User(id = "123", username = "JoergVoye", email = "joerg@example.com", hasVerifiedEmail = true )
             ).withPreviewSections(),
-            username = "JoergVoye",
-            email = "joerg@example.com",
-            onLogout = {},
             snackbarHostState = remember { SnackbarHostState() }
         )
     }
@@ -598,11 +668,9 @@ private fun ProjectOverviewSearchPreview() {
             onAction = {},
             state = ProjectOverviewState(
                 projects = previewProjects(),
-                searchQuery = "Run"
+                searchQuery = "Run",
+                localUser = User(id = "123", username = "JoergVoye", email = "joerg@example.com", hasVerifiedEmail = true )
             ).withPreviewSections(),
-            username = "JoergVoye",
-            email = "joerg@example.com",
-            onLogout = {},
             snackbarHostState = remember { SnackbarHostState() }
         )
     }
@@ -617,11 +685,9 @@ private fun ProjectOverviewEditModePreview() {
             state = ProjectOverviewState(
                 projects = previewProjects(),
                 isEditModeActive = true,
-                selectedProjectIds = setOf("1", "3")
+                selectedProjectIds = setOf("1", "3"),
+                localUser = User(id = "123", username = "JoergVoye", email = "joerg@example.com", hasVerifiedEmail = true )
             ).withPreviewSections(),
-            username = "JoergVoye",
-            email = "joerg@example.com",
-            onLogout = {},
             snackbarHostState = remember { SnackbarHostState() }
         )
     }
@@ -635,10 +701,8 @@ private fun ProjectOverviewDrawerOpenPreview() {
             onAction = {},
             state = ProjectOverviewState(
                 projects = previewProjects(),
+                localUser = User(id = "123", username = "JoergVoye", email = "joerg@example.com", hasVerifiedEmail = true )
             ).withPreviewSections(),
-            username = "JoergVoye",
-            email = "joerg@example.com",
-            onLogout = {},
             snackbarHostState = remember { SnackbarHostState() },
             drawerState = rememberDrawerState(DrawerValue.Open)
         )
@@ -656,10 +720,8 @@ private fun ProjectOverviewSortSheetVisiblePreview() {
                 onAction = {},
                 state = ProjectOverviewState(
                     projects = previewProjects(),
+                    localUser = User(id = "123", username = "JoergVoye", email = "joerg@example.com", hasVerifiedEmail = true )
                 ).withPreviewSections(),
-                username = "JoergVoye",
-                email = "joerg@example.com",
-                onLogout = {},
                 snackbarHostState = remember { SnackbarHostState() }
             )
             Surface(

@@ -17,6 +17,7 @@ import com.jvcs.tracky.core.domain.util.SystemTimeProvider
 import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.features.project_tracker.data.OfflineFirstProjectRepository
 import com.jvcs.tracky.features.project_tracker.data.RoomLocalProjectDataSource
+import com.jvcs.tracky.features.project_tracker.di.projectModule
 import com.jvcs.tracky.features.project_tracker.domain.LocalProjectDataSource
 import com.jvcs.tracky.features.project_tracker.domain.ProjectRepository
 import kotlinx.serialization.json.Json
@@ -57,8 +58,9 @@ val coreDataModule = module {
             connectivityObserver = get(),
             appLifecycleObserver = get(),
             syncRepository = get(),
+            projectRepository = get(),
             applicationScope = get(qualifier = named("AppScope")),
-            timeProvider = get()
+            timeProvider = get(),
         )
     }
 

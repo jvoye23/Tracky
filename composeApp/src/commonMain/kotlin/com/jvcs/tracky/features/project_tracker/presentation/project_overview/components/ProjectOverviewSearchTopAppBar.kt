@@ -32,7 +32,6 @@ fun ProjectOverviewSearchTopAppBar(
     onAction: (ProjectOverviewAction) -> Unit,
     state: ProjectOverviewState,
     scrollBehavior: TopAppBarScrollBehavior,
-    onLogout: () -> Unit,
     onMenuClick: () -> Unit,
     username: String?,
     email: String?,
@@ -59,7 +58,7 @@ fun ProjectOverviewSearchTopAppBar(
                 UserProfileButton(
                     username = username,
                     email = email,
-                    onLogoutClick = onLogout,
+                    onLogoutClick = { onAction(ProjectOverviewAction.OnLogoutClick) },
                     modifier = Modifier.padding(start = 8.dp, end = 10.dp)
                 )
             }
@@ -78,7 +77,6 @@ private fun ProjectOverviewTopBarPreview() {
             onAction = {},
             state = ProjectOverviewState(),
             scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(),
-            onLogout = {},
             onMenuClick = {},
             username = "Jörg Voyé",
             email = "j.voye@jv-coding-solutions.com"

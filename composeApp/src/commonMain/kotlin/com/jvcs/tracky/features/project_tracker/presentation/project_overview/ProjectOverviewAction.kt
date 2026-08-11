@@ -34,4 +34,7 @@ sealed interface ProjectOverviewAction {
     data object OnReorderCancel: ProjectOverviewAction
     // Fired on drop. Carries the dragged card so the ViewModel can persist the section it belongs to.
     data class OnReorderCommit(val projectId: String): ProjectOverviewAction
+    data object OnConfirmLogout: ProjectOverviewAction
+    data object OnLogoutClick: ProjectOverviewAction
+    data object OnDismissLogoutConfirmation: ProjectOverviewAction
 }

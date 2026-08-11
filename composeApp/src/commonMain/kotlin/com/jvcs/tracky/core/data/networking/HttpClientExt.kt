@@ -28,43 +28,43 @@ fun constructRoute(route: String): String {
     }
 }
 
-suspend inline fun <reified T> responseToResult(response: HttpResponse): Result<T, DataError.Network> {
+suspend inline fun <reified T> responseToResult(response: HttpResponse): Result<T, DataError.Remote> {
     return when (response.status.value) {
         in 200..299 -> {
             try {
                 Result.Success(response.body<T>())
             } catch (e: Exception) {
-                Result.Error(DataError.Network.SERIALIZATION)
+                Result.Error(DataError.Remote.SERIALIZATION)
             }
         }
-        400 -> Result.Error(DataError.Network.BAD_REQUEST)
-        401 -> Result.Error(DataError.Network.UNAUTHORIZED)
-        403 -> Result.Error(DataError.Network.FORBIDDEN)
-        404 -> Result.Error(DataError.Network.NOT_FOUND)
-        408 -> Result.Error(DataError.Network.REQUEST_TIMEOUT)
-        409 -> Result.Error(DataError.Network.CONFLICT)
-        413 -> Result.Error(DataError.Network.PAYLOAD_TOO_LARGE)
-        429 -> Result.Error(DataError.Network.TOO_MANY_REQUESTS)
-        in 500..503 -> Result.Error(DataError.Network.SERVER_ERROR)
-        else -> Result.Error(DataError.Network.UNKNOWN)
+        400 -> Result.Error(DataError.Remote.BAD_REQUEST)
+        401 -> Result.Error(DataError.Remote.UNAUTHORIZED)
+        403 -> Result.Error(DataError.Remote.FORBIDDEN)
+        404 -> Result.Error(DataError.Remote.NOT_FOUND)
+        408 -> Result.Error(DataError.Remote.REQUEST_TIMEOUT)
+        409 -> Result.Error(DataError.Remote.CONFLICT)
+        413 -> Result.Error(DataError.Remote.PAYLOAD_TOO_LARGE)
+        429 -> Result.Error(DataError.Remote.TOO_MANY_REQUESTS)
+        in 500..503 -> Result.Error(DataError.Remote.SERVER_ERROR)
+        else -> Result.Error(DataError.Remote.UNKNOWN)
     }
 }
 
 suspend inline fun <reified Response : Any> safeCall(
     execute: () -> HttpResponse
-): Result<Response, DataError.Network> {
+): Result<Response, DataError.Remote> {
     val response = try {
         execute()
     } catch (e: UnresolvedAddressException) {
         e.printStackTrace()
-        return Result.Error(DataError.Network.NO_INTERNET)
+        return Result.Error(DataError.Remote.NO_INTERNET)
     } catch (e: SerializationException) {
         e.printStackTrace()
-        return Result.Error(DataError.Network.SERIALIZATION)
+        return Result.Error(DataError.Remote.SERIALIZATION)
     } catch (e: Exception) {
         if (e is CancellationException) throw e
         e.printStackTrace()
-        return Result.Error(DataError.Network.UNKNOWN)
+        return Result.Error(DataError.Remote.UNKNOWN)
     }
     return responseToResult(response)
 }
@@ -74,7 +74,7 @@ suspend inline fun <reified Request, reified Response : Any> HttpClient.post(
     body: Request,
     queryParams: Map<String, Any> = mapOf(),
     crossinline builder: HttpRequestBuilder.() -> Unit = {}
-): Result<Response, DataError.Network> {
+): Result<Response, DataError.Remote> {
     return safeCall {
         post {
             url(constructRoute(route))
@@ -89,7 +89,7 @@ suspend inline fun <reified Response : Any> HttpClient.get(
     route: String,
     queryParams: Map<String, Any> = mapOf(),
     crossinline builder: HttpRequestBuilder.() -> Unit = {}
-): Result<Response, DataError.Network> {
+): Result<Response, DataError.Remote> {
     return safeCall {
         get {
             url(constructRoute(route))
@@ -103,7 +103,7 @@ suspend inline fun <reified Request, reified Response: Any> HttpClient.put(
     route: String,
     body: Request,
     contentType: ContentType = ContentType.Application.Json
-): Result<Response, DataError.Network> {
+): Result<Response, DataError.Remote> {
     return safeCall {
         put {
             url(constructRoute(route))
@@ -118,7 +118,7 @@ suspend inline fun <reified Request, reified Response: Any> HttpClient.put(
 suspend inline fun <reified Response: Any> HttpClient.delete(
     route: String,
     queryParameters: Map<String, Any?> = mapOf()
-): Result<Response, DataError.Network> {
+): Result<Response, DataError.Remote> {
     return safeCall {
         delete {
             url(constructRoute(route))

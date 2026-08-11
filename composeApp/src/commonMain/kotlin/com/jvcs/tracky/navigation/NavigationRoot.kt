@@ -44,10 +44,7 @@ import org.koin.core.parameter.parametersOf
 
 @Composable
 fun NavigationRoot(
-    backStack: NavBackStack<NavKey>,
-    username: String?,
-    userEmail: String?,
-    onLogout: () -> Unit,
+    backStack: NavBackStack<NavKey>
 ) {
     val editTextCallback = remember { mutableStateOf<((String) -> Unit)?>(null) }
 
@@ -135,9 +132,6 @@ fun NavigationRoot(
             // Project screens
             entry<Route.ProjectRoute.ProjectOverview> {
                 ProjectOverviewScreenRoot(
-                    username = username,
-                    email = userEmail,
-                    onLogout = onLogout,
                     onNavigateToDetailScreen = { projectId ->
                         backStack.add(
                             Route.ProjectRoute.ProjectDetail(
@@ -151,6 +145,10 @@ fun NavigationRoot(
                     },
                     onNavigateToTrash = {
                         backStack.add(Route.ProjectRoute.ProjectTrash)
+                    },
+                    onSuccessfulLogout = {
+                        backStack.removeAll { true }
+                        backStack.add(Route.AuthRoute.Login)
                     }
                 )
             }

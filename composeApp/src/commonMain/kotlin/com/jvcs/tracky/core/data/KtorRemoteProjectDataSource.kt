@@ -31,7 +31,7 @@ import kotlin.time.Instant
 class KtorRemoteProjectDataSource(
     private val httpClient: HttpClient
 ): RemoteProjectDataSource {
-    override suspend fun getProjects(): Result<List<Project>, DataError.Network> {
+    override suspend fun getProjects(): Result<List<Project>, DataError.Remote> {
         return httpClient.get<List<ProjectDto>>(
             route = "/api/projects"
         ).map {
@@ -39,14 +39,14 @@ class KtorRemoteProjectDataSource(
         }
     }
 
-    override suspend fun postProject(project: Project): Result<Project, DataError.Network> {
+    override suspend fun postProject(project: Project): Result<Project, DataError.Remote> {
         return httpClient.post<CreateProjectRequest, ProjectDto>(
             route = "/api/projects",
             body = project.toCreateProjectRequest()
         ).map { it.toProject() }
     }
 
-    override suspend fun updateProject(project: Project): Result<Project, DataError.Network> {
+    override suspend fun updateProject(project: Project): Result<Project, DataError.Remote> {
         return httpClient.put<UpdateProjectRequest, ProjectDto>(
             route = "api/projects/${project.projectId}",
             body = project.toUpdateProjectRequest()
@@ -54,7 +54,7 @@ class KtorRemoteProjectDataSource(
         }
     }
 
-    override suspend fun deleteProject(projectId: String): EmptyResult<DataError.Network> {
+    override suspend fun deleteProject(projectId: String): EmptyResult<DataError.Remote> {
         return httpClient.delete(
             route = "api/projects/$projectId"
         )
@@ -62,7 +62,7 @@ class KtorRemoteProjectDataSource(
 
     // One request for the whole sort gesture. The endpoint answers 204, so nothing comes back that could
     // overwrite the order we just wrote locally.
-    override suspend fun reorderProjects(indices: Map<String, Long>, updatedAt: Instant): EmptyResult<DataError.Network> {
+    override suspend fun reorderProjects(indices: Map<String, Long>, updatedAt: Instant): EmptyResult<DataError.Remote> {
         return httpClient.put<ReorderProjectsRequest, Unit>(
             route = "/api/projects/sort",
             body = ReorderProjectsRequest(
@@ -74,7 +74,7 @@ class KtorRemoteProjectDataSource(
         )
     }
 
-    override suspend fun getTasksByProjectId(projectId: String): Result<List<ProjectTask>, DataError.Network> {
+    override suspend fun getTasksByProjectId(projectId: String): Result<List<ProjectTask>, DataError.Remote> {
         return httpClient.get<List<ProjectTaskDto>>(
             route = "/api/projects/${projectId}/tasks"
         ).map {
@@ -82,21 +82,21 @@ class KtorRemoteProjectDataSource(
         }
     }
 
-    override suspend fun postTaskByProjectId(projectId: String, task: ProjectTask): Result<ProjectTask, DataError.Network> {
+    override suspend fun postTaskByProjectId(projectId: String, task: ProjectTask): Result<ProjectTask, DataError.Remote> {
         return httpClient.post<CreateProjectTaskRequest, ProjectTaskDto>(
             route = "/api/projects/${projectId}/tasks",
             body = task.toCreateProjectTaskRequest()
         ).map { it.toProjectTask(projectId) }
     }
 
-    override suspend fun updateTaskByProjectId(projectId: String, task: ProjectTask): Result<ProjectTask, DataError.Network> {
+    override suspend fun updateTaskByProjectId(projectId: String, task: ProjectTask): Result<ProjectTask, DataError.Remote> {
         return httpClient.put<UpdateProjectTaskRequest, ProjectTaskDto>(
             route = "/api/projects/${projectId}/tasks/${task.projectTaskId}",
             body = task.toUpdateProjectTaskRequest()
         ).map { it.toProjectTask(projectId) }
     }
 
-    override suspend fun deleteTask(projectId: String, taskId: String): EmptyResult<DataError.Network> {
+    override suspend fun deleteTask(projectId: String, taskId: String): EmptyResult<DataError.Remote> {
         return httpClient.delete(
             route = "/api/projects/$projectId/tasks/$taskId"
         )

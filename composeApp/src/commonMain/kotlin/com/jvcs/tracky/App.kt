@@ -41,10 +41,7 @@ fun App(
         if (!state.isCheckingAuth) {
             AppNavHost(
                 isLoggedIn = state.isLoggedIn,
-                username = state.username,
-                userEmail = state.email,
                 events = mainViewModel.events,
-                onLogout = mainViewModel::logout
             )
         }
     }
@@ -53,10 +50,7 @@ fun App(
 @Composable
 private fun AppNavHost(
     isLoggedIn: Boolean,
-    username: String?,
-    userEmail: String?,
-    events: Flow<MainEvent>,
-    onLogout: () -> Unit
+    events: Flow<MainEvent>
 ) {
     val startDestination = if (isLoggedIn) {
         Route.ProjectRoute.ProjectOverview
@@ -79,9 +73,6 @@ private fun AppNavHost(
     }
 
     NavigationRoot(
-        backStack = backStack,
-        username = username,
-        userEmail = userEmail,
-        onLogout = onLogout
+        backStack = backStack
     )
 }

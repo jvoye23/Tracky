@@ -57,23 +57,6 @@ class MainViewModel(
         }
     }
 
-    fun logout() {
-        applicationScope.launch {
-            val refreshToken = sessionStorage.observeAuthInfo().firstOrNull()?.refreshToken
-            if (refreshToken.isNullOrBlank()) {
-                clearLocalSession()
-                return@launch
-            }
-            authService.logout(refreshToken).onSuccess {
-                clearLocalSession()
-            }
-        }
-    }
-    private suspend fun clearLocalSession() {
-        sessionStorage.set(null)
-        authService.clearTokenCache()
-    }
-
     private fun observeSession() {
         sessionStorage
             .observeAuthInfo()

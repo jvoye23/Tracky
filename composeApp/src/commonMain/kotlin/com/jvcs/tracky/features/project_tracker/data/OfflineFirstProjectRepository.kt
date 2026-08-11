@@ -13,10 +13,8 @@ import com.jvcs.tracky.core.database.entity.PendingSyncEntity.Companion.OP_UPDAT
 import com.jvcs.tracky.core.database.entity.PendingSyncEntity.Companion.PROJECT_ORDER_ENTITY_ID
 import com.jvcs.tracky.core.domain.RemoteProjectDataSource
 import com.jvcs.tracky.core.domain.model.Project
-import com.jvcs.tracky.core.domain.model.ProjectStatus
 import com.jvcs.tracky.core.domain.model.ProjectTask
 import com.jvcs.tracky.core.domain.model.TaskInterval
-import com.jvcs.tracky.core.domain.model.status
 import com.jvcs.tracky.core.domain.sync.SyncRepository
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
 import com.jvcs.tracky.core.domain.util.DataError
@@ -67,6 +65,10 @@ class OfflineFirstProjectRepository(
         return localProjectDataSource.getProjects()
     }
 
+    override fun getActiveProjects(): Flow<List<Project>> {
+        return localProjectDataSource.getActiveProjects()
+    }
+
     override fun getArchivedProjects(): Flow<List<Project>> {
         return localProjectDataSource.getArchivedProjects()
     }
@@ -109,7 +111,7 @@ class OfflineFirstProjectRepository(
                 Result.Success(Unit)
             }
             is Result.Error -> when {
-                remoteResult.error == DataError.Network.CONFLICT -> resolveProjectConflict(stamped)
+                remoteResult.error == DataError.Remote.CONFLICT -> resolveProjectConflict(stamped)
                 remoteResult.error.isTransient() -> {
                     // Local write already succeeded; only surface an error if queuing the sync fails.
                     val queued = enqueueProjectOperation(project.projectId, if (isCreate) OP_CREATE else OP_UPDATE)
@@ -263,7 +265,7 @@ class OfflineFirstProjectRepository(
                 Result.Success(Unit)
             }
             is Result.Error -> when {
-                remoteResult.error == DataError.Network.CONFLICT -> resolveTaskConflict(stamped)
+                remoteResult.error == DataError.Remote.CONFLICT -> resolveTaskConflict(stamped)
                 remoteResult.error.isTransient() -> {
                     // Local write already succeeded; only surface an error if queuing the sync fails.
                     val queued = enqueueTaskOperation(projectTask.projectTaskId, projectTask.parentProjectId, if (isCreate) OP_CREATE else OP_UPDATE)
@@ -305,7 +307,7 @@ class OfflineFirstProjectRepository(
                     queued
                 }
                 // Server already has no such project → the delete is effectively done.
-                remoteResult.error == DataError.Network.NOT_FOUND -> Result.Success(Unit)
+                remoteResult.error == DataError.Remote.NOT_FOUND -> Result.Success(Unit)
                 else -> remoteResult.asEmptyDataResult()
             }
         }
@@ -559,30 +561,30 @@ class OfflineFirstProjectRepository(
 
     private enum class SyncOutcome { SUCCESS, RETRY, DROP }
 
-    private suspend fun <T> Result<T, DataError.Network>.toSyncOutcome(
+    private suspend fun <T> Result<T, DataError.Remote>.toSyncOutcome(
         onSuccess: suspend (T) -> Unit,
         onConflict: suspend () -> Unit
     ): SyncOutcome = when (this) {
         is Result.Success -> { onSuccess(data); SyncOutcome.SUCCESS }
         is Result.Error -> when {
-            error == DataError.Network.CONFLICT -> { onConflict(); SyncOutcome.SUCCESS }
+            error == DataError.Remote.CONFLICT -> { onConflict(); SyncOutcome.SUCCESS }
             error.isTransient() -> SyncOutcome.RETRY
             else -> SyncOutcome.DROP // permanent error (e.g. NOT_FOUND for a delete) — give up
         }
     }
 
-    private fun EmptyResult<DataError.Network>.toSyncOutcome(): SyncOutcome = when (this) {
+    private fun EmptyResult<DataError.Remote>.toSyncOutcome(): SyncOutcome = when (this) {
         is Result.Success -> SyncOutcome.SUCCESS
         is Result.Error -> if (error.isTransient()) SyncOutcome.RETRY else SyncOutcome.DROP
     }
 
-    private fun DataError.Network.isTransient(): Boolean = when (this) {
-        DataError.Network.NO_INTERNET,
-        DataError.Network.REQUEST_TIMEOUT,
-        DataError.Network.SERVER_ERROR,
-        DataError.Network.SERVICE_UNAVAILABLE,
-        DataError.Network.TOO_MANY_REQUESTS,
-        DataError.Network.UNKNOWN -> true
+    private fun DataError.Remote.isTransient(): Boolean = when (this) {
+        DataError.Remote.NO_INTERNET,
+        DataError.Remote.REQUEST_TIMEOUT,
+        DataError.Remote.SERVER_ERROR,
+        DataError.Remote.SERVICE_UNAVAILABLE,
+        DataError.Remote.TOO_MANY_REQUESTS,
+        DataError.Remote.UNKNOWN -> true
         else -> false
     }
 }
