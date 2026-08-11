@@ -406,6 +406,10 @@ private class FakeLocalProjectDataSource : LocalProjectDataSource {
     private fun emit() { projectsFlow.value = projects.values.toList() }
 
     override fun getProjects(): Flow<List<Project>> = projectsFlow
+    override fun getActiveProjects(): Flow<List<Project>> =
+        projectsFlow.map { list -> list.filter { !it.isArchived && !it.isFinished && it.trashedAt == null } }
+    override fun getPinnedProjects(): Flow<List<Project>> =
+        projectsFlow.map { list -> list.filter { it.isPinned && !it.isArchived && !it.isFinished && it.trashedAt == null } }
     override fun getArchivedProjects(): Flow<List<Project>> =
         projectsFlow.map { list -> list.filter { it.isArchived && it.trashedAt == null } }
     override fun getTrashedProjects(): Flow<List<Project>> =

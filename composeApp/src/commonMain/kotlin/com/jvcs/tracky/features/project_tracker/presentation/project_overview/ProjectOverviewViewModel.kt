@@ -24,6 +24,8 @@ import com.jvcs.tracky.core.presentation.util.toUiText
 import com.jvcs.tracky.design_system.theme.defaultProjectColor
 import com.jvcs.tracky.features.project_tracker.domain.ProjectRepository
 import com.jvcs.tracky.features.project_tracker.domain.sortedByCustomOrder
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.Channel
@@ -32,7 +34,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -48,6 +56,7 @@ class ProjectOverviewViewModel(
     private val sessionStorage: SessionStorage,
     private val authService: AuthService,
     private val connectivityObserver: ConnectivityObserver,
+    private val applicationScope: CoroutineScope
 ): ViewModel() {
 
     private val _sortOption = MutableStateFlow(SortOption.CUSTOM)
@@ -64,29 +73,23 @@ class ProjectOverviewViewModel(
     private val _state = MutableStateFlow(ProjectOverviewState())
     val state = combine(
         _state,
-        projectRepository.getActiveProjects(),
         sessionStorage.observeAuthInfo(),
-    ) {
-        currentState, projects, authInfo ->
+    ) { currentState, authInfo ->
         if (authInfo == null) {
             return@combine ProjectOverviewState()
         }
         currentState.copy(
-            projects = projects.map { it.toProjectUi() },
             localUser = authInfo.user
         )
     }
         .onStart {
             if (!hasLoadedInitialData) {
-
-                loadProjectsFromServer()
-                getProjects()
-                _state.update { it.copy(
-                    isLoading = false
-                ) }
                 hasLoadedInitialData = true
+                loadProjectsFromServer()
+                observeProjects()
             }
         }
+
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -360,27 +363,37 @@ class ProjectOverviewViewModel(
     private fun loadProjectsFromServer() {
         viewModelScope.launch {
             projectRepository.fetchProjects()
+                .onFailure { error ->
+                    eventChannel.send(ProjectOverviewEvent.Error(error.toUiText()))
+                }
+            _state.update { it.copy(isLoading = false) }
         }
     }
 
-    private fun getProjects(){
-        viewModelScope.launch {
-            combine(
-                projectRepository.getActiveProjects(),
-                timeManager.taskStates,
-                _sortOption
-            ) { projectList, activeTimers, sortOption ->
-                // Only one timer can run at a time across all tasks/projects.
-                val runningTimer = activeTimers.entries
-                    .firstOrNull { it.value.isRunning }
-                    ?.let { it.key to it.value }
-                val uiProjects = projectList
-                    .sortedForOption(sortOption)
-                    .map { it.toProjectUi().withRunningTimer(runningTimer) }
-                uiProjects to sortOption
-            }.collect { (uiProjects, sortOption) ->
-                // On a sort change the manual display order no longer applies, and outside a drag the
-                // source is simply the truth — either way, adopt the freshly sorted order outright.
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun observeProjects() {
+        // We only care whether a session exists, not what changed inside it
+        sessionStorage.observeAuthInfo()
+            .map { it != null }
+            .distinctUntilChanged()
+            // switch onto the local stream while authenticated, drop it on logout.
+            // flatMapLatest cancels the previous inner flow for you, so you never
+            // end up with two collectors after a re-login
+            .flatMapLatest { isAuthenticated ->
+                if (!isAuthenticated) emptyFlow()
+                else combine(
+                    projectRepository.getActiveProjects(),
+                    timeManager.taskStates,
+                    _sortOption
+                ){ projects, activeTimers, sortOption ->
+                    val runningTimer = activeTimers.entries
+                        .firstOrNull() { it.value.isRunning }
+                        ?.let { it.key to it.value }
+                    projects.sortedForOption(sortOption)
+                        .map { it.toProjectUi().withRunningTimer(runningTimer) } to sortOption
+                }
+            }
+            .onEach { (uiProjects, sortOption) ->
                 val sortChanged = _state.value.sortOption != sortOption
                 val adoptSourceOrder = sortChanged || !reorderInFlight
                 _state.update { state ->
@@ -394,7 +407,7 @@ class ProjectOverviewViewModel(
                     reorderInFlight = false
                 }
             }
-        }
+            .launchIn(viewModelScope)
     }
 
     private fun ProjectUi.withRunningTimer(runningTimer: Pair<String, TimerState>?): ProjectUi {
@@ -448,19 +461,19 @@ class ProjectOverviewViewModel(
         }
     }
     private fun logout() {
+        _state.update { it.copy(
+            showLogoutConfirmation = false
+        ) }
         viewModelScope.launch {
             _state.update { it.copy(
                 isLoggingOut = true
             ) }
-            val refreshToken = sessionStorage.observeAuthInfo().firstOrNull()?.refreshToken
-            if (refreshToken.isNullOrBlank()) {
-                clearLocalSession()
-                return@launch
-            }
+            val authInfo = sessionStorage.observeAuthInfo().firstOrNull()
+            val refreshToken = authInfo?.refreshToken ?: return@launch
+
             authService.logout(refreshToken)
                 .onSuccess {
-                    clearLocalSession()
-                    projectRepository.deleteAllProjects()
+                    clearLocalSessionAndData()
                     eventChannel.send(ProjectOverviewEvent.OnLogoutSuccess)
                 }
                 .onFailure { error ->
@@ -468,9 +481,13 @@ class ProjectOverviewViewModel(
                 }
         }
     }
-    private suspend fun clearLocalSession() {
-        sessionStorage.set(null)
-        authService.clearTokenCache()
+
+    private fun clearLocalSessionAndData() {
+        applicationScope.launch {
+            sessionStorage.set(null)
+            authService.clearTokenCache()
+            projectRepository.deleteAllProjects()
+        }
     }
 
     private fun showLogoutConfirmation() {

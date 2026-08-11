@@ -230,9 +230,9 @@ fun ProjectOverviewScreenRoot(
 
 @Composable
 fun ProjectOverviewScreen(
+    modifier: Modifier = Modifier,
     onAction: (ProjectOverviewAction) -> Unit,
     state: ProjectOverviewState,
-    modifier: Modifier = Modifier,
     onNavigateToArchive: () -> Unit = {},
     onNavigateToTrash: () -> Unit = {},
     snackbarHostState: SnackbarHostState,
@@ -333,13 +333,13 @@ fun ProjectOverviewScreen(
 
     ) { innerPadding ->
         Column(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxSize()
                 .padding(innerPadding),
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (state.pinnedProjects.isEmpty() && state.otherProjects.isEmpty()){
+            if (!state.isLoading && state.pinnedProjects.isEmpty() && state.otherProjects.isEmpty()){
                 EmptySection(
                     title = stringResource(Res.string.no_current_projects),
                     description = stringResource(Res.string.no_current_projects_subtitle),

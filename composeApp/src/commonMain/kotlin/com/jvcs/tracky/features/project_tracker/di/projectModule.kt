@@ -3,10 +3,19 @@ package com.jvcs.tracky.features.project_tracker.di
 import com.jvcs.tracky.features.project_tracker.presentation.project_detail.ProjectDetailViewModel
 import com.jvcs.tracky.features.project_tracker.presentation.project_overview.ProjectOverviewViewModel
 import com.jvcs.tracky.features.project_tracker.presentation.task_detail.TaskDetailViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import org.koin.core.module.dsl.viewModel
+import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
 val projectModule = module {
+
+    single(named("AppScope")) {
+        CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    }
+
     viewModel {
         ProjectOverviewViewModel(
             projectRepository = get(),
@@ -14,7 +23,8 @@ val projectModule = module {
             timeProvider = get(),
             sessionStorage = get(),
             authService = get(),
-            connectivityObserver = get()
+            connectivityObserver = get(),
+            applicationScope = get(qualifier = named("AppScope"))
         )
     }
 
