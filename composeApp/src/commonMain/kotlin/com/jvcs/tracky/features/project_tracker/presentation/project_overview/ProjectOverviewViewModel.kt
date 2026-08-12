@@ -26,6 +26,7 @@ import com.jvcs.tracky.features.project_tracker.domain.ProjectRepository
 import com.jvcs.tracky.features.project_tracker.domain.sortedByCustomOrder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.Channel
@@ -34,6 +35,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.firstOrNull
@@ -46,9 +48,11 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
+@OptIn(FlowPreview::class)
 class ProjectOverviewViewModel(
     private val projectRepository: ProjectRepository,
     private val timeManager: TimeManager,
@@ -74,12 +78,14 @@ class ProjectOverviewViewModel(
     val state = combine(
         _state,
         sessionStorage.observeAuthInfo(),
-    ) { currentState, authInfo ->
+        connectivityObserver.isConnected.debounce(1.seconds)
+    ) { currentState, authInfo, isOnline ->
         if (authInfo == null) {
             return@combine ProjectOverviewState()
         }
         currentState.copy(
-            localUser = authInfo.user
+            localUser = authInfo.user,
+            isOnline = isOnline
         )
     }
         .onStart {
@@ -212,12 +218,12 @@ class ProjectOverviewViewModel(
         }
         viewModelScope.launch {
             projectRepository.reorderProjects(section.map { it.projectId })
-                .onFailure {
+                .onFailure { dataError ->
                     // Don't leave the user looking at an order that says it saved while the snackbar
                     // says it didn't: fall back to whatever is actually persisted.
                     reorderInFlight = false
                     _state.update { it.withSectionsFromProjects() }
-                    eventChannel.send(ProjectOverviewEvent.ReorderError)
+                    eventChannel.send(ProjectOverviewEvent.ReorderError(error = dataError.toUiText()))
                 }
         }
     }
@@ -350,8 +356,8 @@ class ProjectOverviewViewModel(
             val results = ids.map { id ->
                 async { projectRepository.setProjectTrashed(id, trashedAt) }
             }.awaitAll()
-            results.forEach { it.onFailure {
-                eventChannel.send(ProjectOverviewEvent.AddToTrashError)
+            results.forEach { it.onFailure { dataError ->
+                eventChannel.send(ProjectOverviewEvent.AddToTrashError(error = dataError.toUiText()))
             } }
             _state.update { it.copy(
                 isEditModeActive = false,

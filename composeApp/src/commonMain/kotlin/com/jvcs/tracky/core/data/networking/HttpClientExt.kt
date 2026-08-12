@@ -12,6 +12,9 @@ import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.request.url
+import io.ktor.client.network.sockets.ConnectTimeoutException
+import io.ktor.client.network.sockets.SocketTimeoutException
+import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
@@ -45,7 +48,8 @@ suspend inline fun <reified T> responseToResult(response: HttpResponse): Result<
         409 -> Result.Error(DataError.Remote.CONFLICT)
         413 -> Result.Error(DataError.Remote.PAYLOAD_TOO_LARGE)
         429 -> Result.Error(DataError.Remote.TOO_MANY_REQUESTS)
-        in 500..503 -> Result.Error(DataError.Remote.SERVER_ERROR)
+        503 -> Result.Error(DataError.Remote.SERVICE_UNAVAILABLE)
+        in 500..599 -> Result.Error(DataError.Remote.SERVER_ERROR)
         else -> Result.Error(DataError.Remote.UNKNOWN)
     }
 }
@@ -53,18 +57,32 @@ suspend inline fun <reified T> responseToResult(response: HttpResponse): Result<
 suspend inline fun <reified Response : Any> safeCall(
     execute: () -> HttpResponse
 ): Result<Response, DataError.Remote> {
+    // Order is load-bearing: on JVM, Ktor's ConnectTimeoutException subclasses
+    // java.net.ConnectException, so the timeout branches must precede anything that treats a
+    // connect/socket failure as "offline" — otherwise timeouts get reported as NO_INTERNET.
     val response = try {
         execute()
     } catch (e: UnresolvedAddressException) {
+        // CIO / native DNS failure. OkHttp signals this as UnknownHostException instead,
+        // which toRemoteDataError() picks up below.
         e.printStackTrace()
         return Result.Error(DataError.Remote.NO_INTERNET)
+    } catch (e: ConnectTimeoutException) {
+        e.printStackTrace()
+        return Result.Error(DataError.Remote.REQUEST_TIMEOUT)
+    } catch (e: SocketTimeoutException) {
+        e.printStackTrace()
+        return Result.Error(DataError.Remote.REQUEST_TIMEOUT)
+    } catch (e: HttpRequestTimeoutException) {
+        e.printStackTrace()
+        return Result.Error(DataError.Remote.REQUEST_TIMEOUT)
     } catch (e: SerializationException) {
         e.printStackTrace()
         return Result.Error(DataError.Remote.SERIALIZATION)
     } catch (e: Exception) {
         if (e is CancellationException) throw e
         e.printStackTrace()
-        return Result.Error(DataError.Remote.UNKNOWN)
+        return Result.Error(e.toRemoteDataError())
     }
     return responseToResult(response)
 }
