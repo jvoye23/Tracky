@@ -12,6 +12,7 @@ import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
 import com.jvcs.tracky.core.domain.model.Project
 import com.jvcs.tracky.core.domain.model.ProjectStatus
 import com.jvcs.tracky.core.domain.model.status
+import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeManager
 import com.jvcs.tracky.core.domain.util.TimeProvider
@@ -356,9 +357,11 @@ class ProjectOverviewViewModel(
             val results = ids.map { id ->
                 async { projectRepository.setProjectTrashed(id, trashedAt) }
             }.awaitAll()
-            results.forEach { it.onFailure { dataError ->
-                eventChannel.send(ProjectOverviewEvent.AddToTrashError(error = dataError.toUiText()))
-            } }
+            results.filterIsInstance<Result.Error<DataError>>()
+                .firstOrNull()
+                ?.let { result ->
+                eventChannel.send(ProjectOverviewEvent.AddToTrashError(result.error.toUiText()))
+            }
             _state.update { it.copy(
                 isEditModeActive = false,
                 selectedProjectIds = emptySet(),

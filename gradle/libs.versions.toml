@@ -33,6 +33,7 @@ sqlite = "2.6.2"
 adaptive = "1.2.0"
 work = "2.11.2"
 lifecycleProcess = "2.11.0"
+turbine = "1.2.1"
 
 # For Compose Multiplatform
 cmpNavigation3 = "1.1.1"
@@ -59,6 +60,7 @@ androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-
 
 kotlinx-coroutines-swing = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-swing", version.ref = "kotlinx-coroutines" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
+turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
 
 adaptive = { module = "org.jetbrains.compose.material3.adaptive:adaptive", version.ref = "adaptive" }
 androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }

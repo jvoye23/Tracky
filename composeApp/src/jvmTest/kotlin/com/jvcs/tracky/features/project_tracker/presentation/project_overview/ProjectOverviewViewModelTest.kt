@@ -2,6 +2,7 @@
 
 package com.jvcs.tracky.features.project_tracker.presentation.project_overview
 
+import app.cash.turbine.test
 import com.jvcs.tracky.core.domain.auth.FakeAuthService
 import com.jvcs.tracky.core.domain.auth.FakeSessionStorage
 import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
@@ -25,7 +26,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -72,41 +72,42 @@ class ProjectOverviewViewModelTest {
         sortIndex = sortIndex
     )
 
+    /** Builds the ViewModel without subscribing to [state], so its `onStart` has not run yet. */
+    private fun TestScope.createViewModel(
+        repository: FakeProjectRepository,
+        sessionStorage: FakeSessionStorage = FakeSessionStorage(),
+        authService: FakeAuthService = FakeAuthService(),
+    ): ProjectOverviewViewModel = ProjectOverviewViewModel(
+        projectRepository = repository,
+        timeManager = TimeManager(CoroutineScope(dispatcher)),
+        timeProvider = FakeTimeProvider(),
+        sessionStorage = sessionStorage,
+        authService = authService,
+        // An `expect class`, so it cannot be faked; the JVM actual is already always-connected.
+        connectivityObserver = ConnectivityObserver(),
+        // Shares the test scheduler, so `advanceUntilIdle` drives the logout teardown and the
+        // scope dies with the test instead of outliving it.
+        applicationScope = backgroundScope,
+    )
+
     /**
-     * Starts the ViewModel with [state] collected, so its `WhileSubscribed` pipeline is running.
-     *
-     * Pass [events] to capture emissions from the very first moment: `state`'s `onStart` runs
-     * `loadProjectsFromServer()`, so anything it reports is sent before this helper returns.
+     * Subscribes to [state], which starts its `WhileSubscribed` pipeline. `state`'s `onStart` runs
+     * `loadProjectsFromServer()`, so call this *inside* a `viewModel.events.test { }` block whenever
+     * the test asserts on what that initial load reports — the event channel is a rendezvous
+     * channel, and a send with no collector attached parks instead of arriving.
      */
+    private fun TestScope.startCollectingState(viewModel: ProjectOverviewViewModel) {
+        backgroundScope.launch { viewModel.state.collect { } }
+        testScheduler.advanceUntilIdle()
+    }
+
+    /** Starts the ViewModel with [state] collected, so its `WhileSubscribed` pipeline is running. */
     private fun TestScope.viewModelWith(
         repository: FakeProjectRepository,
         sessionStorage: FakeSessionStorage = FakeSessionStorage(),
         authService: FakeAuthService = FakeAuthService(),
-        events: MutableList<ProjectOverviewEvent>? = null,
-    ): ProjectOverviewViewModel {
-        val viewModel = ProjectOverviewViewModel(
-            projectRepository = repository,
-            timeManager = TimeManager(CoroutineScope(dispatcher)),
-            timeProvider = FakeTimeProvider(),
-            sessionStorage = sessionStorage,
-            authService = authService,
-            // An `expect class`, so it cannot be faked; the JVM actual is already always-connected.
-            connectivityObserver = ConnectivityObserver(),
-            // Shares the test scheduler, so `advanceUntilIdle` drives the logout teardown and the
-            // scope dies with the test instead of outliving it.
-            applicationScope = backgroundScope,
-        )
-        // Attach before `state` is collected: the event channel is a rendezvous channel, so a send
-        // from `onStart` would otherwise park until a collector shows up.
-        if (events != null) {
-            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-                viewModel.events.collect { events += it }
-            }
-        }
-        backgroundScope.launch { viewModel.state.collect { } }
-        testScheduler.advanceUntilIdle()
-        return viewModel
-    }
+    ): ProjectOverviewViewModel =
+        createViewModel(repository, sessionStorage, authService).also { startCollectingState(it) }
 
     /** The state is a `stateIn` flow, so let the dispatcher deliver pending updates before reading it. */
     private fun TestScope.stateOf(viewModel: ProjectOverviewViewModel): ProjectOverviewState {
@@ -160,22 +161,21 @@ class ProjectOverviewViewModelTest {
             reorderResult = Result.Error(DataError.Local.DISK_FULL)
         }
         val viewModel = viewModelWith(repository)
-        val events = mutableListOf<ProjectOverviewEvent>()
-        // Unconfined so the collector is receiving before anything is sent down the rendezvous channel.
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.events.collect { events += it } }
 
-        viewModel.onAction(ProjectOverviewAction.OnReorderMove(fromId = "p4", toId = "p3"))
-        viewModel.onAction(ProjectOverviewAction.OnReorderCommit("p4"))
-        testScheduler.advanceUntilIdle()
+        viewModel.events.test {
+            viewModel.onAction(ProjectOverviewAction.OnReorderMove(fromId = "p4", toId = "p3"))
+            viewModel.onAction(ProjectOverviewAction.OnReorderCommit("p4"))
+            testScheduler.advanceUntilIdle()
+
+            assertEquals(
+                ProjectOverviewEvent.ReorderError(UiText.Resource(Res.string.error_disk_full)),
+                awaitItem()
+            )
+            expectNoEvents()
+        }
 
         // The snackbar must not contradict the list: both say the reorder did not happen.
         assertEquals(listOf("p3", "p4"), stateOf(viewModel).otherProjects.map { it.projectId })
-        assertEquals(
-            listOf<ProjectOverviewEvent>(
-                ProjectOverviewEvent.ReorderError(UiText.Resource(Res.string.error_disk_full))
-            ),
-            events
-        )
     }
 
     @Test
@@ -183,28 +183,32 @@ class ProjectOverviewViewModelTest {
         val repository = FakeProjectRepository(seededProjects()).apply {
             fetchResult = Result.Error(DataError.Remote.NO_INTERNET)
         }
-        val events = mutableListOf<ProjectOverviewEvent>()
+        val viewModel = createViewModel(repository)
 
-        val viewModel = viewModelWith(repository, events = events)
+        viewModel.events.test {
+            startCollectingState(viewModel) // `state`'s `onStart` runs `loadProjectsFromServer()`.
 
-        // The user must be told the connection is the problem, not shown "an unknown error happened".
-        assertEquals(
-            listOf<ProjectOverviewEvent>(
-                ProjectOverviewEvent.Error(UiText.Resource(Res.string.error_no_internet))
-            ),
-            events
-        )
+            // The user must be told the connection is the problem, not shown "an unknown error happened".
+            assertEquals(
+                ProjectOverviewEvent.Error(UiText.Resource(Res.string.error_no_internet)),
+                awaitItem()
+            )
+            expectNoEvents()
+        }
+
         // A failed pull still has to clear the spinner, or the screen hangs on the loading state.
         assertFalse(stateOf(viewModel).isLoading)
     }
 
     @Test
     fun loadProjectsFromServer_whenItSucceeds_reportsNothing_andClearsLoading() = runTest(dispatcher) {
-        val events = mutableListOf<ProjectOverviewEvent>()
+        val viewModel = createViewModel(FakeProjectRepository(seededProjects()))
 
-        val viewModel = viewModelWith(FakeProjectRepository(seededProjects()), events = events)
+        viewModel.events.test {
+            startCollectingState(viewModel)
+            expectNoEvents()
+        }
 
-        assertEquals(emptyList<ProjectOverviewEvent>(), events)
         assertFalse(stateOf(viewModel).isLoading)
     }
 
