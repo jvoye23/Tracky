@@ -2,6 +2,7 @@
 
 package com.jvcs.tracky.features.project_tracker.presentation.project_overview
 
+import app.cash.turbine.test
 import com.jvcs.tracky.core.domain.auth.FakeAuthService
 import com.jvcs.tracky.core.domain.auth.FakeSessionStorage
 import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
@@ -13,6 +14,7 @@ import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeManager
+import com.jvcs.tracky.design_system.util.UiText
 import com.jvcs.tracky.features.project_tracker.domain.ProjectRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -24,14 +26,17 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import tracky.composeapp.generated.resources.Res
+import tracky.composeapp.generated.resources.error_disk_full
+import tracky.composeapp.generated.resources.error_no_internet
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
@@ -67,28 +72,42 @@ class ProjectOverviewViewModelTest {
         sortIndex = sortIndex
     )
 
+    /** Builds the ViewModel without subscribing to [state], so its `onStart` has not run yet. */
+    private fun TestScope.createViewModel(
+        repository: FakeProjectRepository,
+        sessionStorage: FakeSessionStorage = FakeSessionStorage(),
+        authService: FakeAuthService = FakeAuthService(),
+    ): ProjectOverviewViewModel = ProjectOverviewViewModel(
+        projectRepository = repository,
+        timeManager = TimeManager(CoroutineScope(dispatcher)),
+        timeProvider = FakeTimeProvider(),
+        sessionStorage = sessionStorage,
+        authService = authService,
+        // An `expect class`, so it cannot be faked; the JVM actual is already always-connected.
+        connectivityObserver = ConnectivityObserver(),
+        // Shares the test scheduler, so `advanceUntilIdle` drives the logout teardown and the
+        // scope dies with the test instead of outliving it.
+        applicationScope = backgroundScope,
+    )
+
+    /**
+     * Subscribes to [state], which starts its `WhileSubscribed` pipeline. `state`'s `onStart` runs
+     * `loadProjectsFromServer()`, so call this *inside* a `viewModel.events.test { }` block whenever
+     * the test asserts on what that initial load reports — the event channel is a rendezvous
+     * channel, and a send with no collector attached parks instead of arriving.
+     */
+    private fun TestScope.startCollectingState(viewModel: ProjectOverviewViewModel) {
+        backgroundScope.launch { viewModel.state.collect { } }
+        testScheduler.advanceUntilIdle()
+    }
+
     /** Starts the ViewModel with [state] collected, so its `WhileSubscribed` pipeline is running. */
     private fun TestScope.viewModelWith(
         repository: FakeProjectRepository,
         sessionStorage: FakeSessionStorage = FakeSessionStorage(),
         authService: FakeAuthService = FakeAuthService(),
-    ): ProjectOverviewViewModel {
-        val viewModel = ProjectOverviewViewModel(
-            projectRepository = repository,
-            timeManager = TimeManager(CoroutineScope(dispatcher)),
-            timeProvider = FakeTimeProvider(),
-            sessionStorage = sessionStorage,
-            authService = authService,
-            // An `expect class`, so it cannot be faked; the JVM actual is already always-connected.
-            connectivityObserver = ConnectivityObserver(),
-            // Shares the test scheduler, so `advanceUntilIdle` drives the logout teardown and the
-            // scope dies with the test instead of outliving it.
-            applicationScope = backgroundScope,
-        )
-        backgroundScope.launch { viewModel.state.collect { } }
-        testScheduler.advanceUntilIdle()
-        return viewModel
-    }
+    ): ProjectOverviewViewModel =
+        createViewModel(repository, sessionStorage, authService).also { startCollectingState(it) }
 
     /** The state is a `stateIn` flow, so let the dispatcher deliver pending updates before reading it. */
     private fun TestScope.stateOf(viewModel: ProjectOverviewViewModel): ProjectOverviewState {
@@ -142,17 +161,55 @@ class ProjectOverviewViewModelTest {
             reorderResult = Result.Error(DataError.Local.DISK_FULL)
         }
         val viewModel = viewModelWith(repository)
-        val events = mutableListOf<ProjectOverviewEvent>()
-        // Unconfined so the collector is receiving before anything is sent down the rendezvous channel.
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.events.collect { events += it } }
 
-        viewModel.onAction(ProjectOverviewAction.OnReorderMove(fromId = "p4", toId = "p3"))
-        viewModel.onAction(ProjectOverviewAction.OnReorderCommit("p4"))
-        testScheduler.advanceUntilIdle()
+        viewModel.events.test {
+            viewModel.onAction(ProjectOverviewAction.OnReorderMove(fromId = "p4", toId = "p3"))
+            viewModel.onAction(ProjectOverviewAction.OnReorderCommit("p4"))
+            testScheduler.advanceUntilIdle()
+
+            assertEquals(
+                ProjectOverviewEvent.ReorderError(UiText.Resource(Res.string.error_disk_full)),
+                awaitItem()
+            )
+            expectNoEvents()
+        }
 
         // The snackbar must not contradict the list: both say the reorder did not happen.
         assertEquals(listOf("p3", "p4"), stateOf(viewModel).otherProjects.map { it.projectId })
-        assertEquals(listOf<ProjectOverviewEvent>(ProjectOverviewEvent.ReorderError), events)
+    }
+
+    @Test
+    fun loadProjectsFromServer_whenOffline_reportsNoInternet_ratherThanUnknown() = runTest(dispatcher) {
+        val repository = FakeProjectRepository(seededProjects()).apply {
+            fetchResult = Result.Error(DataError.Remote.NO_INTERNET)
+        }
+        val viewModel = createViewModel(repository)
+
+        viewModel.events.test {
+            startCollectingState(viewModel) // `state`'s `onStart` runs `loadProjectsFromServer()`.
+
+            // The user must be told the connection is the problem, not shown "an unknown error happened".
+            assertEquals(
+                ProjectOverviewEvent.Error(UiText.Resource(Res.string.error_no_internet)),
+                awaitItem()
+            )
+            expectNoEvents()
+        }
+
+        // A failed pull still has to clear the spinner, or the screen hangs on the loading state.
+        assertFalse(stateOf(viewModel).isLoading)
+    }
+
+    @Test
+    fun loadProjectsFromServer_whenItSucceeds_reportsNothing_andClearsLoading() = runTest(dispatcher) {
+        val viewModel = createViewModel(FakeProjectRepository(seededProjects()))
+
+        viewModel.events.test {
+            startCollectingState(viewModel)
+            expectNoEvents()
+        }
+
+        assertFalse(stateOf(viewModel).isLoading)
     }
 
     @Test
@@ -249,6 +306,7 @@ class ProjectOverviewViewModelTest {
 private class FakeProjectRepository(initial: List<Project>) : ProjectRepository {
     private val projectsFlow = MutableStateFlow(initial)
     var reorderResult: EmptyResult<DataError> = Result.Success(Unit)
+    var fetchResult: Result<List<Project>, DataError.Remote> = Result.Success(emptyList())
     val reorderCalls = mutableListOf<List<String>>()
     val pinCalls = mutableListOf<Pair<List<String>, Boolean>>()
 
@@ -259,7 +317,7 @@ private class FakeProjectRepository(initial: List<Project>) : ProjectRepository 
     override fun getActiveProjects(): Flow<List<Project>> = projectsFlow
         .map { projects -> projects.filter { !it.isArchived && !it.isFinished && it.trashedAt == null } }
 
-    override suspend fun fetchProjects(): EmptyResult<DataError> = Result.Success(Unit)
+    override suspend fun fetchProjects(): Result<List<Project>, DataError.Remote> = fetchResult
 
     override suspend fun reorderProjects(orderedProjectIds: List<String>): EmptyResult<DataError> {
         reorderCalls += orderedProjectIds

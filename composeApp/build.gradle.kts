@@ -123,6 +123,8 @@ kotlin {
             implementation(libs.kotlin.test)
             // Dispatchers.setMain, so ViewModels backed by viewModelScope are testable off-device.
             implementation(libs.kotlinx.coroutines.test)
+            // Ordered, suspending assertions on event flows; fails on unconsumed emissions.
+            implementation(libs.turbine)
         }
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)

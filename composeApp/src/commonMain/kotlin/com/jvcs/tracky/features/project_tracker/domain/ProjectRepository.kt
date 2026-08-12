@@ -13,7 +13,7 @@ interface ProjectRepository {
 
     fun getProjects(): Flow<List<Project>>
     fun getActiveProjects(): Flow<List<Project>>
-    suspend fun fetchProjects(): EmptyResult<DataError>
+    suspend fun fetchProjects(): Result<List<Project>, DataError.Remote>
     fun getArchivedProjects(): Flow<List<Project>>
     fun getTrashedProjects(): Flow<List<Project>>
     suspend fun getProjectById(projectId: String): Project?

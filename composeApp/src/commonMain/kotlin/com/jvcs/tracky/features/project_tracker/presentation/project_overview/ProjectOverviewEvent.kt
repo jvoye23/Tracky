@@ -9,8 +9,8 @@ sealed interface ProjectOverviewEvent {
     data class Error(val error: UiText): ProjectOverviewEvent
     data object ArchiveError: ProjectOverviewEvent
     data object PinError: ProjectOverviewEvent
-    data object AddToTrashError: ProjectOverviewEvent
-    data object ReorderError: ProjectOverviewEvent
+    data class AddToTrashError(val error: UiText): ProjectOverviewEvent
+    data class ReorderError(val error: UiText): ProjectOverviewEvent
     data class OnLogoutError(val error: UiText): ProjectOverviewEvent
     data object OnLogoutSuccess: ProjectOverviewEvent
 }

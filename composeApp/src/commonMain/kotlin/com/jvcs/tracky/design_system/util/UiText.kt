@@ -10,7 +10,16 @@ sealed interface UiText {
     class Resource(
         val id: StringResource,
         val args: Array<Any> = arrayOf()
-    ): UiText
+    ): UiText {
+        // Hand-written because an Array field makes a data class fall back to identity equality,
+        // which would make two UiTexts for the same string resource compare unequal.
+        override fun equals(other: Any?): Boolean =
+            this === other || (other is Resource && id == other.id && args.contentEquals(other.args))
+
+        override fun hashCode(): Int = 31 * id.hashCode() + args.contentHashCode()
+
+        override fun toString(): String = "Resource(id=$id, args=${args.contentToString()})"
+    }
 
     @Composable
     fun asString(): String {

@@ -29,6 +29,8 @@
     <string name="log_out">Log out</string>
     <string name="do_you_want_to_logout">Do you want to log out?</string>
     <string name="do_you_want_to_logout_desc">You will have to log in again to use the app.</string>
+    <string name="logout_not_possible">Logout not possible.</string>
+    <string name="logout_not_possible_desc">Logging out in offline mode is not possible.</string>
     <string name="submit">Submit</string>
     <string name="start_date">Start Date</string>
     <string name="last_active">Start Date</string>
@@ -59,6 +61,7 @@
     <string name="navigation_menu">Navigation menu</string>
     <string name="no_current_projects">No current projects</string>
     <string name="no_current_projects_subtitle">Create a new project to start tracking your time</string>
+    <string name="no_internet_connection">No internet connection / Offline mode</string>
 
 
     <!-- Auth -->

@@ -6,10 +6,12 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -93,6 +95,7 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.cancel
+import tracky.composeapp.generated.resources.close
 import tracky.composeapp.generated.resources.confirm
 import tracky.composeapp.generated.resources.delete_one_project_confirmation
 import tracky.composeapp.generated.resources.delete_project_title
@@ -107,9 +110,12 @@ import tracky.composeapp.generated.resources.error_archiving_projects
 import tracky.composeapp.generated.resources.error_pinning_projects
 import tracky.composeapp.generated.resources.error_reordering_projects
 import tracky.composeapp.generated.resources.log_out
+import tracky.composeapp.generated.resources.logout_not_possible
+import tracky.composeapp.generated.resources.logout_not_possible_desc
 import tracky.composeapp.generated.resources.new_project
 import tracky.composeapp.generated.resources.no_current_projects
 import tracky.composeapp.generated.resources.no_current_projects_subtitle
+import tracky.composeapp.generated.resources.no_internet_connection
 import tracky.composeapp.generated.resources.other
 import tracky.composeapp.generated.resources.pinned
 import tracky.composeapp.generated.resources.project_saved_successfully
@@ -135,7 +141,7 @@ fun ProjectOverviewScreenRoot(
             is ProjectOverviewEvent.Error -> {
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar(
-                        message = event.error.toString(),
+                        message = event.error.asStringAsync(),
                         duration = SnackbarDuration.Long
                     )
                 }
@@ -170,18 +176,16 @@ fun ProjectOverviewScreenRoot(
             }
             is ProjectOverviewEvent.AddToTrashError -> {
                 coroutineScope.launch {
-                    val errorMessage = getString(Res.string.error_add_to_trash)
                     snackbarHostState.showSnackbar(
-                        message = errorMessage,
+                        message = event.error.asStringAsync(),
                         duration = SnackbarDuration.Long
                     )
                 }
             }
             is ProjectOverviewEvent.ReorderError -> {
                 coroutineScope.launch {
-                    val errorMessage = getString(Res.string.error_reordering_projects)
                     snackbarHostState.showSnackbar(
-                        message = errorMessage,
+                        message = event.error.asStringAsync(),
                         duration = SnackbarDuration.Long
                     )
                 }
@@ -339,6 +343,23 @@ fun ProjectOverviewScreen(
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            //Internet status
+            if (!state.isOnline){
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.secondary)
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(Res.string.no_internet_connection),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondary
+                    )
+                }
+            }
             if (!state.isLoading && state.pinnedProjects.isEmpty() && state.otherProjects.isEmpty()){
                 EmptySection(
                     title = stringResource(Res.string.no_current_projects),
@@ -461,22 +482,27 @@ fun ProjectOverviewScreen(
                 },
                 title = {
                     Text(
-                        text = stringResource(Res.string.do_you_want_to_logout)
+                        text = if (state.isOnline) stringResource(Res.string.do_you_want_to_logout)
+                            else stringResource(Res.string.logout_not_possible)
                     )
                 },
                 text = {
                     Text(
-                        text = stringResource(Res.string.do_you_want_to_logout_desc)
+                        text = if (state.isOnline) stringResource(Res.string.do_you_want_to_logout_desc)
+                            else stringResource(Res.string.logout_not_possible_desc)
                     )
                 },
-                confirmButton = {
+                confirmButton = { if (state.isOnline)
                     TextButton(onClick = { onAction(ProjectOverviewAction.OnConfirmLogout) }) {
                         Text(text = stringResource(Res.string.confirm))
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { onAction(ProjectOverviewAction.OnDismissLogoutConfirmation) }) {
-                        Text(text = stringResource(Res.string.cancel))
+                        Text(
+                            text = if (state.isOnline) stringResource(Res.string.cancel)
+                                else stringResource(Res.string.close)
+                        )
                     }
                 }
             )
@@ -653,7 +679,8 @@ private fun ProjectOverviewDefaultPreview() {
             onAction = {},
             state = ProjectOverviewState(
                 projects = previewProjects(),
-                localUser = User(id = "123", username = "JoergVoye", email = "joerg@example.com", hasVerifiedEmail = true )
+                localUser = User(id = "123", username = "JoergVoye", email = "joerg@example.com", hasVerifiedEmail = true ),
+                isOnline = false
             ).withPreviewSections(),
             snackbarHostState = remember { SnackbarHostState() }
         )

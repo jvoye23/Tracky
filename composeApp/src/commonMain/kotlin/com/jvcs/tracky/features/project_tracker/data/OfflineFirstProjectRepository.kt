@@ -22,6 +22,8 @@ import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.core.domain.util.asEmptyDataResult
+import com.jvcs.tracky.core.domain.util.onFailure
+import com.jvcs.tracky.core.domain.util.onSuccess
 import com.jvcs.tracky.features.project_tracker.domain.LocalProjectDataSource
 import com.jvcs.tracky.features.project_tracker.domain.ProjectRepository
 import com.jvcs.tracky.features.project_tracker.domain.sortedByCustomOrder
@@ -50,15 +52,12 @@ class OfflineFirstProjectRepository(
 ): ProjectRepository, SyncRepository {
 
     // PULL: network → Room. The Room Flow the UI observes emits automatically.
-    override suspend fun fetchProjects(): EmptyResult<DataError> {
-        return when(val result = remoteProjectDataSource.getProjects()) {
-            is Result.Error -> result.asEmptyDataResult()
-            is Result.Success -> {
-                applicationScope.async {
-                    localProjectDataSource.upsertProjects(result.data).asEmptyDataResult()
-                }.await()
+    override suspend fun fetchProjects(): Result<List<Project>, DataError.Remote> {
+        return remoteProjectDataSource
+            .getProjects()
+            .onSuccess { projects ->
+                localProjectDataSource.upsertProjects(projects)
             }
-        }
     }
 
     override fun getProjects(): Flow<List<Project>> {
