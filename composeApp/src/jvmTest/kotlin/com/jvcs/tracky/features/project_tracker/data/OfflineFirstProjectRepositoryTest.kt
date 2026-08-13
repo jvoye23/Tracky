@@ -390,6 +390,229 @@ class OfflineFirstProjectRepositoryTest {
         assertEquals(Instant.fromEpochMilliseconds(1_000), local.sortIndexWriteTimestamps.single())
         assertEquals(Instant.fromEpochMilliseconds(1_000), remote.reorderTimestamps.single())
     }
+
+    // --- Task intervals ---------------------------------------------------------------------------
+
+    /** Local + remote wired together with one task "t1" under project "p1", timer stopped. */
+    private fun intervalFixture(): Quad {
+        val local = FakeLocalProjectDataSource().apply { seedTask("t1", "p1") }
+        return Quad(local, FakeRemoteProjectDataSource(), FakePendingSyncDao(), FakeSyncScheduler())
+    }
+
+    private data class Quad(
+        val local: FakeLocalProjectDataSource,
+        val remote: FakeRemoteProjectDataSource,
+        val dao: FakePendingSyncDao,
+        val scheduler: FakeSyncScheduler
+    )
+
+    private fun Quad.repository() = repo(local, remote, dao, scheduler)
+
+    @Test
+    fun startTask_postsTheNewIntervalToTheTasksRoute() = runBlocking {
+        val f = intervalFixture()
+
+        f.repository().startTask("t1")
+
+        assertEquals(listOf("i1"), f.remote.postedIntervalIds)
+        // The route needs the project id, which only the parent task knows.
+        assertEquals(listOf("p1/t1"), f.remote.intervalRoutes)
+        assertTrue(f.dao.getAllPendingOperations().isEmpty())
+    }
+
+    @Test
+    fun stopTask_putsTheClosedInterval() = runBlocking {
+        val f = intervalFixture()
+        val repository = f.repository()
+
+        repository.startTask("t1")
+        f.local.clock = Instant.fromEpochMilliseconds(70_000) // 60s after the default start
+        repository.stopTask("t1")
+
+        assertEquals(listOf("i1"), f.remote.updatedIntervalIds)
+        assertEquals(60_000L, f.local.intervals.getValue("i1").durationMillis)
+    }
+
+    @Test
+    fun startTask_queuesTheInterval_whenOffline() = runBlocking {
+        val f = intervalFixture()
+        f.remote.intervalPostFailWith = DataError.Remote.NO_INTERNET
+
+        f.repository().startTask("t1")
+
+        // Local write stands regardless — the user keeps tracking time.
+        assertNotNull(f.local.intervals["i1"])
+
+        val ops = f.dao.getAllPendingOperations()
+        assertEquals(1, ops.size)
+        assertEquals(PendingSyncEntity.ENTITY_INTERVAL, ops[0].entityType)
+        assertEquals(PendingSyncEntity.OP_CREATE, ops[0].operationType)
+        assertEquals("i1", ops[0].entityId)
+        // parentEntityId carries the TASK id for intervals; the project is resolved at drain time.
+        assertEquals("t1", ops[0].parentEntityId)
+        assertTrue(f.scheduler.scheduleCount > 0)
+    }
+
+    /**
+     * The task was created offline, so the server does not know it yet and answers 404. Queueing
+     * (rather than dropping) is what lets the FIFO drain push the task first and the interval after.
+     */
+    @Test
+    fun startTask_queuesTheInterval_whenTheTaskIsNotOnTheServerYet() = runBlocking {
+        val f = intervalFixture()
+        f.remote.intervalPostFailWith = DataError.Remote.NOT_FOUND
+
+        f.repository().startTask("t1")
+
+        val ops = f.dao.getAllPendingOperations()
+        assertEquals(1, ops.size)
+        assertEquals(PendingSyncEntity.ENTITY_INTERVAL, ops[0].entityType)
+        assertEquals(PendingSyncEntity.OP_CREATE, ops[0].operationType)
+    }
+
+    /** A 409 means the POST already landed and only its response was lost. */
+    @Test
+    fun startTask_retriesAsUpdate_whenTheServerReportsADuplicate() = runBlocking {
+        val f = intervalFixture()
+        f.remote.intervalPostFailWith = DataError.Remote.CONFLICT
+
+        f.repository().startTask("t1")
+
+        assertEquals(listOf("i1"), f.remote.updatedIntervalIds)
+        assertTrue(f.remote.postedIntervalIds.isEmpty())
+        assertTrue(f.dao.getAllPendingOperations().isEmpty())
+    }
+
+    @Test
+    fun syncPendingOperations_pushesQueuedInterval_andClearsQueue() = runBlocking {
+        val f = intervalFixture()
+        f.remote.intervalPostFailWith = DataError.Remote.NO_INTERNET
+        val repository = f.repository()
+
+        repository.startTask("t1")            // queued while offline
+        f.remote.intervalPostFailWith = null  // back online
+
+        repository.syncPendingOperations()
+
+        assertEquals(listOf("i1"), f.remote.postedIntervalIds)
+        assertTrue(f.dao.getAllPendingOperations().isEmpty())
+    }
+
+    @Test
+    fun syncPendingOperations_dropsQueuedInterval_whenItWasDeletedLocally() = runBlocking {
+        val f = intervalFixture()
+        f.remote.intervalPostFailWith = DataError.Remote.NO_INTERNET
+        val repository = f.repository()
+
+        repository.startTask("t1")
+        f.local.intervals.remove("i1")        // gone before the queue drained
+        f.remote.intervalPostFailWith = null
+
+        repository.syncPendingOperations()
+
+        assertTrue(f.remote.postedIntervalIds.isEmpty())
+        assertTrue(f.dao.getAllPendingOperations().isEmpty()) // dropped, not retried forever
+    }
+
+    @Test
+    fun syncPendingOperations_dropsQueuedInterval_whenItsTaskIsGone() = runBlocking {
+        val f = intervalFixture()
+        f.remote.intervalPostFailWith = DataError.Remote.NO_INTERNET
+        val repository = f.repository()
+
+        repository.startTask("t1")
+        f.local.tasks.remove("t1")            // server removed its intervals by cascade
+        f.remote.intervalPostFailWith = null
+
+        repository.syncPendingOperations()
+
+        assertTrue(f.remote.postedIntervalIds.isEmpty())
+        assertTrue(f.dao.getAllPendingOperations().isEmpty())
+    }
+
+    @Test
+    fun syncPendingOperations_retriesQueuedInterval_whenStillOffline() = runBlocking {
+        val f = intervalFixture()
+        f.remote.intervalPostFailWith = DataError.Remote.NO_INTERNET
+        val repository = f.repository()
+
+        repository.startTask("t1")
+        repository.syncPendingOperations() // still offline
+
+        assertEquals(1, f.dao.getAllPendingOperations().size) // left queued for the next attempt
+    }
+
+    @Test
+    fun deleteTaskInterval_deletesLocallyAndRemotely() = runBlocking {
+        val f = intervalFixture()
+        val repository = f.repository()
+        repository.startTask("t1")
+
+        repository.deleteTaskInterval("i1")
+
+        assertNull(f.local.intervals["i1"])
+        assertEquals(listOf("i1"), f.remote.deletedIntervalIds)
+    }
+
+    @Test
+    fun deleteTaskInterval_dropsThePendingCreate_andSkipsTheServer() = runBlocking {
+        val f = intervalFixture()
+        f.remote.intervalPostFailWith = DataError.Remote.NO_INTERNET
+        val repository = f.repository()
+
+        repository.startTask("t1")            // create is queued, never reached the server
+        repository.deleteTaskInterval("i1")
+
+        // Nothing to delete server-side — the interval never got there.
+        assertTrue(f.remote.deletedIntervalIds.isEmpty())
+        assertTrue(f.dao.getAllPendingOperations().isEmpty())
+    }
+
+    @Test
+    fun deleteTaskInterval_queuesTheDelete_whenOffline() = runBlocking {
+        val f = intervalFixture()
+        val repository = f.repository()
+        repository.startTask("t1")                                        // succeeds online
+        f.remote.intervalDeleteFailWith = DataError.Remote.NO_INTERNET
+
+        repository.deleteTaskInterval("i1")
+
+        val ops = f.dao.getAllPendingOperations()
+        assertEquals(1, ops.size)
+        assertEquals(PendingSyncEntity.ENTITY_INTERVAL, ops[0].entityType)
+        assertEquals(PendingSyncEntity.OP_DELETE, ops[0].operationType)
+        assertEquals("t1", ops[0].parentEntityId)
+    }
+
+    @Test
+    fun syncPendingOperations_pushesQueuedIntervalDelete() = runBlocking {
+        val f = intervalFixture()
+        val repository = f.repository()
+        repository.startTask("t1")
+        f.remote.intervalDeleteFailWith = DataError.Remote.NO_INTERNET
+        repository.deleteTaskInterval("i1")
+
+        f.remote.intervalDeleteFailWith = null
+        repository.syncPendingOperations()
+
+        // The interval row is gone locally, so the delete has to survive on the queued task id alone.
+        assertEquals(listOf("i1"), f.remote.deletedIntervalIds)
+        assertTrue(f.dao.getAllPendingOperations().isEmpty())
+    }
+
+    @Test
+    fun upsertTaskInterval_updatesAnExistingIntervalRatherThanCreatingIt() = runBlocking {
+        val f = intervalFixture()
+        val repository = f.repository()
+        repository.startTask("t1")
+
+        repository.upsertTaskInterval(
+            f.local.intervals.getValue("i1").copy(durationMillis = 5_000)
+        )
+
+        assertEquals(listOf("i1"), f.remote.updatedIntervalIds)
+        assertEquals(listOf("i1"), f.remote.postedIntervalIds) // only the original startTask create
+    }
 }
 
 // --- Fakes ----------------------------------------------------------------------------------------
@@ -485,6 +708,8 @@ private class FakeLocalProjectDataSource : LocalProjectDataSource {
 
     override suspend fun getOpenIntervalByTaskId(taskId: String): TaskInterval? =
         intervals.values.firstOrNull { it.parentSessionId == taskId && it.endDateTimeUtc == null }
+
+    override suspend fun getIntervalById(intervalId: String): TaskInterval? = intervals[intervalId]
 
     override suspend fun deleteTaskInterval(intervalId: String): EmptyResult<DataError> {
         deletedIntervalIds += intervalId
