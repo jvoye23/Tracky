@@ -38,10 +38,15 @@ data class ProjectTaskDto(
 
 @Serializable
 data class TaskIntervalDto(
-    val intervalId: String,
-    val parentSessionId: String,
+    // The server names these "id" and "parentTaskId"; the Kotlin side keeps the domain's names.
+    // Without the @SerialName mapping every non-empty intervals array fails to decode.
+    @SerialName("id") val intervalId: String,
+    @SerialName("parentTaskId") val parentSessionId: String,
     val startDateTimeUtc: String,
-    val endDateTimeUtc: String?,
-    val durationMillis: Long
-
+    val endDateTimeUtc: String? = null,
+    val durationMillis: Long = 0L,
+    // Stamped by the server but deliberately not carried into the domain: intervals resolve
+    // conflicts by retrying a duplicate CREATE as an UPDATE, not by last-write-wins, so there is
+    // nothing local to compare it against. See TaskInterval.ownUpdatedAt.
+    @SerialName("updatedAtUtc") val updatedAt: String? = null
 )
