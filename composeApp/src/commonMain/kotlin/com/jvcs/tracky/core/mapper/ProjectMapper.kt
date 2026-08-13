@@ -4,8 +4,10 @@ package com.jvcs.tracky.core.mapper
 
 import com.jvcs.tracky.core.data.networking.CreateProjectRequest
 import com.jvcs.tracky.core.data.networking.CreateProjectTaskRequest
+import com.jvcs.tracky.core.data.networking.CreateTaskIntervalRequest
 import com.jvcs.tracky.core.data.networking.UpdateProjectRequest
 import com.jvcs.tracky.core.data.networking.UpdateProjectTaskRequest
+import com.jvcs.tracky.core.data.networking.UpdateTaskIntervalRequest
 import com.jvcs.tracky.core.database.entity.ProjectEntity
 import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
@@ -189,5 +191,22 @@ fun ProjectTask.toUpdateProjectTaskRequest(): UpdateProjectTaskRequest {
         endDateTimeUtc = endDateTimeUtc?.toString(),
         finished = isFinished,
         timerRunning = isTimerRunning,
+    )
+}
+
+fun TaskInterval.toCreateTaskIntervalRequest(): CreateTaskIntervalRequest {
+    return CreateTaskIntervalRequest(
+        id = intervalId,
+        startDateTimeUtc = startDateTimeUtc.toString(),
+        endDateTimeUtc = endDateTimeUtc?.toString(),
+        durationMillis = durationMillis,
+    )
+}
+
+fun TaskInterval.toUpdateTaskIntervalRequest(): UpdateTaskIntervalRequest {
+    return UpdateTaskIntervalRequest(
+        startDateTimeUtc = startDateTimeUtc.toString(),
+        endDateTimeUtc = endDateTimeUtc?.toString(),
+        durationMillis = durationMillis,
     )
 }

@@ -139,9 +139,10 @@ class RoomLocalProjectDataSource (
     }
 
     override suspend fun deleteAllProjects() = withContext(dbWriteDispatcher) {
+        // task_intervals has no foreign key onto project_records, so dropping the projects would
+        // otherwise strand every interval row.
         projectDao.deleteAllTaskIntervals()
         projectDao.deleteAllProjects()
-        projectDao.deleteAllTaskIntervals()
     }
 
     override suspend fun updateTaskDuration(
@@ -172,24 +173,45 @@ class RoomLocalProjectDataSource (
         return projectDao.getOpenIntervalBySessionId(taskId)?.toSessionInterval()
     }
 
-    override suspend fun startTask(taskId: String) = withContext(dbWriteDispatcher) {
-        val now = timeProvider.nowInstant
-        val interval = TaskIntervalEntity(
-            intervalId = Uuid.random().toString(),
-            parentTaskId = taskId,
-            startDateTimeEpochMs = now.toEpochMilliseconds(),
-            endDateTimeEpochMs = null,
-            durationMillis = 0L
-        )
-        projectDao.upsertTaskInterval(interval)
-        projectDao.updateSessionTimerStatus(taskId, true)
-    }
-
-    override suspend fun stopTask(taskId: String): EmptyResult<DataError.Local>  {
+    override suspend fun deleteTaskInterval(intervalId: String): EmptyResult<DataError> {
         return try {
             withContext(dbWriteDispatcher) {
+                projectDao.deleteTaskInterval(intervalId)
+            }
+            Result.Success(Unit)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Result.Error(DataError.Local.DISK_FULL)
+        }
+    }
+
+    override suspend fun startTask(taskId: String): Result<TaskInterval, DataError.Local> {
+        return try {
+            val interval = withContext(dbWriteDispatcher) {
+                val now = timeProvider.nowInstant
+                val interval = TaskIntervalEntity(
+                    intervalId = Uuid.random().toString(),
+                    parentTaskId = taskId,
+                    startDateTimeEpochMs = now.toEpochMilliseconds(),
+                    endDateTimeEpochMs = null,
+                    durationMillis = 0L
+                )
+                projectDao.upsertTaskInterval(interval)
+                projectDao.updateSessionTimerStatus(taskId, true)
+                interval
+            }
+            Result.Success(interval.toSessionInterval())
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Result.Error(DataError.Local.DISK_FULL)
+        }
+    }
+
+    override suspend fun stopTask(taskId: String): Result<TaskInterval?, DataError.Local>  {
+        return try {
+            val closedInterval = withContext(dbWriteDispatcher) {
                 val openInterval = projectDao.getOpenIntervalBySessionId(taskId)
-                if (openInterval != null) {
+                val updatedInterval = if (openInterval != null) {
                     val now = timeProvider.nowInstant
                     val startInstant = Instant.fromEpochMilliseconds(openInterval.startDateTimeEpochMs)
                     val duration = (now - startInstant).inWholeMilliseconds
@@ -200,10 +222,12 @@ class RoomLocalProjectDataSource (
                     projectDao.upsertTaskInterval(updatedInterval)
 
                     projectDao.addTaskDuration(taskId, duration)
-                }
+                    updatedInterval
+                } else null
                 projectDao.updateSessionTimerStatus(taskId, false)
+                updatedInterval
             }
-            Result.Success(Unit)
+            Result.Success(closedInterval?.toSessionInterval())
         } catch (e: Exception) {
             if(e is CancellationException) throw e
             Result.Error(DataError.Local.DISK_FULL)

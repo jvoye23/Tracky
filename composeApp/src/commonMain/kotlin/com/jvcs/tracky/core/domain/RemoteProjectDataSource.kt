@@ -2,6 +2,7 @@ package com.jvcs.tracky.core.domain
 
 import com.jvcs.tracky.core.domain.model.Project
 import com.jvcs.tracky.core.domain.model.ProjectTask
+import com.jvcs.tracky.core.domain.model.TaskInterval
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
@@ -18,6 +19,27 @@ interface RemoteProjectDataSource {
     suspend fun postTaskByProjectId(projectId: String, task: ProjectTask): Result<ProjectTask, DataError.Remote>
     suspend fun updateTaskByProjectId(projectId: String, task: ProjectTask): Result<ProjectTask, DataError.Remote>
     suspend fun deleteTask(projectId: String, taskId: String): EmptyResult<DataError.Remote>
+
+    // Intervals are written through their own endpoints — the task create/update bodies do not
+    // carry them (see Requirements/api/api_endpoints.md). Reads come back nested inside
+    // GET /api/projects, so there is deliberately no interval read method here.
+    suspend fun postInterval(
+        projectId: String,
+        taskId: String,
+        interval: TaskInterval
+    ): Result<TaskInterval, DataError.Remote>
+
+    suspend fun updateInterval(
+        projectId: String,
+        taskId: String,
+        interval: TaskInterval
+    ): Result<TaskInterval, DataError.Remote>
+
+    suspend fun deleteInterval(
+        projectId: String,
+        taskId: String,
+        intervalId: String
+    ): EmptyResult<DataError.Remote>
 }
 
 

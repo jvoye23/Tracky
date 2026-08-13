@@ -90,6 +90,14 @@ interface ProjectDao {
     @Upsert
     suspend fun upsertTaskInterval(interval: TaskIntervalEntity)
 
+    // Needed by the pending-sync drain: a queued interval op stores only the interval id, so the
+    // row has to be re-read from local state when it is finally pushed.
+    @Query("SELECT * FROM task_intervals WHERE intervalId = :intervalId")
+    suspend fun getIntervalById(intervalId: String): TaskIntervalEntity?
+
+    @Query("DELETE FROM task_intervals WHERE intervalId = :intervalId")
+    suspend fun deleteTaskInterval(intervalId: String)
+
     @Query("DELETE FROM task_intervals WHERE parentTaskId = :taskId")
     suspend fun deleteIntervalsByTaskId(taskId: String)
 
