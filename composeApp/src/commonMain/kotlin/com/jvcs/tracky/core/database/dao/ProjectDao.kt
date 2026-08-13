@@ -11,6 +11,8 @@ import com.jvcs.tracky.core.database.relation.ProjectSortIndexEntity
 import com.jvcs.tracky.core.database.relation.ProjectWithTasksEntity
 import com.jvcs.tracky.core.database.relation.TaskWithIntervals
 import com.jvcs.tracky.core.domain.model.ProjectStatus
+import com.jvcs.tracky.core.domain.sync.serverWinsOnPull
+import com.jvcs.tracky.core.domain.sync.serverWinsOnPullForInterval
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -20,6 +22,40 @@ interface ProjectDao {
 
     @Upsert
     suspend fun upsertProject(project: ProjectEntity)
+
+    /**
+     * Writes a whole server tree (projects + their tasks + their intervals) in one transaction.
+     *
+     * `GET /api/projects` returns everything the user owns, so this is what rehydrates a fresh
+     * install. Rows are merged rather than blindly overwritten — see [serverWinsOnPull] — and
+     * nothing is ever deleted: a local row the server does not know about is either still queued
+     * for upload or was created offline, and must survive the pull either way.
+     */
+    @Transaction
+    suspend fun upsertServerTree(
+        projects: List<ProjectEntity>,
+        tasks: List<ProjectTaskEntity>,
+        intervals: List<TaskIntervalEntity>
+    ) {
+        projects.forEach { incoming ->
+            val local = getProjectById(incoming.projectId)
+            if (serverWinsOnPull(local?.updatedAtEpochMs, incoming.updatedAtEpochMs)) {
+                upsertProject(incoming)
+            }
+        }
+        tasks.forEach { incoming ->
+            val local = getTaskById(incoming.recordId)
+            if (serverWinsOnPull(local?.updatedAtEpochMs, incoming.updatedAtEpochMs)) {
+                upsertProjectRecord(incoming)
+            }
+        }
+        intervals.forEach { incoming ->
+            val local = getIntervalById(incoming.intervalId)
+            if (local == null || serverWinsOnPullForInterval(local.endDateTimeEpochMs)) {
+                upsertTaskInterval(incoming)
+            }
+        }
+    }
 
     @Query("SELECT * FROM projects ORDER BY projectId ASC")
     fun getProjects(): Flow<List<ProjectEntity>>
@@ -76,6 +112,9 @@ interface ProjectDao {
 
     @Upsert
     suspend fun upsertProjectRecord(record: ProjectTaskEntity)
+
+    @Query("SELECT * FROM project_records WHERE recordId = :recordId")
+    suspend fun getTaskById(recordId: String): ProjectTaskEntity?
 
     @Query("DELETE FROM project_records WHERE recordId = :recordId")
     suspend fun deleteProjectRecord(recordId: String)

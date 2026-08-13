@@ -9,6 +9,8 @@ import com.jvcs.tracky.core.domain.model.Project
 import com.jvcs.tracky.core.domain.model.ProjectTask
 import com.jvcs.tracky.core.domain.model.TaskInterval
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
+import com.jvcs.tracky.core.domain.sync.serverWinsOnPull
+import com.jvcs.tracky.core.domain.sync.serverWinsOnPullForInterval
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
@@ -391,6 +393,97 @@ class OfflineFirstProjectRepositoryTest {
         assertEquals(Instant.fromEpochMilliseconds(1_000), remote.reorderTimestamps.single())
     }
 
+    // --- Pull path --------------------------------------------------------------------------------
+
+    private fun serverTask(
+        taskId: String,
+        projectId: String,
+        updatedAt: Long?,
+        intervals: List<TaskInterval> = emptyList()
+    ) = ProjectTask(
+        projectTaskId = taskId,
+        title = "task-$taskId",
+        durationMillis = 0,
+        startDateTimeUtc = Instant.fromEpochMilliseconds(0),
+        parentProjectId = projectId,
+        isTimerRunning = false,
+        intervals = intervals,
+        ownUpdatedAt = updatedAt?.let { Instant.fromEpochMilliseconds(it) },
+    )
+
+    private fun serverInterval(intervalId: String, taskId: String, end: Long?) = TaskInterval(
+        intervalId = intervalId,
+        parentSessionId = taskId,
+        startDateTimeUtc = Instant.fromEpochMilliseconds(0),
+        endDateTimeUtc = end?.let { Instant.fromEpochMilliseconds(it) },
+        durationMillis = end ?: 0L,
+    )
+
+    @Test
+    fun fetchProjects_persistsNestedTasksAndIntervals() = runBlocking {
+        val f = Quad(FakeLocalProjectDataSource(), FakeRemoteProjectDataSource(), FakePendingSyncDao(), FakeSyncScheduler())
+        f.remote.projectsToReturn = listOf(
+            project("p1").copy(
+                ownUpdatedAt = Instant.fromEpochMilliseconds(100),
+                projectTasks = listOf(
+                    serverTask("t1", "p1", updatedAt = 100, intervals = listOf(serverInterval("i1", "t1", end = 60_000)))
+                )
+            )
+        )
+
+        f.repository().fetchProjects()
+
+        // This is the fresh-install case: tracked time has to come back, not just the project row.
+        assertNotNull(f.local.projects["p1"])
+        assertNotNull(f.local.tasks["t1"])
+        assertEquals(60_000L, f.local.intervals.getValue("i1").durationMillis)
+    }
+
+    @Test
+    fun fetchProjects_keepsALocalTaskEditThatIsNewerThanTheServer() = runBlocking {
+        val f = Quad(FakeLocalProjectDataSource(), FakeRemoteProjectDataSource(), FakePendingSyncDao(), FakeSyncScheduler())
+        f.local.tasks["t1"] = serverTask("t1", "p1", updatedAt = 500).copy(title = "edited offline")
+        f.remote.projectsToReturn = listOf(
+            project("p1").copy(projectTasks = listOf(serverTask("t1", "p1", updatedAt = 100)))
+        )
+
+        f.repository().fetchProjects()
+
+        // Overwriting here would also feed the stale title back to the server on the next drain.
+        assertEquals("edited offline", f.local.tasks.getValue("t1").title)
+    }
+
+    @Test
+    fun fetchProjects_doesNotCloseAnIntervalThatIsStillRunningLocally() = runBlocking {
+        val f = Quad(FakeLocalProjectDataSource(), FakeRemoteProjectDataSource(), FakePendingSyncDao(), FakeSyncScheduler())
+        f.local.intervals["i1"] = serverInterval("i1", "t1", end = null) // timer running on this device
+        f.remote.projectsToReturn = listOf(
+            project("p1").copy(
+                projectTasks = listOf(
+                    serverTask("t1", "p1", updatedAt = 100, intervals = listOf(serverInterval("i1", "t1", end = 60_000)))
+                )
+            )
+        )
+
+        f.repository().fetchProjects()
+
+        assertNull(f.local.intervals.getValue("i1").endDateTimeUtc)
+    }
+
+    @Test
+    fun fetchProjects_leavesLocalRowsTheServerDoesNotKnowAbout() = runBlocking {
+        val f = Quad(FakeLocalProjectDataSource(), FakeRemoteProjectDataSource(), FakePendingSyncDao(), FakeSyncScheduler())
+        f.local.tasks["local-only"] = serverTask("local-only", "p1", updatedAt = null)
+        f.local.intervals["i-local"] = serverInterval("i-local", "local-only", end = 1_000)
+        f.remote.projectsToReturn = listOf(project("p1").copy(projectTasks = emptyList()))
+
+        f.repository().fetchProjects()
+
+        // Created offline and still queued for upload — a pull must never delete these.
+        assertTrue(f.local.tasks.containsKey("local-only"))
+        assertTrue(f.local.intervals.containsKey("i-local"))
+    }
+
     // --- Task intervals ---------------------------------------------------------------------------
 
     /** Local + remote wired together with one task "t1" under project "p1", timer stopped. */
@@ -662,8 +755,33 @@ private class FakeLocalProjectDataSource : LocalProjectDataSource {
         projects[project.projectId] = project; emit(); return Result.Success(Unit)
     }
 
+    /**
+     * Stands in for ProjectDao.upsertServerTree: writes the whole tree and applies the same merge
+     * rules, so a pull in a test can clobber (or refuse to clobber) local state the way it would
+     * against a real database.
+     */
     override suspend fun upsertProjects(projects: List<Project>): EmptyResult<DataError> {
-        projects.forEach { this.projects[it.projectId] = it }; emit(); return Result.Success(Unit)
+        projects.forEach { incoming ->
+            if (serverWinsOnPull(this.projects[incoming.projectId]?.ownUpdatedAt?.toEpochMilliseconds(),
+                    incoming.ownUpdatedAt?.toEpochMilliseconds())) {
+                this.projects[incoming.projectId] = incoming
+            }
+        }
+        val incomingTasks = projects.flatMap { it.projectTasks.orEmpty() }
+        incomingTasks.forEach { incoming ->
+            if (serverWinsOnPull(tasks[incoming.projectTaskId]?.ownUpdatedAt?.toEpochMilliseconds(),
+                    incoming.ownUpdatedAt?.toEpochMilliseconds())) {
+                tasks[incoming.projectTaskId] = incoming
+            }
+        }
+        incomingTasks.flatMap { it.intervals }.forEach { incoming ->
+            val local = intervals[incoming.intervalId]
+            if (local == null || serverWinsOnPullForInterval(local.endDateTimeUtc?.toEpochMilliseconds())) {
+                intervals[incoming.intervalId] = incoming
+            }
+        }
+        emit()
+        return Result.Success(Unit)
     }
 
     override suspend fun upsertProjectTask(projectTask: ProjectTask): EmptyResult<DataError> {
@@ -755,8 +873,11 @@ private class FakeRemoteProjectDataSource : RemoteProjectDataSource {
     val reorderCalls = mutableListOf<Map<String, Long>>()
     val reorderTimestamps = mutableListOf<Instant>()
 
+    /** What GET /api/projects hands back — the whole tree, tasks and intervals included. */
+    var projectsToReturn: List<Project> = emptyList()
+
     override suspend fun getProjects(): Result<List<Project>, DataError.Remote> =
-        failWith?.let { Result.Error(it) } ?: Result.Success(emptyList())
+        failWith?.let { Result.Error(it) } ?: Result.Success(projectsToReturn)
 
     override suspend fun postProject(project: Project): Result<Project, DataError.Remote> {
         failWith?.let { return Result.Error(it) }
