@@ -3,9 +3,16 @@
 package com.jvcs.tracky.core.domain.model
 
 
-import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
+
+interface Timestamped {
+    val ownUpdatedAt: Instant?
+    val children: List<Timestamped> get() = emptyList()
+    val lastUpdatedAt: Instant?
+        get() = (children.mapNotNull { it.lastUpdatedAt } +
+                listOfNotNull(ownUpdatedAt)).maxOrNull()
+}
 
 data class Project(
     val projectId: String,
@@ -21,14 +28,12 @@ data class Project(
     val isArchived: Boolean = false,
     val trashedAt: Instant? = null,
     val isPinned: Boolean = false,
-    val updatedAt: Instant? = null,
+    override val ownUpdatedAt: Instant? = null,
     val sortIndex: Long? = null
-)
-
-data class ProjectWithTask(
-    val project: Project,
-    val projectTasks: List<ProjectTask>
-)
+) : Timestamped {
+    // null projectTasks means "not loaded" (see ProjectEntity.toProject), not "no tasks".
+    override val children: List<Timestamped> get() = projectTasks.orEmpty()
+}
 
 data class ProjectTask(
     val projectTaskId: String,
@@ -40,8 +45,10 @@ data class ProjectTask(
     val parentProjectId: String,
     val isTimerRunning: Boolean,
     val intervals: List<TaskInterval> = emptyList(),
-    val updatedAt: Instant? = null
-)
+    override val ownUpdatedAt: Instant? = null
+) : Timestamped {
+    override val children: List<Timestamped> get() = intervals
+}
 
 data class TaskInterval(
     val intervalId: String,
@@ -49,7 +56,11 @@ data class TaskInterval(
     val startDateTimeUtc: Instant,
     val endDateTimeUtc: Instant?,
     val durationMillis: Long
-)
+) : Timestamped {
+    // Intervals carry no timestamp of their own: they are never synced remotely and the server
+    // returns them empty, so there is nothing to stamp yet.
+    override val ownUpdatedAt: Instant? get() = null
+}
 
 enum class ProjectStatus {
     ACTIVE,

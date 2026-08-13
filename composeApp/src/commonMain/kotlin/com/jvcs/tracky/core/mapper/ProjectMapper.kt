@@ -31,7 +31,7 @@ fun Project.toProjectEntity(): ProjectEntity {
         isArchived = isArchived,
         trashedAtEpochMs = trashedAt?.toEpochMilliseconds(),
         isPinned = isPinned,
-        updatedAtEpochMs = updatedAt?.toEpochMilliseconds(),
+        updatedAtEpochMs = ownUpdatedAt?.toEpochMilliseconds(),
         sortIndex = sortIndex,
     )
 }
@@ -50,7 +50,7 @@ fun ProjectEntity.toProject(): Project {
         isArchived = isArchived,
         trashedAt = trashedAtEpochMs?.let(Instant::fromEpochMilliseconds),
         isPinned = isPinned,
-        updatedAt = updatedAtEpochMs?.let(Instant::fromEpochMilliseconds),
+        ownUpdatedAt = updatedAtEpochMs?.let(Instant::fromEpochMilliseconds),
         sortIndex = sortIndex,
     )
 }
@@ -70,7 +70,7 @@ fun ProjectWithTasksEntity.toProject(): Project {
         isArchived = project.isArchived,
         trashedAt = project.trashedAtEpochMs?.let(Instant::fromEpochMilliseconds),
         isPinned = project.isPinned,
-        updatedAt = project.updatedAtEpochMs?.let(Instant::fromEpochMilliseconds),
+        ownUpdatedAt = project.updatedAtEpochMs?.let(Instant::fromEpochMilliseconds),
         sortIndex = project.sortIndex,
     )
 }
@@ -85,7 +85,7 @@ fun ProjectTaskEntity.toProjectSession(): ProjectTask {
         isFinished = isFinished,
         parentProjectId = parentProjectId,
         isTimerRunning = isTimerRunning,
-        updatedAt = updatedAtEpochMs?.let(Instant::fromEpochMilliseconds),
+        ownUpdatedAt = updatedAtEpochMs?.let(Instant::fromEpochMilliseconds),
     )
 }
 
@@ -100,7 +100,7 @@ fun TaskWithIntervals.toProjectSession(): ProjectTask {
         parentProjectId = task.parentProjectId,
         isTimerRunning = task.isTimerRunning,
         intervals = intervals.map { it.toSessionInterval() },
-        updatedAt = task.updatedAtEpochMs?.let(Instant::fromEpochMilliseconds),
+        ownUpdatedAt = task.updatedAtEpochMs?.let(Instant::fromEpochMilliseconds),
     )
 }
 
@@ -114,7 +114,7 @@ fun ProjectTask.toProjectSessionEntity(): ProjectTaskEntity {
         endDateTimeEpochMs = endDateTimeUtc?.toEpochMilliseconds(),
         isFinished = isFinished,
         isTimerRunning = isTimerRunning,
-        updatedAtEpochMs = updatedAt?.toEpochMilliseconds(),
+        updatedAtEpochMs = ownUpdatedAt?.toEpochMilliseconds(),
     )
 }
 
@@ -146,7 +146,7 @@ fun Project.toCreateProjectRequest(): CreateProjectRequest {
         color = colorArgb ?: 0,
         startDateTimeUtc = startDateTimeUtc.toString(),
         useLightTextColor = useLightTextColor,
-        updatedAtUtc = updatedAt?.toString(),
+        updatedAtUtc = ownUpdatedAt?.toString(),
         sortIndex = sortIndex,
     )
 }
@@ -164,7 +164,7 @@ fun Project.toUpdateProjectRequest(): UpdateProjectRequest {
         isPinned = isPinned,
         isFinished = isFinished,
         isArchived = isArchived,
-        updatedAtUtc = updatedAt?.toString(),
+        updatedAtUtc = ownUpdatedAt?.toString(),
         sortIndex = sortIndex,
     )
 }

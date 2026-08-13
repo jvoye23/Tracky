@@ -139,7 +139,9 @@ class RoomLocalProjectDataSource (
     }
 
     override suspend fun deleteAllProjects() = withContext(dbWriteDispatcher) {
+        projectDao.deleteAllTaskIntervals()
         projectDao.deleteAllProjects()
+        projectDao.deleteAllTaskIntervals()
     }
 
     override suspend fun updateTaskDuration(
@@ -183,21 +185,29 @@ class RoomLocalProjectDataSource (
         projectDao.updateSessionTimerStatus(taskId, true)
     }
 
-    override suspend fun stopTask(taskId: String) = withContext(dbWriteDispatcher) {
-        val openInterval = projectDao.getOpenIntervalBySessionId(taskId)
-        if (openInterval != null) {
-            val now = timeProvider.nowInstant
-            val startInstant = Instant.fromEpochMilliseconds(openInterval.startDateTimeEpochMs)
-            val duration = (now - startInstant).inWholeMilliseconds
-            val updatedInterval = openInterval.copy(
-                endDateTimeEpochMs = now.toEpochMilliseconds(),
-                durationMillis = duration
-            )
-            projectDao.upsertTaskInterval(updatedInterval)
+    override suspend fun stopTask(taskId: String): EmptyResult<DataError.Local>  {
+        return try {
+            withContext(dbWriteDispatcher) {
+                val openInterval = projectDao.getOpenIntervalBySessionId(taskId)
+                if (openInterval != null) {
+                    val now = timeProvider.nowInstant
+                    val startInstant = Instant.fromEpochMilliseconds(openInterval.startDateTimeEpochMs)
+                    val duration = (now - startInstant).inWholeMilliseconds
+                    val updatedInterval = openInterval.copy(
+                        endDateTimeEpochMs = now.toEpochMilliseconds(),
+                        durationMillis = duration
+                    )
+                    projectDao.upsertTaskInterval(updatedInterval)
 
-            projectDao.addTaskDuration(taskId, duration)
+                    projectDao.addTaskDuration(taskId, duration)
+                }
+                projectDao.updateSessionTimerStatus(taskId, false)
+            }
+            Result.Success(Unit)
+        } catch (e: Exception) {
+            if(e is CancellationException) throw e
+            Result.Error(DataError.Local.DISK_FULL)
         }
-        projectDao.updateSessionTimerStatus(taskId, false)
     }
 
     override suspend fun updateTaskTitle(taskId: String, title: String) = withContext(dbWriteDispatcher) {

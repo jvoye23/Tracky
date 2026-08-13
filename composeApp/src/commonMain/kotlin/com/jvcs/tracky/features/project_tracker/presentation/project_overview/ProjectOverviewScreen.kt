@@ -46,6 +46,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.material3.adaptive.currentWindowSize
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -370,20 +372,49 @@ fun ProjectOverviewScreen(
                         .padding(horizontal = 8.dp)
                 )
             } else {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 10.dp)
-                        .testTag("project_overview"),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                PullToRefreshBox(
+                    isRefreshing = state.isRefreshing,
+                    onRefresh = {
+                        onAction(ProjectOverviewAction.OnPullToRefresh)
+                    },
+                    modifier = Modifier.fillMaxSize(),
                 ) {
-                    if (pinnedItems.isNotEmpty()) {
-                        item {
-                            ProjectSectionHeader(text = stringResource(Res.string.pinned))
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 10.dp)
+                            .testTag("project_overview"),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (pinnedItems.isNotEmpty()) {
+                            item {
+                                ProjectSectionHeader(text = stringResource(Res.string.pinned))
+                            }
+                            items(
+                                items = pinnedItems,
+                                key = { it.projectId }
+                            ) { item ->
+                                ProjectListCard(
+                                    item = item,
+                                    state = state,
+                                    onAction = onAction,
+                                    reorderEnabled = reorderEnabled,
+                                    dragDropState = dragDropState
+                                )
+                            }
                         }
+
+                        if (otherItems.isNotEmpty()) {
+                            item {
+                                ProjectSectionHeader(
+                                    text = if (state.searchQuery.isEmpty()) stringResource(Res.string.other) else stringResource(Res.string.search_results)
+                                )
+                            }
+                        }
+
                         items(
-                            items = pinnedItems,
+                            items = otherItems,
                             key = { it.projectId }
                         ) { item ->
                             ProjectListCard(
@@ -396,26 +427,6 @@ fun ProjectOverviewScreen(
                         }
                     }
 
-                    if (otherItems.isNotEmpty()) {
-                        item {
-                            ProjectSectionHeader(
-                                text = if (state.searchQuery.isEmpty()) stringResource(Res.string.other) else stringResource(Res.string.search_results)
-                            )
-                        }
-                    }
-
-                    items(
-                        items = otherItems,
-                        key = { it.projectId }
-                    ) { item ->
-                        ProjectListCard(
-                            item = item,
-                            state = state,
-                            onAction = onAction,
-                            reorderEnabled = reorderEnabled,
-                            dragDropState = dragDropState
-                        )
-                    }
                 }
             }
         }

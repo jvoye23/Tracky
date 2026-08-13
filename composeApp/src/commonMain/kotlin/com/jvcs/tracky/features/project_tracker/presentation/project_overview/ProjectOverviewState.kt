@@ -27,4 +27,5 @@ data class ProjectOverviewState(
     val isLoggingOut: Boolean = false,
     val showLogoutConfirmation: Boolean = false,
     val isOnline: Boolean = true,
+    val isRefreshing: Boolean = false
 )
