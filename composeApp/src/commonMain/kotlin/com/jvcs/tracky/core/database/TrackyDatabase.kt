@@ -3,7 +3,6 @@ package com.jvcs.tracky.core.database
 import androidx.room.ConstructedBy
 import androidx.room.Database
 import androidx.room.RoomDatabase
-import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.execSQL
@@ -23,7 +22,6 @@ import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
     ],
     version = 12,
 )
-@TypeConverters(RoomConverters::class)
 @ConstructedBy(TrackyDatabaseConstructor::class)
 abstract class TrackyDatabase: RoomDatabase() {
     abstract val projectDao: ProjectDao

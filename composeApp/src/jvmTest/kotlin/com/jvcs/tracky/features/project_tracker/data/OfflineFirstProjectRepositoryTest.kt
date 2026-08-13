@@ -372,7 +372,7 @@ class OfflineFirstProjectRepositoryTest {
 
         repo(local, remote, dao, scheduler, time).upsertProject(project("p1"))
 
-        assertEquals(time.now, remote.postedProjects.single().updatedAt)
+        assertEquals(time.now, remote.postedProjects.single().ownUpdatedAt)
     }
 
     @Test
@@ -428,7 +428,7 @@ private class FakeLocalProjectDataSource : LocalProjectDataSource {
         sortIndexWrites += indices
         sortIndexWriteTimestamps += updatedAt
         indices.forEach { (id, index) ->
-            projects[id]?.let { projects[id] = it.copy(sortIndex = index, updatedAt = updatedAt) }
+            projects[id]?.let { projects[id] = it.copy(sortIndex = index, ownUpdatedAt = updatedAt) }
         }
         emit()
         return Result.Success(Unit)
@@ -452,7 +452,7 @@ private class FakeLocalProjectDataSource : LocalProjectDataSource {
     override suspend fun upsertTaskInterval(interval: TaskInterval): EmptyResult<DataError> = Result.Success(Unit)
     override suspend fun getOpenIntervalByTaskId(taskId: String): TaskInterval? = null
     override suspend fun startTask(taskId: String) = Unit
-    override suspend fun stopTask(taskId: String) = Unit
+    override suspend fun stopTask(taskId: String): EmptyResult<DataError.Local> = Result.Success(Unit)
     override suspend fun updateTaskTitle(taskId: String, title: String) = Unit
 }
 

@@ -206,6 +206,7 @@ class ProjectOverviewViewModel(
             is ProjectOverviewAction.OnLogoutClick -> showLogoutConfirmation()
             is ProjectOverviewAction.OnConfirmLogout -> logout()
             is ProjectOverviewAction.OnDismissLogoutConfirmation -> dismissLogoutConfirmation()
+            ProjectOverviewAction.OnPullToRefresh -> refreshProjectsFromServer()
         }
     }
 
@@ -312,7 +313,9 @@ class ProjectOverviewViewModel(
     private fun List<Project>.sortedForOption(option: SortOption) = when (option) {
         SortOption.CUSTOM -> sortedByCustomOrder()
         SortOption.CREATION_DATE -> sortedByDescending { it.startDateTimeUtc }
-        SortOption.MODIFICATION_DATE -> sortedByDescending { it.updatedAt ?: it.startDateTimeUtc }
+        // lastUpdatedAt, not ownUpdatedAt: editing a task counts as modifying its project, so the
+        // project moves up. The overview loads projects with their tasks, so the roll-up is real.
+        SortOption.MODIFICATION_DATE -> sortedByDescending { it.lastUpdatedAt ?: it.startDateTimeUtc }
     }
 
     private fun archiveSelectedProjects() {
@@ -376,6 +379,17 @@ class ProjectOverviewViewModel(
                     eventChannel.send(ProjectOverviewEvent.Error(error.toUiText()))
                 }
             _state.update { it.copy(isLoading = false) }
+        }
+    }
+
+    private fun refreshProjectsFromServer() {
+        viewModelScope.launch {
+            _state.update { it.copy(isRefreshing = true) }
+            projectRepository.fetchProjects()
+                .onFailure { error ->
+                    eventChannel.send(ProjectOverviewEvent.Error(error.toUiText()))
+                }
+            _state.update { it.copy(isRefreshing = false) }
         }
     }
 

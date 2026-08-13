@@ -35,7 +35,7 @@ interface LocalProjectDataSource {
     suspend fun upsertTaskInterval(interval: TaskInterval): EmptyResult<DataError>
     suspend fun getOpenIntervalByTaskId(taskId: String): TaskInterval?
     suspend fun startTask(taskId: String)
-    suspend fun stopTask(taskId: String)
+    suspend fun stopTask(taskId: String): EmptyResult<DataError.Local>
     suspend fun updateTaskTitle(taskId: String, title: String)
 }
 

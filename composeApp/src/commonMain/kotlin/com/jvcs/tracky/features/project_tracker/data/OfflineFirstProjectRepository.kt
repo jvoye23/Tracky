@@ -35,6 +35,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.time.ExperimentalTime
@@ -90,7 +91,7 @@ class OfflineFirstProjectRepository(
             is Result.Success -> existing.data == null
             is Result.Error -> return existing.asEmptyDataResult()
         }
-        val stamped = project.copy(updatedAt = timeProvider.nowInstant)
+        val stamped = project.copy(ownUpdatedAt = timeProvider.nowInstant)
 
         val localResult = localProjectDataSource.upsertProject(stamped)
         if (localResult !is Result.Success) {
@@ -244,7 +245,7 @@ class OfflineFirstProjectRepository(
             is Result.Success -> existing.data == null
             is Result.Error -> return existing.asEmptyDataResult()
         }
-        val stamped = projectTask.copy(updatedAt = timeProvider.nowInstant)
+        val stamped = projectTask.copy(ownUpdatedAt = timeProvider.nowInstant)
 
         val localResult = localProjectDataSource.upsertProjectTask(stamped)
         if (localResult !is Result.Success) {
@@ -351,6 +352,7 @@ class OfflineFirstProjectRepository(
 
     override suspend fun upsertTaskInterval(interval: TaskInterval) {
         localProjectDataSource.upsertTaskInterval(interval)
+        remoteProjectDataSource
     }
 
     override suspend fun getOpenIntervalByTaskId(taskId: String): TaskInterval? {
@@ -363,6 +365,8 @@ class OfflineFirstProjectRepository(
 
     override suspend fun stopTask(taskId: String) {
         localProjectDataSource.stopTask(taskId)
+        val task = localProjectDataSource.getTaskWithIntervalsById(taskId).firstOrNull()
+        if (task != null) upsertProjectTask(task)
     }
 
     // Title edits must reach the server too. Route through the offline-first upsert so the change
@@ -453,7 +457,9 @@ class OfflineFirstProjectRepository(
             is Result.Error -> return r.asEmptyDataResult()
         } ?: return remoteProjectDataSource.postProject(local).asEmptyDataResult() // server has none → push local
 
-        return if (local.updatedAt != null && (server.updatedAt == null || local.updatedAt > server.updatedAt)) {
+        // Last-write-wins compares this project row against the same row on the server, so it must
+        // read the row's own stamp — never the lastUpdatedAt roll-up over its tasks.
+        return if (local.ownUpdatedAt != null && (server.ownUpdatedAt == null || local.ownUpdatedAt > server.ownUpdatedAt)) {
             when (val pushed = remoteProjectDataSource.updateProject(local)) {
                 is Result.Success -> {
                     val merged = pushed.data.withLocalSortIndexFallback(local)
@@ -483,7 +489,7 @@ class OfflineFirstProjectRepository(
             is Result.Error -> return r.asEmptyDataResult()
         } ?: return remoteProjectDataSource.postTaskByProjectId(local.parentProjectId, local).asEmptyDataResult()
 
-        return if ((local.updatedAt != null) && ((server.updatedAt == null) || (local.updatedAt > server.updatedAt))) {
+        return if ((local.ownUpdatedAt != null) && ((server.ownUpdatedAt == null) || (local.ownUpdatedAt > server.ownUpdatedAt))) {
             when (val pushed = remoteProjectDataSource.updateTaskByProjectId(local.parentProjectId, local)) {
                 is Result.Success -> {
                     applicationScope.async { localProjectDataSource.upsertProjectTask(pushed.data) }.await()

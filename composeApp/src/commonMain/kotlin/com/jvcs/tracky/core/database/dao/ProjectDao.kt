@@ -33,6 +33,9 @@ interface ProjectDao {
     @Query("DELETE FROM projects")
     suspend fun deleteAllProjects()
 
+    @Query("DELETE FROM task_intervals")
+    suspend fun deleteAllTaskIntervals()
+
     @Transaction
     @Query("SELECT * FROM projects")
     fun getProjectsWithTasks(): Flow<List<ProjectWithTasksEntity>>

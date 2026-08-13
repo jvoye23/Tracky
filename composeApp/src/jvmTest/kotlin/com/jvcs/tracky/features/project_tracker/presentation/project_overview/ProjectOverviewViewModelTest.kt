@@ -124,6 +124,36 @@ class ProjectOverviewViewModelTest {
     }
 
     @Test
+    fun sortByModificationDate_countsTaskEditsAsModifyingTheProject() = runTest(dispatcher) {
+        // "stale" was itself touched long ago, but one of its tasks was just edited; "fresh" has no
+        // tasks and a newer stamp of its own. Sorting on the project's own stamp puts "fresh" first,
+        // which is not what a user who just edited a task expects to see.
+        val stale = project("stale").copy(
+            ownUpdatedAt = Instant.fromEpochMilliseconds(100),
+            projectTasks = listOf(task("t1", parentProjectId = "stale", ownUpdatedAt = Instant.fromEpochMilliseconds(300)))
+        )
+        val fresh = project("fresh").copy(
+            ownUpdatedAt = Instant.fromEpochMilliseconds(200),
+            projectTasks = emptyList()
+        )
+        val viewModel = viewModelWith(FakeProjectRepository(listOf(fresh, stale)))
+
+        viewModel.onAction(ProjectOverviewAction.OnSortOptionSelected(SortOption.MODIFICATION_DATE))
+
+        assertEquals(listOf("stale", "fresh"), stateOf(viewModel).otherProjects.map { it.projectId })
+    }
+
+    private fun task(id: String, parentProjectId: String, ownUpdatedAt: Instant) = ProjectTask(
+        projectTaskId = id,
+        title = "title-$id",
+        durationMillis = null,
+        startDateTimeUtc = Instant.fromEpochMilliseconds(0),
+        parentProjectId = parentProjectId,
+        isTimerRunning = false,
+        ownUpdatedAt = ownUpdatedAt
+    )
+
+    @Test
     fun onReorderMove_reordersWithinASection() = runTest(dispatcher) {
         val viewModel = viewModelWith(FakeProjectRepository(seededProjects()))
 

@@ -37,4 +37,5 @@ sealed interface ProjectOverviewAction {
     data object OnConfirmLogout: ProjectOverviewAction
     data object OnLogoutClick: ProjectOverviewAction
     data object OnDismissLogoutConfirmation: ProjectOverviewAction
+    data object OnPullToRefresh: ProjectOverviewAction
 }
