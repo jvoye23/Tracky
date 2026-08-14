@@ -34,8 +34,23 @@ interface LocalProjectDataSource {
     fun getTaskWithIntervalsById(taskId: String): Flow<ProjectTask?>
     suspend fun upsertTaskInterval(interval: TaskInterval): EmptyResult<DataError>
     suspend fun getOpenIntervalByTaskId(taskId: String): TaskInterval?
-    suspend fun startTask(taskId: String)
-    suspend fun stopTask(taskId: String): EmptyResult<DataError.Local>
+    suspend fun deleteTaskInterval(intervalId: String): EmptyResult<DataError>
+
+    /**
+     * Opens a new interval and flags the task's timer as running.
+     *
+     * Returns the interval it created so the caller can push it remotely — the id is generated in
+     * here, so there is no other way for the repository to know which row to sync.
+     */
+    suspend fun startTask(taskId: String): Result<TaskInterval, DataError.Local>
+
+    /**
+     * Closes the task's open interval, adds its duration to the task and clears the timer flag.
+     *
+     * Returns the interval it just closed, or null when the timer was not running — again so the
+     * caller can push exactly that row.
+     */
+    suspend fun stopTask(taskId: String): Result<TaskInterval?, DataError.Local>
     suspend fun updateTaskTitle(taskId: String, title: String)
 }
 

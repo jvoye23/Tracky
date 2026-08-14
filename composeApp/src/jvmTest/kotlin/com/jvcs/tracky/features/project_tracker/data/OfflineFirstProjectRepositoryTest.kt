@@ -443,16 +443,80 @@ private class FakeLocalProjectDataSource : LocalProjectDataSource {
         projects.forEach { this.projects[it.projectId] = it }; emit(); return Result.Success(Unit)
     }
 
-    override suspend fun upsertProjectTask(projectTask: ProjectTask): EmptyResult<DataError> = Result.Success(Unit)
+    override suspend fun upsertProjectTask(projectTask: ProjectTask): EmptyResult<DataError> {
+        tasks[projectTask.projectTaskId] = projectTask
+        return Result.Success(Unit)
+    }
+
     override suspend fun deleteProject(projectId: String) { projects.remove(projectId); emit() }
-    override suspend fun deleteProjectTask(taskId: String) = Unit
+    override suspend fun deleteProjectTask(taskId: String) { tasks.remove(taskId) }
     override suspend fun deleteAllProjects() { projects.clear(); emit() }
     override suspend fun updateTaskDuration(taskId: String, newDurationMillis: Long) = Unit
-    override fun getTaskWithIntervalsById(taskId: String): Flow<ProjectTask?> = flowOf(null)
-    override suspend fun upsertTaskInterval(interval: TaskInterval): EmptyResult<DataError> = Result.Success(Unit)
-    override suspend fun getOpenIntervalByTaskId(taskId: String): TaskInterval? = null
-    override suspend fun startTask(taskId: String) = Unit
-    override suspend fun stopTask(taskId: String): EmptyResult<DataError.Local> = Result.Success(Unit)
+
+    // --- Task / interval state -------------------------------------------------------------------
+    val tasks = linkedMapOf<String, ProjectTask>()
+    val intervals = linkedMapOf<String, TaskInterval>()
+    val upsertedIntervalIds = mutableListOf<String>()
+    val deletedIntervalIds = mutableListOf<String>()
+    /** startTask generates the id in production; pin it here so tests can assert on it. */
+    var nextIntervalId = "i1"
+    var clock: Instant = Instant.fromEpochMilliseconds(10_000)
+
+    fun seedTask(taskId: String, projectId: String) {
+        tasks[taskId] = ProjectTask(
+            projectTaskId = taskId,
+            title = "task-$taskId",
+            durationMillis = 0,
+            startDateTimeUtc = Instant.fromEpochMilliseconds(0),
+            parentProjectId = projectId,
+            isTimerRunning = false,
+        )
+    }
+
+    override fun getTaskWithIntervalsById(taskId: String): Flow<ProjectTask?> = flowOf(
+        tasks[taskId]?.copy(intervals = intervals.values.filter { it.parentSessionId == taskId })
+    )
+
+    override suspend fun upsertTaskInterval(interval: TaskInterval): EmptyResult<DataError> {
+        upsertedIntervalIds += interval.intervalId
+        intervals[interval.intervalId] = interval
+        return Result.Success(Unit)
+    }
+
+    override suspend fun getOpenIntervalByTaskId(taskId: String): TaskInterval? =
+        intervals.values.firstOrNull { it.parentSessionId == taskId && it.endDateTimeUtc == null }
+
+    override suspend fun deleteTaskInterval(intervalId: String): EmptyResult<DataError> {
+        deletedIntervalIds += intervalId
+        intervals.remove(intervalId)
+        return Result.Success(Unit)
+    }
+
+    override suspend fun startTask(taskId: String): Result<TaskInterval, DataError.Local> {
+        val interval = TaskInterval(
+            intervalId = nextIntervalId,
+            parentSessionId = taskId,
+            startDateTimeUtc = clock,
+            endDateTimeUtc = null,
+            durationMillis = 0L,
+        )
+        intervals[interval.intervalId] = interval
+        tasks[taskId]?.let { tasks[taskId] = it.copy(isTimerRunning = true) }
+        return Result.Success(interval)
+    }
+
+    override suspend fun stopTask(taskId: String): Result<TaskInterval?, DataError.Local> {
+        val open = getOpenIntervalByTaskId(taskId)
+        tasks[taskId]?.let { tasks[taskId] = it.copy(isTimerRunning = false) }
+        if (open == null) return Result.Success(null)
+        val closed = open.copy(
+            endDateTimeUtc = clock,
+            durationMillis = (clock - open.startDateTimeUtc).inWholeMilliseconds,
+        )
+        intervals[closed.intervalId] = closed
+        return Result.Success(closed)
+    }
+
     override suspend fun updateTaskTitle(taskId: String, title: String) = Unit
 }
 
@@ -506,6 +570,51 @@ private class FakeRemoteProjectDataSource : RemoteProjectDataSource {
 
     override suspend fun deleteTask(projectId: String, taskId: String): EmptyResult<DataError.Remote> =
         failWith?.let { Result.Error(it) } ?: Result.Success(Unit)
+
+    // --- Intervals -------------------------------------------------------------------------------
+    // Kept on separate failure switches from `failWith` so a test can fail an interval call while
+    // the task/project calls around it still succeed.
+    var intervalPostFailWith: DataError.Remote? = null
+    var intervalUpdateFailWith: DataError.Remote? = null
+    var intervalDeleteFailWith: DataError.Remote? = null
+    val postedIntervalIds = mutableListOf<String>()
+    val updatedIntervalIds = mutableListOf<String>()
+    val deletedIntervalIds = mutableListOf<String>()
+    /** "<projectId>/<taskId>" per interval call, so tests can assert the route was resolved. */
+    val intervalRoutes = mutableListOf<String>()
+
+    override suspend fun postInterval(
+        projectId: String,
+        taskId: String,
+        interval: TaskInterval
+    ): Result<TaskInterval, DataError.Remote> {
+        intervalRoutes += "$projectId/$taskId"
+        intervalPostFailWith?.let { return Result.Error(it) }
+        postedIntervalIds += interval.intervalId
+        return Result.Success(interval)
+    }
+
+    override suspend fun updateInterval(
+        projectId: String,
+        taskId: String,
+        interval: TaskInterval
+    ): Result<TaskInterval, DataError.Remote> {
+        intervalRoutes += "$projectId/$taskId"
+        intervalUpdateFailWith?.let { return Result.Error(it) }
+        updatedIntervalIds += interval.intervalId
+        return Result.Success(interval)
+    }
+
+    override suspend fun deleteInterval(
+        projectId: String,
+        taskId: String,
+        intervalId: String
+    ): EmptyResult<DataError.Remote> {
+        intervalRoutes += "$projectId/$taskId"
+        intervalDeleteFailWith?.let { return Result.Error(it) }
+        deletedIntervalIds += intervalId
+        return Result.Success(Unit)
+    }
 }
 
 private class FakePendingSyncDao : PendingSyncDao {
