@@ -106,10 +106,19 @@ class RoomLocalProjectDataSource (
         }
     }
 
+    // The pull writes the whole tree, not just the project rows: the server returns every task and
+    // interval nested inside GET /api/projects, and dropping them here is what used to make tracked
+    // time unrecoverable after a reinstall. A null projectTasks means "not loaded" rather than "no
+    // tasks", so it contributes nothing instead of clearing anything.
     override suspend fun upsertProjects(projects: List<Project>): EmptyResult<DataError> {
         return try {
             withContext(dbWriteDispatcher) {
-                projectDao.upsertProjects(projects.map { it.toProjectEntity() })
+                val tasks = projects.flatMap { it.projectTasks.orEmpty() }
+                projectDao.upsertServerTree(
+                    projects = projects.map { it.toProjectEntity() },
+                    tasks = tasks.map { it.toProjectSessionEntity() },
+                    intervals = tasks.flatMap { task -> task.intervals }.map { it.toSessionIntervalEntity() },
+                )
             }
             Result.Success(Unit)
         } catch (e: Exception) {
