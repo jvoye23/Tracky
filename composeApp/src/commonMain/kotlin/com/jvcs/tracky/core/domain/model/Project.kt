@@ -57,8 +57,10 @@ data class TaskInterval(
     val endDateTimeUtc: Instant?,
     val durationMillis: Long
 ) : Timestamped {
-    // Intervals carry no timestamp of their own: they are never synced remotely and the server
-    // returns them empty, so there is nothing to stamp yet.
+    // Intervals do sync remotely, but they carry no timestamp of their own. They are written by
+    // one device's timer rather than edited by hand, so a duplicate CREATE is retried as an UPDATE
+    // instead of being resolved by last-write-wins — which means there is nothing to compare and
+    // nothing to stamp. Staying null also keeps them out of the lastUpdatedAt roll-up.
     override val ownUpdatedAt: Instant? get() = null
 }
 
