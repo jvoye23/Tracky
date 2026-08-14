@@ -38,6 +38,7 @@ interface ProjectRepository {
     fun getTaskWithIntervalsById(taskId: String): Flow<ProjectTask?>
     suspend fun upsertTaskInterval(interval: TaskInterval)
     suspend fun getOpenIntervalByTaskId(taskId: String): TaskInterval?
+    suspend fun deleteTaskInterval(intervalId: String)
     
     suspend fun startTask(taskId: String)
     suspend fun stopTask(taskId: String)

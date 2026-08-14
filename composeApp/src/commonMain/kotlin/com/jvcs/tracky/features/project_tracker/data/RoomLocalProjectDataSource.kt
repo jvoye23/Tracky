@@ -173,6 +173,10 @@ class RoomLocalProjectDataSource (
         return projectDao.getOpenIntervalBySessionId(taskId)?.toSessionInterval()
     }
 
+    override suspend fun getIntervalById(intervalId: String): TaskInterval? {
+        return projectDao.getIntervalById(intervalId)?.toSessionInterval()
+    }
+
     override suspend fun deleteTaskInterval(intervalId: String): EmptyResult<DataError> {
         return try {
             withContext(dbWriteDispatcher) {
