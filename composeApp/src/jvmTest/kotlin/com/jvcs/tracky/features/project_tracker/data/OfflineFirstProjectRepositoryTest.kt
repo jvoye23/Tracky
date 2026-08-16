@@ -411,9 +411,15 @@ class OfflineFirstProjectRepositoryTest {
         ownUpdatedAt = updatedAt?.let { Instant.fromEpochMilliseconds(it) },
     )
 
-    private fun serverInterval(intervalId: String, taskId: String, end: Long?) = TaskInterval(
+    private fun serverInterval(
+        intervalId: String,
+        taskId: String,
+        end: Long?,
+        projectId: String = "p1",
+    ) = TaskInterval(
         intervalId = intervalId,
-        parentSessionId = taskId,
+        parentTaskId = taskId,
+        parentProjectId = projectId,
         startDateTimeUtc = Instant.fromEpochMilliseconds(0),
         endDateTimeUtc = end?.let { Instant.fromEpochMilliseconds(it) },
         durationMillis = end ?: 0L,
@@ -508,7 +514,7 @@ class OfflineFirstProjectRepositoryTest {
         f.repository().startTask("t1")
 
         assertEquals(listOf("i1"), f.remote.postedIntervalIds)
-        // The route needs the project id, which only the parent task knows.
+        // The route is built from the interval's own parentProjectId — no task lookup involved.
         assertEquals(listOf("p1/t1"), f.remote.intervalRoutes)
         assertTrue(f.dao.getAllPendingOperations().isEmpty())
     }
@@ -541,7 +547,8 @@ class OfflineFirstProjectRepositoryTest {
         assertEquals(PendingSyncEntity.ENTITY_INTERVAL, ops[0].entityType)
         assertEquals(PendingSyncEntity.OP_CREATE, ops[0].operationType)
         assertEquals("i1", ops[0].entityId)
-        // parentEntityId carries the TASK id for intervals; the project is resolved at drain time.
+        // parentEntityId carries the TASK id for intervals; a queued DELETE has no local row left
+        // to read parentProjectId from, so it resolves the project through the task at drain time.
         assertEquals("t1", ops[0].parentEntityId)
         assertTrue(f.scheduler.scheduleCount > 0)
     }
@@ -614,7 +621,8 @@ class OfflineFirstProjectRepositoryTest {
         val repository = f.repository()
 
         repository.startTask("t1")
-        f.local.tasks.remove("t1")            // server removed its intervals by cascade
+        // Deleting the task cascades to its intervals, so the queued op has nothing left to push.
+        f.local.deleteProjectTask("t1")
         f.remote.intervalPostFailWith = null
 
         repository.syncPendingOperations()
@@ -789,9 +797,19 @@ private class FakeLocalProjectDataSource : LocalProjectDataSource {
         return Result.Success(Unit)
     }
 
-    override suspend fun deleteProject(projectId: String) { projects.remove(projectId); emit() }
-    override suspend fun deleteProjectTask(taskId: String) { tasks.remove(taskId) }
-    override suspend fun deleteAllProjects() { projects.clear(); emit() }
+    // Room cascades projects -> project_records -> task_intervals, so the fake has to as well;
+    // otherwise the queue-draining tests would see rows the real database could never hold.
+    override suspend fun deleteProject(projectId: String) {
+        projects.remove(projectId)
+        tasks.values.filter { it.parentProjectId == projectId }.forEach { deleteProjectTask(it.projectTaskId) }
+        emit()
+    }
+    override suspend fun deleteProjectTask(taskId: String) {
+        tasks.remove(taskId)
+        intervals.values.filter { it.parentTaskId == taskId }.map { it.intervalId }
+            .forEach { intervals.remove(it) }
+    }
+    override suspend fun deleteAllProjects() { projects.clear(); tasks.clear(); intervals.clear(); emit() }
     override suspend fun updateTaskDuration(taskId: String, newDurationMillis: Long) = Unit
 
     // --- Task / interval state -------------------------------------------------------------------
@@ -815,7 +833,7 @@ private class FakeLocalProjectDataSource : LocalProjectDataSource {
     }
 
     override fun getTaskWithIntervalsById(taskId: String): Flow<ProjectTask?> = flowOf(
-        tasks[taskId]?.copy(intervals = intervals.values.filter { it.parentSessionId == taskId })
+        tasks[taskId]?.copy(intervals = intervals.values.filter { it.parentTaskId == taskId })
     )
 
     override suspend fun upsertTaskInterval(interval: TaskInterval): EmptyResult<DataError> {
@@ -825,7 +843,7 @@ private class FakeLocalProjectDataSource : LocalProjectDataSource {
     }
 
     override suspend fun getOpenIntervalByTaskId(taskId: String): TaskInterval? =
-        intervals.values.firstOrNull { it.parentSessionId == taskId && it.endDateTimeUtc == null }
+        intervals.values.firstOrNull { it.parentTaskId == taskId && it.endDateTimeUtc == null }
 
     override suspend fun getIntervalById(intervalId: String): TaskInterval? = intervals[intervalId]
 
@@ -836,9 +854,13 @@ private class FakeLocalProjectDataSource : LocalProjectDataSource {
     }
 
     override suspend fun startTask(taskId: String): Result<TaskInterval, DataError.Local> {
+        // Mirrors the Room implementation: the interval carries its project, so an unknown task
+        // has nothing to hang the new row off.
+        val task = tasks[taskId] ?: return Result.Error(DataError.Local.NOT_FOUND)
         val interval = TaskInterval(
             intervalId = nextIntervalId,
-            parentSessionId = taskId,
+            parentTaskId = taskId,
+            parentProjectId = task.parentProjectId,
             startDateTimeUtc = clock,
             endDateTimeUtc = null,
             durationMillis = 0L,

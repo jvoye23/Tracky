@@ -52,7 +52,11 @@ data class ProjectTask(
 
 data class TaskInterval(
     val intervalId: String,
-    val parentSessionId: String,
+    val parentTaskId: String,
+    // Carried alongside parentTaskId so the interval knows its whole ancestry: it backs the
+    // cascading foreign key onto projects, and it spares the sync layer a lookup to build the
+    // /api/projects/{projectId}/tasks/{taskId}/intervals route.
+    val parentProjectId: String,
     val startDateTimeUtc: Instant,
     val endDateTimeUtc: Instant?,
     val durationMillis: Long

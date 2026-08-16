@@ -66,11 +66,9 @@ interface ProjectDao {
     @Query("DELETE FROM projects WHERE projectId = :projectId")
     suspend fun deleteProject(projectId: String)
 
+    // task_intervals and project_records both cascade from projects, so this clears the whole tree.
     @Query("DELETE FROM projects")
     suspend fun deleteAllProjects()
-
-    @Query("DELETE FROM task_intervals")
-    suspend fun deleteAllTaskIntervals()
 
     @Transaction
     @Query("SELECT * FROM projects")
@@ -136,9 +134,6 @@ interface ProjectDao {
 
     @Query("DELETE FROM task_intervals WHERE intervalId = :intervalId")
     suspend fun deleteTaskInterval(intervalId: String)
-
-    @Query("DELETE FROM task_intervals WHERE parentTaskId = :taskId")
-    suspend fun deleteIntervalsByTaskId(taskId: String)
 
     @Query("SELECT * FROM task_intervals WHERE parentTaskId = :sessionId AND endDateTimeEpochMs IS NULL LIMIT 1")
     suspend fun getOpenIntervalBySessionId(sessionId: String): TaskIntervalEntity?

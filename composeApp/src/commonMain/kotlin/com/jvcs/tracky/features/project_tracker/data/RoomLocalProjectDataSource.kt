@@ -13,12 +13,11 @@ import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.core.mapper.toProject
 import com.jvcs.tracky.core.mapper.toProjectEntity
-import com.jvcs.tracky.core.mapper.toProjectSession
+import com.jvcs.tracky.core.mapper.toProjectTask
 import com.jvcs.tracky.core.mapper.toProjectSessionEntity
-import com.jvcs.tracky.core.mapper.toSessionInterval
-import com.jvcs.tracky.core.mapper.toSessionIntervalEntity
+import com.jvcs.tracky.core.mapper.toTaskInterval
+import com.jvcs.tracky.core.mapper.toTaskIntervalEntity
 import com.jvcs.tracky.features.project_tracker.domain.LocalProjectDataSource
-import com.jvcs.tracky.features.project_tracker.domain.ProjectId
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -117,7 +116,7 @@ class RoomLocalProjectDataSource (
                 projectDao.upsertServerTree(
                     projects = projects.map { it.toProjectEntity() },
                     tasks = tasks.map { it.toProjectSessionEntity() },
-                    intervals = tasks.flatMap { task -> task.intervals }.map { it.toSessionIntervalEntity() },
+                    intervals = tasks.flatMap { task -> task.intervals }.map { it.toTaskIntervalEntity() },
                 )
             }
             Result.Success(Unit)
@@ -148,9 +147,8 @@ class RoomLocalProjectDataSource (
     }
 
     override suspend fun deleteAllProjects() = withContext(dbWriteDispatcher) {
-        // task_intervals has no foreign key onto project_records, so dropping the projects would
-        // otherwise strand every interval row.
-        projectDao.deleteAllTaskIntervals()
+        // task_intervals cascades from both project_records and projects, so dropping the projects
+        // takes every task and interval with it.
         projectDao.deleteAllProjects()
     }
 
@@ -163,13 +161,13 @@ class RoomLocalProjectDataSource (
 
     override fun getTaskWithIntervalsById(taskId: String): Flow<ProjectTask?> {
         return projectDao.getTaskWithIntervalsById(taskId)
-            .map { it?.toProjectSession() }
+            .map { it?.toProjectTask() }
     }
 
     override suspend fun upsertTaskInterval(interval: TaskInterval): EmptyResult<DataError> {
         return try {
             withContext(dbWriteDispatcher) {
-                projectDao.upsertTaskInterval(interval.toSessionIntervalEntity())
+                projectDao.upsertTaskInterval(interval.toTaskIntervalEntity())
             }
             Result.Success(Unit)
         } catch (e: Exception) {
@@ -179,11 +177,11 @@ class RoomLocalProjectDataSource (
     }
 
     override suspend fun getOpenIntervalByTaskId(taskId: String): TaskInterval? {
-        return projectDao.getOpenIntervalBySessionId(taskId)?.toSessionInterval()
+        return projectDao.getOpenIntervalBySessionId(taskId)?.toTaskInterval()
     }
 
     override suspend fun getIntervalById(intervalId: String): TaskInterval? {
-        return projectDao.getIntervalById(intervalId)?.toSessionInterval()
+        return projectDao.getIntervalById(intervalId)?.toTaskInterval()
     }
 
     override suspend fun deleteTaskInterval(intervalId: String): EmptyResult<DataError> {
@@ -201,10 +199,15 @@ class RoomLocalProjectDataSource (
     override suspend fun startTask(taskId: String): Result<TaskInterval, DataError.Local> {
         return try {
             val interval = withContext(dbWriteDispatcher) {
+                // The owning project has to be read before the interval can be written: it is part
+                // of the row now, and the cascading foreign key would reject an interval whose task
+                // no longer exists anyway.
+                val task = projectDao.getTaskById(taskId) ?: return@withContext null
                 val now = timeProvider.nowInstant
                 val interval = TaskIntervalEntity(
                     intervalId = Uuid.random().toString(),
                     parentTaskId = taskId,
+                    parentProjectId = task.parentProjectId,
                     startDateTimeEpochMs = now.toEpochMilliseconds(),
                     endDateTimeEpochMs = null,
                     durationMillis = 0L
@@ -212,8 +215,8 @@ class RoomLocalProjectDataSource (
                 projectDao.upsertTaskInterval(interval)
                 projectDao.updateSessionTimerStatus(taskId, true)
                 interval
-            }
-            Result.Success(interval.toSessionInterval())
+            } ?: return Result.Error(DataError.Local.NOT_FOUND)
+            Result.Success(interval.toTaskInterval())
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Result.Error(DataError.Local.DISK_FULL)
@@ -240,7 +243,7 @@ class RoomLocalProjectDataSource (
                 projectDao.updateSessionTimerStatus(taskId, false)
                 updatedInterval
             }
-            Result.Success(closedInterval?.toSessionInterval())
+            Result.Success(closedInterval?.toTaskInterval())
         } catch (e: Exception) {
             if(e is CancellationException) throw e
             Result.Error(DataError.Local.DISK_FULL)

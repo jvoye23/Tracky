@@ -70,9 +70,15 @@ class ProjectDaoPullMergeTest {
         updatedAtEpochMs = updatedAt,
     )
 
-    private fun intervalEntity(id: String, taskId: String, end: Long?) = TaskIntervalEntity(
+    private fun intervalEntity(
+        id: String,
+        taskId: String,
+        end: Long?,
+        projectId: String = "p1",
+    ) = TaskIntervalEntity(
         intervalId = id,
         parentTaskId = taskId,
+        parentProjectId = projectId,
         startDateTimeEpochMs = 0,
         endDateTimeEpochMs = end,
         durationMillis = end ?: 0L,
@@ -95,6 +101,12 @@ class ProjectDaoPullMergeTest {
     /** project_records has a CASCADE foreign key onto projects, so the parent must exist first. */
     private suspend fun seedProject(id: String = "p1") {
         dao.upsertProject(projectEntity(id, updatedAt = 0))
+    }
+
+    /** task_intervals cascades from both project_records and projects, so seed the whole chain. */
+    private suspend fun seedTask(taskId: String = "t1", projectId: String = "p1") {
+        seedProject(projectId)
+        dao.upsertProjectRecord(taskEntity(taskId, projectId, "seeded", updatedAt = 0))
     }
 
     @Test
@@ -127,6 +139,7 @@ class ProjectDaoPullMergeTest {
 
     @Test
     fun doesNotCloseAnIntervalThatIsStillRunningLocally() = runBlocking {
+        seedTask()
         dao.upsertTaskInterval(intervalEntity("i1", "t1", end = null)) // timer running here
 
         dao.upsertServerTree(

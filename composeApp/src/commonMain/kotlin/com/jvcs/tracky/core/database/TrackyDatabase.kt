@@ -20,7 +20,7 @@ import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
         TaskIntervalEntity::class,
         PendingSyncEntity::class
     ],
-    version = 12,
+    version = 13,
 )
 @ConstructedBy(TrackyDatabaseConstructor::class)
 abstract class TrackyDatabase: RoomDatabase() {
@@ -354,6 +354,54 @@ abstract class TrackyDatabase: RoomDatabase() {
                 // sortIndex: persisted manual order for the Custom sort filter. Nullable so existing
                 // rows keep their date-based order until the user first reorders them.
                 connection.execSQL("ALTER TABLE projects ADD COLUMN sortIndex INTEGER")
+            }
+        }
+
+        val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(connection: SQLiteConnection) {
+                // task_intervals gains parentProjectId plus two cascading foreign keys, so deleting
+                // a task or a project now takes its intervals with it. Before this, only
+                // project_records cascaded and every interval under a deleted project was stranded.
+                // SQLite can't add a foreign key in place, so the table is rebuilt.
+                //
+                // parentProjectId is backfilled by joining through project_records. The joins are
+                // INNER on purpose: intervals whose parent task - or whose task's parent project -
+                // no longer exists are exactly the orphans the old deletes left behind, and they
+                // cannot satisfy the new NOT NULL foreign keys, so they are dropped here.
+                connection.execSQL(
+                    """
+                    CREATE TABLE task_intervals_new (
+                        intervalId TEXT NOT NULL PRIMARY KEY,
+                        parentTaskId TEXT NOT NULL,
+                        parentProjectId TEXT NOT NULL,
+                        startDateTimeEpochMs INTEGER NOT NULL,
+                        endDateTimeEpochMs INTEGER,
+                        durationMillis INTEGER NOT NULL,
+                        FOREIGN KEY(parentTaskId) REFERENCES project_records(recordId) ON DELETE CASCADE,
+                        FOREIGN KEY(parentProjectId) REFERENCES projects(projectId) ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                connection.execSQL(
+                    """
+                    INSERT INTO task_intervals_new
+                      (intervalId, parentTaskId, parentProjectId,
+                       startDateTimeEpochMs, endDateTimeEpochMs, durationMillis)
+                    SELECT ti.intervalId, ti.parentTaskId, pr.parentProjectId,
+                           ti.startDateTimeEpochMs, ti.endDateTimeEpochMs, ti.durationMillis
+                    FROM task_intervals AS ti
+                    JOIN project_records AS pr ON pr.recordId = ti.parentTaskId
+                    JOIN projects AS p ON p.projectId = pr.parentProjectId
+                    """.trimIndent()
+                )
+                connection.execSQL("DROP TABLE task_intervals")
+                connection.execSQL("ALTER TABLE task_intervals_new RENAME TO task_intervals")
+                connection.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_task_intervals_parentTaskId ON task_intervals(parentTaskId)"
+                )
+                connection.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_task_intervals_parentProjectId ON task_intervals(parentProjectId)"
+                )
             }
         }
     }

@@ -131,7 +131,8 @@ class TimestampedTest {
 
     private fun interval(id: String) = TaskInterval(
         intervalId = id,
-        parentSessionId = "t1",
+        parentTaskId = "t1",
+        parentProjectId = "p1",
         startDateTimeUtc = Instant.fromEpochMilliseconds(0),
         endDateTimeUtc = null,
         durationMillis = 0L

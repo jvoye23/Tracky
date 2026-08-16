@@ -117,7 +117,7 @@ class KtorRemoteProjectDataSource(
         return httpClient.post<CreateTaskIntervalRequest, TaskIntervalDto>(
             route = "/api/projects/$projectId/tasks/$taskId/intervals",
             body = interval.toCreateTaskIntervalRequest()
-        ).map { it.toTaskInterval() }
+        ).map { it.toTaskInterval(projectId) }
     }
 
     override suspend fun updateInterval(
@@ -128,7 +128,7 @@ class KtorRemoteProjectDataSource(
         return httpClient.put<UpdateTaskIntervalRequest, TaskIntervalDto>(
             route = "/api/projects/$projectId/tasks/$taskId/intervals/${interval.intervalId}",
             body = interval.toUpdateTaskIntervalRequest()
-        ).map { it.toTaskInterval() }
+        ).map { it.toTaskInterval(projectId) }
     }
 
     override suspend fun deleteInterval(
