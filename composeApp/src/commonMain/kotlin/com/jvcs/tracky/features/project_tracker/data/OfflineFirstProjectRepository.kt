@@ -23,7 +23,6 @@ import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.core.domain.util.asEmptyDataResult
-import com.jvcs.tracky.core.domain.util.onFailure
 import com.jvcs.tracky.core.domain.util.onSuccess
 import com.jvcs.tracky.features.project_tracker.domain.LocalProjectDataSource
 import com.jvcs.tracky.features.project_tracker.domain.ProjectRepository
@@ -401,11 +400,10 @@ class OfflineFirstProjectRepository(
             return
         }
 
-        val taskId = interval.parentSessionId
-        val projectId = parentProjectIdOf(taskId) ?: return // cannot build the route without it
+        val taskId = interval.parentTaskId
 
         val remoteResult = applicationScope.async {
-            remoteProjectDataSource.deleteInterval(projectId, taskId, intervalId)
+            remoteProjectDataSource.deleteInterval(interval.parentProjectId, taskId, intervalId)
         }.await()
         if (remoteResult is Result.Error && remoteResult.error.isTransient()) {
             if (enqueueIntervalOperation(intervalId, taskId, OP_DELETE) is Result.Success) scheduleSync()
@@ -426,8 +424,8 @@ class OfflineFirstProjectRepository(
      *   exactly the offline case this feature exists for.
      */
     private suspend fun pushInterval(interval: TaskInterval, isCreate: Boolean) {
-        val taskId = interval.parentSessionId
-        val projectId = parentProjectIdOf(taskId) ?: return
+        val taskId = interval.parentTaskId
+        val projectId = interval.parentProjectId
 
         val remoteResult = if (isCreate) {
             remoteProjectDataSource.postInterval(projectId, taskId, interval)
@@ -464,7 +462,13 @@ class OfflineFirstProjectRepository(
         }
     }
 
-    /** An interval only knows its task; the interval routes also need the project that owns it. */
+    /**
+     * Resolves an interval route's project id from the task alone.
+     *
+     * Intervals carry their own `parentProjectId`, so this is only needed for a queued DELETE: by
+     * the time that op drains, the local interval row is gone and the task id stored on the queue
+     * entry is all that is left to go on.
+     */
     private suspend fun parentProjectIdOf(taskId: String): String? = dbResult {
         localProjectDataSource.getTaskWithIntervalsById(taskId).first()?.parentProjectId
     }.getOrDefault(null)
@@ -539,9 +543,8 @@ class OfflineFirstProjectRepository(
                         is Result.Success -> r.data ?: return SyncOutcome.DROP // deleted meanwhile
                         is Result.Error -> return SyncOutcome.RETRY
                     }
-                    val taskId = interval.parentSessionId
-                    // Task gone → the server cascade already removed its intervals.
-                    val projectId = parentProjectIdOf(taskId) ?: return SyncOutcome.DROP
+                    val taskId = interval.parentTaskId
+                    val projectId = interval.parentProjectId
                     val result = if (op.operationType == OP_CREATE) {
                         remoteProjectDataSource.postInterval(projectId, taskId, interval)
                     } else {

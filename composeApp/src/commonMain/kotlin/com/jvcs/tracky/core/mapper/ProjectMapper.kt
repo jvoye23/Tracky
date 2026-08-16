@@ -68,7 +68,7 @@ fun ProjectWithTasksEntity.toProject(): Project {
         isFinished = project.isFinished,
         useLightTextColor = project.useLightTextColor,
         endDateTimeUtc = project.endDateTimeEpochMs?.let(Instant::fromEpochMilliseconds),
-        projectTasks = projectTasks.map { it.toProjectSession() },
+        projectTasks = projectTasks.map { it.toProjectTask() },
         isArchived = project.isArchived,
         trashedAt = project.trashedAtEpochMs?.let(Instant::fromEpochMilliseconds),
         isPinned = project.isPinned,
@@ -77,7 +77,7 @@ fun ProjectWithTasksEntity.toProject(): Project {
     )
 }
 
-fun ProjectTaskEntity.toProjectSession(): ProjectTask {
+fun ProjectTaskEntity.toProjectTask(): ProjectTask {
     return ProjectTask(
         projectTaskId = recordId,
         title = description,
@@ -91,7 +91,7 @@ fun ProjectTaskEntity.toProjectSession(): ProjectTask {
     )
 }
 
-fun TaskWithIntervals.toProjectSession(): ProjectTask {
+fun TaskWithIntervals.toProjectTask(): ProjectTask {
     return ProjectTask(
         projectTaskId = task.recordId,
         title = task.description,
@@ -101,7 +101,7 @@ fun TaskWithIntervals.toProjectSession(): ProjectTask {
         isFinished = task.isFinished,
         parentProjectId = task.parentProjectId,
         isTimerRunning = task.isTimerRunning,
-        intervals = intervals.map { it.toSessionInterval() },
+        intervals = intervals.map { it.toTaskInterval() },
         ownUpdatedAt = task.updatedAtEpochMs?.let(Instant::fromEpochMilliseconds),
     )
 }
@@ -120,20 +120,22 @@ fun ProjectTask.toProjectSessionEntity(): ProjectTaskEntity {
     )
 }
 
-fun TaskIntervalEntity.toSessionInterval(): TaskInterval {
+fun TaskIntervalEntity.toTaskInterval(): TaskInterval {
     return TaskInterval(
         intervalId = intervalId,
-        parentSessionId = parentTaskId,
+        parentTaskId = parentTaskId,
+        parentProjectId = parentProjectId,
         startDateTimeUtc = Instant.fromEpochMilliseconds(startDateTimeEpochMs),
         endDateTimeUtc = endDateTimeEpochMs?.let(Instant::fromEpochMilliseconds),
         durationMillis = durationMillis
     )
 }
 
-fun TaskInterval.toSessionIntervalEntity(): TaskIntervalEntity {
+fun TaskInterval.toTaskIntervalEntity(): TaskIntervalEntity {
     return TaskIntervalEntity(
         intervalId = intervalId,
-        parentTaskId = parentSessionId,
+        parentTaskId = parentTaskId,
+        parentProjectId = parentProjectId,
         startDateTimeEpochMs = startDateTimeUtc.toEpochMilliseconds(),
         endDateTimeEpochMs = endDateTimeUtc?.toEpochMilliseconds(),
         durationMillis = durationMillis
