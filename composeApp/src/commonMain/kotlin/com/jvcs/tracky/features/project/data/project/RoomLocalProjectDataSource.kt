@@ -1,0 +1,256 @@
+package com.jvcs.tracky.features.project.data.project
+
+import com.jvcs.tracky.core.database.dao.ProjectDao
+import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
+import com.jvcs.tracky.core.domain.util.DataError
+import com.jvcs.tracky.core.domain.util.EmptyResult
+import com.jvcs.tracky.core.domain.util.Result
+import com.jvcs.tracky.core.domain.util.TimeProvider
+import com.jvcs.tracky.features.project.data.mappers.toProject
+import com.jvcs.tracky.features.project.data.mappers.toProjectEntity
+import com.jvcs.tracky.features.project.data.mappers.toProjectSessionEntity
+import com.jvcs.tracky.features.project.data.mappers.toProjectTask
+import com.jvcs.tracky.features.project.data.mappers.toTaskInterval
+import com.jvcs.tracky.features.project.data.mappers.toTaskIntervalEntity
+import com.jvcs.tracky.features.project.domain.models.Project
+import com.jvcs.tracky.features.project.domain.models.ProjectTask
+import com.jvcs.tracky.features.project.domain.models.TaskInterval
+import com.jvcs.tracky.features.project.domain.project.LocalProjectDataSource
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
+import kotlin.time.Instant
+import kotlin.uuid.Uuid
+
+class RoomLocalProjectDataSource (
+    private val projectDao: ProjectDao,
+    private val timeProvider: TimeProvider
+): LocalProjectDataSource {
+
+    private val dbWriteDispatcher = Dispatchers.IO.limitedParallelism(1)
+
+    override fun getProjects(): Flow<List<Project>> {
+        return projectDao.getProjectsWithTasks()
+            .map { list -> list.map { it.toProject() } }
+    }
+
+    override fun getActiveProjects(): Flow<List<Project>> {
+        return projectDao.getActiveProjectsWithTasks()
+            .map { list -> list.map { it.toProject()} }
+    }
+
+    override fun getArchivedProjects(): Flow<List<Project>> {
+        return projectDao.getArchivedProjectsWithTasks()
+            .map { list -> list.map { it.toProject() } }
+    }
+
+    override fun getTrashedProjects(): Flow<List<Project>> {
+        return projectDao.getTrashedProjectsWithTasks()
+            .map { list -> list.map { it.toProject() } }
+    }
+
+    override fun getPinnedProjects(): Flow<List<Project>> {
+        return projectDao.getPinnedProjectsWithTasks()
+            .map { list -> list.map { it.toProject() } }
+    }
+
+    override suspend fun getExpiredTrashedProjectIds(cutoff: Instant): List<String> {
+        return projectDao.getExpiredTrashedProjectIds(cutoff.toEpochMilliseconds())
+    }
+
+    override suspend fun getProjectById(projectId: String): Project? {
+        return projectDao.getProjectById(projectId)?.toProject()
+
+    }
+
+    override suspend fun getProjectWithTasksByProjectId(projectId: String): Project? {
+        return projectDao.getProjectWithTasksById(projectId)?.toProject()
+    }
+
+    override suspend fun getSortIndices(): Map<String, Long?> {
+        return projectDao.getSortIndices().associate { it.projectId to it.sortIndex }
+    }
+
+    override suspend fun updateSortIndices(
+        indices: Map<String, Long>,
+        updatedAt: Instant
+    ): EmptyResult<DataError> {
+        return try {
+            withContext(dbWriteDispatcher) {
+                projectDao.updateSortIndices(indices, updatedAt.toEpochMilliseconds())
+            }
+            Result.Success(Unit)
+        } catch (e: Exception) {
+            if(e is CancellationException) throw e
+            Result.Error(DataError.Local.DISK_FULL)
+        }
+    }
+
+    override suspend fun upsertProject(project: Project): EmptyResult<DataError> {
+        return try {
+            withContext(dbWriteDispatcher) {
+                projectDao.upsertProject(project.toProjectEntity())
+            }
+            Result.Success(Unit)
+
+        } catch (e: Exception) {
+            if(e is CancellationException) throw e
+            Result.Error(DataError.Local.DISK_FULL)
+        }
+    }
+
+    // The pull writes the whole tree, not just the project rows: the server returns every task and
+    // interval nested inside GET /api/projects, and dropping them here is what used to make tracked
+    // time unrecoverable after a reinstall. A null projectTasks means "not loaded" rather than "no
+    // tasks", so it contributes nothing instead of clearing anything.
+    override suspend fun upsertProjects(projects: List<Project>): EmptyResult<DataError> {
+        return try {
+            withContext(dbWriteDispatcher) {
+                val tasks = projects.flatMap { it.projectTasks.orEmpty() }
+                projectDao.upsertServerTree(
+                    projects = projects.map { it.toProjectEntity() },
+                    tasks = tasks.map { it.toProjectSessionEntity() },
+                    intervals = tasks.flatMap { task -> task.intervals }
+                        .map { it.toTaskIntervalEntity() },
+                )
+            }
+            Result.Success(Unit)
+        } catch (e: Exception) {
+            if(e is CancellationException) throw e
+            Result.Error(DataError.Local.DISK_FULL)
+        }
+    }
+
+    override suspend fun upsertProjectTask(projectTask: ProjectTask): EmptyResult<DataError> {
+        return try {
+            withContext(dbWriteDispatcher) {
+                projectDao.upsertProjectRecord(projectTask.toProjectSessionEntity())
+            }
+            Result.Success(Unit)
+        } catch (e: Exception) {
+            if(e is CancellationException) throw e
+            Result.Error(DataError.Local.DISK_FULL)
+        }
+    }
+
+    override suspend fun deleteProject(projectId: String) = withContext(dbWriteDispatcher) {
+        projectDao.deleteProject(projectId)
+    }
+
+    override suspend fun deleteProjectTask(taskId: String) = withContext(dbWriteDispatcher) {
+        projectDao.deleteProjectRecord(taskId)
+    }
+
+    override suspend fun deleteAllProjects() = withContext(dbWriteDispatcher) {
+        // task_intervals cascades from both project_records and projects, so dropping the projects
+        // takes every task and interval with it.
+        projectDao.deleteAllProjects()
+    }
+
+    override suspend fun updateTaskDuration(
+        taskId: String,
+        newDurationMillis: Long
+    ) = withContext(dbWriteDispatcher) {
+        projectDao.updateTaskDuration(taskId, newDurationMillis)
+    }
+
+    override fun getTaskWithIntervalsById(taskId: String): Flow<ProjectTask?> {
+        return projectDao.getTaskWithIntervalsById(taskId)
+            .map { it?.toProjectTask() }
+    }
+
+    override suspend fun upsertTaskInterval(interval: TaskInterval): EmptyResult<DataError> {
+        return try {
+            withContext(dbWriteDispatcher) {
+                projectDao.upsertTaskInterval(interval.toTaskIntervalEntity())
+            }
+            Result.Success(Unit)
+        } catch (e: Exception) {
+            if(e is CancellationException) throw e
+            Result.Error(DataError.Local.DISK_FULL)
+        }
+    }
+
+    override suspend fun getOpenIntervalByTaskId(taskId: String): TaskInterval? {
+        return projectDao.getOpenIntervalBySessionId(taskId)?.toTaskInterval()
+    }
+
+    override suspend fun getIntervalById(intervalId: String): TaskInterval? {
+        return projectDao.getIntervalById(intervalId)?.toTaskInterval()
+    }
+
+    override suspend fun deleteTaskInterval(intervalId: String): EmptyResult<DataError> {
+        return try {
+            withContext(dbWriteDispatcher) {
+                projectDao.deleteTaskInterval(intervalId)
+            }
+            Result.Success(Unit)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Result.Error(DataError.Local.DISK_FULL)
+        }
+    }
+
+    override suspend fun startTask(taskId: String): Result<TaskInterval, DataError.Local> {
+        return try {
+            val interval = withContext(dbWriteDispatcher) {
+                // The owning project has to be read before the interval can be written: it is part
+                // of the row now, and the cascading foreign key would reject an interval whose task
+                // no longer exists anyway.
+                val task = projectDao.getTaskById(taskId) ?: return@withContext null
+                val now = timeProvider.nowInstant
+                val interval = TaskIntervalEntity(
+                    intervalId = Uuid.random().toString(),
+                    parentTaskId = taskId,
+                    parentProjectId = task.parentProjectId,
+                    startDateTimeEpochMs = now.toEpochMilliseconds(),
+                    endDateTimeEpochMs = null,
+                    durationMillis = 0L
+                )
+                projectDao.upsertTaskInterval(interval)
+                projectDao.updateSessionTimerStatus(taskId, true)
+                interval
+            } ?: return Result.Error(DataError.Local.NOT_FOUND)
+            Result.Success(interval.toTaskInterval())
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Result.Error(DataError.Local.DISK_FULL)
+        }
+    }
+
+    override suspend fun stopTask(taskId: String): Result<TaskInterval?, DataError.Local> {
+        return try {
+            val closedInterval = withContext(dbWriteDispatcher) {
+                val openInterval = projectDao.getOpenIntervalBySessionId(taskId)
+                val updatedInterval = if (openInterval != null) {
+                    val now = timeProvider.nowInstant
+                    val startInstant =
+                        Instant.fromEpochMilliseconds(openInterval.startDateTimeEpochMs)
+                    val duration = (now - startInstant).inWholeMilliseconds
+                    val updatedInterval = openInterval.copy(
+                        endDateTimeEpochMs = now.toEpochMilliseconds(),
+                        durationMillis = duration
+                    )
+                    projectDao.upsertTaskInterval(updatedInterval)
+
+                    projectDao.addTaskDuration(taskId, duration)
+                    updatedInterval
+                } else null
+                projectDao.updateSessionTimerStatus(taskId, false)
+                updatedInterval
+            }
+            Result.Success(closedInterval?.toTaskInterval())
+        } catch (e: Exception) {
+            if(e is CancellationException) throw e
+            Result.Error(DataError.Local.DISK_FULL)
+        }
+    }
+
+    override suspend fun updateTaskTitle(taskId: String, title: String) =
+        withContext(dbWriteDispatcher) {
+            projectDao.updateTaskTitle(taskId, title)
+        }
+}

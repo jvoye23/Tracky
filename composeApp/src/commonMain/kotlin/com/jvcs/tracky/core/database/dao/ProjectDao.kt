@@ -10,7 +10,6 @@ import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 import com.jvcs.tracky.core.database.relation.ProjectSortIndexEntity
 import com.jvcs.tracky.core.database.relation.ProjectWithTasksEntity
 import com.jvcs.tracky.core.database.relation.TaskWithIntervals
-import com.jvcs.tracky.core.domain.model.ProjectStatus
 import com.jvcs.tracky.core.domain.sync.serverWinsOnPull
 import com.jvcs.tracky.core.domain.sync.serverWinsOnPullForInterval
 import kotlinx.coroutines.flow.Flow

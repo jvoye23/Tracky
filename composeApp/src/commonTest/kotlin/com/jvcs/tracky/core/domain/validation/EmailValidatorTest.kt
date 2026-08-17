@@ -1,5 +1,6 @@
 package com.jvcs.tracky.core.domain.validation
 
+import com.jvcs.tracky.features.auth.domain.EmailValidator
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue

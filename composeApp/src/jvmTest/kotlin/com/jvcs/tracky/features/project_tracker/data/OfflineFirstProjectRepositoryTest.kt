@@ -4,10 +4,10 @@ package com.jvcs.tracky.features.project_tracker.data
 
 import com.jvcs.tracky.core.database.dao.PendingSyncDao
 import com.jvcs.tracky.core.database.entity.PendingSyncEntity
-import com.jvcs.tracky.core.domain.RemoteProjectDataSource
-import com.jvcs.tracky.core.domain.model.Project
-import com.jvcs.tracky.core.domain.model.ProjectTask
-import com.jvcs.tracky.core.domain.model.TaskInterval
+import com.jvcs.tracky.features.project.domain.project.RemoteProjectDataSource
+import com.jvcs.tracky.features.project.domain.models.Project
+import com.jvcs.tracky.features.project.domain.models.ProjectTask
+import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
 import com.jvcs.tracky.core.domain.sync.serverWinsOnPull
 import com.jvcs.tracky.core.domain.sync.serverWinsOnPullForInterval
@@ -15,7 +15,8 @@ import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
 import com.jvcs.tracky.core.domain.util.Result
-import com.jvcs.tracky.features.project_tracker.domain.LocalProjectDataSource
+import com.jvcs.tracky.features.project.data.project.OfflineFirstProjectRepository
+import com.jvcs.tracky.features.project.domain.project.LocalProjectDataSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow

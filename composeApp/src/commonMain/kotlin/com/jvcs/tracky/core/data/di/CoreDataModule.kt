@@ -1,13 +1,13 @@
 package com.jvcs.tracky.core.data.di
 
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
-import com.jvcs.tracky.core.data.KtorRemoteProjectDataSource
+import com.jvcs.tracky.features.project.data.project.KtorRemoteProjectDataSource
 import com.jvcs.tracky.core.data.auth.DataStoreSessionStorage
 import com.jvcs.tracky.core.data.auth.KtorAuthService
 import com.jvcs.tracky.core.data.networking.HttpClientFactory
 import com.jvcs.tracky.core.database.DatabaseFactory
 import com.jvcs.tracky.core.database.TrackyDatabase
-import com.jvcs.tracky.core.domain.RemoteProjectDataSource
+import com.jvcs.tracky.features.project.domain.project.RemoteProjectDataSource
 import com.jvcs.tracky.core.domain.auth.AuthService
 import com.jvcs.tracky.core.domain.auth.SessionStorage
 import com.jvcs.tracky.core.domain.auth.SocialAuthProvider
@@ -15,11 +15,10 @@ import com.jvcs.tracky.core.domain.sync.ProjectSyncManager
 import com.jvcs.tracky.core.domain.sync.SyncRepository
 import com.jvcs.tracky.core.domain.util.SystemTimeProvider
 import com.jvcs.tracky.core.domain.util.TimeProvider
-import com.jvcs.tracky.features.project_tracker.data.OfflineFirstProjectRepository
-import com.jvcs.tracky.features.project_tracker.data.RoomLocalProjectDataSource
-import com.jvcs.tracky.features.project_tracker.di.projectModule
-import com.jvcs.tracky.features.project_tracker.domain.LocalProjectDataSource
-import com.jvcs.tracky.features.project_tracker.domain.ProjectRepository
+import com.jvcs.tracky.features.project.data.project.OfflineFirstProjectRepository
+import com.jvcs.tracky.features.project.data.project.RoomLocalProjectDataSource
+import com.jvcs.tracky.features.project.domain.project.LocalProjectDataSource
+import com.jvcs.tracky.features.project.domain.project.ProjectRepository
 import kotlinx.serialization.json.Json
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.singleOf

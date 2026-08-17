@@ -30,7 +30,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
 import com.jvcs.tracky.design_system.Icon_Swap_Vert_Down
 import com.jvcs.tracky.design_system.Icon_Swap_Vert_Up
-import com.jvcs.tracky.features.project_tracker.presentation.project_overview.SortOption
+import com.jvcs.tracky.features.project.presentation.project_overview.SortOption
 import org.jetbrains.compose.resources.stringResource
 import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.sort_by

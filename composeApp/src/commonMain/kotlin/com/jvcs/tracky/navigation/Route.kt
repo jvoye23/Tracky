@@ -1,7 +1,7 @@
 package com.jvcs.tracky.navigation
 
 import androidx.navigation3.runtime.NavKey
-import com.jvcs.tracky.features.project_tracker.domain.EditTextType
+import com.jvcs.tracky.features.project.domain.project.EditTextType
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 

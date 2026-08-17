@@ -7,8 +7,8 @@ import com.jvcs.tracky.core.domain.auth.AuthService
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.onFailure
 import com.jvcs.tracky.core.domain.util.onSuccess
-import com.jvcs.tracky.core.domain.validation.PasswordValidator
-import com.jvcs.tracky.core.presentation.util.toUiText
+import com.jvcs.tracky.features.auth.domain.PasswordValidator
+import com.jvcs.tracky.features.project.presentation.util.toUiText
 import com.jvcs.tracky.design_system.util.UiText
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted

@@ -5,7 +5,7 @@ package com.jvcs.tracky.core.domain.sync
 import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
 import com.jvcs.tracky.core.domain.lifecycle.AppLifecycleObserver
 import com.jvcs.tracky.core.domain.util.TimeProvider
-import com.jvcs.tracky.features.project_tracker.domain.ProjectRepository
+import com.jvcs.tracky.features.project.domain.project.ProjectRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.combine

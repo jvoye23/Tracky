@@ -2,6 +2,9 @@
 
 package com.jvcs.tracky.core.domain.model
 
+import com.jvcs.tracky.features.project.domain.models.Project
+import com.jvcs.tracky.features.project.domain.models.ProjectTask
+import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -9,8 +12,8 @@ import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
 /**
- * The [Timestamped] roll-up: [Timestamped.lastUpdatedAt] is the max of an element's own stamp and
- * every stamp in its subtree, while [Timestamped.ownUpdatedAt] stays the element's own value —
+ * The [com.jvcs.tracky.features.project.domain.models.Timestamped] roll-up: [com.jvcs.tracky.features.project.domain.models.Timestamped.lastUpdatedAt] is the max of an element's own stamp and
+ * every stamp in its subtree, while [com.jvcs.tracky.features.project.domain.models.Timestamped.ownUpdatedAt] stays the element's own value —
  * that separation is what last-write-wins sync depends on.
  */
 class TimestampedTest {
