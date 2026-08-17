@@ -7,7 +7,7 @@ import com.jvcs.tracky.core.domain.sync.TrashCleanupScheduler
 import com.jvcs.tracky.core.domain.sync.TrashRetention
 import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.di.initKoin
-import com.jvcs.tracky.features.project_tracker.domain.ProjectRepository
+import com.jvcs.tracky.features.project.domain.project.ProjectRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch

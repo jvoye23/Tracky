@@ -5,9 +5,9 @@ package com.jvcs.tracky.core.data.networking.mappers
 import com.jvcs.tracky.core.data.networking.dto.ProjectDto
 import com.jvcs.tracky.core.data.networking.dto.ProjectTaskDto
 import com.jvcs.tracky.core.data.networking.dto.TaskIntervalDto
-import com.jvcs.tracky.core.domain.model.Project
-import com.jvcs.tracky.core.domain.model.ProjectTask
-import com.jvcs.tracky.core.domain.model.TaskInterval
+import com.jvcs.tracky.features.project.domain.models.Project
+import com.jvcs.tracky.features.project.domain.models.ProjectTask
+import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 

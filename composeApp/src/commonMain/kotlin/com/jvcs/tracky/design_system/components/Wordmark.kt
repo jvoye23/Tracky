@@ -1,12 +1,12 @@
 package com.jvcs.tracky.design_system.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,7 +18,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.jvcs.tracky.design_system.Icon_Timer
+import org.jetbrains.compose.resources.painterResource
+import tracky.composeapp.generated.resources.Res
+import tracky.composeapp.generated.resources.tracky_icon
 
 enum class WordmarkSize { Md, Lg }
 
@@ -55,11 +57,11 @@ fun Wordmark(
                 .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                imageVector = Icon_Timer,
+            Image(
+                painter = painterResource(Res.drawable.tracky_icon),
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(iconSize),
+                modifier = Modifier.size(50.dp)
+
             )
         }
         Text(

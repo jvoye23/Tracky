@@ -3,7 +3,7 @@ package com.jvcs.tracky.navigation
 import androidx.navigation3.runtime.NavKey
 import androidx.savedstate.serialization.decodeFromSavedState
 import androidx.savedstate.serialization.encodeToSavedState
-import com.jvcs.tracky.features.project_tracker.domain.EditTextType
+import com.jvcs.tracky.features.project.domain.project.EditTextType
 import kotlinx.serialization.PolymorphicSerializer
 import kotlin.test.Test
 import kotlin.test.assertEquals

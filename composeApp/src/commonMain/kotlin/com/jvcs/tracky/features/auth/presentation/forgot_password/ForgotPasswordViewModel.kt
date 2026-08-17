@@ -6,8 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.jvcs.tracky.core.domain.auth.AuthService
 import com.jvcs.tracky.core.domain.util.onFailure
 import com.jvcs.tracky.core.domain.util.onSuccess
-import com.jvcs.tracky.core.domain.validation.EmailValidator
-import com.jvcs.tracky.core.presentation.util.toUiText
+import com.jvcs.tracky.features.auth.domain.EmailValidator
+import com.jvcs.tracky.features.project.presentation.util.toUiText
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
