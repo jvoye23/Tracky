@@ -1,0 +1,528 @@
+@file:OptIn(ExperimentalTime::class)
+
+package com.jvcs.tracky.features.project_tracker.data
+
+import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource
+import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
+import com.jvcs.tracky.core.domain.sync.SyncScheduler
+import com.jvcs.tracky.core.domain.sync.serverWinsOnPull
+import com.jvcs.tracky.core.domain.sync.serverWinsOnPullForInterval
+import com.jvcs.tracky.core.domain.util.DataError
+import com.jvcs.tracky.core.domain.util.EmptyResult
+import com.jvcs.tracky.core.domain.util.FakeTimeProvider
+import com.jvcs.tracky.core.domain.util.Result
+import com.jvcs.tracky.features.project.data.interval.OfflineFirstIntervalRepository
+import com.jvcs.tracky.features.project.data.project.OfflineFirstProjectRepository
+import com.jvcs.tracky.features.project.domain.interval.LocalIntervalDataSource
+import com.jvcs.tracky.features.project.domain.interval.RemoteIntervalDataSource
+import com.jvcs.tracky.features.project.domain.models.Project
+import com.jvcs.tracky.features.project.domain.models.TaskInterval
+import com.jvcs.tracky.features.project.domain.models.ProjectTask
+import com.jvcs.tracky.features.project.domain.project.LocalProjectDataSource
+import com.jvcs.tracky.features.project.domain.project.RemoteProjectDataSource
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
+import kotlin.uuid.Uuid
+
+/**
+ * The one store the three local fakes share.
+ *
+ * Projects, tasks and intervals live in a single database in production, and the cascades between
+ * them are what several of these tests are actually about — so the fakes cannot each keep their own
+ * private copy. Splitting the repositories does not split the schema.
+ */
+class FakeDb {
+    val projects = linkedMapOf<String, Project>()
+    val tasks = linkedMapOf<String, ProjectTask>()
+    val intervals = linkedMapOf<String, TaskInterval>()
+
+    val projectsFlow = MutableStateFlow<List<Project>>(emptyList())
+
+    fun emit() { projectsFlow.value = projects.values.toList() }
+
+    /** Room cascades projects -> project_records -> task_intervals; the fake has to as well. */
+    fun cascadeDeleteProject(projectId: String) {
+        projects.remove(projectId)
+        tasks.values.filter { it.parentProjectId == projectId }
+            .map { it.projectTaskId }
+            .forEach { cascadeDeleteTask(it) }
+        emit()
+    }
+
+    fun cascadeDeleteTask(taskId: String) {
+        tasks.remove(taskId)
+        intervals.values.filter { it.parentTaskId == taskId }
+            .map { it.intervalId }
+            .forEach { intervals.remove(it) }
+    }
+
+    /**
+     * Builds a project without storing it — for the offline-create path, where the repository has
+     * to see the row as absent to treat the write as a CREATE.
+     */
+    fun newProject(id: String) = Project(
+        projectId = id,
+        title = "title-$id",
+        description = null,
+        colorArgb = null,
+        totalDurationMillis = null,
+        startDateTimeUtc = Instant.fromEpochMilliseconds(0),
+        isFinished = false,
+        endDateTimeUtc = null
+    )
+
+    fun newTask(taskId: String, projectId: String) = ProjectTask(
+        projectTaskId = taskId,
+        title = "task-$taskId",
+        durationMillis = 0,
+        startDateTimeUtc = Instant.fromEpochMilliseconds(0),
+        parentProjectId = projectId,
+        isTimerRunning = false,
+    )
+
+    /** Stores the row as if it were already there — a project the server and device both know. */
+    fun seedProject(id: String) = newProject(id).also { projects[id] = it; emit() }
+
+    fun seedTask(taskId: String, projectId: String) =
+        newTask(taskId, projectId).also { tasks[taskId] = it }
+}
+
+// --- Local data sources ---------------------------------------------------------------------------
+
+class FakeLocalProjectDataSource(val db: FakeDb = FakeDb()) : LocalProjectDataSource {
+    val projects get() = db.projects
+    val tasks get() = db.tasks
+    val intervals get() = db.intervals
+
+    val upsertedProjectIds = mutableListOf<String>()
+    /** One entry per updateSortIndices call, so tests can assert a reorder is a single write. */
+    val sortIndexWrites = mutableListOf<Map<String, Long>>()
+    val sortIndexWriteTimestamps = mutableListOf<Instant>()
+    var failSortIndexWrite = false
+
+    override fun getProjects(): Flow<List<Project>> = db.projectsFlow
+    override fun getActiveProjects(): Flow<List<Project>> =
+        db.projectsFlow.map { list -> list.filter { !it.isArchived && !it.isFinished && it.trashedAt == null } }
+    override fun getArchivedProjects(): Flow<List<Project>> =
+        db.projectsFlow.map { list -> list.filter { it.isArchived && it.trashedAt == null } }
+    override fun getTrashedProjects(): Flow<List<Project>> =
+        db.projectsFlow.map { list -> list.filter { it.trashedAt != null } }
+
+    override suspend fun getPinnedProjects(): Result<List<Project>, DataError.Local> = Result.Success(
+        projects.values.filter { it.isPinned && !it.isArchived && !it.isFinished && it.trashedAt == null }
+    )
+
+    override suspend fun getExpiredTrashedProjectIds(cutoff: Instant): Result<List<String>, DataError.Local> =
+        Result.Success(projects.values.filter { it.trashedAt != null && it.trashedAt!! < cutoff }.map { it.projectId })
+
+    override suspend fun getProjectById(projectId: String): Result<Project?, DataError.Local> =
+        Result.Success(projects[projectId])
+
+    override suspend fun getProjectWithTasksByProjectId(projectId: String): Result<Project?, DataError.Local> =
+        Result.Success(projects[projectId])
+
+    override suspend fun getSortIndices(): Result<Map<String, Long?>, DataError.Local> =
+        Result.Success(projects.mapValues { (_, project) -> project.sortIndex })
+
+    override suspend fun updateSortIndices(
+        indices: Map<String, Long>,
+        updatedAt: Instant
+    ): EmptyResult<DataError.Local> {
+        // All or nothing, like the DAO transaction it stands in for.
+        if (failSortIndexWrite) return Result.Error(DataError.Local.DISK_FULL)
+        sortIndexWrites += indices
+        sortIndexWriteTimestamps += updatedAt
+        indices.forEach { (id, index) ->
+            projects[id]?.let { projects[id] = it.copy(sortIndex = index, ownUpdatedAt = updatedAt) }
+        }
+        db.emit()
+        return Result.Success(Unit)
+    }
+
+    override suspend fun upsertProject(project: Project): EmptyResult<DataError.Local> {
+        upsertedProjectIds += project.projectId
+        projects[project.projectId] = project
+        db.emit()
+        return Result.Success(Unit)
+    }
+
+    /**
+     * Stands in for ProjectDao.upsertServerTree: writes the whole tree and applies the same merge
+     * rules, so a pull in a test can clobber (or refuse to clobber) local state the way it would
+     * against a real database.
+     */
+    override suspend fun upsertProjects(projects: List<Project>): EmptyResult<DataError.Local> {
+        projects.forEach { incoming ->
+            if (serverWinsOnPull(this.projects[incoming.projectId]?.ownUpdatedAt?.toEpochMilliseconds(),
+                    incoming.ownUpdatedAt?.toEpochMilliseconds())) {
+                this.projects[incoming.projectId] = incoming
+            }
+        }
+        val incomingTasks = projects.flatMap { it.projectTasks.orEmpty() }
+        incomingTasks.forEach { incoming ->
+            if (serverWinsOnPull(tasks[incoming.projectTaskId]?.ownUpdatedAt?.toEpochMilliseconds(),
+                    incoming.ownUpdatedAt?.toEpochMilliseconds())) {
+                tasks[incoming.projectTaskId] = incoming
+            }
+        }
+        incomingTasks.flatMap { it.intervals }.forEach { incoming ->
+            val local = intervals[incoming.intervalId]
+            if (local == null || serverWinsOnPullForInterval(local.endDateTimeUtc?.toEpochMilliseconds())) {
+                intervals[incoming.intervalId] = incoming
+            }
+        }
+        db.emit()
+        return Result.Success(Unit)
+    }
+
+    override suspend fun deleteProject(projectId: String): EmptyResult<DataError.Local> {
+        db.cascadeDeleteProject(projectId)
+        return Result.Success(Unit)
+    }
+
+    override suspend fun deleteAllProjects(): EmptyResult<DataError.Local> {
+        projects.clear(); tasks.clear(); intervals.clear(); db.emit()
+        return Result.Success(Unit)
+    }
+
+    // --- Tasks -----------------------------------------------------------------------------------
+    // Tasks still live on this data source in production; they move out in the next change.
+
+    val upsertedTaskIds = mutableListOf<String>()
+    val deletedTaskIds = mutableListOf<String>()
+    /** startTask generates the id in production; pin it here so tests can assert on it. */
+    var nextIntervalId = "i1"
+    var clock: Instant = Instant.fromEpochMilliseconds(10_000)
+
+    // `intervals` on the receiver shadows the db map, so the lookup has to name it explicitly.
+    private fun ProjectTask.withIntervals() =
+        copy(intervals = db.intervals.values.filter { it.parentTaskId == projectTaskId })
+
+    override fun getTaskWithIntervalsById(taskId: String): Flow<ProjectTask?> =
+        flowOf(tasks[taskId]?.withIntervals())
+
+    override suspend fun getTaskById(taskId: String): Result<ProjectTask?, DataError.Local> =
+        Result.Success(tasks[taskId]?.withIntervals())
+
+    override suspend fun upsertProjectTask(projectTask: ProjectTask): EmptyResult<DataError.Local> {
+        upsertedTaskIds += projectTask.projectTaskId
+        tasks[projectTask.projectTaskId] = projectTask
+        return Result.Success(Unit)
+    }
+
+    override suspend fun deleteProjectTask(taskId: String): EmptyResult<DataError.Local> {
+        deletedTaskIds += taskId
+        cascadeDeleteTask(taskId)
+        return Result.Success(Unit)
+    }
+
+    override suspend fun updateTaskDuration(
+        taskId: String,
+        newDurationMillis: Long
+    ): EmptyResult<DataError.Local> {
+        tasks[taskId]?.let { tasks[taskId] = it.copy(durationMillis = newDurationMillis) }
+        return Result.Success(Unit)
+    }
+
+    override suspend fun updateTaskTitle(taskId: String, title: String): EmptyResult<DataError.Local> {
+        tasks[taskId]?.let { tasks[taskId] = it.copy(title = title) }
+        return Result.Success(Unit)
+    }
+
+    override suspend fun startTask(taskId: String): Result<TaskInterval, DataError.Local> {
+        // Mirrors the Room implementation: the interval carries its project, so an unknown task
+        // has nothing to hang the new row off.
+        val task = tasks[taskId] ?: return Result.Error(DataError.Local.NOT_FOUND)
+        val interval = TaskInterval(
+            intervalId = nextIntervalId,
+            parentTaskId = taskId,
+            parentProjectId = task.parentProjectId,
+            startDateTimeUtc = clock,
+            endDateTimeUtc = null,
+            durationMillis = 0L,
+        )
+        intervals[interval.intervalId] = interval
+        tasks[taskId] = task.copy(isTimerRunning = true)
+        return Result.Success(interval)
+    }
+
+    override suspend fun stopTask(taskId: String): Result<TaskInterval?, DataError.Local> {
+        val open = intervals.values.firstOrNull { it.parentTaskId == taskId && it.endDateTimeUtc == null }
+        tasks[taskId]?.let { tasks[taskId] = it.copy(isTimerRunning = false) }
+        if (open == null) return Result.Success(null)
+        val closed = open.copy(
+            endDateTimeUtc = clock,
+            durationMillis = (clock - open.startDateTimeUtc).inWholeMilliseconds,
+        )
+        intervals[closed.intervalId] = closed
+        return Result.Success(closed)
+    }
+
+    private fun cascadeDeleteTask(taskId: String) = db.cascadeDeleteTask(taskId)
+}
+
+class FakeLocalIntervalDataSource(private val db: FakeDb = FakeDb()) : LocalIntervalDataSource {
+    val intervals get() = db.intervals
+
+    val upsertedIntervalIds = mutableListOf<String>()
+    val deletedIntervalIds = mutableListOf<String>()
+
+    override suspend fun upsertTaskInterval(interval: TaskInterval): EmptyResult<DataError.Local> {
+        upsertedIntervalIds += interval.intervalId
+        intervals[interval.intervalId] = interval
+        return Result.Success(Unit)
+    }
+
+    override suspend fun getIntervalById(intervalId: String): Result<TaskInterval?, DataError.Local> =
+        Result.Success(intervals[intervalId])
+
+    override suspend fun getOpenIntervalByTaskId(taskId: String): Result<TaskInterval?, DataError.Local> =
+        Result.Success(intervals.values.firstOrNull { it.parentTaskId == taskId && it.endDateTimeUtc == null })
+
+    override suspend fun deleteTaskInterval(intervalId: String): EmptyResult<DataError.Local> {
+        deletedIntervalIds += intervalId
+        intervals.remove(intervalId)
+        return Result.Success(Unit)
+    }
+}
+
+// --- Remote data sources --------------------------------------------------------------------------
+
+class FakeRemoteProjectDataSource : RemoteProjectDataSource {
+    var failWith: DataError.Remote? = null
+    val postedProjects = mutableListOf<Project>()
+    val postedProjectIds = mutableListOf<String>()
+    val updatedProjectIds = mutableListOf<String>()
+    val deletedProjectIds = mutableListOf<String>()
+    /** One entry per reorderProjects call, so tests can assert a drag is a single network call. */
+    val reorderCalls = mutableListOf<Map<String, Long>>()
+    val reorderTimestamps = mutableListOf<Instant>()
+
+    /** What GET /api/projects hands back — the whole tree, tasks and intervals included. */
+    var projectsToReturn: List<Project> = emptyList()
+
+    override suspend fun getProjects(): Result<List<Project>, DataError.Remote> =
+        failWith?.let { Result.Error(it) } ?: Result.Success(projectsToReturn)
+
+    override suspend fun postProject(project: Project): Result<Project, DataError.Remote> {
+        failWith?.let { return Result.Error(it) }
+        postedProjects += project
+        postedProjectIds += project.projectId
+        return Result.Success(project)
+    }
+
+    override suspend fun updateProject(project: Project): Result<Project, DataError.Remote> {
+        failWith?.let { return Result.Error(it) }
+        updatedProjectIds += project.projectId
+        return Result.Success(project)
+    }
+
+    override suspend fun reorderProjects(indices: Map<String, Long>, updatedAt: Instant): EmptyResult<DataError.Remote> {
+        failWith?.let { return Result.Error(it) }
+        reorderCalls += indices
+        reorderTimestamps += updatedAt
+        return Result.Success(Unit)
+    }
+
+    override suspend fun deleteProject(projectId: String): EmptyResult<DataError.Remote> {
+        failWith?.let { return Result.Error(it) }
+        deletedProjectIds += projectId
+        return Result.Success(Unit)
+    }
+
+    // --- Tasks -----------------------------------------------------------------------------------
+    // The task endpoints are still served from here; they move to their own remote data source next.
+    val postedTaskIds = mutableListOf<String>()
+    val updatedTaskIds = mutableListOf<String>()
+    val deletedTaskIds = mutableListOf<String>()
+    var tasksToReturn: List<ProjectTask> = emptyList()
+
+    override suspend fun getTasksByProjectId(projectId: String): Result<List<ProjectTask>, DataError.Remote> =
+        failWith?.let { Result.Error(it) } ?: Result.Success(tasksToReturn)
+
+    override suspend fun postTaskByProjectId(projectId: String, task: ProjectTask): Result<ProjectTask, DataError.Remote> {
+        failWith?.let { return Result.Error(it) }
+        postedTaskIds += task.projectTaskId
+        return Result.Success(task)
+    }
+
+    override suspend fun updateTaskByProjectId(projectId: String, task: ProjectTask): Result<ProjectTask, DataError.Remote> {
+        failWith?.let { return Result.Error(it) }
+        updatedTaskIds += task.projectTaskId
+        return Result.Success(task)
+    }
+
+    override suspend fun deleteTask(projectId: String, taskId: String): EmptyResult<DataError.Remote> {
+        failWith?.let { return Result.Error(it) }
+        deletedTaskIds += taskId
+        return Result.Success(Unit)
+    }
+}
+
+class FakeRemoteIntervalDataSource : RemoteIntervalDataSource {
+    // Separate failure switches per verb so a test can fail one interval call while the others
+    // around it still succeed.
+    var postFailWith: DataError.Remote? = null
+    var updateFailWith: DataError.Remote? = null
+    var deleteFailWith: DataError.Remote? = null
+    val postedIntervalIds = mutableListOf<String>()
+    val updatedIntervalIds = mutableListOf<String>()
+    val deletedIntervalIds = mutableListOf<String>()
+    /** "<projectId>/<taskId>" per interval call, so tests can assert the route was resolved. */
+    val intervalRoutes = mutableListOf<String>()
+
+    override suspend fun postInterval(interval: TaskInterval): Result<TaskInterval, DataError.Remote> {
+        intervalRoutes += "${interval.parentProjectId}/${interval.parentTaskId}"
+        postFailWith?.let { return Result.Error(it) }
+        postedIntervalIds += interval.intervalId
+        return Result.Success(interval)
+    }
+
+    override suspend fun updateInterval(interval: TaskInterval): Result<TaskInterval, DataError.Remote> {
+        intervalRoutes += "${interval.parentProjectId}/${interval.parentTaskId}"
+        updateFailWith?.let { return Result.Error(it) }
+        updatedIntervalIds += interval.intervalId
+        return Result.Success(interval)
+    }
+
+    override suspend fun deleteInterval(
+        projectId: String,
+        taskId: String,
+        intervalId: String
+    ): EmptyResult<DataError.Remote> {
+        intervalRoutes += "$projectId/$taskId"
+        deleteFailWith?.let { return Result.Error(it) }
+        deletedIntervalIds += intervalId
+        return Result.Success(Unit)
+    }
+}
+
+// --- Queue + scheduler ----------------------------------------------------------------------------
+
+/**
+ * In-memory pending-sync queue. Reimplements the DAO's dedup rules rather than delegating, because
+ * those rules (a pending CREATE absorbs later UPDATEs; a DELETE cancels a pending CREATE) are part
+ * of the behaviour under test.
+ */
+class FakePendingSyncDataSource : PendingSyncDataSource {
+    private val ops = mutableListOf<PendingSyncOperation>()
+
+    fun all(): List<PendingSyncOperation> = ops.sortedBy { it.createdAt }
+
+    override suspend fun getPendingOperations(): Result<List<PendingSyncOperation>, DataError.Local> =
+        Result.Success(all())
+
+    override suspend fun getOperationsByEntityId(
+        entityId: String
+    ): Result<List<PendingSyncOperation>, DataError.Local> =
+        Result.Success(ops.filter { it.entityId == entityId }.sortedBy { it.createdAt })
+
+    override suspend fun hasPendingCreate(entityId: String): Result<Boolean, DataError.Local> =
+        Result.Success(ops.any { it.entityId == entityId && it.operationType == PendingSyncOperation.OP_CREATE })
+
+    override suspend fun enqueue(
+        entityId: String,
+        entityType: String,
+        operationType: String,
+        parentEntityId: String?,
+        createdAt: Instant
+    ): EmptyResult<DataError.Local> {
+        val existing = ops.filter { it.entityId == entityId }
+        val op = PendingSyncOperation(
+            operationId = Uuid.random().toString(),
+            entityId = entityId,
+            entityType = entityType,
+            operationType = operationType,
+            createdAt = createdAt,
+            parentEntityId = parentEntityId
+        )
+        when (operationType) {
+            PendingSyncOperation.OP_CREATE -> ops += op
+            PendingSyncOperation.OP_UPDATE -> {
+                val alreadyQueued = existing.any {
+                    it.operationType == PendingSyncOperation.OP_CREATE ||
+                        it.operationType == PendingSyncOperation.OP_UPDATE
+                }
+                if (!alreadyQueued) ops += op
+            }
+            PendingSyncOperation.OP_DELETE -> {
+                val hadPendingCreate = existing.any { it.operationType == PendingSyncOperation.OP_CREATE }
+                ops.removeAll { it.entityId == entityId }
+                if (!hadPendingCreate) ops += op
+            }
+        }
+        return Result.Success(Unit)
+    }
+
+    override suspend fun deleteOperation(operationId: String): EmptyResult<DataError.Local> {
+        ops.removeAll { it.operationId == operationId }
+        return Result.Success(Unit)
+    }
+
+    override suspend fun deleteOperationsByEntityId(entityId: String): EmptyResult<DataError.Local> {
+        ops.removeAll { it.entityId == entityId }
+        return Result.Success(Unit)
+    }
+}
+
+class FakeSyncScheduler : SyncScheduler {
+    var scheduleCount = 0
+    override suspend fun schedulePeriodicSync() { scheduleCount++ }
+    override suspend fun schedulePeriodicSyncOnStart() = Unit
+    override suspend fun cancelAllSyncs() = Unit
+}
+
+// --- Wired fixture --------------------------------------------------------------------------------
+
+/**
+ * All three repositories built over one [FakeDb] and one queue, exactly as Koin wires them.
+ *
+ * The split repositories still collaborate — starting a timer goes task → interval, and the drain
+ * order is the whole point of [com.jvcs.tracky.core.data.sync.SyncCoordinator] — so testing any one
+ * of them in isolation would mean faking the others and asserting nothing real.
+ */
+internal class RepoFixture(
+    val time: FakeTimeProvider = FakeTimeProvider()
+) {
+    val db = FakeDb()
+    val localProject = FakeLocalProjectDataSource(db)
+    val localInterval = FakeLocalIntervalDataSource(db)
+    val remoteProject = FakeRemoteProjectDataSource()
+    val remoteInterval = FakeRemoteIntervalDataSource()
+    val queue = FakePendingSyncDataSource()
+    val scheduler = FakeSyncScheduler()
+
+    private val scope = CoroutineScope(Dispatchers.Unconfined)
+
+    val intervalRepository = OfflineFirstIntervalRepository(
+        localIntervalDataSource = localInterval,
+        remoteIntervalDataSource = remoteInterval,
+        localProjectDataSource = localProject,
+        pendingSyncDataSource = queue,
+        syncScheduler = scheduler,
+        applicationScope = scope,
+        timeProvider = time
+    )
+
+    val projectRepository = OfflineFirstProjectRepository(
+        localProjectDataSource = localProject,
+        remoteProjectDataSource = remoteProject,
+        pendingSyncDataSource = queue,
+        intervalRepository = intervalRepository,
+        syncScheduler = scheduler,
+        applicationScope = scope,
+        timeProvider = time
+    )
+
+    /** One project "p1" with one stopped task "t1" under it, both already known to the server. */
+    fun seedProjectWithTask(projectId: String = "p1", taskId: String = "t1") {
+        db.seedProject(projectId)
+        db.seedTask(taskId, projectId)
+    }
+}
