@@ -341,7 +341,7 @@ class ProjectOverviewViewModelTest {
 private class FakeProjectRepository(initial: List<Project>) : ProjectRepository {
     private val projectsFlow = MutableStateFlow(initial)
     var reorderResult: EmptyResult<DataError> = Result.Success(Unit)
-    var fetchResult: Result<List<Project>, DataError.Remote> = Result.Success(emptyList())
+    var fetchResult: EmptyResult<DataError> = Result.Success(Unit)
     val reorderCalls = mutableListOf<List<String>>()
     val pinCalls = mutableListOf<Pair<List<String>, Boolean>>()
 
@@ -352,7 +352,7 @@ private class FakeProjectRepository(initial: List<Project>) : ProjectRepository 
     override fun getActiveProjects(): Flow<List<Project>> = projectsFlow
         .map { projects -> projects.filter { !it.isArchived && !it.isFinished && it.trashedAt == null } }
 
-    override suspend fun fetchProjects(): Result<List<Project>, DataError.Remote> = fetchResult
+    override suspend fun fetchProjects(): EmptyResult<DataError> = fetchResult
 
     override suspend fun reorderProjects(orderedProjectIds: List<String>): EmptyResult<DataError> {
         reorderCalls += orderedProjectIds
@@ -372,13 +372,6 @@ private class FakeProjectRepository(initial: List<Project>) : ProjectRepository 
     override suspend fun setProjectArchived(projectId: String, isArchived: Boolean): EmptyResult<DataError> = Result.Success(Unit)
     override suspend fun setProjectTrashed(projectId: String, trashedAt: Instant?): EmptyResult<DataError> = Result.Success(Unit)
     override suspend fun purgeExpiredTrashedProjects(cutoff: Instant): EmptyResult<DataError> = Result.Success(Unit)
-    override suspend fun upsertProjectTask(projectTask: ProjectTask): EmptyResult<DataError> = Result.Success(Unit)
     override suspend fun deleteProject(projectId: String): EmptyResult<DataError> = Result.Success(Unit)
-    override suspend fun deleteProjectTask(taskId: String) = Unit
     override suspend fun deleteAllProjects() = Unit
-    override suspend fun updateTaskDuration(taskId: String, newDurationMillis: Long) = Unit
-    override fun getTaskWithIntervalsById(taskId: String): Flow<ProjectTask?> = flowOf(null)
-    override suspend fun startTask(taskId: String) = Unit
-    override suspend fun stopTask(taskId: String) = Unit
-    override suspend fun updateTaskTitle(taskId: String, title: String) = Unit
 }

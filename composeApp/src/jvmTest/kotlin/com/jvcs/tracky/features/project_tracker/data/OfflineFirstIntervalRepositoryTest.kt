@@ -15,7 +15,8 @@ import kotlin.time.Instant
 
 /**
  * Intervals are only ever created through the timer, so these drive the repository the way the app
- * does — `startTask` / `stopTask`, which hand the interval to this repository to push.
+ * does — `startProjectTask` / `stopProjectTask` on the task repository, which hands the interval to
+ * this one.
  */
 internal class OfflineFirstIntervalRepositoryTest {
 
@@ -26,7 +27,7 @@ internal class OfflineFirstIntervalRepositoryTest {
     fun startTask_postsTheNewIntervalToTheTasksRoute() = runBlocking<Unit> {
         val f = fixture()
 
-        f.projectRepository.startTask("t1")
+        f.taskRepository.startProjectTask("t1")
 
         assertEquals(listOf("i1"), f.remoteInterval.postedIntervalIds)
         // The route is built from the interval's own parentProjectId — no task lookup involved.
@@ -38,9 +39,9 @@ internal class OfflineFirstIntervalRepositoryTest {
     fun stopTask_putsTheClosedInterval() = runBlocking<Unit> {
         val f = fixture()
 
-        f.projectRepository.startTask("t1")
-        f.localProject.clock = Instant.fromEpochMilliseconds(70_000) // 60s after the default start
-        f.projectRepository.stopTask("t1")
+        f.taskRepository.startProjectTask("t1")
+        f.localTask.clock = Instant.fromEpochMilliseconds(70_000) // 60s after the default start
+        f.taskRepository.stopProjectTask("t1")
 
         assertEquals(listOf("i1"), f.remoteInterval.updatedIntervalIds)
         assertEquals(60_000L, f.db.intervals.getValue("i1").durationMillis)
@@ -51,7 +52,7 @@ internal class OfflineFirstIntervalRepositoryTest {
         val f = fixture()
         f.remoteInterval.postFailWith = DataError.Remote.NO_INTERNET
 
-        f.projectRepository.startTask("t1")
+        f.taskRepository.startProjectTask("t1")
 
         // Local write stands regardless — the user keeps tracking time.
         assertNotNull(f.db.intervals["i1"])
@@ -74,12 +75,12 @@ internal class OfflineFirstIntervalRepositoryTest {
     fun startTask_queuesTheInterval_withoutCallingTheServer_whenTheTaskIsStillPendingCreate() = runBlocking<Unit> {
         val f = RepoFixture()
         f.db.seedProject("p1")
-        f.remoteProject.failWith = DataError.Remote.NO_INTERNET
-        f.projectRepository.upsertProjectTask(f.db.newTask("t1", "p1")) // task CREATE queued
-        f.remoteProject.failWith = null
+        f.remoteTask.failWith = DataError.Remote.NO_INTERNET
+        f.taskRepository.upsertProjectTask(f.db.newTask("t1", "p1")) // task CREATE queued
+        f.remoteTask.failWith = null
         f.remoteInterval.intervalRoutes.clear()
 
-        f.projectRepository.startTask("t1")
+        f.taskRepository.startProjectTask("t1")
 
         // No request went out at all — the parent-pending check short-circuits before the network.
         assertTrue(f.remoteInterval.intervalRoutes.isEmpty())
@@ -98,7 +99,7 @@ internal class OfflineFirstIntervalRepositoryTest {
         val f = fixture()
         f.remoteInterval.postFailWith = DataError.Remote.NOT_FOUND
 
-        f.projectRepository.startTask("t1")
+        f.taskRepository.startProjectTask("t1")
 
         val ops = f.queue.all().filter { it.entityType == PendingSyncOperation.ENTITY_INTERVAL }
         assertEquals(1, ops.size)
@@ -111,7 +112,7 @@ internal class OfflineFirstIntervalRepositoryTest {
         val f = fixture()
         f.remoteInterval.postFailWith = DataError.Remote.CONFLICT
 
-        f.projectRepository.startTask("t1")
+        f.taskRepository.startProjectTask("t1")
 
         assertEquals(listOf("i1"), f.remoteInterval.updatedIntervalIds)
         assertTrue(f.remoteInterval.postedIntervalIds.isEmpty())
@@ -123,7 +124,7 @@ internal class OfflineFirstIntervalRepositoryTest {
         val f = fixture()
         f.remoteInterval.postFailWith = DataError.Remote.NO_INTERNET
 
-        f.projectRepository.startTask("t1") // queued while offline
+        f.taskRepository.startProjectTask("t1") // queued while offline
         f.remoteInterval.postFailWith = null    // back online
 
         f.intervalRepository.syncPendingIntervals()
@@ -137,7 +138,7 @@ internal class OfflineFirstIntervalRepositoryTest {
         val f = fixture()
         f.remoteInterval.postFailWith = DataError.Remote.NO_INTERNET
 
-        f.projectRepository.startTask("t1")
+        f.taskRepository.startProjectTask("t1")
         f.db.intervals.remove("i1")          // gone before the queue drained
         f.remoteInterval.postFailWith = null
 
@@ -153,9 +154,9 @@ internal class OfflineFirstIntervalRepositoryTest {
         val f = fixture()
         f.remoteInterval.postFailWith = DataError.Remote.NO_INTERNET
 
-        f.projectRepository.startTask("t1")
+        f.taskRepository.startProjectTask("t1")
         // Deleting the task cascades to its intervals, so the queued op has nothing left to push.
-        f.localProject.deleteProjectTask("t1")
+        f.localTask.deleteProjectTask("t1")
         f.remoteInterval.postFailWith = null
 
         f.intervalRepository.syncPendingIntervals()
@@ -169,7 +170,7 @@ internal class OfflineFirstIntervalRepositoryTest {
         val f = fixture()
         f.remoteInterval.postFailWith = DataError.Remote.NO_INTERNET
 
-        f.projectRepository.startTask("t1")
+        f.taskRepository.startProjectTask("t1")
         f.intervalRepository.syncPendingIntervals() // still offline
 
         // Left queued for the next attempt.
@@ -179,7 +180,7 @@ internal class OfflineFirstIntervalRepositoryTest {
     @Test
     fun deleteTaskInterval_deletesLocallyAndRemotely() = runBlocking<Unit> {
         val f = fixture()
-        f.projectRepository.startTask("t1")
+        f.taskRepository.startProjectTask("t1")
 
         f.intervalRepository.deleteTaskInterval("i1")
 
@@ -192,7 +193,7 @@ internal class OfflineFirstIntervalRepositoryTest {
         val f = fixture()
         f.remoteInterval.postFailWith = DataError.Remote.NO_INTERNET
 
-        f.projectRepository.startTask("t1")    // create is queued, never reached the server
+        f.taskRepository.startProjectTask("t1")    // create is queued, never reached the server
         f.intervalRepository.deleteTaskInterval("i1")
 
         // Nothing to delete server-side — the interval never got there.
@@ -203,7 +204,7 @@ internal class OfflineFirstIntervalRepositoryTest {
     @Test
     fun deleteTaskInterval_queuesTheDelete_whenOffline() = runBlocking<Unit> {
         val f = fixture()
-        f.projectRepository.startTask("t1")                       // succeeds online
+        f.taskRepository.startProjectTask("t1")                       // succeeds online
         f.remoteInterval.deleteFailWith = DataError.Remote.NO_INTERNET
 
         f.intervalRepository.deleteTaskInterval("i1")
@@ -217,7 +218,7 @@ internal class OfflineFirstIntervalRepositoryTest {
     @Test
     fun syncPendingIntervals_pushesQueuedIntervalDelete() = runBlocking<Unit> {
         val f = fixture()
-        f.projectRepository.startTask("t1")
+        f.taskRepository.startProjectTask("t1")
         f.remoteInterval.deleteFailWith = DataError.Remote.NO_INTERNET
         f.intervalRepository.deleteTaskInterval("i1")
 
@@ -232,14 +233,14 @@ internal class OfflineFirstIntervalRepositoryTest {
     @Test
     fun upsertTaskInterval_updatesAnExistingIntervalRatherThanCreatingIt() = runBlocking<Unit> {
         val f = fixture()
-        f.projectRepository.startTask("t1")
+        f.taskRepository.startProjectTask("t1")
 
         f.intervalRepository.updateTaskInterval(
             f.db.intervals.getValue("i1").copy(durationMillis = 5_000)
         )
 
         assertEquals(listOf("i1"), f.remoteInterval.updatedIntervalIds)
-        // Only the original startTask create.
+        // Only the original startProjectTask create.
         assertEquals(listOf("i1"), f.remoteInterval.postedIntervalIds)
     }
 }

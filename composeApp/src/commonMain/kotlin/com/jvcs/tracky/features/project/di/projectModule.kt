@@ -33,6 +33,7 @@ val projectModule = module {
             isEdit = isEdit,
             projectId = projectId,
             projectRepository = get(),
+            projectTaskRepository = get(),
             timeManager = get(),
             timeProvider = get()
         )
@@ -41,7 +42,7 @@ val projectModule = module {
     viewModel { (sessionId: String) ->
         TaskDetailViewModel(
             taskId = sessionId,
-            projectRepository = get(),
+            projectTaskRepository = get(),
             timeManager = get()
         )
     }
