@@ -27,4 +27,12 @@ interface ProjectRepository {
     suspend fun reorderProjects(orderedProjectIds: List<String>): EmptyResult<DataError>
     suspend fun deleteProject(projectId: String): EmptyResult<DataError>
     suspend fun deleteAllProjects()
+
+    /**
+     * Drains the queued project writes (including the manual sort order).
+     *
+     * Runs first of the three drains: every task and interval hangs off a project route, so nothing
+     * else can be pushed until the projects exist server-side.
+     */
+    suspend fun syncPendingProjects()
 }

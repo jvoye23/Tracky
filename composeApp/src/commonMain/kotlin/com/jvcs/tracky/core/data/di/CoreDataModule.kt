@@ -1,20 +1,13 @@
 package com.jvcs.tracky.core.data.di
 
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
-import com.jvcs.tracky.features.project.data.interval.KtorRemoteIntervalDataSource
-import com.jvcs.tracky.features.project.data.interval.OfflineFirstIntervalRepository
-import com.jvcs.tracky.features.project.data.interval.RoomLocalIntervalDataSource
-import com.jvcs.tracky.features.project.data.project.KtorRemoteProjectDataSource
 import com.jvcs.tracky.core.data.auth.DataStoreSessionStorage
 import com.jvcs.tracky.core.data.auth.KtorAuthService
 import com.jvcs.tracky.core.data.networking.HttpClientFactory
 import com.jvcs.tracky.core.data.sync.RoomPendingSyncDataSource
+import com.jvcs.tracky.core.data.sync.SyncCoordinator
 import com.jvcs.tracky.core.database.DatabaseFactory
 import com.jvcs.tracky.core.database.TrackyDatabase
-import com.jvcs.tracky.features.project.domain.interval.IntervalRepository
-import com.jvcs.tracky.features.project.domain.interval.LocalIntervalDataSource
-import com.jvcs.tracky.features.project.domain.interval.RemoteIntervalDataSource
-import com.jvcs.tracky.features.project.domain.project.RemoteProjectDataSource
 import com.jvcs.tracky.core.domain.auth.AuthService
 import com.jvcs.tracky.core.domain.auth.SessionStorage
 import com.jvcs.tracky.core.domain.auth.SocialAuthProvider
@@ -23,13 +16,21 @@ import com.jvcs.tracky.core.domain.sync.ProjectSyncManager
 import com.jvcs.tracky.core.domain.sync.SyncRepository
 import com.jvcs.tracky.core.domain.util.SystemTimeProvider
 import com.jvcs.tracky.core.domain.util.TimeProvider
+import com.jvcs.tracky.features.project.data.interval.KtorRemoteIntervalDataSource
+import com.jvcs.tracky.features.project.data.interval.OfflineFirstIntervalRepository
+import com.jvcs.tracky.features.project.data.interval.RoomLocalIntervalDataSource
+import com.jvcs.tracky.features.project.data.project.KtorRemoteProjectDataSource
 import com.jvcs.tracky.features.project.data.project.OfflineFirstProjectRepository
 import com.jvcs.tracky.features.project.data.project.RoomLocalProjectDataSource
 import com.jvcs.tracky.features.project.data.task.KtorRemoteTaskDataSource
 import com.jvcs.tracky.features.project.data.task.OfflineFirstTaskRepository
 import com.jvcs.tracky.features.project.data.task.RoomLocalTaskDataSource
+import com.jvcs.tracky.features.project.domain.interval.IntervalRepository
+import com.jvcs.tracky.features.project.domain.interval.LocalIntervalDataSource
+import com.jvcs.tracky.features.project.domain.interval.RemoteIntervalDataSource
 import com.jvcs.tracky.features.project.domain.project.LocalProjectDataSource
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
+import com.jvcs.tracky.features.project.domain.project.RemoteProjectDataSource
 import com.jvcs.tracky.features.project.domain.task.LocalTaskDataSource
 import com.jvcs.tracky.features.project.domain.task.ProjectTaskRepository
 import com.jvcs.tracky.features.project.domain.task.RemoteTaskDataSource
@@ -38,7 +39,6 @@ import org.koin.core.module.Module
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.qualifier.named
 import org.koin.dsl.bind
-import org.koin.dsl.binds
 import org.koin.dsl.module
 
 expect val platformCoreDataModule: Module
@@ -63,6 +63,20 @@ val coreDataModule = module {
     singleOf(::KtorRemoteIntervalDataSource) bind RemoteIntervalDataSource::class
 
     single {
+        OfflineFirstProjectRepository(
+            localProjectDataSource = get(),
+            remoteProjectDataSource = get(),
+            pendingSyncDataSource = get(),
+            syncScheduler = get(),
+            applicationScope = get(qualifier = named("AppScope")),
+            timeProvider = get()
+        )
+    } bind ProjectRepository::class
+
+    // Intervals before tasks: the task repository pushes the timer's interval through this one.
+    // No cycle — the interval repository reads tasks through LocalTaskDataSource, not through the
+    // task repository.
+    single {
         OfflineFirstIntervalRepository(
             localIntervalDataSource = get(),
             remoteIntervalDataSource = get(),
@@ -74,8 +88,6 @@ val coreDataModule = module {
         )
     } bind IntervalRepository::class
 
-    // After the interval repository: the task repository pushes the timer's interval through it.
-    // No cycle — the interval repository reads tasks through LocalTaskDataSource, not through this.
     single {
         OfflineFirstTaskRepository(
             localTaskDataSource = get(),
@@ -88,18 +100,8 @@ val coreDataModule = module {
         )
     } bind ProjectTaskRepository::class
 
-    single {
-        OfflineFirstProjectRepository(
-            localProjectDataSource = get(),
-            remoteProjectDataSource = get(),
-            pendingSyncDataSource = get(),
-            taskRepository = get(),
-            intervalRepository = get(),
-            syncScheduler = get(),
-            applicationScope = get(qualifier = named("AppScope")),
-            timeProvider = get()
-        )
-    } binds arrayOf(ProjectRepository::class, SyncRepository::class)
+    // The one place the projects → tasks → intervals sync order is expressed.
+    singleOf(::SyncCoordinator) bind SyncRepository::class
 
     single(createdAtStart = true) {
         ProjectSyncManager(

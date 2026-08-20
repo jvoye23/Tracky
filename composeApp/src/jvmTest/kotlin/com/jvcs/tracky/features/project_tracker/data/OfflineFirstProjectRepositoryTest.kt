@@ -9,8 +9,6 @@ import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
 import com.jvcs.tracky.core.domain.util.Result
-import com.jvcs.tracky.features.project.data.interval.OfflineFirstIntervalRepository
-import com.jvcs.tracky.features.project.data.task.OfflineFirstTaskRepository
 import com.jvcs.tracky.features.project.data.project.OfflineFirstProjectRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -24,7 +22,7 @@ import kotlin.test.assertTrue
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
-internal class OfflineFirstProjectRepositoryTest {
+class OfflineFirstProjectRepositoryTest {
 
     private fun repo(
         local: FakeLocalProjectDataSource,
@@ -32,39 +30,14 @@ internal class OfflineFirstProjectRepositoryTest {
         queue: FakePendingSyncDataSource,
         scheduler: FakeSyncScheduler,
         time: FakeTimeProvider = FakeTimeProvider()
-    ): OfflineFirstProjectRepository {
-        val scope = CoroutineScope(Dispatchers.Unconfined)
-        // Real child repositories, not stubs: the project repository still owns
-        // syncPendingOperations and hands the task and interval legs to their owners, so the
-        // drain tests below exercise the whole chain.
-        val intervalRepository = OfflineFirstIntervalRepository(
-            localIntervalDataSource = FakeLocalIntervalDataSource(local.db),
-            remoteIntervalDataSource = FakeRemoteIntervalDataSource(),
-            localTaskDataSource = FakeLocalTaskDataSource(local.db),
-            pendingSyncDataSource = queue,
-            syncScheduler = scheduler,
-            applicationScope = scope,
-            timeProvider = time
-        )
-        return OfflineFirstProjectRepository(
-            localProjectDataSource = local,
-            remoteProjectDataSource = remote,
-            pendingSyncDataSource = queue,
-            taskRepository = OfflineFirstTaskRepository(
-                localTaskDataSource = FakeLocalTaskDataSource(local.db),
-                remoteTaskDataSource = FakeRemoteTaskDataSource(),
-                pendingSyncDataSource = queue,
-                syncScheduler = scheduler,
-                intervalRepository = intervalRepository,
-                timeProvider = time,
-                applicationScope = scope
-            ),
-            intervalRepository = intervalRepository,
-            syncScheduler = scheduler,
-            applicationScope = scope,
-            timeProvider = time
-        )
-    }
+    ) = OfflineFirstProjectRepository(
+        localProjectDataSource = local,
+        remoteProjectDataSource = remote,
+        pendingSyncDataSource = queue,
+        syncScheduler = scheduler,
+        applicationScope = CoroutineScope(Dispatchers.Unconfined),
+        timeProvider = time
+    )
 
     private fun project(id: String) = Project(
         projectId = id,
@@ -108,7 +81,7 @@ internal class OfflineFirstProjectRepositoryTest {
         repository.upsertProject(project("p1")) // queued while offline
         remote.failWith = null                  // back online
 
-        repository.syncPendingOperations()
+        repository.syncPendingProjects()
 
         assertTrue(queue.all().isEmpty())
         assertTrue(remote.postedProjectIds.contains("p1"))
@@ -244,7 +217,7 @@ internal class OfflineFirstProjectRepositoryTest {
         remote.failWith = null                               // back online
         remote.reorderCalls.clear()
 
-        repository.syncPendingOperations()
+        repository.syncPendingProjects()
 
         assertTrue(queue.all().isEmpty())
         // The queued row is rebuilt from current local state: the full order, in one call.

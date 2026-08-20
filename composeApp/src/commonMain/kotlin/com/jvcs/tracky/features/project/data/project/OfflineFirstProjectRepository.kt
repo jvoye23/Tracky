@@ -3,9 +3,8 @@ package com.jvcs.tracky.features.project.data.project
 import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
 import com.jvcs.tracky.core.domain.sync.SyncOutcome
-import com.jvcs.tracky.core.domain.sync.SyncRepository
-import com.jvcs.tracky.core.domain.sync.toSyncOutcome
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
+import com.jvcs.tracky.core.domain.sync.toSyncOutcome
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
@@ -13,38 +12,28 @@ import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.core.domain.util.asEmptyDataResult
 import com.jvcs.tracky.core.domain.util.getOrDefault
 import com.jvcs.tracky.core.domain.util.isTransient
-import com.jvcs.tracky.features.project.domain.interval.IntervalRepository
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.project.LocalProjectDataSource
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
 import com.jvcs.tracky.features.project.domain.project.RemoteProjectDataSource
 import com.jvcs.tracky.features.project.domain.project.sortedByCustomOrder
-import com.jvcs.tracky.features.project.domain.task.ProjectTaskRepository
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlin.time.Instant
 
 class OfflineFirstProjectRepository(
     private val localProjectDataSource: LocalProjectDataSource,
     private val remoteProjectDataSource: RemoteProjectDataSource,
     private val pendingSyncDataSource: PendingSyncDataSource,
-    // Only until the sync drains are split out: the project repository still owns
-    // syncPendingOperations, so it has to hand the child legs over to their owners.
-    private val taskRepository: ProjectTaskRepository,
-    private val intervalRepository: IntervalRepository,
     private val syncScheduler: SyncScheduler,
     private val applicationScope: CoroutineScope,
     private val timeProvider: TimeProvider
-): ProjectRepository, SyncRepository {
+): ProjectRepository {
 
-    // PULL: network → Room. The Room Flow the UI observes emits automatically, so the pulled
-    // projects never travel back up through the return value — only whether it worked does.
     override suspend fun fetchProjects(): EmptyResult<DataError> {
         return when (val remoteResult = remoteProjectDataSource.getProjects()) {
             is Result.Error -> remoteResult.asEmptyDataResult()
@@ -109,7 +98,10 @@ class OfflineFirstProjectRepository(
                 remoteResult.error == DataError.Remote.CONFLICT -> resolveProjectConflict(stamped)
                 remoteResult.error.isTransient() -> {
                     // Local write already succeeded; only surface an error if queuing the sync fails.
-                    val queued = enqueueProjectOperation(project.projectId, if (isCreate) PendingSyncOperation.OP_CREATE else PendingSyncOperation.OP_UPDATE)
+                    val queued = enqueueProjectOperation(
+                        project.projectId,
+                        if (isCreate) PendingSyncOperation.OP_CREATE else PendingSyncOperation.OP_UPDATE
+                    )
                     if (queued is Result.Success) scheduleSync()
                     queued
                 }
@@ -221,7 +213,7 @@ class OfflineFirstProjectRepository(
             return localResult.asEmptyDataResult()
         }
 
-        return when (val remoteResult = remoteProjectDataSource.reorderProjects(changed, updatedAt  )) {
+        return when (val remoteResult = remoteProjectDataSource.reorderProjects(changed, updatedAt)) {
             is Result.Success -> Result.Success(Unit)
             is Result.Error -> when {
                 remoteResult.error.isTransient() -> {
@@ -277,26 +269,23 @@ class OfflineFirstProjectRepository(
     // Pending-sync queue draining
     // ---------------------------------------------------------------------------------------------
 
-    override suspend fun syncPendingOperations() = withContext(Dispatchers.Default) {
-        // Drain FIFO so a CREATE is always pushed before a later UPDATE on the same entity.
-        pendingSyncDataSource.getPendingOperations().getOrDefault(emptyList())
+    override suspend fun syncPendingProjects() {
+        val operations = pendingSyncDataSource.getPendingOperations().getOrDefault(emptyList())
+        // Drain FIFO so a CREATE is always pushed before a later UPDATE on the same project.
+        operations
             .filter {
                 it.entityType == PendingSyncOperation.ENTITY_PROJECT ||
                     it.entityType == PendingSyncOperation.ENTITY_PROJECT_ORDER
             }
             .forEach { op ->
-                when (runSyncOperation(op)) {
+                when (runProjectOperation(op)) {
                     SyncOutcome.SUCCESS, SyncOutcome.DROP -> pendingSyncDataSource.deleteOperation(op.operationId)
                     SyncOutcome.RETRY -> Unit // leave queued for the next attempt
                 }
             }
-        // Then the children, parents first: a task's route is nested inside its project's, and an
-        // interval's inside its task's, so neither can be pushed before the level above has landed.
-        taskRepository.syncPendingTasks()
-        intervalRepository.syncPendingIntervals()
     }
 
-    private suspend fun runSyncOperation(op: PendingSyncOperation): SyncOutcome {
+    private suspend fun runProjectOperation(op: PendingSyncOperation): SyncOutcome {
         return when (op.entityType) {
             PendingSyncOperation.ENTITY_PROJECT -> when (op.operationType) {
                 PendingSyncOperation.OP_CREATE, PendingSyncOperation.OP_UPDATE -> {
@@ -314,7 +303,8 @@ class OfflineFirstProjectRepository(
                         onConflict = { resolveProjectConflict(project) }
                     )
                 }
-                PendingSyncOperation.OP_DELETE -> remoteProjectDataSource.deleteProject(op.entityId).toSyncOutcome()
+                PendingSyncOperation.OP_DELETE ->
+                    remoteProjectDataSource.deleteProject(op.entityId).toSyncOutcome()
                 else -> SyncOutcome.DROP
             }
             // The queued row is just a marker: the order itself is rebuilt from current local state,
@@ -372,31 +362,26 @@ class OfflineFirstProjectRepository(
     // ---------------------------------------------------------------------------------------------
 
     private suspend fun enqueueProjectOperation(projectId: String, operationType: String): EmptyResult<DataError> {
-        return enqueueOperation(projectId,
-            PendingSyncOperation.ENTITY_PROJECT, operationType, parentEntityId = null)
+        return pendingSyncDataSource.enqueue(
+            entityId = projectId,
+            entityType = PendingSyncOperation.ENTITY_PROJECT,
+            operationType = operationType,
+            parentEntityId = null,
+            createdAt = timeProvider.nowInstant
+        )
     }
 
-    // One row for the whole order, not one per moved project. enqueueDeduped's OP_UPDATE rule then
+    // One row for the whole order, not one per moved project. The queue's OP_UPDATE dedup rule then
     // collapses further offline reorders into this same row.
     private suspend fun enqueueReorderOperation(): EmptyResult<DataError> {
-        return enqueueOperation(
-            PendingSyncOperation.PROJECT_ORDER_ENTITY_ID,
-            PendingSyncOperation.ENTITY_PROJECT_ORDER,
-            PendingSyncOperation.OP_UPDATE, parentEntityId = null)
+        return pendingSyncDataSource.enqueue(
+            entityId = PendingSyncOperation.PROJECT_ORDER_ENTITY_ID,
+            entityType = PendingSyncOperation.ENTITY_PROJECT_ORDER,
+            operationType = PendingSyncOperation.OP_UPDATE,
+            parentEntityId = null,
+            createdAt = timeProvider.nowInstant
+        )
     }
-
-    private suspend fun enqueueOperation(
-        entityId: String,
-        entityType: String,
-        operationType: String,
-        parentEntityId: String?
-    ): EmptyResult<DataError> = pendingSyncDataSource.enqueue(
-        entityId = entityId,
-        entityType = entityType,
-        operationType = operationType,
-        parentEntityId = parentEntityId,
-        createdAt = timeProvider.nowInstant
-    )
 
     private suspend fun scheduleSync() {
         applicationScope.launch { syncScheduler.schedulePeriodicSync() }.join()
