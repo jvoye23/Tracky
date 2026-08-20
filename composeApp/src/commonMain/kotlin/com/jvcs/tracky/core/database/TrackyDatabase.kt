@@ -10,7 +10,9 @@ import com.jvcs.tracky.core.database.dao.PendingSyncDao
 import com.jvcs.tracky.core.database.dao.ProjectDao
 import com.jvcs.tracky.core.database.entity.PendingSyncEntity
 import com.jvcs.tracky.core.database.entity.ProjectEntity
+import com.jvcs.tracky.core.database.entity.ProjectSubTaskEntity
 import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
+import com.jvcs.tracky.core.database.entity.SubTaskIntervalEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 
 @Database(
@@ -18,9 +20,11 @@ import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
         ProjectEntity::class,
         ProjectTaskEntity::class,
         TaskIntervalEntity::class,
+        ProjectSubTaskEntity::class,
+        SubTaskIntervalEntity::class,
         PendingSyncEntity::class
     ],
-    version = 13,
+    version = 14,
 )
 @ConstructedBy(TrackyDatabaseConstructor::class)
 abstract class TrackyDatabase: RoomDatabase() {
@@ -401,6 +405,71 @@ abstract class TrackyDatabase: RoomDatabase() {
                 )
                 connection.execSQL(
                     "CREATE INDEX IF NOT EXISTS index_task_intervals_parentProjectId ON task_intervals(parentProjectId)"
+                )
+            }
+        }
+
+        val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(connection: SQLiteConnection) {
+                // Subtasks: a fourth level under project -> task -> interval. Both tables are new,
+                // so there is nothing to backfill and no table rebuild — plain CREATEs are enough.
+                //
+                // project_sub_tasks mirrors project_records, down to the nullable updatedAtEpochMs
+                // that last-write-wins reads. It cascades from its task and, denormalised through
+                // parentProjectId, straight from its project.
+                connection.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS project_sub_tasks (
+                        projectSubTaskId TEXT NOT NULL PRIMARY KEY,
+                        parentProjectTaskId TEXT NOT NULL,
+                        parentProjectId TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        description TEXT,
+                        durationMillis INTEGER,
+                        isTimerRunning INTEGER NOT NULL,
+                        startDateTimeEpochMs INTEGER NOT NULL,
+                        endDateTimeEpochMs INTEGER,
+                        isFinished INTEGER NOT NULL,
+                        updatedAtEpochMs INTEGER,
+                        FOREIGN KEY(parentProjectTaskId) REFERENCES project_records(recordId) ON DELETE CASCADE,
+                        FOREIGN KEY(parentProjectId) REFERENCES projects(projectId) ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                connection.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_project_sub_tasks_parentProjectTaskId ON project_sub_tasks(parentProjectTaskId)"
+                )
+                connection.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_project_sub_tasks_parentProjectId ON project_sub_tasks(parentProjectId)"
+                )
+
+                // sub_task_intervals additionally cascades from the task interval that encloses it:
+                // timing a subtask also runs its parent task's timer, so every row here has exactly
+                // one parent interval and dies with it.
+                connection.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS sub_task_intervals (
+                        subTaskIntervalId TEXT NOT NULL PRIMARY KEY,
+                        parentSubTaskId TEXT NOT NULL,
+                        parentTaskIntervalId TEXT NOT NULL,
+                        parentProjectId TEXT NOT NULL,
+                        startDateTimeEpochMs INTEGER NOT NULL,
+                        endDateTimeEpochMs INTEGER,
+                        durationMillis INTEGER NOT NULL,
+                        FOREIGN KEY(parentSubTaskId) REFERENCES project_sub_tasks(projectSubTaskId) ON DELETE CASCADE,
+                        FOREIGN KEY(parentTaskIntervalId) REFERENCES task_intervals(intervalId) ON DELETE CASCADE,
+                        FOREIGN KEY(parentProjectId) REFERENCES projects(projectId) ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                connection.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_sub_task_intervals_parentSubTaskId ON sub_task_intervals(parentSubTaskId)"
+                )
+                connection.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_sub_task_intervals_parentTaskIntervalId ON sub_task_intervals(parentTaskIntervalId)"
+                )
+                connection.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_sub_task_intervals_parentProjectId ON sub_task_intervals(parentProjectId)"
                 )
             }
         }
