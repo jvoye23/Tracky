@@ -2,6 +2,7 @@
 
 package com.jvcs.tracky.features.project_tracker.data
 
+import com.jvcs.tracky.core.data.sync.SyncCoordinator
 import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
@@ -98,7 +99,7 @@ class FakeDb {
 
 // --- Local data sources ---------------------------------------------------------------------------
 
-class FakeLocalProjectDataSource(val db: FakeDb = FakeDb()) : LocalProjectDataSource {
+class FakeLocalProjectDataSource(private val db: FakeDb = FakeDb()) : LocalProjectDataSource {
     val projects get() = db.projects
     val tasks get() = db.tasks
     val intervals get() = db.intervals
@@ -516,6 +517,15 @@ internal class RepoFixture(
 
     private val scope = CoroutineScope(Dispatchers.Unconfined)
 
+    val projectRepository = OfflineFirstProjectRepository(
+        localProjectDataSource = localProject,
+        remoteProjectDataSource = remoteProject,
+        pendingSyncDataSource = queue,
+        syncScheduler = scheduler,
+        applicationScope = scope,
+        timeProvider = time
+    )
+
     val intervalRepository = OfflineFirstIntervalRepository(
         localIntervalDataSource = localInterval,
         remoteIntervalDataSource = remoteInterval,
@@ -536,15 +546,10 @@ internal class RepoFixture(
         applicationScope = scope
     )
 
-    val projectRepository = OfflineFirstProjectRepository(
-        localProjectDataSource = localProject,
-        remoteProjectDataSource = remoteProject,
-        pendingSyncDataSource = queue,
+    val syncCoordinator = SyncCoordinator(
+        projectRepository = projectRepository,
         taskRepository = taskRepository,
-        intervalRepository = intervalRepository,
-        syncScheduler = scheduler,
-        applicationScope = scope,
-        timeProvider = time
+        intervalRepository = intervalRepository
     )
 
     /** One project "p1" with one stopped task "t1" under it, both already known to the server. */

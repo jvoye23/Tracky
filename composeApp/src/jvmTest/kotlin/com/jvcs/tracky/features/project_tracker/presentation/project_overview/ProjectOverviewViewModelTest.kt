@@ -374,4 +374,5 @@ private class FakeProjectRepository(initial: List<Project>) : ProjectRepository 
     override suspend fun purgeExpiredTrashedProjects(cutoff: Instant): EmptyResult<DataError> = Result.Success(Unit)
     override suspend fun deleteProject(projectId: String): EmptyResult<DataError> = Result.Success(Unit)
     override suspend fun deleteAllProjects() = Unit
+    override suspend fun syncPendingProjects() = Unit
 }
