@@ -9,12 +9,18 @@ import com.jvcs.tracky.core.data.networking.UpdateProjectRequest
 import com.jvcs.tracky.core.data.networking.UpdateProjectTaskRequest
 import com.jvcs.tracky.core.data.networking.UpdateTaskIntervalRequest
 import com.jvcs.tracky.core.database.entity.ProjectEntity
+import com.jvcs.tracky.core.database.entity.ProjectSubTaskEntity
 import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
+import com.jvcs.tracky.core.database.entity.SubTaskIntervalEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 import com.jvcs.tracky.core.database.relation.ProjectWithTasksEntity
+import com.jvcs.tracky.core.database.relation.SubTaskWithIntervals
 import com.jvcs.tracky.core.database.relation.TaskWithIntervals
+import com.jvcs.tracky.core.database.relation.TaskWithSubTasks
 import com.jvcs.tracky.features.project.domain.models.Project
+import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
+import com.jvcs.tracky.features.project.domain.models.SubTaskInterval
 import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
@@ -210,5 +216,81 @@ fun TaskInterval.toUpdateTaskIntervalRequest(): UpdateTaskIntervalRequest {
         startDateTimeUtc = startDateTimeUtc.toString(),
         endDateTimeUtc = endDateTimeUtc?.toString(),
         durationMillis = durationMillis,
+    )
+}
+
+fun ProjectSubTaskEntity.toProjectSubTask(): ProjectSubTask {
+    return ProjectSubTask(
+        projectSubTaskId = projectSubTaskId,
+        parentProjectTaskId = parentProjectTaskId,
+        parentProjectId = parentProjectId,
+        title = title,
+        description = description,
+        durationMillis = durationMillis,
+        isTimerRunning = isTimerRunning,
+        startDateTimeUtc = Instant.fromEpochMilliseconds(startDateTimeEpochMs),
+        endDateTimeUtc = endDateTimeEpochMs?.let(Instant::fromEpochMilliseconds),
+        isFinished = isFinished,
+        ownUpdatedAt = updatedAtEpochMs?.let(Instant::fromEpochMilliseconds),
+    )
+}
+
+fun SubTaskWithIntervals.toProjectSubTask(): ProjectSubTask =
+    subTask.toProjectSubTask().copy(subTaskIntervals = intervals.map { it.toSubTaskInterval() })
+
+fun ProjectSubTask.toProjectSubTaskEntity(): ProjectSubTaskEntity {
+    return ProjectSubTaskEntity(
+        projectSubTaskId = projectSubTaskId,
+        parentProjectTaskId = parentProjectTaskId,
+        parentProjectId = parentProjectId,
+        title = title,
+        description = description,
+        durationMillis = durationMillis,
+        isTimerRunning = isTimerRunning,
+        startDateTimeEpochMs = startDateTimeUtc.toEpochMilliseconds(),
+        endDateTimeEpochMs = endDateTimeUtc?.toEpochMilliseconds(),
+        isFinished = isFinished,
+        updatedAtEpochMs = ownUpdatedAt?.toEpochMilliseconds(),
+    )
+}
+
+fun SubTaskIntervalEntity.toSubTaskInterval(): SubTaskInterval {
+    return SubTaskInterval(
+        subTaskIntervalId = subTaskIntervalId,
+        parentSubTaskId = parentSubTaskId,
+        parentTaskIntervalId = parentTaskIntervalId,
+        parentProjectId = parentProjectId,
+        startDateTimeUtc = Instant.fromEpochMilliseconds(startDateTimeEpochMs),
+        endDateTimeUtc = endDateTimeEpochMs?.let(Instant::fromEpochMilliseconds),
+        durationMillis = durationMillis
+    )
+}
+
+fun SubTaskInterval.toSubTaskIntervalEntity(): SubTaskIntervalEntity {
+    return SubTaskIntervalEntity(
+        subTaskIntervalId = subTaskIntervalId,
+        parentSubTaskId = parentSubTaskId,
+        parentTaskIntervalId = parentTaskIntervalId,
+        parentProjectId = parentProjectId,
+        startDateTimeEpochMs = startDateTimeUtc.toEpochMilliseconds(),
+        endDateTimeEpochMs = endDateTimeUtc?.toEpochMilliseconds(),
+        durationMillis = durationMillis
+    )
+}
+
+/** The task's whole subtree: its own intervals plus its subtasks, each with theirs. */
+fun TaskWithSubTasks.toProjectTask(): ProjectTask {
+    return ProjectTask(
+        projectTaskId = task.recordId,
+        title = task.description,
+        durationMillis = task.durationMillis,
+        startDateTimeUtc = Instant.fromEpochMilliseconds(task.startDateTimeEpochMs),
+        endDateTimeUtc = task.endDateTimeEpochMs?.let(Instant::fromEpochMilliseconds),
+        isFinished = task.isFinished,
+        parentProjectId = task.parentProjectId,
+        isTimerRunning = task.isTimerRunning,
+        intervals = intervals.map { it.toTaskInterval() },
+        ownUpdatedAt = task.updatedAtEpochMs?.let(Instant::fromEpochMilliseconds),
+        subTasks = subTasks.map { it.toProjectSubTask() },
     )
 }
