@@ -94,6 +94,6 @@ fun ProjectTaskUi.toProjectTask(parentProjectId: String): ProjectTask {
         } else null,
         isFinished = !isTimerRunning,
         parentProjectId = parentProjectId,
-        isTimerRunning = isTimerRunning
+        isTimerRunning = isTimerRunning,
     )
 }

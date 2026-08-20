@@ -12,7 +12,11 @@ data class ProjectTask(
     val parentProjectId: String,
     val isTimerRunning: Boolean,
     val intervals: List<TaskInterval> = emptyList(),
-    override val ownUpdatedAt: Instant? = null
+    override val ownUpdatedAt: Instant? = null,
+    // null means "not loaded" (see TaskWithIntervals.toProjectTask), not "no subtasks" — the same
+    // distinction Project.projectTasks draws. Intervals need no such marker: every query that
+    // returns a task returns its intervals with it, so an empty list there really is empty.
+    val subTasks: List<ProjectSubTask>? = null
 ) : Timestamped {
-    override val children: List<Timestamped> get() = intervals
+    override val children: List<Timestamped> get() = intervals + subTasks.orEmpty()
 }

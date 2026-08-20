@@ -8,7 +8,6 @@ import com.jvcs.tracky.core.domain.auth.FakeSessionStorage
 import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
-import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
@@ -155,7 +154,7 @@ class ProjectOverviewViewModelTest {
         startDateTimeUtc = Instant.fromEpochMilliseconds(0),
         parentProjectId = parentProjectId,
         isTimerRunning = false,
-        ownUpdatedAt = ownUpdatedAt
+        ownUpdatedAt = ownUpdatedAt,
     )
 
     @Test

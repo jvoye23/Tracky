@@ -161,10 +161,8 @@ class ProjectDetailViewModel(
                 title = projectTaskTitle,
                 durationMillis = 0L,
                 startDateTimeUtc = timeProvider.nowInstant,
-                endDateTimeUtc = null,
-                isFinished = false,
                 parentProjectId = currentProject.projectId,
-                isTimerRunning = false
+                isTimerRunning = false,
             )
 
             when(val result = projectTaskRepository.upsertProjectTask(newProjectTask)) {

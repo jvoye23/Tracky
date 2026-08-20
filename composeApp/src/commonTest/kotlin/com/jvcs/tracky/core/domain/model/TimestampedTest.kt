@@ -3,6 +3,7 @@
 package com.jvcs.tracky.core.domain.model
 
 import com.jvcs.tracky.features.project.domain.models.Project
+import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import kotlin.test.Test
@@ -102,6 +103,23 @@ class TimestampedTest {
         assertEquals(t100, project(ownUpdatedAt = null, projectTasks = listOf(task)).lastUpdatedAt)
     }
 
+    @Test
+    fun aStampedSubTaskRollsUpThroughATaskThatAlsoHasIntervals() {
+        // Both branches of a task's subtree have to stay visible to the roll-up: dropping either
+        // one from `children` leaves the newest stamp unreachable.
+        val task = task(
+            "t1",
+            ownUpdatedAt = t100,
+            intervals = listOf(interval("i1")),
+            subTasks = listOf(subTask("s1", ownUpdatedAt = t300))
+        )
+
+        assertEquals(t300, task.lastUpdatedAt)
+        assertEquals(t100, task.ownUpdatedAt) // own stamp is untouched by the roll-up
+        assertEquals(2, task.children.size)   // the interval branch is still there
+        assertEquals(t300, project(ownUpdatedAt = null, projectTasks = listOf(task)).lastUpdatedAt)
+    }
+
     // ---------------------------------------------------------------------------------------------
 
     private fun project(ownUpdatedAt: Instant?, projectTasks: List<ProjectTask>?) = Project(
@@ -120,7 +138,8 @@ class TimestampedTest {
     private fun task(
         id: String,
         ownUpdatedAt: Instant?,
-        intervals: List<TaskInterval> = emptyList()
+        intervals: List<TaskInterval> = emptyList(),
+        subTasks: List<ProjectSubTask>? = null
     ) = ProjectTask(
         projectTaskId = id,
         title = "title-$id",
@@ -129,7 +148,19 @@ class TimestampedTest {
         parentProjectId = "p1",
         isTimerRunning = false,
         intervals = intervals,
-        ownUpdatedAt = ownUpdatedAt
+        ownUpdatedAt = ownUpdatedAt,
+        subTasks = subTasks,
+    )
+
+    private fun subTask(id: String, ownUpdatedAt: Instant?) = ProjectSubTask(
+        projectSubTaskId = id,
+        parentProjectTaskId = "t1",
+        parentProjectId = "p1",
+        title = "title-$id",
+        durationMillis = null,
+        isTimerRunning = false,
+        startDateTimeUtc = Instant.fromEpochMilliseconds(0),
+        ownUpdatedAt = ownUpdatedAt,
     )
 
     private fun interval(id: String) = TaskInterval(

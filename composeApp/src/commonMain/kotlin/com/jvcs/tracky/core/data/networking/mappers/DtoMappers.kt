@@ -42,7 +42,7 @@ fun ProjectTaskDto.toProjectTask(parentProjectId: String): ProjectTask {
         parentProjectId = parentProjectId,
         isTimerRunning = isTimerRunning,
         intervals = intervals.map { it.toTaskInterval(parentProjectId) },
-        ownUpdatedAt = updatedAt?.let(Instant::parse)
+        ownUpdatedAt = updatedAt?.let(Instant::parse),
     )
 }
 
