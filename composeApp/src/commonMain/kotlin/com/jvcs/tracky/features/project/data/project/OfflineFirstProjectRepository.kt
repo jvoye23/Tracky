@@ -14,6 +14,7 @@ import com.jvcs.tracky.core.domain.util.asEmptyDataResult
 import com.jvcs.tracky.core.domain.util.getOrDefault
 import com.jvcs.tracky.core.domain.util.isTransient
 import com.jvcs.tracky.core.domain.util.onSuccess
+import com.jvcs.tracky.features.project.domain.interval.IntervalRepository
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.features.project.domain.models.TaskInterval
@@ -35,6 +36,9 @@ class OfflineFirstProjectRepository(
     private val localProjectDataSource: LocalProjectDataSource,
     private val remoteProjectDataSource: RemoteProjectDataSource,
     private val pendingSyncDataSource: PendingSyncDataSource,
+    // Only until the sync drains are split out: the project repository still owns
+    // syncPendingOperations, so it has to hand the interval leg over to its owner.
+    private val intervalRepository: IntervalRepository,
     private val syncScheduler: SyncScheduler,
     private val applicationScope: CoroutineScope,
     private val timeProvider: TimeProvider
@@ -335,25 +339,14 @@ class OfflineFirstProjectRepository(
         return localProjectDataSource.getTaskWithIntervalsById(taskId)
     }
 
-    // CREATE/UPDATE interval: local first (optimistic), then remote — same flow as projects/tasks.
-    override suspend fun upsertTaskInterval(interval: TaskInterval) {
-        val isCreate = localProjectDataSource.getIntervalById(interval.intervalId)
-            .getOrDefault(null) == null
-
-        if (localProjectDataSource.upsertTaskInterval(interval) !is Result.Success) return
-        pushInterval(interval, isCreate)
-    }
-
-    override suspend fun getOpenIntervalByTaskId(taskId: String): TaskInterval? {
-        return localProjectDataSource.getOpenIntervalByTaskId(taskId).getOrDefault(null)
-    }
-
+    // The timer writes the interval locally, then hands it to the interval repository to push —
+    // that repository owns when an interval can reach the server and what to do when it cannot.
     override suspend fun startTask(taskId: String) {
         val opened = when (val started = localProjectDataSource.startTask(taskId)) {
             is Result.Success -> started.data
             is Result.Error -> return // local write failed; nothing to push
         }
-        pushInterval(opened, isCreate = true)
+        intervalRepository.createTaskInterval(opened)
     }
 
     override suspend fun stopTask(taskId: String) {
@@ -364,98 +357,10 @@ class OfflineFirstProjectRepository(
         // The interval carries the measured span, the task carries the accumulated total and the
         // cleared timer flag; both have to reach the server. The interval goes first so that a
         // failure pushing the task cannot strand it.
-        if (closed != null) pushInterval(closed, isCreate = false)
+        if (closed != null) intervalRepository.updateTaskInterval(closed)
         val task = localProjectDataSource.getTaskById(taskId).getOrDefault(null)
         if (task != null) upsertProjectTask(task)
     }
-
-    // DELETE interval: local first, then remote, with the same offline-create-then-delete (ghost)
-    // handling as tasks — an interval that never reached the server just drops out of the queue.
-    override suspend fun deleteTaskInterval(intervalId: String) {
-        val interval = localProjectDataSource.getIntervalById(intervalId)
-            .getOrDefault(null) ?: return // already gone locally
-        val hadPendingCreate = pendingSyncDataSource.hasPendingCreate(intervalId).getOrDefault(false)
-
-        if (localProjectDataSource.deleteTaskInterval(intervalId) !is Result.Success) return
-
-        if (hadPendingCreate) {
-            pendingSyncDataSource.deleteOperationsByEntityId(intervalId)
-            return
-        }
-
-        val taskId = interval.parentTaskId
-
-        val remoteResult = applicationScope.async {
-            remoteProjectDataSource.deleteInterval(interval.parentProjectId, taskId, intervalId)
-        }.await()
-        if (remoteResult is Result.Error && remoteResult.error.isTransient()) {
-            if (enqueueIntervalOperation(intervalId, taskId, PendingSyncOperation.OP_DELETE) is Result.Success) scheduleSync()
-        }
-        // A NOT_FOUND here means the server already has no such interval — the delete is done.
-    }
-
-    /**
-     * Pushes one interval, queueing it whenever the push cannot succeed yet.
-     *
-     * Two failures get their own handling:
-     * - `CONFLICT` on a create means the POST already landed and only its response was lost, so the
-     *   same interval is retried as an update rather than resolved by last-write-wins.
-     * - `NOT_FOUND` means the parent task does not exist server-side yet, which happens whenever
-     *   the task was created offline and the timer ran before the queue drained. That must be
-     *   queued rather than dropped: the queue drains FIFO, so the task's own CREATE is pushed
-     *   first and the retry then succeeds. Dropping here would silently lose tracked time in
-     *   exactly the offline case this feature exists for.
-     */
-    private suspend fun pushInterval(interval: TaskInterval, isCreate: Boolean) {
-        val taskId = interval.parentTaskId
-        val projectId = interval.parentProjectId
-
-        val remoteResult = if (isCreate) {
-            remoteProjectDataSource.postInterval(projectId, taskId, interval)
-        } else {
-            remoteProjectDataSource.updateInterval(projectId, taskId, interval)
-        }
-
-        when (remoteResult) {
-            // Server is canonical on the happy path, exactly like projects and tasks.
-            is Result.Success -> localProjectDataSource.upsertTaskInterval(remoteResult.data)
-            is Result.Error -> when {
-                isCreate && remoteResult.error == DataError.Remote.CONFLICT ->
-                    resolveIntervalConflict(projectId, taskId, interval)
-                remoteResult.error == DataError.Remote.NOT_FOUND || remoteResult.error.isTransient() -> {
-                    val operation = if (isCreate) PendingSyncOperation.OP_CREATE else PendingSyncOperation.OP_UPDATE
-                    if (enqueueIntervalOperation(interval.intervalId, taskId, operation) is Result.Success) {
-                        scheduleSync()
-                    }
-                }
-                else -> Unit // permanent error — the local row stands, nothing left to try
-            }
-        }
-    }
-
-    /** A duplicate create means the row is already on the server: push local state as an update. */
-    private suspend fun resolveIntervalConflict(projectId: String, taskId: String, interval: TaskInterval) {
-        when (val updated = remoteProjectDataSource.updateInterval(projectId, taskId, interval)) {
-            is Result.Success -> localProjectDataSource.upsertTaskInterval(updated.data)
-            is Result.Error -> if (updated.error.isTransient()) {
-                if (enqueueIntervalOperation(interval.intervalId, taskId,
-                        PendingSyncOperation.OP_UPDATE
-                    ) is Result.Success) {
-                    scheduleSync()
-                }
-            }
-        }
-    }
-
-    /**
-     * Resolves an interval route's project id from the task alone.
-     *
-     * Intervals carry their own `parentProjectId`, so this is only needed for a queued DELETE: by
-     * the time that op drains, the local interval row is gone and the task id stored on the queue
-     * entry is all that is left to go on.
-     */
-    private suspend fun parentProjectIdOf(taskId: String): String? =
-        localProjectDataSource.getTaskById(taskId).getOrDefault(null)?.parentProjectId
 
     // Title edits must reach the server too. Route through the offline-first upsert so the change
     // is pushed remotely (and queued for sync when offline) instead of staying local-only.
@@ -470,12 +375,17 @@ class OfflineFirstProjectRepository(
 
     override suspend fun syncPendingOperations() = withContext(Dispatchers.Default) {
         // Drain FIFO so a CREATE is always pushed before a later UPDATE on the same entity.
-        pendingSyncDataSource.getPendingOperations().getOrDefault(emptyList()).forEach { op ->
-            when (runSyncOperation(op)) {
-                SyncOutcome.SUCCESS, SyncOutcome.DROP -> pendingSyncDataSource.deleteOperation(op.operationId)
-                SyncOutcome.RETRY -> Unit // leave queued for the next attempt
+        pendingSyncDataSource.getPendingOperations().getOrDefault(emptyList())
+            .filter { it.entityType != PendingSyncOperation.ENTITY_INTERVAL }
+            .forEach { op ->
+                when (runSyncOperation(op)) {
+                    SyncOutcome.SUCCESS, SyncOutcome.DROP -> pendingSyncDataSource.deleteOperation(op.operationId)
+                    SyncOutcome.RETRY -> Unit // leave queued for the next attempt
+                }
             }
-        }
+        // Intervals go last: their route is nested inside the task's, so nothing can be pushed
+        // until the tasks above have landed.
+        intervalRepository.syncPendingIntervals()
     }
 
     private suspend fun runSyncOperation(op: PendingSyncOperation): SyncOutcome {
@@ -518,31 +428,6 @@ class OfflineFirstProjectRepository(
                 PendingSyncOperation.OP_DELETE -> {
                     val parentProjectId = op.parentEntityId ?: return SyncOutcome.DROP
                     remoteProjectDataSource.deleteTask(parentProjectId, op.entityId).toSyncOutcome()
-                }
-                else -> SyncOutcome.DROP
-            }
-            PendingSyncOperation.ENTITY_INTERVAL -> when (op.operationType) {
-                PendingSyncOperation.OP_CREATE, PendingSyncOperation.OP_UPDATE -> {
-                    val interval = when (val r = localProjectDataSource.getIntervalById(op.entityId)) {
-                        is Result.Success -> r.data ?: return SyncOutcome.DROP // deleted meanwhile
-                        is Result.Error -> return SyncOutcome.RETRY
-                    }
-                    val taskId = interval.parentTaskId
-                    val projectId = interval.parentProjectId
-                    val result = if (op.operationType == PendingSyncOperation.OP_CREATE) {
-                        remoteProjectDataSource.postInterval(projectId, taskId, interval)
-                    } else {
-                        remoteProjectDataSource.updateInterval(projectId, taskId, interval)
-                    }
-                    result.toSyncOutcome(
-                        onSuccess = { localProjectDataSource.upsertTaskInterval(it) },
-                        onConflict = { resolveIntervalConflict(projectId, taskId, interval) }
-                    )
-                }
-                PendingSyncOperation.OP_DELETE -> {
-                    val taskId = op.parentEntityId ?: return SyncOutcome.DROP
-                    val projectId = parentProjectIdOf(taskId) ?: return SyncOutcome.DROP
-                    remoteProjectDataSource.deleteInterval(projectId, taskId, op.entityId).toSyncOutcome()
                 }
                 else -> SyncOutcome.DROP
             }
@@ -638,14 +523,6 @@ class OfflineFirstProjectRepository(
         // parentEntityId is only needed for DELETE (the task row is gone by drain time).
         val parent = if (operationType == PendingSyncOperation.OP_DELETE) parentProjectId else null
         return enqueueOperation(taskId, PendingSyncOperation.ENTITY_TASK, operationType, parent)
-    }
-
-    // parentEntityId always carries the parent *task* id here, not the project id: unlike a task
-    // DELETE, the interval routes need both ids on every operation, and the project is looked up
-    // from the task when the op drains.
-    private suspend fun enqueueIntervalOperation(intervalId: String, taskId: String, operationType: String): EmptyResult<DataError> {
-        return enqueueOperation(intervalId,
-            PendingSyncOperation.ENTITY_INTERVAL, operationType, parentEntityId = taskId)
     }
 
     private suspend fun enqueueOperation(

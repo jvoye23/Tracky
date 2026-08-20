@@ -378,9 +378,6 @@ private class FakeProjectRepository(initial: List<Project>) : ProjectRepository 
     override suspend fun deleteAllProjects() = Unit
     override suspend fun updateTaskDuration(taskId: String, newDurationMillis: Long) = Unit
     override fun getTaskWithIntervalsById(taskId: String): Flow<ProjectTask?> = flowOf(null)
-    override suspend fun upsertTaskInterval(interval: TaskInterval) = Unit
-    override suspend fun getOpenIntervalByTaskId(taskId: String): TaskInterval? = null
-    override suspend fun deleteTaskInterval(intervalId: String) = Unit
     override suspend fun startTask(taskId: String) = Unit
     override suspend fun stopTask(taskId: String) = Unit
     override suspend fun updateTaskTitle(taskId: String, title: String) = Unit

@@ -1,6 +1,9 @@
 package com.jvcs.tracky.core.data.di
 
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import com.jvcs.tracky.features.project.data.interval.KtorRemoteIntervalDataSource
+import com.jvcs.tracky.features.project.data.interval.OfflineFirstIntervalRepository
+import com.jvcs.tracky.features.project.data.interval.RoomLocalIntervalDataSource
 import com.jvcs.tracky.features.project.data.project.KtorRemoteProjectDataSource
 import com.jvcs.tracky.core.data.auth.DataStoreSessionStorage
 import com.jvcs.tracky.core.data.auth.KtorAuthService
@@ -8,6 +11,9 @@ import com.jvcs.tracky.core.data.networking.HttpClientFactory
 import com.jvcs.tracky.core.data.sync.RoomPendingSyncDataSource
 import com.jvcs.tracky.core.database.DatabaseFactory
 import com.jvcs.tracky.core.database.TrackyDatabase
+import com.jvcs.tracky.features.project.domain.interval.IntervalRepository
+import com.jvcs.tracky.features.project.domain.interval.LocalIntervalDataSource
+import com.jvcs.tracky.features.project.domain.interval.RemoteIntervalDataSource
 import com.jvcs.tracky.features.project.domain.project.RemoteProjectDataSource
 import com.jvcs.tracky.core.domain.auth.AuthService
 import com.jvcs.tracky.core.domain.auth.SessionStorage
@@ -45,11 +51,27 @@ val coreDataModule = module {
 
     singleOf(::RoomLocalProjectDataSource) bind LocalProjectDataSource::class
     singleOf(::KtorRemoteProjectDataSource) bind RemoteProjectDataSource::class
+    singleOf(::RoomLocalIntervalDataSource) bind LocalIntervalDataSource::class
+    singleOf(::KtorRemoteIntervalDataSource) bind RemoteIntervalDataSource::class
+
+    single {
+        OfflineFirstIntervalRepository(
+            localIntervalDataSource = get(),
+            remoteIntervalDataSource = get(),
+            localProjectDataSource = get(),
+            pendingSyncDataSource = get(),
+            syncScheduler = get(),
+            applicationScope = get(qualifier = named("AppScope")),
+            timeProvider = get()
+        )
+    } bind IntervalRepository::class
+
     single {
         OfflineFirstProjectRepository(
             localProjectDataSource = get(),
             remoteProjectDataSource = get(),
             pendingSyncDataSource = get(),
+            intervalRepository = get(),
             syncScheduler = get(),
             applicationScope = get(qualifier = named("AppScope")),
             timeProvider = get()

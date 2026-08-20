@@ -2,20 +2,16 @@ package com.jvcs.tracky.features.project.data.project
 
 import com.jvcs.tracky.core.data.networking.CreateProjectRequest
 import com.jvcs.tracky.core.data.networking.CreateProjectTaskRequest
-import com.jvcs.tracky.core.data.networking.CreateTaskIntervalRequest
 import com.jvcs.tracky.core.data.networking.ProjectSortOrderDto
 import com.jvcs.tracky.core.data.networking.ReorderProjectsRequest
 import com.jvcs.tracky.core.data.networking.UpdateProjectRequest
 import com.jvcs.tracky.core.data.networking.UpdateProjectTaskRequest
-import com.jvcs.tracky.core.data.networking.UpdateTaskIntervalRequest
 import com.jvcs.tracky.core.data.networking.delete
 import com.jvcs.tracky.core.data.networking.dto.ProjectDto
 import com.jvcs.tracky.core.data.networking.dto.ProjectTaskDto
-import com.jvcs.tracky.core.data.networking.dto.TaskIntervalDto
 import com.jvcs.tracky.core.data.networking.get
 import com.jvcs.tracky.core.data.networking.mappers.toProject
 import com.jvcs.tracky.core.data.networking.mappers.toProjectTask
-import com.jvcs.tracky.core.data.networking.mappers.toTaskInterval
 import com.jvcs.tracky.core.data.networking.post
 import com.jvcs.tracky.core.data.networking.put
 import com.jvcs.tracky.core.domain.util.DataError
@@ -24,13 +20,10 @@ import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.map
 import com.jvcs.tracky.features.project.data.mappers.toCreateProjectRequest
 import com.jvcs.tracky.features.project.data.mappers.toCreateProjectTaskRequest
-import com.jvcs.tracky.features.project.data.mappers.toCreateTaskIntervalRequest
 import com.jvcs.tracky.features.project.data.mappers.toUpdateProjectRequest
 import com.jvcs.tracky.features.project.data.mappers.toUpdateProjectTaskRequest
-import com.jvcs.tracky.features.project.data.mappers.toUpdateTaskIntervalRequest
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
-import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import com.jvcs.tracky.features.project.domain.project.RemoteProjectDataSource
 import io.ktor.client.HttpClient
 import kotlin.time.Instant
@@ -106,38 +99,6 @@ class KtorRemoteProjectDataSource(
     override suspend fun deleteTask(projectId: String, taskId: String): EmptyResult<DataError.Remote> {
         return httpClient.delete(
             route = "/api/projects/$projectId/tasks/$taskId"
-        )
-    }
-
-    override suspend fun postInterval(
-        projectId: String,
-        taskId: String,
-        interval: TaskInterval
-    ): Result<TaskInterval, DataError.Remote> {
-        return httpClient.post<CreateTaskIntervalRequest, TaskIntervalDto>(
-            route = "/api/projects/$projectId/tasks/$taskId/intervals",
-            body = interval.toCreateTaskIntervalRequest()
-        ).map { it.toTaskInterval(projectId) }
-    }
-
-    override suspend fun updateInterval(
-        projectId: String,
-        taskId: String,
-        interval: TaskInterval
-    ): Result<TaskInterval, DataError.Remote> {
-        return httpClient.put<UpdateTaskIntervalRequest, TaskIntervalDto>(
-            route = "/api/projects/$projectId/tasks/$taskId/intervals/${interval.intervalId}",
-            body = interval.toUpdateTaskIntervalRequest()
-        ).map { it.toTaskInterval(projectId) }
-    }
-
-    override suspend fun deleteInterval(
-        projectId: String,
-        taskId: String,
-        intervalId: String
-    ): EmptyResult<DataError.Remote> {
-        return httpClient.delete(
-            route = "/api/projects/$projectId/tasks/$taskId/intervals/$intervalId"
         )
     }
 }

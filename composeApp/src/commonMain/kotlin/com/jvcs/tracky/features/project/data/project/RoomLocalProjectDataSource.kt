@@ -144,22 +144,6 @@ class RoomLocalProjectDataSource (
         projectDao.getTaskWithIntervalsById(taskId).first()?.toProjectTask()
     }
 
-    override suspend fun upsertTaskInterval(interval: TaskInterval): EmptyResult<DataError.Local> = write {
-        projectDao.upsertTaskInterval(interval.toTaskIntervalEntity())
-    }
-
-    override suspend fun getOpenIntervalByTaskId(taskId: String): Result<TaskInterval?, DataError.Local> = read {
-        projectDao.getOpenIntervalBySessionId(taskId)?.toTaskInterval()
-    }
-
-    override suspend fun getIntervalById(intervalId: String): Result<TaskInterval?, DataError.Local> = read {
-        projectDao.getIntervalById(intervalId)?.toTaskInterval()
-    }
-
-    override suspend fun deleteTaskInterval(intervalId: String): EmptyResult<DataError.Local> = write {
-        projectDao.deleteTaskInterval(intervalId)
-    }
-
     override suspend fun startTask(taskId: String): Result<TaskInterval, DataError.Local> {
         return try {
             val interval = withContext(dbWriteDispatcher) {
