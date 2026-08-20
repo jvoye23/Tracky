@@ -7,7 +7,7 @@ import com.jvcs.tracky.core.domain.util.TimeManager
 import com.jvcs.tracky.features.project.presentation.mappers.toProjectTaskUi
 import com.jvcs.tracky.design_system.util.formatDuration
 import com.jvcs.tracky.design_system.util.parseDuration
-import com.jvcs.tracky.features.project.domain.project.ProjectRepository
+import com.jvcs.tracky.features.project.domain.task.ProjectTaskRepository
 import com.jvcs.tracky.features.project.presentation.task_detail.model.DailyStatistic
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -21,7 +21,7 @@ import kotlin.time.Duration.Companion.milliseconds
 
 class TaskDetailViewModel(
     private val taskId: String,
-    private val projectRepository: ProjectRepository,
+    private val projectTaskRepository: ProjectTaskRepository,
     private val timeManager: TimeManager
 ) : ViewModel() {
 
@@ -55,7 +55,7 @@ class TaskDetailViewModel(
 
     private fun loadSession() {
         viewModelScope.launch {
-            projectRepository.getTaskWithIntervalsById(taskId).collect { session ->
+            projectTaskRepository.getProjectTaskWithIntervalsById(taskId).collect { session ->
                 session?.let {
                     _state.update { currentState ->
                         currentState.copy(
@@ -99,10 +99,10 @@ class TaskDetailViewModel(
         viewModelScope.launch {
             val isRunning = _state.value.isTimerRunning
             if (isRunning) {
-                projectRepository.stopTask(taskId)
+                projectTaskRepository.stopProjectTask(taskId)
                 timeManager.stopAndResetTimer(taskId)
             } else {
-                projectRepository.startTask(taskId)
+                projectTaskRepository.startProjectTask(taskId)
                 val currentDurationString = _state.value.task?.formattedDuration ?: "00:00:00"
                 val currentDuration = parseDuration(currentDurationString)
                 timeManager.toggleTimer(taskId, currentDuration)
@@ -112,7 +112,7 @@ class TaskDetailViewModel(
 
     private fun saveTitle() {
         viewModelScope.launch {
-            projectRepository.updateTaskTitle(taskId, _state.value.titleText)
+            projectTaskRepository.updateProjectTaskTitle(taskId, _state.value.titleText)
         }
     }
 }

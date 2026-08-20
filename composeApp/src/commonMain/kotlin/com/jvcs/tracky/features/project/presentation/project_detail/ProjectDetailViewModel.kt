@@ -18,6 +18,7 @@ import com.jvcs.tracky.features.project.presentation.util.toUiText
 import com.jvcs.tracky.design_system.util.parseDuration
 import com.jvcs.tracky.features.project.domain.project.EditTextType
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
+import com.jvcs.tracky.features.project.domain.task.ProjectTaskRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.channels.Channel
@@ -36,6 +37,7 @@ class ProjectDetailViewModel(
     private val isEdit: Boolean,
     private val projectId: String?,
     private val projectRepository: ProjectRepository,
+    private val projectTaskRepository: ProjectTaskRepository,
     private val timeManager: TimeManager,
     private val timeProvider: TimeProvider
 ): ViewModel() {
@@ -138,12 +140,12 @@ class ProjectDetailViewModel(
 
         if (timerState != null && timerState.isRunning) {
             viewModelScope.launch {
-                projectRepository.stopTask(taskId)
+                projectTaskRepository.stopProjectTask(taskId)
                 timeManager.stopAndResetTimer(taskId)
             }
         } else {
             viewModelScope.launch {
-                projectRepository.startTask(taskId)
+                projectTaskRepository.startProjectTask(taskId)
                 timeManager.toggleTimer(taskId, currentDuration)
             }
         }
@@ -165,7 +167,7 @@ class ProjectDetailViewModel(
                 isTimerRunning = false
             )
 
-            when(val result = projectRepository.upsertProjectTask(newProjectTask)) {
+            when(val result = projectTaskRepository.upsertProjectTask(newProjectTask)) {
                 is Result.Error -> {
                 eventChannel.send(ProjectDetailEvent.Error(result.error.toUiText()))
             }
@@ -253,7 +255,9 @@ class ProjectDetailViewModel(
 
     private fun deleteProjectTask(taskId: String) {
         viewModelScope.launch {
-            projectRepository.deleteProjectTask(taskId)
+            // The task routes are nested under the project, so the delete needs both ids.
+            val parentProjectId = _state.value.project?.projectId ?: return@launch
+            projectTaskRepository.deleteProjectTask(parentProjectId, taskId)
             _state.update { currentState ->
                 val currentProject = currentState.project ?: return@update currentState
                 val updatedTasks = currentProject.projectTasks?.filter { it.id != taskId }

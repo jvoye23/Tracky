@@ -13,13 +13,16 @@ import com.jvcs.tracky.core.domain.util.FakeTimeProvider
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.features.project.data.interval.OfflineFirstIntervalRepository
 import com.jvcs.tracky.features.project.data.project.OfflineFirstProjectRepository
+import com.jvcs.tracky.features.project.data.task.OfflineFirstTaskRepository
 import com.jvcs.tracky.features.project.domain.interval.LocalIntervalDataSource
 import com.jvcs.tracky.features.project.domain.interval.RemoteIntervalDataSource
 import com.jvcs.tracky.features.project.domain.models.Project
-import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
+import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import com.jvcs.tracky.features.project.domain.project.LocalProjectDataSource
 import com.jvcs.tracky.features.project.domain.project.RemoteProjectDataSource
+import com.jvcs.tracky.features.project.domain.task.LocalTaskDataSource
+import com.jvcs.tracky.features.project.domain.task.RemoteTaskDataSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -190,9 +193,11 @@ class FakeLocalProjectDataSource(val db: FakeDb = FakeDb()) : LocalProjectDataSo
         projects.clear(); tasks.clear(); intervals.clear(); db.emit()
         return Result.Success(Unit)
     }
+}
 
-    // --- Tasks -----------------------------------------------------------------------------------
-    // Tasks still live on this data source in production; they move out in the next change.
+class FakeLocalTaskDataSource(private val db: FakeDb = FakeDb()) : LocalTaskDataSource {
+    val tasks get() = db.tasks
+    val intervals get() = db.intervals
 
     val upsertedTaskIds = mutableListOf<String>()
     val deletedTaskIds = mutableListOf<String>()
@@ -218,7 +223,7 @@ class FakeLocalProjectDataSource(val db: FakeDb = FakeDb()) : LocalProjectDataSo
 
     override suspend fun deleteProjectTask(taskId: String): EmptyResult<DataError.Local> {
         deletedTaskIds += taskId
-        cascadeDeleteTask(taskId)
+        db.cascadeDeleteTask(taskId)
         return Result.Success(Unit)
     }
 
@@ -263,8 +268,6 @@ class FakeLocalProjectDataSource(val db: FakeDb = FakeDb()) : LocalProjectDataSo
         intervals[closed.intervalId] = closed
         return Result.Success(closed)
     }
-
-    private fun cascadeDeleteTask(taskId: String) = db.cascadeDeleteTask(taskId)
 }
 
 class FakeLocalIntervalDataSource(private val db: FakeDb = FakeDb()) : LocalIntervalDataSource {
@@ -335,30 +338,41 @@ class FakeRemoteProjectDataSource : RemoteProjectDataSource {
         deletedProjectIds += projectId
         return Result.Success(Unit)
     }
+}
 
-    // --- Tasks -----------------------------------------------------------------------------------
-    // The task endpoints are still served from here; they move to their own remote data source next.
+class FakeRemoteTaskDataSource : RemoteTaskDataSource {
+    /** Fails every verb. Per-verb switches below override it, so a test can fail just the POST. */
+    var failWith: DataError.Remote? = null
+    var postFailWith: DataError.Remote? = null
+    var updateFailWith: DataError.Remote? = null
+    var getFailWith: DataError.Remote? = null
     val postedTaskIds = mutableListOf<String>()
     val updatedTaskIds = mutableListOf<String>()
     val deletedTaskIds = mutableListOf<String>()
+    /** "<projectId>/<taskId>" per call, so tests can assert the route was built from both ids. */
+    val taskRoutes = mutableListOf<String>()
+    /** What GET /api/projects/{id}/tasks hands back — used by conflict resolution. */
     var tasksToReturn: List<ProjectTask> = emptyList()
 
     override suspend fun getTasksByProjectId(projectId: String): Result<List<ProjectTask>, DataError.Remote> =
-        failWith?.let { Result.Error(it) } ?: Result.Success(tasksToReturn)
+        (getFailWith ?: failWith)?.let { Result.Error(it) } ?: Result.Success(tasksToReturn)
 
     override suspend fun postTaskByProjectId(projectId: String, task: ProjectTask): Result<ProjectTask, DataError.Remote> {
-        failWith?.let { return Result.Error(it) }
+        taskRoutes += "$projectId/${task.projectTaskId}"
+        (postFailWith ?: failWith)?.let { return Result.Error(it) }
         postedTaskIds += task.projectTaskId
         return Result.Success(task)
     }
 
     override suspend fun updateTaskByProjectId(projectId: String, task: ProjectTask): Result<ProjectTask, DataError.Remote> {
-        failWith?.let { return Result.Error(it) }
+        taskRoutes += "$projectId/${task.projectTaskId}"
+        (updateFailWith ?: failWith)?.let { return Result.Error(it) }
         updatedTaskIds += task.projectTaskId
         return Result.Success(task)
     }
 
     override suspend fun deleteTask(projectId: String, taskId: String): EmptyResult<DataError.Remote> {
+        taskRoutes += "$projectId/$taskId"
         failWith?.let { return Result.Error(it) }
         deletedTaskIds += taskId
         return Result.Success(Unit)
@@ -492,8 +506,10 @@ internal class RepoFixture(
 ) {
     val db = FakeDb()
     val localProject = FakeLocalProjectDataSource(db)
+    val localTask = FakeLocalTaskDataSource(db)
     val localInterval = FakeLocalIntervalDataSource(db)
     val remoteProject = FakeRemoteProjectDataSource()
+    val remoteTask = FakeRemoteTaskDataSource()
     val remoteInterval = FakeRemoteIntervalDataSource()
     val queue = FakePendingSyncDataSource()
     val scheduler = FakeSyncScheduler()
@@ -503,17 +519,28 @@ internal class RepoFixture(
     val intervalRepository = OfflineFirstIntervalRepository(
         localIntervalDataSource = localInterval,
         remoteIntervalDataSource = remoteInterval,
-        localProjectDataSource = localProject,
+        localTaskDataSource = localTask,
         pendingSyncDataSource = queue,
         syncScheduler = scheduler,
         applicationScope = scope,
         timeProvider = time
     )
 
+    val taskRepository = OfflineFirstTaskRepository(
+        localTaskDataSource = localTask,
+        remoteTaskDataSource = remoteTask,
+        pendingSyncDataSource = queue,
+        syncScheduler = scheduler,
+        intervalRepository = intervalRepository,
+        timeProvider = time,
+        applicationScope = scope
+    )
+
     val projectRepository = OfflineFirstProjectRepository(
         localProjectDataSource = localProject,
         remoteProjectDataSource = remoteProject,
         pendingSyncDataSource = queue,
+        taskRepository = taskRepository,
         intervalRepository = intervalRepository,
         syncScheduler = scheduler,
         applicationScope = scope,

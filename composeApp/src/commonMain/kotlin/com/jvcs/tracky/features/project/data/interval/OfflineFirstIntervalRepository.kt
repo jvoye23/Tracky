@@ -16,7 +16,7 @@ import com.jvcs.tracky.features.project.domain.interval.IntervalRepository
 import com.jvcs.tracky.features.project.domain.interval.LocalIntervalDataSource
 import com.jvcs.tracky.features.project.domain.interval.RemoteIntervalDataSource
 import com.jvcs.tracky.features.project.domain.models.TaskInterval
-import com.jvcs.tracky.features.project.domain.project.LocalProjectDataSource
+import com.jvcs.tracky.features.project.domain.task.LocalTaskDataSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
@@ -26,13 +26,13 @@ import kotlinx.coroutines.launch
  * turn nested under a project. Nothing here can be pushed until both parents exist server-side, so
  * every write first asks the queue whether the parent task is still local-only.
  *
- * [localProjectDataSource] is here for exactly two reads — the parent-pending check, and resolving the
+ * [localTaskDataSource] is here for exactly two reads — the parent-pending check, and resolving the
  * project id of a queued DELETE, whose interval row is already gone by the time it drains.
  */
 class OfflineFirstIntervalRepository(
     private val localIntervalDataSource: LocalIntervalDataSource,
     private val remoteIntervalDataSource: RemoteIntervalDataSource,
-    private val localProjectDataSource: LocalProjectDataSource,
+    private val localTaskDataSource: LocalTaskDataSource,
     private val pendingSyncDataSource: PendingSyncDataSource,
     private val syncScheduler: SyncScheduler,
     private val applicationScope: CoroutineScope,
@@ -208,7 +208,7 @@ class OfflineFirstIntervalRepository(
      * entry is all that is left to go on.
      */
     private suspend fun parentProjectIdOf(taskId: String): String? =
-        localProjectDataSource.getTaskById(taskId).getOrDefault(null)?.parentProjectId
+        localTaskDataSource.getTaskById(taskId).getOrDefault(null)?.parentProjectId
 
     // ---------------------------------------------------------------------------------------------
     // Queue helpers

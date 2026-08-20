@@ -10,6 +10,7 @@ import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.features.project.data.interval.OfflineFirstIntervalRepository
+import com.jvcs.tracky.features.project.data.task.OfflineFirstTaskRepository
 import com.jvcs.tracky.features.project.data.project.OfflineFirstProjectRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,25 +32,39 @@ internal class OfflineFirstProjectRepositoryTest {
         queue: FakePendingSyncDataSource,
         scheduler: FakeSyncScheduler,
         time: FakeTimeProvider = FakeTimeProvider()
-    ) = OfflineFirstProjectRepository(
-        localProjectDataSource = local,
-        remoteProjectDataSource = remote,
-        pendingSyncDataSource = queue,
-        // Real, not a stub: the project repository still owns syncPendingOperations and hands the
-        // interval leg to this one, so the drain tests below exercise both.
-        intervalRepository = OfflineFirstIntervalRepository(
+    ): OfflineFirstProjectRepository {
+        val scope = CoroutineScope(Dispatchers.Unconfined)
+        // Real child repositories, not stubs: the project repository still owns
+        // syncPendingOperations and hands the task and interval legs to their owners, so the
+        // drain tests below exercise the whole chain.
+        val intervalRepository = OfflineFirstIntervalRepository(
             localIntervalDataSource = FakeLocalIntervalDataSource(local.db),
             remoteIntervalDataSource = FakeRemoteIntervalDataSource(),
-            localProjectDataSource = local,
+            localTaskDataSource = FakeLocalTaskDataSource(local.db),
             pendingSyncDataSource = queue,
             syncScheduler = scheduler,
-            applicationScope = CoroutineScope(Dispatchers.Unconfined),
+            applicationScope = scope,
             timeProvider = time
-        ),
-        syncScheduler = scheduler,
-        applicationScope = CoroutineScope(Dispatchers.Unconfined),
-        timeProvider = time
-    )
+        )
+        return OfflineFirstProjectRepository(
+            localProjectDataSource = local,
+            remoteProjectDataSource = remote,
+            pendingSyncDataSource = queue,
+            taskRepository = OfflineFirstTaskRepository(
+                localTaskDataSource = FakeLocalTaskDataSource(local.db),
+                remoteTaskDataSource = FakeRemoteTaskDataSource(),
+                pendingSyncDataSource = queue,
+                syncScheduler = scheduler,
+                intervalRepository = intervalRepository,
+                timeProvider = time,
+                applicationScope = scope
+            ),
+            intervalRepository = intervalRepository,
+            syncScheduler = scheduler,
+            applicationScope = scope,
+            timeProvider = time
+        )
+    }
 
     private fun project(id: String) = Project(
         projectId = id,
