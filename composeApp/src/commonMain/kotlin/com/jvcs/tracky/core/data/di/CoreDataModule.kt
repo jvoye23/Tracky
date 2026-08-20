@@ -5,12 +5,14 @@ import com.jvcs.tracky.features.project.data.project.KtorRemoteProjectDataSource
 import com.jvcs.tracky.core.data.auth.DataStoreSessionStorage
 import com.jvcs.tracky.core.data.auth.KtorAuthService
 import com.jvcs.tracky.core.data.networking.HttpClientFactory
+import com.jvcs.tracky.core.data.sync.RoomPendingSyncDataSource
 import com.jvcs.tracky.core.database.DatabaseFactory
 import com.jvcs.tracky.core.database.TrackyDatabase
 import com.jvcs.tracky.features.project.domain.project.RemoteProjectDataSource
 import com.jvcs.tracky.core.domain.auth.AuthService
 import com.jvcs.tracky.core.domain.auth.SessionStorage
 import com.jvcs.tracky.core.domain.auth.SocialAuthProvider
+import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource
 import com.jvcs.tracky.core.domain.sync.ProjectSyncManager
 import com.jvcs.tracky.core.domain.sync.SyncRepository
 import com.jvcs.tracky.core.domain.util.SystemTimeProvider
@@ -39,13 +41,15 @@ val coreDataModule = module {
     single { get<TrackyDatabase>().projectDao }
     single { get<TrackyDatabase>().pendingSyncDao }
 
+    singleOf(::RoomPendingSyncDataSource) bind PendingSyncDataSource::class
+
     singleOf(::RoomLocalProjectDataSource) bind LocalProjectDataSource::class
     singleOf(::KtorRemoteProjectDataSource) bind RemoteProjectDataSource::class
     single {
         OfflineFirstProjectRepository(
             localProjectDataSource = get(),
             remoteProjectDataSource = get(),
-            pendingSyncDao = get(),
+            pendingSyncDataSource = get(),
             syncScheduler = get(),
             applicationScope = get(qualifier = named("AppScope")),
             timeProvider = get()

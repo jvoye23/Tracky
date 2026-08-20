@@ -5,9 +5,9 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Upsert
 import com.jvcs.tracky.core.database.entity.PendingSyncEntity
-import com.jvcs.tracky.core.database.entity.PendingSyncEntity.Companion.OP_CREATE
-import com.jvcs.tracky.core.database.entity.PendingSyncEntity.Companion.OP_DELETE
-import com.jvcs.tracky.core.database.entity.PendingSyncEntity.Companion.OP_UPDATE
+import com.jvcs.tracky.core.domain.sync.PendingSyncOperation.Companion.OP_CREATE
+import com.jvcs.tracky.core.domain.sync.PendingSyncOperation.Companion.OP_DELETE
+import com.jvcs.tracky.core.domain.sync.PendingSyncOperation.Companion.OP_UPDATE
 import kotlinx.coroutines.flow.Flow
 
 @Dao

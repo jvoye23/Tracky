@@ -40,3 +40,10 @@ fun <T, E: Error> Result<T, E>.asEmptyDataResult(): EmptyResult<E> {
 }
 
 typealias EmptyResult<E> = Result<Unit, E>
+/** Unwraps a success, falling back to [default] on failure. For reads where "unknown" is survivable. */
+fun <T, E: Error> Result<T, E>.getOrDefault(default: T): T {
+    return when (this) {
+        is Result.Success -> data
+        is Result.Error -> default
+    }
+}

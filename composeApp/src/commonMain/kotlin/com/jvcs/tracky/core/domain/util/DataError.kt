@@ -24,3 +24,13 @@ sealed interface DataError: Error {
         UNKNOWN
     }
 }
+
+fun DataError.Remote.isTransient(): Boolean = when (this) {
+    DataError.Remote.NO_INTERNET,
+    DataError.Remote.REQUEST_TIMEOUT,
+    DataError.Remote.SERVER_ERROR,
+    DataError.Remote.SERVICE_UNAVAILABLE,
+    DataError.Remote.TOO_MANY_REQUESTS,
+    DataError.Remote.UNKNOWN -> true
+    else -> false
+}
