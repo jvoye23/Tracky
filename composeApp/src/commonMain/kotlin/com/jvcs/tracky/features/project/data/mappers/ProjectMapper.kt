@@ -262,7 +262,8 @@ fun SubTaskIntervalEntity.toSubTaskInterval(): SubTaskInterval {
         parentProjectId = parentProjectId,
         startDateTimeUtc = Instant.fromEpochMilliseconds(startDateTimeEpochMs),
         endDateTimeUtc = endDateTimeEpochMs?.let(Instant::fromEpochMilliseconds),
-        durationMillis = durationMillis
+        durationMillis = durationMillis,
+        startedParentTimer = startedParentTimer
     )
 }
 
@@ -274,7 +275,8 @@ fun SubTaskInterval.toSubTaskIntervalEntity(): SubTaskIntervalEntity {
         parentProjectId = parentProjectId,
         startDateTimeEpochMs = startDateTimeUtc.toEpochMilliseconds(),
         endDateTimeEpochMs = endDateTimeUtc?.toEpochMilliseconds(),
-        durationMillis = durationMillis
+        durationMillis = durationMillis,
+        startedParentTimer = startedParentTimer
     )
 }
 

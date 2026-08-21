@@ -189,4 +189,14 @@ interface ProjectDao {
     // row can come back: a subtask has one timer, and closing it stamps endDateTimeEpochMs.
     @Query("SELECT * FROM sub_task_intervals WHERE parentSubTaskId = :subTaskId AND endDateTimeEpochMs IS NULL LIMIT 1")
     suspend fun getOpenSubTaskInterval(subTaskId: String): SubTaskIntervalEntity?
+
+    // Only one subtask under a task may run at a time, so starting one has to find whichever
+    // sibling is currently open and close it. The join is what makes "sibling" mean "under the
+    // same task" rather than "under the same subtask".
+    @Query(
+        "SELECT si.* FROM sub_task_intervals AS si " +
+            "JOIN project_sub_tasks AS s ON s.projectSubTaskId = si.parentSubTaskId " +
+            "WHERE s.parentProjectTaskId = :taskId AND si.endDateTimeEpochMs IS NULL LIMIT 1"
+    )
+    suspend fun getOpenSubTaskIntervalForTask(taskId: String): SubTaskIntervalEntity?
 }

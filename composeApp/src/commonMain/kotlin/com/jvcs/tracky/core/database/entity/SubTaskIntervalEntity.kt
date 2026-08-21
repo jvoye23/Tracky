@@ -1,5 +1,6 @@
 package com.jvcs.tracky.core.database.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -45,5 +46,13 @@ data class SubTaskIntervalEntity(
     val parentProjectId: String, // The Foreign Key link to the owning project
     val startDateTimeEpochMs: Long,
     val endDateTimeEpochMs: Long?,
-    val durationMillis: Long
+    val durationMillis: Long,
+    // True when starting this subtask is what opened the enclosing task interval, so stopping it
+    // should stop the parent task too. False when the task timer was already running on its own.
+    //
+    // The default is declared here as well as in MIGRATION_14_15: `ADD COLUMN NOT NULL` cannot omit
+    // one, and without it on the entity the two schemas would only agree because Room happens to
+    // skip comparing defaults the entity does not declare.
+    @ColumnInfo(defaultValue = "0")
+    val startedParentTimer: Boolean = false
 )
