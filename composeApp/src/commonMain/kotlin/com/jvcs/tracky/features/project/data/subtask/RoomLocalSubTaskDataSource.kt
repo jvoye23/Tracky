@@ -7,6 +7,8 @@ import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.features.project.data.mappers.toSubTaskInterval
+import com.jvcs.tracky.features.project.data.timer.closeSubTaskInterval
+import com.jvcs.tracky.features.project.data.timer.closeTaskInterval
 import com.jvcs.tracky.features.project.domain.models.SubTaskInterval
 import com.jvcs.tracky.features.project.domain.subtask.LocalSubTaskDataSource
 import kotlinx.coroutines.CancellationException
@@ -33,7 +35,7 @@ class RoomLocalSubTaskDataSource(
 
                 // One subtask at a time: whichever sibling is still running gets closed at the same
                 // instant this one starts, so their durations never overlap.
-                projectDao.getOpenSubTaskIntervalForTask(taskId)?.let { closeSubTaskInterval(it, now) }
+                projectDao.getOpenSubTaskIntervalForTask(taskId)?.let { projectDao.closeSubTaskInterval(it, now) }
 
                 // The enclosing task interval. Reusing the open one keeps a manually started task
                 // timer intact; opening one makes this subtask the reason the task is running, which
@@ -73,19 +75,27 @@ class RoomLocalSubTaskDataSource(
         }
     }
 
-    /**
-     * Closes [interval] at [now], banks its duration on the subtask and clears the subtask's flag.
-     *
-     * Deliberately says nothing about the parent task: the caller decides that. Starting a sibling
-     * leaves the task running, which is the only case this slice has.
-     */
-    private suspend fun closeSubTaskInterval(interval: SubTaskIntervalEntity, now: Instant) {
-        val start = Instant.fromEpochMilliseconds(interval.startDateTimeEpochMs)
-        val duration = (now - start).inWholeMilliseconds
-        projectDao.upsertSubTaskInterval(
-            interval.copy(endDateTimeEpochMs = now.toEpochMilliseconds(), durationMillis = duration)
-        )
-        projectDao.addSubTaskDuration(interval.parentSubTaskId, duration)
-        projectDao.updateSubTaskTimerStatus(interval.parentSubTaskId, false)
+    override suspend fun stopSubTask(subTaskId: String): Result<SubTaskInterval?, DataError.Local> {
+        return try {
+            val closed = withContext(dbWriteDispatcher) {
+                val open = projectDao.getOpenSubTaskInterval(subTaskId) ?: return@withContext null
+                val now = timeProvider.nowInstant
+                val closed = projectDao.closeSubTaskInterval(open, now)
+
+                // Only the subtask that opened the task's interval may close it again. A task the
+                // user started stays running, and a sibling that merely nested inside it never
+                // claimed it in the first place.
+                if (open.startedParentTimer) {
+                    projectDao.getIntervalById(open.parentTaskIntervalId)
+                        ?.takeIf { it.endDateTimeEpochMs == null }
+                        ?.let { projectDao.closeTaskInterval(it, now) }
+                }
+                closed
+            }
+            Result.Success(closed?.toSubTaskInterval())
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Result.Error(DataError.Local.DISK_FULL)
+        }
     }
 }
