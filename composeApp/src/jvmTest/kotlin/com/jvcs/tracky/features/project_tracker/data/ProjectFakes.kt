@@ -21,12 +21,15 @@ import com.jvcs.tracky.features.project.domain.interval.RemoteIntervalDataSource
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
+import com.jvcs.tracky.features.project.domain.models.SubTaskInterval
 import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import com.jvcs.tracky.features.project.domain.project.LocalProjectDataSource
 import com.jvcs.tracky.features.project.domain.project.RemoteProjectDataSource
 import com.jvcs.tracky.features.project.domain.subtask.LocalSubTaskDataSource
 import com.jvcs.tracky.features.project.domain.subtask.RemoteSubTaskDataSource
 import com.jvcs.tracky.features.project.domain.subtask.SubTaskTimerChange
+import com.jvcs.tracky.features.project.domain.subtaskinterval.LocalSubTaskIntervalDataSource
+import com.jvcs.tracky.features.project.domain.subtaskinterval.RemoteSubTaskIntervalDataSource
 import com.jvcs.tracky.features.project.domain.task.LocalTaskDataSource
 import com.jvcs.tracky.features.project.domain.task.RemoteTaskDataSource
 import kotlinx.coroutines.CoroutineScope
@@ -51,6 +54,7 @@ class FakeDb {
     val tasks = linkedMapOf<String, ProjectTask>()
     val intervals = linkedMapOf<String, TaskInterval>()
     val subTasks = linkedMapOf<String, ProjectSubTask>()
+    val subTaskIntervals = linkedMapOf<String, SubTaskInterval>()
 
     val projectsFlow = MutableStateFlow<List<Project>>(emptyList())
 
@@ -69,7 +73,7 @@ class FakeDb {
         tasks.remove(taskId)
         intervals.values.filter { it.parentTaskId == taskId }
             .map { it.intervalId }
-            .forEach { intervals.remove(it) }
+            .forEach { cascadeDeleteTaskInterval(it) }
         subTasks.values.filter { it.parentProjectTaskId == taskId }
             .map { it.projectSubTaskId }
             .forEach { cascadeDeleteSubTask(it) }
@@ -77,6 +81,20 @@ class FakeDb {
 
     fun cascadeDeleteSubTask(subTaskId: String) {
         subTasks.remove(subTaskId)
+        subTaskIntervals.values.filter { it.parentSubTaskId == subTaskId }
+            .map { it.subTaskIntervalId }
+            .forEach { subTaskIntervals.remove(it) }
+    }
+
+    /**
+     * sub_task_intervals has a second cascading foreign key, onto task_intervals — a subtask
+     * interval always sits inside exactly one task interval, so removing the outer row removes it.
+     */
+    fun cascadeDeleteTaskInterval(intervalId: String) {
+        intervals.remove(intervalId)
+        subTaskIntervals.values.filter { it.parentTaskIntervalId == intervalId }
+            .map { it.subTaskIntervalId }
+            .forEach { subTaskIntervals.remove(it) }
     }
 
     /**
@@ -116,11 +134,37 @@ class FakeDb {
         startDateTimeUtc = Instant.fromEpochMilliseconds(0),
     )
 
+    fun newSubTaskInterval(
+        intervalId: String,
+        subTaskId: String,
+        taskIntervalId: String,
+        projectId: String,
+        startedParentTimer: Boolean = false
+    ) = SubTaskInterval(
+        subTaskIntervalId = intervalId,
+        parentTaskIntervalId = taskIntervalId,
+        parentSubTaskId = subTaskId,
+        parentProjectId = projectId,
+        startDateTimeUtc = Instant.fromEpochMilliseconds(0),
+        endDateTimeUtc = null,
+        durationMillis = 0,
+        startedParentTimer = startedParentTimer
+    )
+
     fun seedTask(taskId: String, projectId: String) =
         newTask(taskId, projectId).also { tasks[taskId] = it }
 
     fun seedSubTask(subTaskId: String, taskId: String, projectId: String) =
         newSubTask(subTaskId, taskId, projectId).also { subTasks[subTaskId] = it }
+
+    fun seedSubTaskInterval(
+        intervalId: String,
+        subTaskId: String,
+        taskIntervalId: String,
+        projectId: String,
+        startedParentTimer: Boolean = false
+    ) = newSubTaskInterval(intervalId, subTaskId, taskIntervalId, projectId, startedParentTimer)
+        .also { subTaskIntervals[intervalId] = it }
 }
 
 // --- Local data sources ---------------------------------------------------------------------------
@@ -530,6 +574,89 @@ class FakeRemoteSubTaskDataSource : RemoteSubTaskDataSource {
         subTaskRoutes += "$projectId/$taskId"
         deleteFailWith?.let { return Result.Error(it) }
         deletedSubTaskIds += subTaskId
+        return Result.Success(Unit)
+    }
+}
+
+class FakeLocalSubTaskIntervalDataSource(private val db: FakeDb = FakeDb()) : LocalSubTaskIntervalDataSource {
+    var failReadWith: DataError.Local? = null
+    val upserted = mutableListOf<SubTaskInterval>()
+
+    override suspend fun upsertSubTaskInterval(interval: SubTaskInterval): EmptyResult<DataError.Local> {
+        upserted += interval
+        db.subTaskIntervals[interval.subTaskIntervalId] = interval
+        return Result.Success(Unit)
+    }
+
+    override suspend fun getSubTaskIntervalById(
+        intervalId: String
+    ): Result<SubTaskInterval?, DataError.Local> {
+        failReadWith?.let { return Result.Error(it) }
+        return Result.Success(db.subTaskIntervals[intervalId])
+    }
+
+    override suspend fun getOpenIntervalBySubTaskId(
+        subTaskId: String
+    ): Result<SubTaskInterval?, DataError.Local> = Result.Success(
+        db.subTaskIntervals.values.firstOrNull {
+            it.parentSubTaskId == subTaskId && it.endDateTimeUtc == null
+        }
+    )
+
+    override suspend fun deleteSubTaskInterval(intervalId: String): EmptyResult<DataError.Local> {
+        db.subTaskIntervals.remove(intervalId)
+        return Result.Success(Unit)
+    }
+}
+
+class FakeRemoteSubTaskIntervalDataSource : RemoteSubTaskIntervalDataSource {
+    // Separate failure switches per verb, matching FakeRemoteIntervalDataSource.
+    var postFailWith: DataError.Remote? = null
+    var updateFailWith: DataError.Remote? = null
+    var deleteFailWith: DataError.Remote? = null
+    val postedIntervalIds = mutableListOf<String>()
+    val updatedIntervalIds = mutableListOf<String>()
+    val deletedIntervalIds = mutableListOf<String>()
+
+    /**
+     * "<projectId>/<taskId>/<subTaskId>" per call. The task id is the one the interval itself does
+     * not carry, so this is what proves the repository resolved it from the parent subtask.
+     */
+    val intervalRoutes = mutableListOf<String>()
+
+    override suspend fun postInterval(
+        projectId: String,
+        taskId: String,
+        interval: SubTaskInterval
+    ): Result<SubTaskInterval, DataError.Remote> {
+        intervalRoutes += "$projectId/$taskId/${interval.parentSubTaskId}"
+        postFailWith?.let { return Result.Error(it) }
+        postedIntervalIds += interval.subTaskIntervalId
+        // The real source refills parentTaskIntervalId and startedParentTimer from the row it
+        // sent, because the wire carries neither — so a correct echo is the input unchanged.
+        return Result.Success(interval)
+    }
+
+    override suspend fun updateInterval(
+        projectId: String,
+        taskId: String,
+        interval: SubTaskInterval
+    ): Result<SubTaskInterval, DataError.Remote> {
+        intervalRoutes += "$projectId/$taskId/${interval.parentSubTaskId}"
+        updateFailWith?.let { return Result.Error(it) }
+        updatedIntervalIds += interval.subTaskIntervalId
+        return Result.Success(interval)
+    }
+
+    override suspend fun deleteInterval(
+        projectId: String,
+        taskId: String,
+        subTaskId: String,
+        intervalId: String
+    ): EmptyResult<DataError.Remote> {
+        intervalRoutes += "$projectId/$taskId/$subTaskId"
+        deleteFailWith?.let { return Result.Error(it) }
+        deletedIntervalIds += intervalId
         return Result.Success(Unit)
     }
 }
