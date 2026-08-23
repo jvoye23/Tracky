@@ -58,14 +58,13 @@ class KtorRemoteSubTaskIntervalDataSource(
         "/api/projects/$projectId/tasks/$taskId/subtasks/$subTaskId/intervals"
 
     /**
-     * The server echoes back neither `parentTaskIntervalId` nor `startedParentTimer` — it has no
-     * column for either. Both are taken from [sent], the row this call was built from, so writing
-     * the echo to Room cannot blank out a NOT NULL foreign key or lose which timer opened which.
+     * The server echoes back `parentTaskIntervalId` but never `startedParentTimer` — which timer
+     * opened which is a purely local fact. It is taken from [sent], the row this call was built
+     * from, so writing the echo to Room cannot lose it.
      */
     private fun SubTaskIntervalDto.toDomain(sent: SubTaskInterval): SubTaskInterval =
         toSubTaskInterval(
             parentProjectId = sent.parentProjectId,
-            parentTaskIntervalId = sent.parentTaskIntervalId,
             startedParentTimer = sent.startedParentTimer
         )
 }

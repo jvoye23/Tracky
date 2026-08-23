@@ -71,16 +71,18 @@ data class ProjectSubTaskDto(
 /**
  * A subtask interval as the server sends it.
  *
- * Two fields the domain needs are deliberately absent, and neither can be defaulted in:
- * `parentTaskIntervalId` (the server has no column for it yet — see
- * Requirements/backend-subtask-interval-nesting.md) and `startedParentTimer` (a purely local fact
- * about which timer opened which). [toSubTaskInterval] therefore takes both as parameters, so a
- * server echo can never silently blank them out.
+ * [parentTaskIntervalId] records which task interval this one is nested inside — a subtask timer
+ * always runs inside its parent task's, so there is exactly one. It is required on create and
+ * immutable on update.
+ *
+ * `startedParentTimer` has no wire counterpart and never will: which timer opened which is a purely
+ * local fact. [toSubTaskInterval] takes it as a parameter so a server echo cannot blank it out.
  */
 @Serializable
 data class SubTaskIntervalDto(
     @SerialName("id") val subTaskIntervalId: String,
     @SerialName("parentSubTaskId") val parentSubTaskId: String,
+    val parentTaskIntervalId: String,
     val startDateTimeUtc: String,
     val endDateTimeUtc: String? = null,
     val durationMillis: Long = 0L,

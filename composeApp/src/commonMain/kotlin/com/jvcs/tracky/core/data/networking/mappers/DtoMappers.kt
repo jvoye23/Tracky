@@ -68,26 +68,24 @@ fun ProjectSubTaskDto.toProjectSubTask(parentProjectId: String): ProjectSubTask 
         startDateTimeUtc = Instant.parse(startDateTimeUtc),
         endDateTimeUtc = endDateTimeUtc?.let(Instant::parse),
         isFinished = isFinished,
-        // Left empty on purpose: a pulled subtask interval cannot be built without a
-        // parentTaskIntervalId, which the wire does not carry yet. See
-        // Requirements/backend-subtask-interval-nesting.md.
-        subTaskIntervals = emptyList(),
+        // startedParentTimer is unknowable from the wire; upsertServerTree keeps whatever the
+        // local row already had, and false is safe for a row this device has never seen.
+        subTaskIntervals = intervals.map { it.toSubTaskInterval(parentProjectId, startedParentTimer = false) },
         ownUpdatedAt = updatedAt?.let(Instant::parse),
     )
 }
 
 /**
- * Rebuilds a subtask interval from a server payload that is missing two of its fields.
+ * Rebuilds a subtask interval from a server payload missing one of its fields.
  *
- * [parentTaskIntervalId] and [startedParentTimer] are parameters rather than defaults precisely so
- * that a caller cannot forget them: the happy path of a push writes the server's echo straight back
- * to Room, and a defaulted `parentTaskIntervalId` would violate the NOT NULL foreign key while a
- * defaulted `startedParentTimer` would quietly break "stopping this subtask stops its parent task".
- * The caller passes the values off the row it just sent.
+ * [startedParentTimer] is a parameter rather than a default precisely so a caller cannot forget it:
+ * the happy path of a push writes the server's echo straight back to Room, and a defaulted `false`
+ * would quietly break "stopping this subtask also stops its parent task". A push passes the value
+ * off the row it sent; a pull has no way to know it and passes `false`, which the merge in
+ * ProjectDao.upsertServerTree then overrides with whatever the local row already held.
  */
 fun SubTaskIntervalDto.toSubTaskInterval(
     parentProjectId: String,
-    parentTaskIntervalId: String,
     startedParentTimer: Boolean
 ): SubTaskInterval {
     return SubTaskInterval(
@@ -172,6 +170,7 @@ fun SubTaskInterval.toSubTaskIntervalDto(): SubTaskIntervalDto {
     return SubTaskIntervalDto(
         subTaskIntervalId = subTaskIntervalId,
         parentSubTaskId = parentSubTaskId,
+        parentTaskIntervalId = parentTaskIntervalId,
         startDateTimeUtc = startDateTimeUtc.toString(),
         endDateTimeUtc = endDateTimeUtc?.toString(),
         durationMillis = durationMillis

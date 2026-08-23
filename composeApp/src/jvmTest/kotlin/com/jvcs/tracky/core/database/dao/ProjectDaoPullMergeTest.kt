@@ -6,6 +6,7 @@ import com.jvcs.tracky.core.database.TrackyDatabase
 import com.jvcs.tracky.core.database.entity.ProjectEntity
 import com.jvcs.tracky.core.database.entity.ProjectSubTaskEntity
 import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
+import com.jvcs.tracky.core.database.entity.SubTaskIntervalEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -263,5 +264,111 @@ class ProjectDaoPullMergeTest {
         assertNotNull(dao.getProjectById("p1"))
         assertNotNull(dao.getTaskById("t1"))
         assertNotNull(dao.getSubTaskById("s1"))
+    }
+
+    private fun subTaskIntervalEntity(
+        id: String,
+        subTaskId: String,
+        taskIntervalId: String,
+        end: Long?,
+        startedParentTimer: Boolean = false,
+        projectId: String = "p1",
+    ) = SubTaskIntervalEntity(
+        subTaskIntervalId = id,
+        parentSubTaskId = subTaskId,
+        parentTaskIntervalId = taskIntervalId,
+        parentProjectId = projectId,
+        startDateTimeEpochMs = 0,
+        endDateTimeEpochMs = end,
+        durationMillis = end ?: 0L,
+        startedParentTimer = startedParentTimer,
+    )
+
+    /** sub_task_intervals cascades from project_sub_tasks AND task_intervals — seed both. */
+    private suspend fun seedSubTask(subTaskId: String = "s1", taskId: String = "t1") {
+        seedTask(taskId)
+        dao.upsertProjectSubTask(subTaskEntity(subTaskId, taskId, "seeded", updatedAt = 0))
+        dao.upsertTaskInterval(intervalEntity("ti1", taskId, end = null))
+    }
+
+    @Test
+    fun writesSubTaskIntervalsNestedThreeLevelsDown() = runBlocking {
+        dao.upsertServerTree(
+            projects = listOf(projectEntity("p1", updatedAt = 100)),
+            tasks = listOf(taskEntity("t1", "p1", "from server", updatedAt = 100)),
+            intervals = listOf(intervalEntity("ti1", "t1", end = 60_000)),
+            subTasks = listOf(subTaskEntity("s1", "t1", "from server", updatedAt = 100)),
+            subTaskIntervals = listOf(subTaskIntervalEntity("si1", "s1", "ti1", end = 600)),
+        )
+
+        // The last thing a fresh install could not recover.
+        assertEquals(600L, dao.getSubTaskIntervalById("si1")?.durationMillis)
+    }
+
+    @Test
+    fun preservesTheLocalStartedParentTimerFlagAcrossAPull() = runBlocking {
+        seedSubTask()
+        dao.upsertSubTaskInterval(
+            subTaskIntervalEntity("si1", "s1", "ti1", end = 600, startedParentTimer = true)
+        )
+
+        dao.upsertServerTree(
+            projects = emptyList(), tasks = emptyList(), intervals = emptyList(),
+            subTasks = emptyList(),
+            // The server has no column for the flag, so its copy always reads false.
+            subTaskIntervals = listOf(subTaskIntervalEntity("si1", "s1", "ti1", end = 900)),
+        )
+
+        // Losing this would break "stopping this subtask also stops its parent task".
+        assertEquals(true, dao.getSubTaskIntervalById("si1")?.startedParentTimer)
+        assertEquals(900L, dao.getSubTaskIntervalById("si1")?.endDateTimeEpochMs)
+    }
+
+    @Test
+    fun doesNotCloseASubTaskIntervalThatIsStillRunningLocally() = runBlocking {
+        seedSubTask()
+        dao.upsertSubTaskInterval(subTaskIntervalEntity("si1", "s1", "ti1", end = null))
+
+        dao.upsertServerTree(
+            projects = emptyList(), tasks = emptyList(), intervals = emptyList(),
+            subTasks = emptyList(),
+            subTaskIntervals = listOf(subTaskIntervalEntity("si1", "s1", "ti1", end = 60_000)),
+        )
+
+        // A timer running on this device is never stopped by a pull.
+        assertNull(dao.getSubTaskIntervalById("si1")?.endDateTimeEpochMs)
+    }
+
+    @Test
+    fun skipsASubTaskIntervalWithEitherParentMissing() = runBlocking<Unit> {
+        seedSubTask()
+
+        dao.upsertServerTree(
+            projects = emptyList(), tasks = emptyList(), intervals = emptyList(),
+            subTasks = emptyList(),
+            subTaskIntervals = listOf(
+                subTaskIntervalEntity("no-subtask", "missing-subtask", "ti1", end = 1),
+                subTaskIntervalEntity("no-interval", "s1", "missing-interval", end = 1),
+                subTaskIntervalEntity("fine", "s1", "ti1", end = 1),
+            ),
+        )
+
+        // Either dangling reference would throw inside the transaction and lose the whole pull.
+        assertNull(dao.getSubTaskIntervalById("no-subtask"))
+        assertNull(dao.getSubTaskIntervalById("no-interval"))
+        assertNotNull(dao.getSubTaskIntervalById("fine"))
+    }
+
+    @Test
+    fun neverDeletesALocalOnlySubTaskInterval() = runBlocking<Unit> {
+        seedSubTask()
+        dao.upsertSubTaskInterval(subTaskIntervalEntity("local-only", "s1", "ti1", end = 1))
+
+        dao.upsertServerTree(
+            projects = emptyList(), tasks = emptyList(), intervals = emptyList(),
+            subTasks = emptyList(), subTaskIntervals = emptyList(),
+        )
+
+        assertNotNull(dao.getSubTaskIntervalById("local-only"))
     }
 }

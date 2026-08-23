@@ -1,5 +1,8 @@
 # Backend prompt — subtask interval nesting
 
+> **Shipped 2026-08-23.** `parentTaskIntervalId` is live; see
+> `Requirements/api/backend_documentation.md`. Kept as the record of what was asked for and why.
+
 Paste the block below into a session opened on the Tracky backend repo.
 
 ---

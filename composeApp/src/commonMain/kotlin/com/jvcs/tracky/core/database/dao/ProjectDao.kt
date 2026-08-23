@@ -35,20 +35,19 @@ interface ProjectDao {
      * nothing is ever deleted: a local row the server does not know about is either still queued
      * for upload or was created offline, and must survive the pull either way.
      *
-     * Rows are written parents-first because Room enforces the foreign keys, and a subtask whose
-     * parent task is absent is skipped rather than inserted: one dangling reference throws inside
-     * the transaction and would lose the *entire* pull, not just that row. The three older levels
-     * need no such filter only because their parent is always in the same payload.
-     *
-     * Subtask *intervals* are not written yet — the wire carries no `parentTaskIntervalId`, which
-     * `sub_task_intervals` requires. See Requirements/backend-subtask-interval-nesting.md.
+     * Rows are written parents-first because Room enforces the foreign keys, and a row whose parent
+     * is absent is skipped rather than inserted: one dangling reference throws inside the
+     * transaction and would lose the *entire* pull, not just that row. The three oldest levels need
+     * no such filter only because their parent is always in the same payload; subtasks and their
+     * intervals do, and a subtask interval has to clear *both* of its parents.
      */
     @Transaction
     suspend fun upsertServerTree(
         projects: List<ProjectEntity>,
         tasks: List<ProjectTaskEntity>,
         intervals: List<TaskIntervalEntity>,
-        subTasks: List<ProjectSubTaskEntity> = emptyList()
+        subTasks: List<ProjectSubTaskEntity> = emptyList(),
+        subTaskIntervals: List<SubTaskIntervalEntity> = emptyList()
     ) {
         projects.forEach { incoming ->
             val local = getProjectById(incoming.projectId)
@@ -74,6 +73,22 @@ interface ProjectDao {
             // A real stamp, exactly like a task's: subtasks are edited by hand.
             if (serverWinsOnPull(local?.updatedAtEpochMs, incoming.updatedAtEpochMs)) {
                 upsertProjectSubTask(incoming)
+            }
+        }
+        subTaskIntervals.forEach { incoming ->
+            // Two cascading parents, so two ways to dangle.
+            if (getSubTaskById(incoming.parentSubTaskId) == null) return@forEach
+            if (getIntervalById(incoming.parentTaskIntervalId) == null) return@forEach
+            val local = getSubTaskIntervalById(incoming.subTaskIntervalId)
+            if (local == null || serverWinsOnPullForInterval(local.endDateTimeEpochMs)) {
+                // startedParentTimer has no wire counterpart, so the server's copy is always false.
+                // Keeping the local value is what preserves "stopping this subtask also stops its
+                // parent task" across a pull. A row this device has never seen gets false, which is
+                // safe: the merge only lets the server win when the local row is already closed,
+                // and the flag is only ever read off an open one.
+                upsertSubTaskInterval(
+                    incoming.copy(startedParentTimer = local?.startedParentTimer ?: false)
+                )
             }
         }
     }
