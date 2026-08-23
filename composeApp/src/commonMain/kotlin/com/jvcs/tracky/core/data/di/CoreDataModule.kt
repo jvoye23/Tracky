@@ -26,6 +26,7 @@ import com.jvcs.tracky.features.project.data.task.KtorRemoteTaskDataSource
 import com.jvcs.tracky.features.project.data.subtask.OfflineFirstSubTaskRepository
 import com.jvcs.tracky.features.project.data.subtask.KtorRemoteSubTaskDataSource
 import com.jvcs.tracky.features.project.data.subtaskinterval.KtorRemoteSubTaskIntervalDataSource
+import com.jvcs.tracky.features.project.data.subtaskinterval.OfflineFirstSubTaskIntervalRepository
 import com.jvcs.tracky.features.project.data.subtaskinterval.RoomLocalSubTaskIntervalDataSource
 import com.jvcs.tracky.features.project.data.subtask.RoomLocalSubTaskDataSource
 import com.jvcs.tracky.features.project.data.task.OfflineFirstTaskRepository
@@ -40,6 +41,7 @@ import com.jvcs.tracky.features.project.domain.subtask.LocalSubTaskDataSource
 import com.jvcs.tracky.features.project.domain.subtask.RemoteSubTaskDataSource
 import com.jvcs.tracky.features.project.domain.subtaskinterval.LocalSubTaskIntervalDataSource
 import com.jvcs.tracky.features.project.domain.subtaskinterval.RemoteSubTaskIntervalDataSource
+import com.jvcs.tracky.features.project.domain.subtaskinterval.SubTaskIntervalRepository
 import com.jvcs.tracky.features.project.domain.subtask.SubTaskRepository
 import com.jvcs.tracky.features.project.domain.task.LocalTaskDataSource
 import com.jvcs.tracky.features.project.domain.task.ProjectTaskRepository
@@ -114,6 +116,21 @@ val coreDataModule = module {
         )
     } bind ProjectTaskRepository::class
 
+    // Subtask intervals before subtasks, for the same reason intervals come before tasks: the
+    // subtask timer pushes the interval it opened through this one. No cycle — this repository
+    // reads subtasks through LocalSubTaskDataSource, not through SubTaskRepository.
+    single {
+        OfflineFirstSubTaskIntervalRepository(
+            localSubTaskIntervalDataSource = get(),
+            remoteSubTaskIntervalDataSource = get(),
+            localSubTaskDataSource = get(),
+            pendingSyncDataSource = get(),
+            syncScheduler = get(),
+            applicationScope = get(qualifier = named("AppScope")),
+            timeProvider = get()
+        )
+    } bind SubTaskIntervalRepository::class
+
     // Subtasks after tasks: a subtask timer pushes the task interval it opened through the interval
     // repository and the changed task row through the task repository. No cycle — neither of those
     // knows subtasks exist.
@@ -131,7 +148,8 @@ val coreDataModule = module {
         )
     } bind SubTaskRepository::class
 
-    // The one place the projects → tasks → intervals → subtasks sync order is expressed.
+    // The one place the projects → tasks → intervals → subtasks → subtask intervals sync order
+    // is expressed.
     singleOf(::SyncCoordinator) bind SyncRepository::class
 
     single(createdAtStart = true) {
