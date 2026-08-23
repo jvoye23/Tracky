@@ -174,6 +174,7 @@ class FakeLocalProjectDataSource(private val db: FakeDb = FakeDb()) : LocalProje
     val projects get() = db.projects
     val tasks get() = db.tasks
     val intervals get() = db.intervals
+    val subTasks get() = db.subTasks
 
     val upsertedProjectIds = mutableListOf<String>()
     /** One entry per updateSortIndices call, so tests can assert a reorder is a single write. */
@@ -250,6 +251,16 @@ class FakeLocalProjectDataSource(private val db: FakeDb = FakeDb()) : LocalProje
             val local = intervals[incoming.intervalId]
             if (local == null || serverWinsOnPullForInterval(local.endDateTimeUtc?.toEpochMilliseconds())) {
                 intervals[incoming.intervalId] = incoming
+            }
+        }
+        incomingTasks.flatMap { it.subTasks.orEmpty() }.forEach { incoming ->
+            // A subtask whose parent task is absent is skipped, not inserted: in Room that is a
+            // foreign key violation, and it throws inside the transaction that carries the whole
+            // pull. Subtasks carry a real stamp, so the merge is the task rule, not the interval one.
+            if (tasks[incoming.parentProjectTaskId] == null) return@forEach
+            if (serverWinsOnPull(subTasks[incoming.projectSubTaskId]?.ownUpdatedAt?.toEpochMilliseconds(),
+                    incoming.ownUpdatedAt?.toEpochMilliseconds())) {
+                subTasks[incoming.projectSubTaskId] = incoming
             }
         }
         db.emit()

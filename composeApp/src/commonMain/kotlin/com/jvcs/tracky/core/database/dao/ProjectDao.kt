@@ -27,18 +27,28 @@ interface ProjectDao {
     suspend fun upsertProject(project: ProjectEntity)
 
     /**
-     * Writes a whole server tree (projects + their tasks + their intervals) in one transaction.
+     * Writes a whole server tree (projects, their tasks, those tasks' intervals and subtasks) in
+     * one transaction.
      *
      * `GET /api/projects` returns everything the user owns, so this is what rehydrates a fresh
      * install. Rows are merged rather than blindly overwritten — see [serverWinsOnPull] — and
      * nothing is ever deleted: a local row the server does not know about is either still queued
      * for upload or was created offline, and must survive the pull either way.
+     *
+     * Rows are written parents-first because Room enforces the foreign keys, and a subtask whose
+     * parent task is absent is skipped rather than inserted: one dangling reference throws inside
+     * the transaction and would lose the *entire* pull, not just that row. The three older levels
+     * need no such filter only because their parent is always in the same payload.
+     *
+     * Subtask *intervals* are not written yet — the wire carries no `parentTaskIntervalId`, which
+     * `sub_task_intervals` requires. See Requirements/backend-subtask-interval-nesting.md.
      */
     @Transaction
     suspend fun upsertServerTree(
         projects: List<ProjectEntity>,
         tasks: List<ProjectTaskEntity>,
-        intervals: List<TaskIntervalEntity>
+        intervals: List<TaskIntervalEntity>,
+        subTasks: List<ProjectSubTaskEntity> = emptyList()
     ) {
         projects.forEach { incoming ->
             val local = getProjectById(incoming.projectId)
@@ -56,6 +66,14 @@ interface ProjectDao {
             val local = getIntervalById(incoming.intervalId)
             if (local == null || serverWinsOnPullForInterval(local.endDateTimeEpochMs)) {
                 upsertTaskInterval(incoming)
+            }
+        }
+        subTasks.forEach { incoming ->
+            if (getTaskById(incoming.parentProjectTaskId) == null) return@forEach
+            val local = getSubTaskById(incoming.projectSubTaskId)
+            // A real stamp, exactly like a task's: subtasks are edited by hand.
+            if (serverWinsOnPull(local?.updatedAtEpochMs, incoming.updatedAtEpochMs)) {
+                upsertProjectSubTask(incoming)
             }
         }
     }
