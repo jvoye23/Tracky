@@ -140,6 +140,7 @@ val coreDataModule = module {
             remoteSubTaskDataSource = get(),
             localTaskDataSource = get(),
             intervalRepository = get(),
+            subTaskIntervalRepository = get(),
             projectTaskRepository = get(),
             pendingSyncDataSource = get(),
             syncScheduler = get(),

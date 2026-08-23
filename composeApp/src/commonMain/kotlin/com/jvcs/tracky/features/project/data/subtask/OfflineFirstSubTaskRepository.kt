@@ -18,6 +18,7 @@ import com.jvcs.tracky.features.project.domain.subtask.LocalSubTaskDataSource
 import com.jvcs.tracky.features.project.domain.subtask.RemoteSubTaskDataSource
 import com.jvcs.tracky.features.project.domain.subtask.SubTaskRepository
 import com.jvcs.tracky.features.project.domain.subtask.SubTaskTimerChange
+import com.jvcs.tracky.features.project.domain.subtaskinterval.SubTaskIntervalRepository
 import com.jvcs.tracky.features.project.domain.task.LocalTaskDataSource
 import com.jvcs.tracky.features.project.domain.task.ProjectTaskRepository
 import kotlinx.coroutines.CoroutineScope
@@ -40,6 +41,7 @@ class OfflineFirstSubTaskRepository(
     private val remoteSubTaskDataSource: RemoteSubTaskDataSource,
     private val localTaskDataSource: LocalTaskDataSource,
     private val intervalRepository: IntervalRepository,
+    private val subTaskIntervalRepository: SubTaskIntervalRepository,
     private val projectTaskRepository: ProjectTaskRepository,
     private val pendingSyncDataSource: PendingSyncDataSource,
     private val syncScheduler: SyncScheduler,
@@ -102,45 +104,79 @@ class OfflineFirstSubTaskRepository(
         }
     }
 
+    /**
+     * Starting a subtask changes up to four rows that sync, and every one of them is pushed.
+     *
+     * The order is measured time before derived state, outer before inner: the two interval rows
+     * carry spans that exist nowhere else, while the task and subtask rows carry only a duration
+     * and a timer flag, both recomputable from those intervals. So a failure on either interval is
+     * the one worth reporting, and the first error in push order wins.
+     *
+     * Nothing is skipped when an earlier push fails. Each of the four has its own offline queue, so
+     * stopping early would silently drop writes that could have been queued.
+     */
     override suspend fun startSubTask(subTaskId: String): EmptyResult<DataError> {
         val change = when (val started = localSubTaskDataSource.startSubTask(subTaskId)) {
             is Result.Success -> started.data
             is Result.Error -> return started.asEmptyDataResult()
         }
-        // Null when the task timer was already running: that interval is already on its way to the
-        // server, and the task's own row has not changed either.
-        val opened = change.taskInterval ?: return Result.Success(Unit)
-        val intervalResult = intervalRepository.createTaskInterval(opened)
-        return pushParentTask(change, intervalResult)
+        return pushTimerChange(subTaskId, change, isCreate = true)
     }
 
+    /** Stops the subtask's timer. Pushes the same four rows [startSubTask] does — see its KDoc. */
     override suspend fun stopSubTask(subTaskId: String): EmptyResult<DataError> {
         val change = when (val stopped = localSubTaskDataSource.stopSubTask(subTaskId)) {
-            is Result.Success -> stopped.data ?: return Result.Success(Unit)
+            is Result.Success -> stopped.data ?: return Result.Success(Unit) // timer was not running
             is Result.Error -> return stopped.asEmptyDataResult()
         }
-        val closed = change.taskInterval ?: return Result.Success(Unit)
-        // The interval carries the measured span, the task the accumulated total and the cleared
-        // flag. The interval goes first so a failure pushing the task cannot strand it — the same
-        // order stopProjectTask uses.
-        val intervalResult = intervalRepository.updateTaskInterval(closed)
-        return pushParentTask(change, intervalResult)
+        return pushTimerChange(subTaskId, change, isCreate = false)
     }
+
+    private suspend fun pushTimerChange(
+        subTaskId: String,
+        change: SubTaskTimerChange,
+        isCreate: Boolean
+    ): EmptyResult<DataError> {
+        // Null when the task's timer was already running (or is left running): that interval is
+        // already on its way to the server, and the task's own row has not changed either.
+        val taskInterval = change.taskInterval
+        val taskIntervalResult = taskInterval?.let {
+            if (isCreate) intervalRepository.createTaskInterval(it)
+            else intervalRepository.updateTaskInterval(it)
+        }
+
+        val subTaskIntervalResult = if (isCreate) {
+            subTaskIntervalRepository.createSubTaskInterval(change.subTaskInterval)
+        } else {
+            subTaskIntervalRepository.updateSubTaskInterval(change.subTaskInterval)
+        }
+
+        // Re-read rather than reusing the pre-write copy: the data source is what banked the
+        // duration and cleared the flag, so this is the only place the new values exist.
+        val subTask = localSubTaskDataSource.getSubTaskById(subTaskId).getOrDefault(null)
+
+        val taskResult = if (taskInterval != null && subTask != null) {
+            pushParentTask(subTask.parentProjectTaskId)
+        } else {
+            null
+        }
+        val subTaskResult = subTask?.let { upsertSubTask(it) }
+
+        return firstError(taskIntervalResult, subTaskIntervalResult, taskResult, subTaskResult)
+            ?: Result.Success(Unit)
+    }
+
+    private fun firstError(vararg results: EmptyResult<DataError>?): EmptyResult<DataError>? =
+        results.filterIsInstance<Result.Error<DataError>>().firstOrNull()
 
     /**
      * Pushes the parent task row, whose duration and timer flag the write just changed.
      *
      * Goes through [ProjectTaskRepository] rather than talking to the network directly so the task's
-     * queueing and last-write-wins rules stay in one place. [intervalResult] is returned when the
-     * task cannot be read back, so an interval failure is never masked by a later success.
+     * queueing and last-write-wins rules stay in one place.
      */
-    private suspend fun pushParentTask(
-        change: SubTaskTimerChange,
-        intervalResult: EmptyResult<DataError>
-    ): EmptyResult<DataError> {
-        val taskId = change.taskInterval?.parentTaskId ?: return intervalResult
-        val task = localTaskDataSource.getTaskById(taskId).getOrDefault(null)
-            ?: return intervalResult
+    private suspend fun pushParentTask(taskId: String): EmptyResult<DataError>? {
+        val task = localTaskDataSource.getTaskById(taskId).getOrDefault(null) ?: return null
         return projectTaskRepository.upsertProjectTask(task)
     }
 
