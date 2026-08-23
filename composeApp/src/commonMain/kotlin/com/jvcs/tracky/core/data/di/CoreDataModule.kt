@@ -24,6 +24,7 @@ import com.jvcs.tracky.features.project.data.project.OfflineFirstProjectReposito
 import com.jvcs.tracky.features.project.data.project.RoomLocalProjectDataSource
 import com.jvcs.tracky.features.project.data.task.KtorRemoteTaskDataSource
 import com.jvcs.tracky.features.project.data.subtask.OfflineFirstSubTaskRepository
+import com.jvcs.tracky.features.project.data.subtask.KtorRemoteSubTaskDataSource
 import com.jvcs.tracky.features.project.data.subtask.RoomLocalSubTaskDataSource
 import com.jvcs.tracky.features.project.data.task.OfflineFirstTaskRepository
 import com.jvcs.tracky.features.project.data.task.RoomLocalTaskDataSource
@@ -34,6 +35,7 @@ import com.jvcs.tracky.features.project.domain.project.LocalProjectDataSource
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
 import com.jvcs.tracky.features.project.domain.project.RemoteProjectDataSource
 import com.jvcs.tracky.features.project.domain.subtask.LocalSubTaskDataSource
+import com.jvcs.tracky.features.project.domain.subtask.RemoteSubTaskDataSource
 import com.jvcs.tracky.features.project.domain.subtask.SubTaskRepository
 import com.jvcs.tracky.features.project.domain.task.LocalTaskDataSource
 import com.jvcs.tracky.features.project.domain.task.ProjectTaskRepository
@@ -63,6 +65,7 @@ val coreDataModule = module {
     singleOf(::KtorRemoteProjectDataSource) bind RemoteProjectDataSource::class
     singleOf(::RoomLocalTaskDataSource) bind LocalTaskDataSource::class
     singleOf(::RoomLocalSubTaskDataSource) bind LocalSubTaskDataSource::class
+    singleOf(::KtorRemoteSubTaskDataSource) bind RemoteSubTaskDataSource::class
     singleOf(::KtorRemoteTaskDataSource) bind RemoteTaskDataSource::class
     singleOf(::RoomLocalIntervalDataSource) bind LocalIntervalDataSource::class
     singleOf(::KtorRemoteIntervalDataSource) bind RemoteIntervalDataSource::class

@@ -9,10 +9,10 @@ import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.features.project.domain.models.SubTaskInterval
 import com.jvcs.tracky.features.project.domain.models.TaskInterval
-import com.jvcs.tracky.features.project.domain.subtask.LocalSubTaskDataSource
 import com.jvcs.tracky.features.project.domain.subtask.SubTaskTimerChange
 import com.jvcs.tracky.features.project.domain.task.ProjectTaskRepository
 import com.jvcs.tracky.features.project_tracker.data.FakeDb
+import com.jvcs.tracky.features.project_tracker.data.FakeLocalSubTaskDataSource
 import com.jvcs.tracky.features.project_tracker.data.FakeLocalTaskDataSource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -33,7 +33,7 @@ internal class OfflineFirstSubTaskRepositoryTest {
 
     private val db = FakeDb()
     private val localTasks = FakeLocalTaskDataSource(db)
-    private val localSubTasks = FakeLocalSubTaskDataSource()
+    private val localSubTasks = FakeLocalSubTaskDataSource(db)
     private val intervals = RecordingIntervalRepository()
     private val tasks = RecordingTaskRepository()
     private val timeProvider = FakeTimeProvider(now = Instant.fromEpochMilliseconds(500))
@@ -133,26 +133,6 @@ internal class OfflineFirstSubTaskRepositoryTest {
         assertEquals(timeProvider.now, localSubTasks.upserted.single().ownUpdatedAt)
         assertEquals(listOf("s1"), localSubTasks.deleted)
     }
-}
-
-private class FakeLocalSubTaskDataSource : LocalSubTaskDataSource {
-    var startResult: SubTaskTimerChange? = null
-    var stopResult: SubTaskTimerChange? = null
-    val upserted = mutableListOf<ProjectSubTask>()
-    val deleted = mutableListOf<String>()
-
-    override fun getSubTasksForTask(taskId: String): Flow<List<ProjectSubTask>> = flowOf(emptyList())
-    override suspend fun getSubTaskById(subTaskId: String) = Result.Success(null)
-    override suspend fun upsertSubTask(subTask: ProjectSubTask): EmptyResult<DataError.Local> {
-        upserted += subTask
-        return Result.Success(Unit)
-    }
-    override suspend fun deleteSubTask(subTaskId: String): EmptyResult<DataError.Local> {
-        deleted += subTaskId
-        return Result.Success(Unit)
-    }
-    override suspend fun startSubTask(subTaskId: String) = Result.Success(startResult!!)
-    override suspend fun stopSubTask(subTaskId: String) = Result.Success(stopResult)
 }
 
 private class RecordingIntervalRepository : IntervalRepository {

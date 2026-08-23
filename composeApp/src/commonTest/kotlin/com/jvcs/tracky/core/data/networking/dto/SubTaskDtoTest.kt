@@ -1,7 +1,11 @@
 package com.jvcs.tracky.core.data.networking.dto
 
+import com.jvcs.tracky.core.data.networking.CreateSubTaskIntervalRequest
+import com.jvcs.tracky.core.data.networking.CreateSubTaskRequest
 import com.jvcs.tracky.core.data.networking.mappers.toProjectSubTask
 import com.jvcs.tracky.core.data.networking.mappers.toSubTaskInterval
+import com.jvcs.tracky.features.project.data.mappers.toCreateSubTaskIntervalRequest
+import com.jvcs.tracky.features.project.data.mappers.toCreateSubTaskRequest
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -134,5 +138,24 @@ class SubTaskDtoTest {
 
         assertNull(dto.endDateTimeUtc)
         assertEquals(0L, dto.durationMillis)
+    }
+
+    @Test
+    fun theCreateBodiesCarryTheClientGeneratedIdAndLeakNoLocalOnlyFields() {
+        val subTask = json.decodeFromString<ProjectTaskDto>(documentedTask).subTasks.single()
+
+        val body: CreateSubTaskRequest = subTask.toProjectSubTask("p1").toCreateSubTaskRequest()
+        assertEquals("3d90b1ac-51f7-4a02-9e64-1c7b2f0e5d48", body.id)
+        assertTrue(body.title.isNotBlank()) // the server's @NotBlank rule
+
+        val intervalBody: CreateSubTaskIntervalRequest = subTask.intervals.single()
+            .toSubTaskInterval("p1", "ti1", startedParentTimer = true)
+            .toCreateSubTaskIntervalRequest()
+        assertEquals("7a41e0c9-2b8d-4f31-8c05-9e6a3d1f4b72", intervalBody.id)
+
+        // The server has no column for either field and would reject the unknown property.
+        val encoded = json.encodeToString(intervalBody)
+        assertTrue(!encoded.contains("parentTaskIntervalId"), encoded)
+        assertTrue(!encoded.contains("startedParentTimer"), encoded)
     }
 }
