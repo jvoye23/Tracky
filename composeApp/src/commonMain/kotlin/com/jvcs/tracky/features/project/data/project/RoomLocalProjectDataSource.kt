@@ -7,6 +7,7 @@ import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.features.project.data.mappers.toProject
 import com.jvcs.tracky.features.project.data.mappers.toProjectEntity
 import com.jvcs.tracky.features.project.data.mappers.toProjectSessionEntity
+import com.jvcs.tracky.features.project.data.mappers.toProjectSubTaskEntity
 import com.jvcs.tracky.features.project.data.mappers.toTaskIntervalEntity
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.project.LocalProjectDataSource
@@ -80,10 +81,13 @@ class RoomLocalProjectDataSource (
         projectDao.upsertProject(project.toProjectEntity())
     }
 
-    // The pull writes the whole tree, not just the project rows: the server returns every task and
-    // interval nested inside GET /api/projects, and dropping them here is what used to make tracked
-    // time unrecoverable after a reinstall. A null projectTasks means "not loaded" rather than "no
-    // tasks", so it contributes nothing instead of clearing anything.
+    // The pull writes the whole tree, not just the project rows: the server returns every task,
+    // interval and subtask nested inside GET /api/projects, and dropping them here is what used to
+    // make tracked time unrecoverable after a reinstall. A null projectTasks or subTasks means
+    // "not loaded" rather than "none", so it contributes nothing instead of clearing anything.
+    //
+    // Subtask intervals are missing one field the wire does not carry yet — see
+    // Requirements/backend-subtask-interval-nesting.md — so they are not flattened here.
     override suspend fun upsertProjects(projects: List<Project>): EmptyResult<DataError.Local> = write {
         val tasks = projects.flatMap { it.projectTasks.orEmpty() }
         projectDao.upsertServerTree(
@@ -91,6 +95,8 @@ class RoomLocalProjectDataSource (
             tasks = tasks.map { it.toProjectSessionEntity() },
             intervals = tasks.flatMap { task -> task.intervals }
                 .map { it.toTaskIntervalEntity() },
+            subTasks = tasks.flatMap { task -> task.subTasks.orEmpty() }
+                .map { it.toProjectSubTaskEntity() },
         )
     }
 

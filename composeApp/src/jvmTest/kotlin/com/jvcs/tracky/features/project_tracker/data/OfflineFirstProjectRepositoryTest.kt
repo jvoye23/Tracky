@@ -4,6 +4,7 @@ package com.jvcs.tracky.features.project_tracker.data
 
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
 import com.jvcs.tracky.features.project.domain.models.Project
+import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import com.jvcs.tracky.core.domain.util.DataError
@@ -487,5 +488,118 @@ class OfflineFirstProjectRepositoryTest {
         // Created offline and still queued for upload — a pull must never delete these.
         assertTrue(f.local.tasks.containsKey("local-only"))
         assertTrue(f.local.intervals.containsKey("i-local"))
+    }
+
+    private fun serverSubTask(
+        subTaskId: String,
+        taskId: String,
+        updatedAt: Long?,
+        title: String = "sub-$subTaskId",
+        projectId: String = "p1",
+    ) = ProjectSubTask(
+        projectSubTaskId = subTaskId,
+        parentProjectTaskId = taskId,
+        parentProjectId = projectId,
+        title = title,
+        durationMillis = 0,
+        isTimerRunning = false,
+        startDateTimeUtc = Instant.fromEpochMilliseconds(0),
+        ownUpdatedAt = updatedAt?.let { Instant.fromEpochMilliseconds(it) },
+    )
+
+    @Test
+    fun fetchProjects_persistsNestedSubTasks() = runBlocking {
+        val f = Quad(FakeLocalProjectDataSource(), FakeRemoteProjectDataSource(), FakePendingSyncDataSource(), FakeSyncScheduler())
+        f.remote.projectsToReturn = listOf(
+            project("p1").copy(
+                projectTasks = listOf(
+                    serverTask("t1", "p1", updatedAt = 100)
+                        .copy(subTasks = listOf(serverSubTask("s1", "t1", updatedAt = 100)))
+                )
+            )
+        )
+
+        f.repository().fetchProjects()
+
+        // The fresh-install case, one level deeper than tasks.
+        assertNotNull(f.local.subTasks["s1"])
+        assertEquals("t1", f.local.subTasks.getValue("s1").parentProjectTaskId)
+    }
+
+    @Test
+    fun fetchProjects_keepsALocalSubTaskEditThatIsNewerThanTheServer() = runBlocking {
+        val f = Quad(FakeLocalProjectDataSource(), FakeRemoteProjectDataSource(), FakePendingSyncDataSource(), FakeSyncScheduler())
+        f.local.tasks["t1"] = serverTask("t1", "p1", updatedAt = 100)
+        f.local.subTasks["s1"] = serverSubTask("s1", "t1", updatedAt = 500, title = "edited offline")
+        f.remote.projectsToReturn = listOf(
+            project("p1").copy(
+                projectTasks = listOf(
+                    serverTask("t1", "p1", updatedAt = 100)
+                        .copy(subTasks = listOf(serverSubTask("s1", "t1", updatedAt = 100)))
+                )
+            )
+        )
+
+        f.repository().fetchProjects()
+
+        // Overwriting would also feed the stale title back to the server on the next drain.
+        assertEquals("edited offline", f.local.subTasks.getValue("s1").title)
+    }
+
+    @Test
+    fun fetchProjects_adoptsASubTaskTheServerHasEditedMoreRecently() = runBlocking {
+        val f = Quad(FakeLocalProjectDataSource(), FakeRemoteProjectDataSource(), FakePendingSyncDataSource(), FakeSyncScheduler())
+        f.local.tasks["t1"] = serverTask("t1", "p1", updatedAt = 100)
+        f.local.subTasks["s1"] = serverSubTask("s1", "t1", updatedAt = 100, title = "stale")
+        f.remote.projectsToReturn = listOf(
+            project("p1").copy(
+                projectTasks = listOf(
+                    serverTask("t1", "p1", updatedAt = 100).copy(
+                        subTasks = listOf(serverSubTask("s1", "t1", updatedAt = 900, title = "renamed elsewhere"))
+                    )
+                )
+            )
+        )
+
+        f.repository().fetchProjects()
+
+        assertEquals("renamed elsewhere", f.local.subTasks.getValue("s1").title)
+    }
+
+    @Test
+    fun fetchProjects_skipsASubTaskWhoseParentTaskIsMissing_withoutLosingTheRestOfThePull() = runBlocking<Unit> {
+        val f = Quad(FakeLocalProjectDataSource(), FakeRemoteProjectDataSource(), FakePendingSyncDataSource(), FakeSyncScheduler())
+        // A subtask nested under a task the merge did not write is a foreign key violation in Room,
+        // and it throws inside the transaction carrying the whole pull. One bad row must not cost
+        // the project and task rows around it.
+        f.remote.projectsToReturn = listOf(
+            project("p1").copy(
+                projectTasks = listOf(
+                    serverTask("t1", "p1", updatedAt = 100)
+                        .copy(subTasks = listOf(serverSubTask("orphan", "missing-task", updatedAt = 100)))
+                )
+            )
+        )
+
+        f.repository().fetchProjects()
+
+        assertNull(f.local.subTasks["orphan"])
+        assertNotNull(f.local.projects["p1"])
+        assertNotNull(f.local.tasks["t1"])
+    }
+
+    @Test
+    fun fetchProjects_leavesALocalOnlySubTaskAlone() = runBlocking {
+        val f = Quad(FakeLocalProjectDataSource(), FakeRemoteProjectDataSource(), FakePendingSyncDataSource(), FakeSyncScheduler())
+        f.local.tasks["t1"] = serverTask("t1", "p1", updatedAt = 100)
+        f.local.subTasks["local-only"] = serverSubTask("local-only", "t1", updatedAt = null)
+        f.remote.projectsToReturn = listOf(
+            project("p1").copy(projectTasks = listOf(serverTask("t1", "p1", updatedAt = 100)))
+        )
+
+        f.repository().fetchProjects()
+
+        // Created offline and still queued for upload — a pull must never delete these.
+        assertTrue(f.local.subTasks.containsKey("local-only"))
     }
 }

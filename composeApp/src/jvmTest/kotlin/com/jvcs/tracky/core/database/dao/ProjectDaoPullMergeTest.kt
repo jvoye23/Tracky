@@ -4,6 +4,7 @@ import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.jvcs.tracky.core.database.TrackyDatabase
 import com.jvcs.tracky.core.database.entity.ProjectEntity
+import com.jvcs.tracky.core.database.entity.ProjectSubTaskEntity
 import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 import kotlinx.coroutines.Dispatchers
@@ -162,5 +163,105 @@ class ProjectDaoPullMergeTest {
         assertNotNull(dao.getTaskById("local-only"))
         assertNotNull(dao.getIntervalById("i-local"))
         Unit
+    }
+
+    private fun subTaskEntity(
+        id: String,
+        taskId: String,
+        title: String,
+        updatedAt: Long?,
+        projectId: String = "p1",
+    ) = ProjectSubTaskEntity(
+        projectSubTaskId = id,
+        parentProjectTaskId = taskId,
+        parentProjectId = projectId,
+        title = title,
+        description = null,
+        durationMillis = 0,
+        isTimerRunning = false,
+        startDateTimeEpochMs = 0,
+        endDateTimeEpochMs = null,
+        isFinished = false,
+        updatedAtEpochMs = updatedAt,
+    )
+
+    @Test
+    fun writesSubTasksNestedTwoLevelsDown() = runBlocking {
+        dao.upsertServerTree(
+            projects = listOf(projectEntity("p1", updatedAt = 100)),
+            tasks = listOf(taskEntity("t1", "p1", "from server", updatedAt = 100)),
+            intervals = emptyList(),
+            subTasks = listOf(subTaskEntity("s1", "t1", "from server", updatedAt = 100)),
+        )
+
+        assertEquals("from server", dao.getSubTaskById("s1")?.title)
+    }
+
+    @Test
+    fun keepsALocalSubTaskThatIsNewerThanTheServer() = runBlocking {
+        seedTask()
+        dao.upsertProjectSubTask(subTaskEntity("s1", "t1", "edited offline", updatedAt = 500))
+
+        dao.upsertServerTree(
+            projects = emptyList(),
+            tasks = emptyList(),
+            intervals = emptyList(),
+            subTasks = listOf(subTaskEntity("s1", "t1", "stale server copy", updatedAt = 100)),
+        )
+
+        assertEquals("edited offline", dao.getSubTaskById("s1")?.title)
+    }
+
+    @Test
+    fun takesTheServerSubTaskWhenItIsNewer() = runBlocking {
+        seedTask()
+        dao.upsertProjectSubTask(subTaskEntity("s1", "t1", "old local copy", updatedAt = 100))
+
+        dao.upsertServerTree(
+            projects = emptyList(),
+            tasks = emptyList(),
+            intervals = emptyList(),
+            subTasks = listOf(subTaskEntity("s1", "t1", "renamed elsewhere", updatedAt = 900)),
+        )
+
+        assertEquals("renamed elsewhere", dao.getSubTaskById("s1")?.title)
+    }
+
+    @Test
+    fun neverDeletesALocalOnlySubTask() = runBlocking<Unit> {
+        seedTask()
+        dao.upsertProjectSubTask(subTaskEntity("local-only", "t1", "created offline", updatedAt = null))
+
+        dao.upsertServerTree(
+            projects = emptyList(),
+            tasks = emptyList(),
+            intervals = emptyList(),
+            subTasks = emptyList(),
+        )
+
+        // Still queued for upload — a pull must never delete it.
+        assertNotNull(dao.getSubTaskById("local-only"))
+    }
+
+    @Test
+    fun skipsAnOrphanSubTaskInsteadOfLosingTheWholePull() = runBlocking<Unit> {
+        // project_sub_tasks has a CASCADE foreign key onto project_records. Without the filter this
+        // row throws inside the transaction and takes the project and task rows down with it — the
+        // whole pull, not just the bad row.
+        dao.upsertServerTree(
+            projects = listOf(projectEntity("p1", updatedAt = 100)),
+            tasks = listOf(taskEntity("t1", "p1", "from server", updatedAt = 100)),
+            intervals = emptyList(),
+            subTasks = listOf(
+                subTaskEntity("orphan", "missing-task", "no parent here", updatedAt = 100),
+                subTaskEntity("s1", "t1", "fine", updatedAt = 100),
+            ),
+        )
+
+        assertNull(dao.getSubTaskById("orphan"))
+        // Everything around it survived.
+        assertNotNull(dao.getProjectById("p1"))
+        assertNotNull(dao.getTaskById("t1"))
+        assertNotNull(dao.getSubTaskById("s1"))
     }
 }
