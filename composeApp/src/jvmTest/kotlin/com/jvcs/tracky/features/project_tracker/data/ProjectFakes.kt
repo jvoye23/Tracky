@@ -175,6 +175,7 @@ class FakeLocalProjectDataSource(private val db: FakeDb = FakeDb()) : LocalProje
     val tasks get() = db.tasks
     val intervals get() = db.intervals
     val subTasks get() = db.subTasks
+    val subTaskIntervals get() = db.subTaskIntervals
 
     val upsertedProjectIds = mutableListOf<String>()
     /** One entry per updateSortIndices call, so tests can assert a reorder is a single write. */
@@ -261,6 +262,17 @@ class FakeLocalProjectDataSource(private val db: FakeDb = FakeDb()) : LocalProje
             if (serverWinsOnPull(subTasks[incoming.projectSubTaskId]?.ownUpdatedAt?.toEpochMilliseconds(),
                     incoming.ownUpdatedAt?.toEpochMilliseconds())) {
                 subTasks[incoming.projectSubTaskId] = incoming
+            }
+        }
+        incomingTasks.flatMap { it.subTasks.orEmpty() }.flatMap { it.subTaskIntervals }.forEach { incoming ->
+            // Two cascading parents, so two ways to dangle.
+            if (subTasks[incoming.parentSubTaskId] == null) return@forEach
+            if (intervals[incoming.parentTaskIntervalId] == null) return@forEach
+            val local = subTaskIntervals[incoming.subTaskIntervalId]
+            if (local == null || serverWinsOnPullForInterval(local.endDateTimeUtc?.toEpochMilliseconds())) {
+                // The wire carries no startedParentTimer, so the local value is what survives.
+                subTaskIntervals[incoming.subTaskIntervalId] =
+                    incoming.copy(startedParentTimer = local?.startedParentTimer ?: false)
             }
         }
         db.emit()

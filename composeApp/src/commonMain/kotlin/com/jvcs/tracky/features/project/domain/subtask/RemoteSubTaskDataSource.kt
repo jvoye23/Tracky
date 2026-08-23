@@ -7,7 +7,7 @@ import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 
 /**
  * Subtasks are written through their own endpoints nested under the task — the task create and
- * update bodies do not carry them (see Requirements/api/api_endpoints.md).
+ * update bodies do not carry them (see Requirements/api/backend_documentation.md).
  *
  * Ordinary reads come back nested inside GET /api/projects, so [getSubTasksByTaskId] exists only
  * for conflict resolution: a 409 means the server already has the row, and last-write-wins needs

@@ -329,11 +329,11 @@ fun ProjectSubTask.toUpdateSubTaskRequest(): UpdateSubTaskRequest {
     )
 }
 
-// parentTaskIntervalId and startedParentTimer are absent by design — the server has no column for
-// either. See Requirements/backend-subtask-interval-nesting.md.
+// startedParentTimer is absent by design — which timer opened which is a purely local fact.
 fun SubTaskInterval.toCreateSubTaskIntervalRequest(): CreateSubTaskIntervalRequest {
     return CreateSubTaskIntervalRequest(
         id = subTaskIntervalId,
+        parentTaskIntervalId = parentTaskIntervalId,
         startDateTimeUtc = startDateTimeUtc.toString(),
         endDateTimeUtc = endDateTimeUtc?.toString(),
         durationMillis = durationMillis,

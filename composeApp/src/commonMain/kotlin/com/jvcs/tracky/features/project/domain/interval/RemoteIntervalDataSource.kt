@@ -7,7 +7,7 @@ import com.jvcs.tracky.features.project.domain.models.TaskInterval
 
 /**
  * Intervals are written through their own endpoints nested under the task — the task create/update
- * bodies do not carry them (see Requirements/api/api_endpoints.md). Reads come back nested inside
+ * bodies do not carry them (see Requirements/api/backend_documentation.md). Reads come back nested inside
  * GET /api/projects, so there is deliberately no interval read method here.
  */
 interface RemoteIntervalDataSource {

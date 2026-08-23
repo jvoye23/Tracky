@@ -8,7 +8,7 @@ import kotlin.test.assertTrue
 
 /**
  * Guards the wire contract for task intervals against the documented server response
- * (Requirements/api/api_endpoints.md).
+ * (Requirements/api/backend_documentation.md).
  *
  * This matters more than it looks: the server names the fields `id` and `parentTaskId`, while the
  * domain calls them `intervalId` and `parentSessionId`. Until intervals actually sync, every
