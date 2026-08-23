@@ -810,6 +810,7 @@ internal class RepoFixture(
         remoteSubTaskDataSource = remoteSubTask,
         localTaskDataSource = localTask,
         intervalRepository = intervalRepository,
+        subTaskIntervalRepository = subTaskIntervalRepository,
         projectTaskRepository = taskRepository,
         pendingSyncDataSource = queue,
         syncScheduler = scheduler,
