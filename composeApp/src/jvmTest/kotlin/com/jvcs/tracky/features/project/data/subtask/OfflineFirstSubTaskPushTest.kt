@@ -158,4 +158,33 @@ internal class OfflineFirstSubTaskPushTest {
         assertEquals(PendingSyncOperation.OP_DELETE, op.operationType)
         assertEquals("t1", op.parentEntityId)
     }
+
+    @Test
+    fun theDrainPushesQueuedSubTasksAndClearsThem() = runTest {
+        fixture.seedProjectWithTask()
+        remote.postFailWith = DataError.Remote.NO_INTERNET
+        repo.upsertSubTask(newSubTask())
+        remote.postFailWith = null
+
+        repo.syncPendingSubTasks()
+
+        assertEquals(listOf("s1"), remote.postedSubTaskIds)
+        assertTrue(queue.all().isEmpty())
+    }
+
+    @Test
+    fun aQueuedDeleteWhoseTaskIsAlreadyGoneIsDroppedNotRetriedForever() = runTest {
+        fixture.seedProjectWithTaskAndSubTask()
+        remote.deleteFailWith = DataError.Remote.SERVER_ERROR
+        repo.deleteSubTask("s1")
+        remote.deleteFailWith = null
+        // The task went too. Deleting a task cascades to its subtasks server-side, so this op has
+        // nothing left to do — and the project id it needs for the route is unrecoverable.
+        fixture.db.cascadeDeleteTask("t1")
+
+        repo.syncPendingSubTasks()
+
+        assertTrue(queue.all().isEmpty())
+        assertTrue(remote.deletedSubTaskIds.isEmpty())
+    }
 }

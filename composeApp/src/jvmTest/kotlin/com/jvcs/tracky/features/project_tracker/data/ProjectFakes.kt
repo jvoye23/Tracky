@@ -680,7 +680,8 @@ internal class RepoFixture(
     val syncCoordinator = SyncCoordinator(
         projectRepository = projectRepository,
         taskRepository = taskRepository,
-        intervalRepository = intervalRepository
+        intervalRepository = intervalRepository,
+        subTaskRepository = subTaskRepository
     )
 
     /** One project "p1" with one stopped task "t1" under it, both already known to the server. */

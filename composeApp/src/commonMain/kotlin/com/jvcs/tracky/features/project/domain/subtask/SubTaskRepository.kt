@@ -25,4 +25,10 @@ interface SubTaskRepository {
 
     /** Stops the subtask's timer, stopping its parent task's when this subtask started it. */
     suspend fun stopSubTask(subTaskId: String): EmptyResult<DataError>
+
+    /**
+     * Drains the queued subtask writes. Runs after the task drain: a subtask has no route until its
+     * task exists on the server, so ops whose task is still pending stay queued.
+     */
+    suspend fun syncPendingSubTasks()
 }
