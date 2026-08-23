@@ -3,10 +3,14 @@
 package com.jvcs.tracky.core.data.networking.mappers
 
 import com.jvcs.tracky.core.data.networking.dto.ProjectDto
+import com.jvcs.tracky.core.data.networking.dto.ProjectSubTaskDto
 import com.jvcs.tracky.core.data.networking.dto.ProjectTaskDto
+import com.jvcs.tracky.core.data.networking.dto.SubTaskIntervalDto
 import com.jvcs.tracky.core.data.networking.dto.TaskIntervalDto
 import com.jvcs.tracky.features.project.domain.models.Project
+import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
+import com.jvcs.tracky.features.project.domain.models.SubTaskInterval
 import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
@@ -46,6 +50,55 @@ fun ProjectTaskDto.toProjectTask(parentProjectId: String): ProjectTask {
         isTimerRunning = isTimerRunning,
         intervals = intervals.map { it.toTaskInterval(parentProjectId) },
         ownUpdatedAt = updatedAt?.let(Instant::parse),
+        subTasks = subTasks.map { it.toProjectSubTask(parentProjectId) },
+    )
+}
+
+// Like intervals, subtasks are nested inside their task on the wire and the project id is never
+// repeated, so it is handed down from the enclosing ProjectTaskDto.
+fun ProjectSubTaskDto.toProjectSubTask(parentProjectId: String): ProjectSubTask {
+    return ProjectSubTask(
+        projectSubTaskId = subTaskId,
+        parentProjectTaskId = parentProjectTaskId,
+        parentProjectId = parentProjectId,
+        title = title,
+        description = description,
+        durationMillis = durationMillis,
+        isTimerRunning = isTimerRunning,
+        startDateTimeUtc = Instant.parse(startDateTimeUtc),
+        endDateTimeUtc = endDateTimeUtc?.let(Instant::parse),
+        isFinished = isFinished,
+        // Left empty on purpose: a pulled subtask interval cannot be built without a
+        // parentTaskIntervalId, which the wire does not carry yet. See
+        // Requirements/backend-subtask-interval-nesting.md.
+        subTaskIntervals = emptyList(),
+        ownUpdatedAt = updatedAt?.let(Instant::parse),
+    )
+}
+
+/**
+ * Rebuilds a subtask interval from a server payload that is missing two of its fields.
+ *
+ * [parentTaskIntervalId] and [startedParentTimer] are parameters rather than defaults precisely so
+ * that a caller cannot forget them: the happy path of a push writes the server's echo straight back
+ * to Room, and a defaulted `parentTaskIntervalId` would violate the NOT NULL foreign key while a
+ * defaulted `startedParentTimer` would quietly break "stopping this subtask stops its parent task".
+ * The caller passes the values off the row it just sent.
+ */
+fun SubTaskIntervalDto.toSubTaskInterval(
+    parentProjectId: String,
+    parentTaskIntervalId: String,
+    startedParentTimer: Boolean
+): SubTaskInterval {
+    return SubTaskInterval(
+        subTaskIntervalId = subTaskIntervalId,
+        parentTaskIntervalId = parentTaskIntervalId,
+        parentSubTaskId = parentSubTaskId,
+        parentProjectId = parentProjectId,
+        startDateTimeUtc = Instant.parse(startDateTimeUtc),
+        endDateTimeUtc = endDateTimeUtc?.let(Instant::parse),
+        durationMillis = durationMillis,
+        startedParentTimer = startedParentTimer
     )
 }
 
@@ -94,7 +147,34 @@ fun ProjectTask.toProjectTaskDto(): ProjectTaskDto {
         isFinished = isFinished,
         isTimerRunning = isTimerRunning,
         intervals = intervals.map { it.toTaskIntervalDto() },
+        subTasks = subTasks.orEmpty().map { it.toProjectSubTaskDto() },
         updatedAt = ownUpdatedAt?.toString()
+    )
+}
+
+fun ProjectSubTask.toProjectSubTaskDto(): ProjectSubTaskDto {
+    return ProjectSubTaskDto(
+        subTaskId = projectSubTaskId,
+        parentProjectTaskId = parentProjectTaskId,
+        title = title,
+        description = description,
+        durationMillis = durationMillis,
+        startDateTimeUtc = startDateTimeUtc.toString(),
+        endDateTimeUtc = endDateTimeUtc?.toString(),
+        isFinished = isFinished,
+        isTimerRunning = isTimerRunning,
+        intervals = subTaskIntervals.map { it.toSubTaskIntervalDto() },
+        updatedAt = ownUpdatedAt?.toString()
+    )
+}
+
+fun SubTaskInterval.toSubTaskIntervalDto(): SubTaskIntervalDto {
+    return SubTaskIntervalDto(
+        subTaskIntervalId = subTaskIntervalId,
+        parentSubTaskId = parentSubTaskId,
+        startDateTimeUtc = startDateTimeUtc.toString(),
+        endDateTimeUtc = endDateTimeUtc?.toString(),
+        durationMillis = durationMillis
     )
 }
 
