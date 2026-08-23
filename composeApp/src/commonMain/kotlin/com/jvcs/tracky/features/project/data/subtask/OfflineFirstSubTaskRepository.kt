@@ -2,7 +2,9 @@ package com.jvcs.tracky.features.project.data.subtask
 
 import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
+import com.jvcs.tracky.core.domain.sync.SyncOutcome
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
+import com.jvcs.tracky.core.domain.sync.toSyncOutcome
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
@@ -214,6 +216,71 @@ class OfflineFirstSubTaskRepository(
             Result.Success(Unit)
         }
     }
+
+    // ---------------------------------------------------------------------------------------------
+    // Pending-sync queue draining
+    // ---------------------------------------------------------------------------------------------
+
+    override suspend fun syncPendingSubTasks() {
+        val operations = pendingSyncDataSource.getPendingOperations().getOrDefault(emptyList())
+        // Drain FIFO so a CREATE is always pushed before a later UPDATE on the same subtask.
+        operations
+            .filter { it.entityType == PendingSyncOperation.ENTITY_SUBTASK }
+            .forEach { op ->
+                when (runSubTaskOperation(op)) {
+                    SyncOutcome.SUCCESS, SyncOutcome.DROP -> pendingSyncDataSource.deleteOperation(op.operationId)
+                    SyncOutcome.RETRY -> Unit // leave queued for the next attempt
+                }
+            }
+    }
+
+    private suspend fun runSubTaskOperation(op: PendingSyncOperation): SyncOutcome {
+        return when (op.operationType) {
+            PendingSyncOperation.OP_CREATE, PendingSyncOperation.OP_UPDATE -> {
+                val subTask = when (val r = localSubTaskDataSource.getSubTaskById(op.entityId)) {
+                    is Result.Success -> r.data ?: return SyncOutcome.DROP // deleted meanwhile
+                    is Result.Error -> return SyncOutcome.RETRY
+                }
+                // The task drain runs before this one, so a still-pending CREATE means that push
+                // failed too. Stay queued rather than burning a request that cannot succeed.
+                if (pendingSyncDataSource.hasPendingCreate(subTask.parentProjectTaskId).getOrDefault(false)) {
+                    return SyncOutcome.RETRY
+                }
+                val projectId = subTask.parentProjectId
+                val taskId = subTask.parentProjectTaskId
+                val result = if (op.operationType == PendingSyncOperation.OP_CREATE) {
+                    remoteSubTaskDataSource.postSubTask(projectId, taskId, subTask)
+                } else {
+                    remoteSubTaskDataSource.updateSubTask(projectId, taskId, subTask)
+                }
+                result.toSyncOutcome(
+                    onSuccess = { localSubTaskDataSource.upsertSubTask(it) },
+                    onConflict = { resolveSubTaskConflict(subTask) }
+                )
+            }
+            PendingSyncOperation.OP_DELETE -> {
+                val taskId = op.parentEntityId ?: return SyncOutcome.DROP
+                if (pendingSyncDataSource.hasPendingCreate(taskId).getOrDefault(false)) {
+                    return SyncOutcome.RETRY
+                }
+                // A missing task row means the task was deleted, and the server cascades that to
+                // its subtasks — so this delete has nothing left to do. Retrying would never end.
+                val projectId = parentProjectIdOf(taskId) ?: return SyncOutcome.DROP
+                remoteSubTaskDataSource.deleteSubTask(projectId, taskId, op.entityId).toSyncOutcome()
+            }
+            else -> SyncOutcome.DROP
+        }
+    }
+
+    /**
+     * Resolves a subtask route's project id from the task alone.
+     *
+     * Subtasks carry their own `parentProjectId`, so this is only needed for a queued DELETE: by the
+     * time that op drains, the local subtask row is gone and the task id stored on the queue entry
+     * is all that is left to go on.
+     */
+    private suspend fun parentProjectIdOf(taskId: String): String? =
+        localTaskDataSource.getTaskById(taskId).getOrDefault(null)?.parentProjectId
 
     // ---------------------------------------------------------------------------------------------
     // Queue helpers

@@ -12,8 +12,8 @@ import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
 /**
- * The ordering contract: a whole offline session — project, task and timer — has to reach the
- * server in dependency order once connectivity comes back, because each child's route is nested
+ * The ordering contract: a whole offline session — project, task, timer and subtask — has to reach
+ * the server in dependency order once connectivity comes back, because each child's route is nested
  * inside its parent's.
  */
 internal class SyncCoordinatorTest {
@@ -27,17 +27,22 @@ internal class SyncCoordinatorTest {
         isTimerRunning = false,
     )
 
-    /** Creates a project, a task under it and one tracked interval, all with the network down. */
+    /**
+     * Creates a project, a task under it, one tracked interval and one subtask, all with the
+     * network down.
+     */
     private suspend fun RepoFixture.recordAnOfflineSession() {
         remoteProject.failWith = DataError.Remote.NO_INTERNET
         remoteTask.failWith = DataError.Remote.NO_INTERNET
         remoteInterval.postFailWith = DataError.Remote.NO_INTERNET
+        remoteSubTask.postFailWith = DataError.Remote.NO_INTERNET
 
         projectRepository.upsertProject(db.newProject("p1"))
         taskRepository.upsertProjectTask(task("t1", "p1"))
         taskRepository.startProjectTask("t1")
         localTask.clock = Instant.fromEpochMilliseconds(70_000)
         taskRepository.stopProjectTask("t1")
+        subTaskRepository.upsertSubTask(db.newSubTask("s1", "t1", "p1"))
     }
 
     private fun RepoFixture.goOnline() {
@@ -45,6 +50,7 @@ internal class SyncCoordinatorTest {
         remoteTask.failWith = null
         remoteInterval.postFailWith = null
         remoteInterval.updateFailWith = null
+        remoteSubTask.postFailWith = null
     }
 
     @Test
@@ -58,6 +64,7 @@ internal class SyncCoordinatorTest {
         assertEquals(listOf("p1"), f.remoteProject.postedProjectIds)
         assertEquals(listOf("t1"), f.remoteTask.postedTaskIds)
         assertEquals(listOf("i1"), f.remoteInterval.postedIntervalIds)
+        assertEquals(listOf("s1"), f.remoteSubTask.postedSubTaskIds)
         assertTrue(f.queue.all().isEmpty())
     }
 
@@ -68,13 +75,16 @@ internal class SyncCoordinatorTest {
         // Tasks and intervals could go through now, but their project still cannot.
         f.remoteTask.failWith = null
         f.remoteInterval.postFailWith = null
+        f.remoteSubTask.postFailWith = null
 
         f.syncCoordinator.syncPendingOperations()
 
         assertTrue(f.remoteTask.postedTaskIds.isEmpty())
         assertTrue(f.remoteInterval.postedIntervalIds.isEmpty())
-        // Nothing was dropped — all three are still queued for the next attempt.
-        assertEquals(3, f.queue.all().size)
+        // A subtask is two levels below the project, so it is held back just as far.
+        assertTrue(f.remoteSubTask.postedSubTaskIds.isEmpty())
+        // Nothing was dropped — all four are still queued for the next attempt.
+        assertEquals(4, f.queue.all().size)
     }
 
     @Test
@@ -88,8 +98,10 @@ internal class SyncCoordinatorTest {
 
         assertEquals(listOf("p1"), f.remoteProject.postedProjectIds)
         assertTrue(f.remoteInterval.postedIntervalIds.isEmpty())
-        // Project drained; task and interval remain.
-        assertEquals(2, f.queue.all().size)
+        // The subtask hangs off the same failing task.
+        assertTrue(f.remoteSubTask.postedSubTaskIds.isEmpty())
+        // Project drained; task, interval and subtask remain.
+        assertEquals(3, f.queue.all().size)
     }
 
     @Test
@@ -98,6 +110,7 @@ internal class SyncCoordinatorTest {
         f.recordAnOfflineSession()
         f.remoteTask.failWith = null
         f.remoteInterval.postFailWith = null
+        f.remoteSubTask.postFailWith = null
 
         f.syncCoordinator.syncPendingOperations() // project still down: nothing drains
         f.goOnline()
@@ -106,6 +119,7 @@ internal class SyncCoordinatorTest {
         assertEquals(listOf("p1"), f.remoteProject.postedProjectIds)
         assertEquals(listOf("t1"), f.remoteTask.postedTaskIds)
         assertEquals(listOf("i1"), f.remoteInterval.postedIntervalIds)
+        assertEquals(listOf("s1"), f.remoteSubTask.postedSubTaskIds)
         assertTrue(f.queue.all().isEmpty())
     }
 }
