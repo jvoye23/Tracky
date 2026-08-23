@@ -1,46 +1,104 @@
 package com.jvcs.tracky.features.project.data.subtask
 
+import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource
+import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
+import com.jvcs.tracky.core.domain.sync.SyncScheduler
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.core.domain.util.asEmptyDataResult
 import com.jvcs.tracky.core.domain.util.getOrDefault
+import com.jvcs.tracky.core.domain.util.isTransient
 import com.jvcs.tracky.features.project.domain.interval.IntervalRepository
 import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import com.jvcs.tracky.features.project.domain.subtask.LocalSubTaskDataSource
+import com.jvcs.tracky.features.project.domain.subtask.RemoteSubTaskDataSource
 import com.jvcs.tracky.features.project.domain.subtask.SubTaskRepository
 import com.jvcs.tracky.features.project.domain.subtask.SubTaskTimerChange
 import com.jvcs.tracky.features.project.domain.task.LocalTaskDataSource
 import com.jvcs.tracky.features.project.domain.task.ProjectTaskRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 
 /**
- * Subtask writes never leave the device — there is no subtask route to call — so this repository
- * has no remote data source and nothing to queue.
+ * Subtasks sync through their own routes nested under the task, one level below where the task
+ * repository works: `/api/projects/{projectId}/tasks/{taskId}/subtasks`. The offline-first rules
+ * are the task repository's, applied a level down — optimistic local write, queue on a failure the
+ * server might yet accept, last-write-wins on a conflict.
  *
- * What does leave the device is the *task* interval a subtask timer opens or closes. Those rows are
+ * What still goes elsewhere is the *task* interval a subtask timer opens or closes. Those rows are
  * pushed through the interval and task repositories, which already own the queueing and conflict
  * rules for them, rather than being duplicated here.
  */
 class OfflineFirstSubTaskRepository(
     private val localSubTaskDataSource: LocalSubTaskDataSource,
+    private val remoteSubTaskDataSource: RemoteSubTaskDataSource,
     private val localTaskDataSource: LocalTaskDataSource,
     private val intervalRepository: IntervalRepository,
     private val projectTaskRepository: ProjectTaskRepository,
+    private val pendingSyncDataSource: PendingSyncDataSource,
+    private val syncScheduler: SyncScheduler,
+    private val applicationScope: CoroutineScope,
     private val timeProvider: TimeProvider
 ) : SubTaskRepository {
 
     override fun getSubTasksForTask(taskId: String): Flow<List<ProjectSubTask>> =
         localSubTaskDataSource.getSubTasksForTask(taskId)
 
-    override suspend fun upsertSubTask(subTask: ProjectSubTask): EmptyResult<DataError> =
-        localSubTaskDataSource
-            .upsertSubTask(subTask.copy(ownUpdatedAt = timeProvider.nowInstant))
-            .asEmptyDataResult()
+    // CREATE/UPDATE subtask: local first (optimistic), then remote; on transient failure -> queue.
+    override suspend fun upsertSubTask(subTask: ProjectSubTask): EmptyResult<DataError> {
+        val isCreate = when (val existing = localSubTaskDataSource.getSubTaskById(subTask.projectSubTaskId)) {
+            is Result.Success -> existing.data == null
+            is Result.Error -> return existing.asEmptyDataResult()
+        }
+        val stamped = subTask.copy(ownUpdatedAt = timeProvider.nowInstant)
 
-    override suspend fun deleteSubTask(subTaskId: String): EmptyResult<DataError> =
-        localSubTaskDataSource.deleteSubTask(subTaskId).asEmptyDataResult()
+        val localResult = localSubTaskDataSource.upsertSubTask(stamped)
+        if (localResult !is Result.Success) return localResult.asEmptyDataResult()
+
+        return pushSubTask(stamped, isCreate)
+    }
+
+    // DELETE subtask: local first, then remote; handle offline-create-then-delete (ghost) case.
+    override suspend fun deleteSubTask(subTaskId: String): EmptyResult<DataError> {
+        val subTask = localSubTaskDataSource.getSubTaskById(subTaskId)
+            .getOrDefault(null) ?: return Result.Success(Unit) // already gone locally
+        val hadPendingCreate = pendingSyncDataSource.hasPendingCreate(subTaskId).getOrDefault(false)
+
+        val localResult = localSubTaskDataSource.deleteSubTask(subTaskId)
+        if (localResult !is Result.Success) return localResult.asEmptyDataResult()
+
+        if (hadPendingCreate) {
+            // Created offline and deleted before it ever reached the server -> just drop the queue.
+            pendingSyncDataSource.deleteOperationsByEntityId(subTaskId)
+            return Result.Success(Unit)
+        }
+
+        val taskId = subTask.parentProjectTaskId
+        // The parent task was created offline too, so the server has neither it nor this subtask —
+        // and deleting the task later takes its subtasks with it by cascade. Nothing to push.
+        if (pendingSyncDataSource.hasPendingCreate(taskId).getOrDefault(false)) {
+            return Result.Success(Unit)
+        }
+
+        val remoteResult = applicationScope.async {
+            remoteSubTaskDataSource.deleteSubTask(subTask.parentProjectId, taskId, subTaskId)
+        }.await()
+        return when (remoteResult) {
+            is Result.Success -> Result.Success(Unit)
+            is Result.Error -> when {
+                // Local delete already succeeded; only surface an error if queuing the sync fails.
+                remoteResult.error.isTransient() ->
+                    queueForLater(subTaskId, taskId, PendingSyncOperation.OP_DELETE)
+                // Server already has no such subtask -> the delete is effectively done.
+                remoteResult.error == DataError.Remote.NOT_FOUND -> Result.Success(Unit)
+                else -> remoteResult.asEmptyDataResult()
+            }
+        }
+    }
 
     override suspend fun startSubTask(subTaskId: String): EmptyResult<DataError> {
         val change = when (val started = localSubTaskDataSource.startSubTask(subTaskId)) {
@@ -82,5 +140,106 @@ class OfflineFirstSubTaskRepository(
         val task = localTaskDataSource.getTaskById(taskId).getOrDefault(null)
             ?: return intervalResult
         return projectTaskRepository.upsertProjectTask(task)
+    }
+
+    /**
+     * Pushes one subtask, queueing it whenever the push cannot succeed yet.
+     *
+     * Mirrors the task repository's rules one level down. Two cases never reach the network, or come
+     * back from it, as an ordinary failure:
+     * - The parent task is still queued for creation. There is no route to POST to yet, so the
+     *   subtask is queued straight away rather than spending a request to learn that.
+     * - `NOT_FOUND` means the parent task does not exist server-side after all — the backstop for a
+     *   queue row that went missing. That must be queued rather than dropped: the drain runs tasks
+     *   before subtasks, so the retry then succeeds.
+     */
+    private suspend fun pushSubTask(subTask: ProjectSubTask, isCreate: Boolean): EmptyResult<DataError> {
+        val taskId = subTask.parentProjectTaskId
+        val projectId = subTask.parentProjectId
+        val operation = if (isCreate) PendingSyncOperation.OP_CREATE else PendingSyncOperation.OP_UPDATE
+
+        if (pendingSyncDataSource.hasPendingCreate(taskId).getOrDefault(false)) {
+            return queueForLater(subTask.projectSubTaskId, taskId, operation)
+        }
+
+        val remoteResult = if (isCreate) {
+            remoteSubTaskDataSource.postSubTask(projectId, taskId, subTask)
+        } else {
+            remoteSubTaskDataSource.updateSubTask(projectId, taskId, subTask)
+        }
+
+        return when (remoteResult) {
+            // Server is canonical on the happy path, exactly like projects and tasks.
+            is Result.Success -> localSubTaskDataSource.upsertSubTask(remoteResult.data).asEmptyDataResult()
+            is Result.Error -> when {
+                remoteResult.error == DataError.Remote.CONFLICT -> resolveSubTaskConflict(subTask)
+                remoteResult.error == DataError.Remote.NOT_FOUND || remoteResult.error.isTransient() ->
+                    queueForLater(subTask.projectSubTaskId, taskId, operation)
+                // Permanent error — the local row stands, nothing left to try.
+                else -> remoteResult.asEmptyDataResult()
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Conflict resolution (last-write-wins on the newer updatedAt)
+    // ---------------------------------------------------------------------------------------------
+
+    /**
+     * Unlike an interval, a subtask is edited by hand and carries a real stamp, so a duplicate is
+     * resolved by comparing the two rows rather than blindly retrying as an update.
+     */
+    private suspend fun resolveSubTaskConflict(local: ProjectSubTask): EmptyResult<DataError> {
+        val projectId = local.parentProjectId
+        val taskId = local.parentProjectTaskId
+        val server = when (val r = remoteSubTaskDataSource.getSubTasksByTaskId(projectId, taskId)) {
+            is Result.Success -> r.data.find { it.projectSubTaskId == local.projectSubTaskId }
+            is Result.Error -> return r.asEmptyDataResult()
+        } ?: return remoteSubTaskDataSource // server has none -> push local
+            .postSubTask(projectId, taskId, local)
+            .asEmptyDataResult()
+
+        // Compares this subtask row against the same row on the server, so it must read the row's
+        // own stamp — never the lastUpdatedAt roll-up over its intervals.
+        return if (local.ownUpdatedAt != null && (server.ownUpdatedAt == null || local.ownUpdatedAt > server.ownUpdatedAt)) {
+            when (val pushed = remoteSubTaskDataSource.updateSubTask(projectId, taskId, local)) {
+                is Result.Success -> {
+                    applicationScope.async { localSubTaskDataSource.upsertSubTask(pushed.data) }.await()
+                    Result.Success(Unit)
+                }
+                is Result.Error -> pushed.asEmptyDataResult()
+            }
+        } else {
+            applicationScope.async { localSubTaskDataSource.upsertSubTask(server) }.await()
+            Result.Success(Unit)
+        }
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Queue helpers
+    // ---------------------------------------------------------------------------------------------
+
+    /** Queues the op and wakes the scheduler. The local row already stands, so this is the success path. */
+    private suspend fun queueForLater(
+        subTaskId: String,
+        taskId: String,
+        operationType: String
+    ): EmptyResult<DataError> {
+        // parentEntityId is only needed for DELETE (the subtask row is gone by drain time); for the
+        // other ops both ids are re-read from the subtask itself.
+        val parent = if (operationType == PendingSyncOperation.OP_DELETE) taskId else null
+        val queued = pendingSyncDataSource.enqueue(
+            entityId = subTaskId,
+            entityType = PendingSyncOperation.ENTITY_SUBTASK,
+            operationType = operationType,
+            parentEntityId = parent,
+            createdAt = timeProvider.nowInstant
+        )
+        if (queued is Result.Success) scheduleSync()
+        return queued
+    }
+
+    private suspend fun scheduleSync() {
+        applicationScope.launch { syncScheduler.schedulePeriodicSync() }.join()
     }
 }

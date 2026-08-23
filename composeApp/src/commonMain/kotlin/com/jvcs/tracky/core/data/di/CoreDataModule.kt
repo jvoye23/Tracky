@@ -114,14 +114,18 @@ val coreDataModule = module {
     single {
         OfflineFirstSubTaskRepository(
             localSubTaskDataSource = get(),
+            remoteSubTaskDataSource = get(),
             localTaskDataSource = get(),
             intervalRepository = get(),
             projectTaskRepository = get(),
+            pendingSyncDataSource = get(),
+            syncScheduler = get(),
+            applicationScope = get(qualifier = named("AppScope")),
             timeProvider = get()
         )
     } bind SubTaskRepository::class
 
-    // The one place the projects → tasks → intervals sync order is expressed.
+    // The one place the projects → tasks → intervals → subtasks sync order is expressed.
     singleOf(::SyncCoordinator) bind SyncRepository::class
 
     single(createdAtStart = true) {
