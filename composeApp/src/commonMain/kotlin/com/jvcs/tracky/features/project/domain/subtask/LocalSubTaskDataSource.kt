@@ -19,4 +19,14 @@ interface LocalSubTaskDataSource {
      * the caller to know which row it is.
      */
     suspend fun startSubTask(subTaskId: String): Result<SubTaskInterval, DataError.Local>
+
+    /**
+     * Closes the subtask's open interval, banks its duration and clears its timer flag.
+     *
+     * The parent task keeps running — unless this subtask is what started it, which the interval
+     * itself records, in which case the task is stopped again too.
+     *
+     * Returns the interval it closed, or null when the timer was not running.
+     */
+    suspend fun stopSubTask(subTaskId: String): Result<SubTaskInterval?, DataError.Local>
 }

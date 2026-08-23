@@ -9,6 +9,8 @@ import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.features.project.data.mappers.toProjectSessionEntity
 import com.jvcs.tracky.features.project.data.mappers.toProjectTask
 import com.jvcs.tracky.features.project.data.mappers.toTaskInterval
+import com.jvcs.tracky.features.project.data.timer.closeSubTaskInterval
+import com.jvcs.tracky.features.project.data.timer.closeTaskInterval
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import com.jvcs.tracky.features.project.domain.task.LocalTaskDataSource
@@ -91,17 +93,13 @@ class RoomLocalTaskDataSource(
                 val openInterval = projectDao.getOpenIntervalBySessionId(taskId)
                 val updatedInterval = if (openInterval != null) {
                     val now = timeProvider.nowInstant
-                    val startInstant =
-                        Instant.fromEpochMilliseconds(openInterval.startDateTimeEpochMs)
-                    val duration = (now - startInstant).inWholeMilliseconds
-                    val updatedInterval = openInterval.copy(
-                        endDateTimeEpochMs = now.toEpochMilliseconds(),
-                        durationMillis = duration
-                    )
-                    projectDao.upsertTaskInterval(updatedInterval)
+                    // A subtask cannot outlive the interval it sits in: leaving it open would strand
+                    // a running subtask inside a closed task interval, which the foreign key permits
+                    // but nothing could ever reconcile. It closes at the same instant the task does.
+                    projectDao.getOpenSubTaskIntervalForTask(taskId)
+                        ?.let { projectDao.closeSubTaskInterval(it, now) }
 
-                    projectDao.addTaskDuration(taskId, duration)
-                    updatedInterval
+                    projectDao.closeTaskInterval(openInterval, now)
                 } else null
                 projectDao.updateSessionTimerStatus(taskId, false)
                 updatedInterval
