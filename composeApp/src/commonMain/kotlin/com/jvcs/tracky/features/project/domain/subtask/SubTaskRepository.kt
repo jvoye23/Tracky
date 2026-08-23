@@ -6,12 +6,12 @@ import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import kotlinx.coroutines.flow.Flow
 
 /**
- * Subtasks themselves are local-only — the backend has no routes for them — so unlike the project,
- * task and interval repositories this one queues nothing and drains nothing.
+ * Subtasks sync through their own routes nested under the task, so this repository queues and
+ * drains like the project, task and interval ones do.
  *
- * The timer is the exception. Starting a subtask can open a task interval and stopping it can close
- * one, and those *do* sync, so the two timer calls push through the interval and task repositories
- * while the rest stay purely local.
+ * The timer calls reach further than the others: starting a subtask can open a task interval and
+ * stopping it can close one, and those rows belong to the interval and task repositories, so the
+ * two timer calls push through those rather than duplicating their rules here.
  */
 interface SubTaskRepository {
 

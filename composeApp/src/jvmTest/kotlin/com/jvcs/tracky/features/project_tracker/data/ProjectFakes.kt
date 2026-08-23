@@ -14,6 +14,7 @@ import com.jvcs.tracky.core.domain.util.FakeTimeProvider
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.features.project.data.interval.OfflineFirstIntervalRepository
 import com.jvcs.tracky.features.project.data.project.OfflineFirstProjectRepository
+import com.jvcs.tracky.features.project.data.subtask.OfflineFirstSubTaskRepository
 import com.jvcs.tracky.features.project.data.task.OfflineFirstTaskRepository
 import com.jvcs.tracky.features.project.domain.interval.LocalIntervalDataSource
 import com.jvcs.tracky.features.project.domain.interval.RemoteIntervalDataSource
@@ -624,9 +625,11 @@ internal class RepoFixture(
     val localProject = FakeLocalProjectDataSource(db)
     val localTask = FakeLocalTaskDataSource(db)
     val localInterval = FakeLocalIntervalDataSource(db)
+    val localSubTask = FakeLocalSubTaskDataSource(db)
     val remoteProject = FakeRemoteProjectDataSource()
     val remoteTask = FakeRemoteTaskDataSource()
     val remoteInterval = FakeRemoteIntervalDataSource()
+    val remoteSubTask = FakeRemoteSubTaskDataSource()
     val queue = FakePendingSyncDataSource()
     val scheduler = FakeSyncScheduler()
 
@@ -661,6 +664,19 @@ internal class RepoFixture(
         applicationScope = scope
     )
 
+    // Subtasks after tasks: a subtask timer pushes through the interval and task repositories.
+    val subTaskRepository = OfflineFirstSubTaskRepository(
+        localSubTaskDataSource = localSubTask,
+        remoteSubTaskDataSource = remoteSubTask,
+        localTaskDataSource = localTask,
+        intervalRepository = intervalRepository,
+        projectTaskRepository = taskRepository,
+        pendingSyncDataSource = queue,
+        syncScheduler = scheduler,
+        applicationScope = scope,
+        timeProvider = time
+    )
+
     val syncCoordinator = SyncCoordinator(
         projectRepository = projectRepository,
         taskRepository = taskRepository,
@@ -671,5 +687,15 @@ internal class RepoFixture(
     fun seedProjectWithTask(projectId: String = "p1", taskId: String = "t1") {
         db.seedProject(projectId)
         db.seedTask(taskId, projectId)
+    }
+
+    /** [seedProjectWithTask] plus one subtask "s1", the whole chain already known to the server. */
+    fun seedProjectWithTaskAndSubTask(
+        projectId: String = "p1",
+        taskId: String = "t1",
+        subTaskId: String = "s1"
+    ) {
+        seedProjectWithTask(projectId, taskId)
+        db.seedSubTask(subTaskId, taskId, projectId)
     }
 }

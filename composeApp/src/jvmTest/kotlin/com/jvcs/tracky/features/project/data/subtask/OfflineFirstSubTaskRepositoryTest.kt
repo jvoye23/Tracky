@@ -14,6 +14,11 @@ import com.jvcs.tracky.features.project.domain.task.ProjectTaskRepository
 import com.jvcs.tracky.features.project_tracker.data.FakeDb
 import com.jvcs.tracky.features.project_tracker.data.FakeLocalSubTaskDataSource
 import com.jvcs.tracky.features.project_tracker.data.FakeLocalTaskDataSource
+import com.jvcs.tracky.features.project_tracker.data.FakePendingSyncDataSource
+import com.jvcs.tracky.features.project_tracker.data.FakeRemoteSubTaskDataSource
+import com.jvcs.tracky.features.project_tracker.data.FakeSyncScheduler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -25,9 +30,10 @@ import kotlin.time.Instant
 /**
  * What a subtask write pushes, and what it deliberately does not.
  *
- * Subtasks are local-only, so the interesting cases are all about the *task* interval a subtask
- * timer opens or closes: those rows sync, and if the repository failed to hand them on, time tracked
- * through subtasks would silently never reach the server.
+ * The interesting cases here are all about the *task* interval a subtask timer opens or closes:
+ * those rows belong to another repository, and if this one failed to hand them on, time tracked
+ * through subtasks would silently never reach the server. The subtask's own push is
+ * OfflineFirstSubTaskPushTest's subject.
  */
 internal class OfflineFirstSubTaskRepositoryTest {
 
@@ -38,11 +44,17 @@ internal class OfflineFirstSubTaskRepositoryTest {
     private val tasks = RecordingTaskRepository()
     private val timeProvider = FakeTimeProvider(now = Instant.fromEpochMilliseconds(500))
 
+    private val queue = FakePendingSyncDataSource()
+
     private val repository = OfflineFirstSubTaskRepository(
         localSubTaskDataSource = localSubTasks,
+        remoteSubTaskDataSource = FakeRemoteSubTaskDataSource(),
         localTaskDataSource = localTasks,
         intervalRepository = intervals,
         projectTaskRepository = tasks,
+        pendingSyncDataSource = queue,
+        syncScheduler = FakeSyncScheduler(),
+        applicationScope = CoroutineScope(Dispatchers.Unconfined),
         timeProvider = timeProvider
     )
 
@@ -115,23 +127,6 @@ internal class OfflineFirstSubTaskRepositoryTest {
         assertTrue(result is Result.Success)
         assertTrue(intervals.updated.isEmpty())
         assertTrue(tasks.upserted.isEmpty())
-    }
-
-    @Test
-    fun subTaskWritesStayLocalAndCarryAFreshStamp() = runTest {
-        val subTask = ProjectSubTask(
-            projectSubTaskId = "s1", parentProjectTaskId = "t1", parentProjectId = "p1",
-            title = "sub", durationMillis = null, isTimerRunning = false,
-            startDateTimeUtc = Instant.fromEpochMilliseconds(0)
-        )
-
-        repository.upsertSubTask(subTask)
-        repository.deleteSubTask("s1")
-
-        // Nothing queued, nothing pushed — there is no subtask route to call.
-        assertTrue(intervals.created.isEmpty() && tasks.upserted.isEmpty())
-        assertEquals(timeProvider.now, localSubTasks.upserted.single().ownUpdatedAt)
-        assertEquals(listOf("s1"), localSubTasks.deleted)
     }
 }
 
