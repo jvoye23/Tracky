@@ -20,5 +20,13 @@ interface SubTaskIntervalRepository {
     /** Writes the interval locally and pushes it as an update to a row the server already has. */
     suspend fun updateSubTaskInterval(interval: SubTaskInterval): EmptyResult<DataError>
 
+    suspend fun deleteSubTaskInterval(intervalId: String): EmptyResult<DataError>
     suspend fun getOpenIntervalBySubTaskId(subTaskId: String): Result<SubTaskInterval?, DataError>
+
+    /**
+     * Drains the queued subtask-interval writes. Runs last of all five drains: this is the deepest
+     * row in the tree, with no route until its subtask — and the task above that — exist on the
+     * server, so ops whose subtask is still pending stay queued.
+     */
+    suspend fun syncPendingSubTaskIntervals()
 }

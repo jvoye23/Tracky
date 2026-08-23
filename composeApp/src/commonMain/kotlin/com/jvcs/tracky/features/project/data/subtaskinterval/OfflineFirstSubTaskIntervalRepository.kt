@@ -2,7 +2,9 @@ package com.jvcs.tracky.features.project.data.subtaskinterval
 
 import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
+import com.jvcs.tracky.core.domain.sync.SyncOutcome
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
+import com.jvcs.tracky.core.domain.sync.toSyncOutcome
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
@@ -17,6 +19,7 @@ import com.jvcs.tracky.features.project.domain.subtaskinterval.LocalSubTaskInter
 import com.jvcs.tracky.features.project.domain.subtaskinterval.RemoteSubTaskIntervalDataSource
 import com.jvcs.tracky.features.project.domain.subtaskinterval.SubTaskIntervalRepository
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
 /**
@@ -61,6 +64,53 @@ class OfflineFirstSubTaskIntervalRepository(
         subTaskId: String
     ): Result<SubTaskInterval?, DataError> =
         localSubTaskIntervalDataSource.getOpenIntervalBySubTaskId(subTaskId)
+
+    // DELETE interval: local first, then remote, with the same offline-create-then-delete (ghost)
+    // handling as task intervals — one that never reached the server just drops out of the queue.
+    override suspend fun deleteSubTaskInterval(intervalId: String): EmptyResult<DataError> {
+        val interval = localSubTaskIntervalDataSource.getSubTaskIntervalById(intervalId)
+            .getOrDefault(null) ?: return Result.Success(Unit) // already gone locally
+        val hadPendingCreate = pendingSyncDataSource.hasPendingCreate(intervalId).getOrDefault(false)
+
+        val localResult = localSubTaskIntervalDataSource.deleteSubTaskInterval(intervalId)
+        if (localResult !is Result.Success) return localResult.asEmptyDataResult()
+
+        val subTaskId = interval.parentSubTaskId
+        if (hadPendingCreate) {
+            // Created offline and deleted before it ever reached the server → just drop the queue.
+            pendingSyncDataSource.deleteOperationsByEntityId(intervalId)
+            return Result.Success(Unit)
+        }
+
+        // The parent subtask was created offline too, so the server has neither it nor this
+        // interval — and deleting the subtask later takes its intervals with it by cascade.
+        if (pendingSyncDataSource.hasPendingCreate(subTaskId).getOrDefault(false)) {
+            return Result.Success(Unit)
+        }
+
+        val taskId = parentTaskIdOf(subTaskId)
+            ?: return Result.Success(Unit) // subtask already gone; the server cascade covered it
+        val remoteResult = applicationScope.async {
+            remoteSubTaskIntervalDataSource.deleteInterval(
+                projectId = interval.parentProjectId,
+                taskId = taskId,
+                subTaskId = subTaskId,
+                intervalId = intervalId
+            )
+        }.await()
+        return when (remoteResult) {
+            is Result.Success -> Result.Success(Unit)
+            is Result.Error -> when {
+                remoteResult.error.isTransient() -> {
+                    // Local delete already succeeded; only surface an error if queuing it fails.
+                    queueForLater(intervalId, subTaskId, PendingSyncOperation.OP_DELETE)
+                }
+                // Server already has no such interval — the delete is effectively done.
+                remoteResult.error == DataError.Remote.NOT_FOUND -> Result.Success(Unit)
+                else -> remoteResult.asEmptyDataResult()
+            }
+        }
+    }
 
     /**
      * Pushes one subtask interval, queueing it whenever the push cannot succeed yet.
@@ -132,6 +182,65 @@ class OfflineFirstSubTaskIntervalRepository(
         }
     }
 
+    // ---------------------------------------------------------------------------------------------
+    // Pending-sync queue draining
+    // ---------------------------------------------------------------------------------------------
+
+    override suspend fun syncPendingSubTaskIntervals() {
+        val operations = pendingSyncDataSource.getPendingOperations().getOrDefault(emptyList())
+        // Drain FIFO so a CREATE is always pushed before a later UPDATE on the same interval.
+        operations
+            .filter { it.entityType == PendingSyncOperation.ENTITY_SUBTASK_INTERVAL }
+            .forEach { op ->
+                when (runIntervalOperation(op)) {
+                    SyncOutcome.SUCCESS, SyncOutcome.DROP -> pendingSyncDataSource.deleteOperation(op.operationId)
+                    SyncOutcome.RETRY -> Unit // leave queued for the next attempt
+                }
+            }
+    }
+
+    private suspend fun runIntervalOperation(op: PendingSyncOperation): SyncOutcome {
+        return when (op.operationType) {
+            PendingSyncOperation.OP_CREATE, PendingSyncOperation.OP_UPDATE -> {
+                val interval = when (val r = localSubTaskIntervalDataSource.getSubTaskIntervalById(op.entityId)) {
+                    is Result.Success -> r.data ?: return SyncOutcome.DROP // deleted meanwhile
+                    is Result.Error -> return SyncOutcome.RETRY
+                }
+                // The subtask drain runs before this one, so a still-pending CREATE means that push
+                // failed too. Stay queued rather than burning a request that cannot succeed.
+                if (pendingSyncDataSource.hasPendingCreate(interval.parentSubTaskId).getOrDefault(false)) {
+                    return SyncOutcome.RETRY
+                }
+                // A missing subtask means it was deleted, and the server cascades that to its
+                // intervals — so this op has nothing left to do, and no route to build either.
+                val subTask = parentSubTaskOf(interval.parentSubTaskId) ?: return SyncOutcome.DROP
+                val result = if (op.operationType == PendingSyncOperation.OP_CREATE) {
+                    remoteSubTaskIntervalDataSource.postInterval(subTask.parentProjectId, subTask.parentProjectTaskId, interval)
+                } else {
+                    remoteSubTaskIntervalDataSource.updateInterval(subTask.parentProjectId, subTask.parentProjectTaskId, interval)
+                }
+                result.toSyncOutcome(
+                    onSuccess = { localSubTaskIntervalDataSource.upsertSubTaskInterval(it) },
+                    onConflict = { resolveIntervalConflict(interval, subTask) }
+                )
+            }
+            PendingSyncOperation.OP_DELETE -> {
+                val subTaskId = op.parentEntityId ?: return SyncOutcome.DROP
+                if (pendingSyncDataSource.hasPendingCreate(subTaskId).getOrDefault(false)) {
+                    return SyncOutcome.RETRY
+                }
+                val subTask = parentSubTaskOf(subTaskId) ?: return SyncOutcome.DROP
+                remoteSubTaskIntervalDataSource.deleteInterval(
+                    projectId = subTask.parentProjectId,
+                    taskId = subTask.parentProjectTaskId,
+                    subTaskId = subTaskId,
+                    intervalId = op.entityId
+                ).toSyncOutcome()
+            }
+            else -> SyncOutcome.DROP
+        }
+    }
+
     /**
      * The parent subtask row, which is where both remaining route segments come from.
      *
@@ -141,6 +250,9 @@ class OfflineFirstSubTaskIntervalRepository(
      */
     private suspend fun parentSubTaskOf(subTaskId: String): ProjectSubTask? =
         localSubTaskDataSource.getSubTaskById(subTaskId).getOrDefault(null)
+
+    private suspend fun parentTaskIdOf(subTaskId: String): String? =
+        parentSubTaskOf(subTaskId)?.parentProjectTaskId
 
     // ---------------------------------------------------------------------------------------------
     // Queue helpers
