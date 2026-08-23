@@ -107,4 +107,62 @@ internal class OfflineFirstSubTaskIntervalRepositoryTest {
         assertEquals(PendingSyncOperation.ENTITY_SUBTASK_INTERVAL, queue.all().single().entityType)
         assertTrue(fixture.scheduler.scheduleCount > 0)
     }
+
+    @Test
+    fun theDrainPushesQueuedIntervalsAndClearsThem() = runTest {
+        fixture.seedProjectWithTaskAndSubTask()
+        remote.postFailWith = DataError.Remote.NO_INTERNET
+        repo.createSubTaskInterval(interval())
+        remote.postFailWith = null
+
+        repo.syncPendingSubTaskIntervals()
+
+        assertEquals(listOf("si1"), remote.postedIntervalIds)
+        assertTrue(queue.all().isEmpty())
+    }
+
+    @Test
+    fun deletingAnIntervalThatNeverReachedTheServerJustDropsTheQueue() = runTest {
+        fixture.seedProjectWithTaskAndSubTask()
+        remote.postFailWith = DataError.Remote.NO_INTERNET
+        repo.createSubTaskInterval(interval())
+        remote.postFailWith = null
+        remote.intervalRoutes.clear()
+
+        repo.deleteSubTaskInterval("si1")
+
+        assertTrue(queue.all().isEmpty())
+        assertTrue(remote.intervalRoutes.isEmpty())
+    }
+
+    @Test
+    fun aQueuedDeleteCarriesTheSubTaskIdBecauseTheRowIsGoneByDrainTime() = runTest {
+        fixture.seedProjectWithTaskAndSubTask()
+        fixture.db.seedSubTaskInterval("si1", "s1", "ti1", "p1")
+        remote.deleteFailWith = DataError.Remote.SERVER_ERROR
+
+        repo.deleteSubTaskInterval("si1")
+
+        val op = queue.all().single()
+        assertEquals(PendingSyncOperation.OP_DELETE, op.operationType)
+        // Both remaining route segments are recovered from this one link.
+        assertEquals("s1", op.parentEntityId)
+    }
+
+    @Test
+    fun aQueuedDeleteWhoseSubTaskIsAlreadyGoneIsDroppedNotRetriedForever() = runTest {
+        fixture.seedProjectWithTaskAndSubTask()
+        fixture.db.seedSubTaskInterval("si1", "s1", "ti1", "p1")
+        remote.deleteFailWith = DataError.Remote.SERVER_ERROR
+        repo.deleteSubTaskInterval("si1")
+        remote.deleteFailWith = null
+        // Deleting a subtask cascades to its intervals server-side, so this op has nothing left to
+        // do — and the route it would need is unrecoverable.
+        fixture.db.cascadeDeleteSubTask("s1")
+
+        repo.syncPendingSubTaskIntervals()
+
+        assertTrue(queue.all().isEmpty())
+        assertTrue(remote.deletedIntervalIds.isEmpty())
+    }
 }

@@ -821,7 +821,8 @@ internal class RepoFixture(
         projectRepository = projectRepository,
         taskRepository = taskRepository,
         intervalRepository = intervalRepository,
-        subTaskRepository = subTaskRepository
+        subTaskRepository = subTaskRepository,
+        subTaskIntervalRepository = subTaskIntervalRepository
     )
 
     /** One project "p1" with one stopped task "t1" under it, both already known to the server. */

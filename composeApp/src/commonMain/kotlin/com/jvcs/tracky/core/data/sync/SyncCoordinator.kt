@@ -4,13 +4,14 @@ import com.jvcs.tracky.core.domain.sync.SyncRepository
 import com.jvcs.tracky.features.project.domain.interval.IntervalRepository
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
 import com.jvcs.tracky.features.project.domain.subtask.SubTaskRepository
+import com.jvcs.tracky.features.project.domain.subtaskinterval.SubTaskIntervalRepository
 import com.jvcs.tracky.features.project.domain.task.ProjectTaskRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Drains the pending-sync queue in dependency order: projects, tasks, task intervals, then
- * subtasks.
+ * Drains the pending-sync queue in dependency order: projects, tasks, task intervals, subtasks,
+ * then subtask intervals.
  *
  * The order is not a preference — it is the API shape. A task is addressed as
  * `/api/projects/{projectId}/tasks`, an interval as `.../tasks/{taskId}/intervals` and a subtask as
@@ -25,7 +26,8 @@ class SyncCoordinator(
     private val projectRepository: ProjectRepository,
     private val taskRepository: ProjectTaskRepository,
     private val intervalRepository: IntervalRepository,
-    private val subTaskRepository: SubTaskRepository
+    private val subTaskRepository: SubTaskRepository,
+    private val subTaskIntervalRepository: SubTaskIntervalRepository
 ) : SyncRepository {
 
     override suspend fun syncPendingOperations() = withContext(Dispatchers.Default) {
@@ -33,5 +35,6 @@ class SyncCoordinator(
         taskRepository.syncPendingTasks()
         intervalRepository.syncPendingIntervals()
         subTaskRepository.syncPendingSubTasks()
+        subTaskIntervalRepository.syncPendingSubTaskIntervals()
     }
 }
