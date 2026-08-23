@@ -18,7 +18,10 @@ data class SubTaskInterval(
     val parentProjectId: String,
     val startDateTimeUtc: Instant,
     val endDateTimeUtc: Instant?,
-    val durationMillis: Long
+    val durationMillis: Long,
+    // True when starting this subtask is what opened the enclosing task interval. Stopping it then
+    // stops the parent task too; when the task timer was already running, it is left alone.
+    val startedParentTimer: Boolean = false
 ) : Timestamped {
     // No stamp of its own, for the same reason TaskInterval has none: an interval is written by a
     // device's timer rather than edited by hand, so there is nothing to compare and nothing to

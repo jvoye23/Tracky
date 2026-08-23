@@ -24,7 +24,7 @@ import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
         SubTaskIntervalEntity::class,
         PendingSyncEntity::class
     ],
-    version = 14,
+    version = 15,
 )
 @ConstructedBy(TrackyDatabaseConstructor::class)
 abstract class TrackyDatabase: RoomDatabase() {
@@ -470,6 +470,20 @@ abstract class TrackyDatabase: RoomDatabase() {
                 )
                 connection.execSQL(
                     "CREATE INDEX IF NOT EXISTS index_sub_task_intervals_parentProjectId ON sub_task_intervals(parentProjectId)"
+                )
+            }
+        }
+
+        val MIGRATION_14_15 = object : Migration(14, 15) {
+            override fun migrate(connection: SQLiteConnection) {
+                // Records whether starting a subtask is what opened the task interval enclosing it.
+                // Stopping such a subtask stops the parent task too; when the task timer was already
+                // running on its own, it keeps running. Nothing else can answer that after the fact.
+                //
+                // Existing rows default to 0: every interval written before v15 was created by a
+                // task-level start, so none of them opened their parent.
+                connection.execSQL(
+                    "ALTER TABLE sub_task_intervals ADD COLUMN startedParentTimer INTEGER NOT NULL DEFAULT 0"
                 )
             }
         }

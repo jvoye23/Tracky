@@ -1,0 +1,570 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 15,
+    "identityHash": "ef30151b56ab32a39b37983162a9c3c7",
+    "entities": [
+      {
+        "tableName": "projects",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`projectId` TEXT NOT NULL, `title` TEXT NOT NULL, `description` TEXT, `color` INTEGER, `totalDuration` INTEGER, `startDateTimeEpochMs` INTEGER NOT NULL, `isFinished` INTEGER NOT NULL, `useLightTextColor` INTEGER NOT NULL, `endDateTimeEpochMs` INTEGER, `isArchived` INTEGER NOT NULL, `trashedAtEpochMs` INTEGER, `isPinned` INTEGER NOT NULL, `updatedAtEpochMs` INTEGER, `sortIndex` INTEGER, PRIMARY KEY(`projectId`))",
+        "fields": [
+          {
+            "fieldPath": "projectId",
+            "columnName": "projectId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "description",
+            "columnName": "description",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "color",
+            "columnName": "color",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "totalDuration",
+            "columnName": "totalDuration",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "startDateTimeEpochMs",
+            "columnName": "startDateTimeEpochMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isFinished",
+            "columnName": "isFinished",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "useLightTextColor",
+            "columnName": "useLightTextColor",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endDateTimeEpochMs",
+            "columnName": "endDateTimeEpochMs",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "isArchived",
+            "columnName": "isArchived",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "trashedAtEpochMs",
+            "columnName": "trashedAtEpochMs",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "isPinned",
+            "columnName": "isPinned",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAtEpochMs",
+            "columnName": "updatedAtEpochMs",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sortIndex",
+            "columnName": "sortIndex",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "projectId"
+          ]
+        }
+      },
+      {
+        "tableName": "project_records",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`recordId` TEXT NOT NULL, `parentProjectId` TEXT NOT NULL, `description` TEXT NOT NULL, `durationMillis` INTEGER NOT NULL, `startDateTimeEpochMs` INTEGER NOT NULL, `endDateTimeEpochMs` INTEGER, `isFinished` INTEGER NOT NULL, `isTimerRunning` INTEGER NOT NULL, `updatedAtEpochMs` INTEGER, PRIMARY KEY(`recordId`), FOREIGN KEY(`parentProjectId`) REFERENCES `projects`(`projectId`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "recordId",
+            "columnName": "recordId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "parentProjectId",
+            "columnName": "parentProjectId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "description",
+            "columnName": "description",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "durationMillis",
+            "columnName": "durationMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startDateTimeEpochMs",
+            "columnName": "startDateTimeEpochMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endDateTimeEpochMs",
+            "columnName": "endDateTimeEpochMs",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "isFinished",
+            "columnName": "isFinished",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isTimerRunning",
+            "columnName": "isTimerRunning",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAtEpochMs",
+            "columnName": "updatedAtEpochMs",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "recordId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_project_records_parentProjectId",
+            "unique": false,
+            "columnNames": [
+              "parentProjectId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_project_records_parentProjectId` ON `${TABLE_NAME}` (`parentProjectId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "projects",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "parentProjectId"
+            ],
+            "referencedColumns": [
+              "projectId"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "task_intervals",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`intervalId` TEXT NOT NULL, `parentTaskId` TEXT NOT NULL, `parentProjectId` TEXT NOT NULL, `startDateTimeEpochMs` INTEGER NOT NULL, `endDateTimeEpochMs` INTEGER, `durationMillis` INTEGER NOT NULL, PRIMARY KEY(`intervalId`), FOREIGN KEY(`parentTaskId`) REFERENCES `project_records`(`recordId`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`parentProjectId`) REFERENCES `projects`(`projectId`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "intervalId",
+            "columnName": "intervalId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "parentTaskId",
+            "columnName": "parentTaskId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "parentProjectId",
+            "columnName": "parentProjectId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startDateTimeEpochMs",
+            "columnName": "startDateTimeEpochMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endDateTimeEpochMs",
+            "columnName": "endDateTimeEpochMs",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "durationMillis",
+            "columnName": "durationMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "intervalId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_task_intervals_parentTaskId",
+            "unique": false,
+            "columnNames": [
+              "parentTaskId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_task_intervals_parentTaskId` ON `${TABLE_NAME}` (`parentTaskId`)"
+          },
+          {
+            "name": "index_task_intervals_parentProjectId",
+            "unique": false,
+            "columnNames": [
+              "parentProjectId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_task_intervals_parentProjectId` ON `${TABLE_NAME}` (`parentProjectId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "project_records",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "parentTaskId"
+            ],
+            "referencedColumns": [
+              "recordId"
+            ]
+          },
+          {
+            "table": "projects",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "parentProjectId"
+            ],
+            "referencedColumns": [
+              "projectId"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "project_sub_tasks",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`projectSubTaskId` TEXT NOT NULL, `parentProjectTaskId` TEXT NOT NULL, `parentProjectId` TEXT NOT NULL, `title` TEXT NOT NULL, `description` TEXT, `durationMillis` INTEGER, `isTimerRunning` INTEGER NOT NULL, `startDateTimeEpochMs` INTEGER NOT NULL, `endDateTimeEpochMs` INTEGER, `isFinished` INTEGER NOT NULL, `updatedAtEpochMs` INTEGER, PRIMARY KEY(`projectSubTaskId`), FOREIGN KEY(`parentProjectTaskId`) REFERENCES `project_records`(`recordId`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`parentProjectId`) REFERENCES `projects`(`projectId`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "projectSubTaskId",
+            "columnName": "projectSubTaskId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "parentProjectTaskId",
+            "columnName": "parentProjectTaskId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "parentProjectId",
+            "columnName": "parentProjectId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "description",
+            "columnName": "description",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "durationMillis",
+            "columnName": "durationMillis",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "isTimerRunning",
+            "columnName": "isTimerRunning",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startDateTimeEpochMs",
+            "columnName": "startDateTimeEpochMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endDateTimeEpochMs",
+            "columnName": "endDateTimeEpochMs",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "isFinished",
+            "columnName": "isFinished",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAtEpochMs",
+            "columnName": "updatedAtEpochMs",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "projectSubTaskId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_project_sub_tasks_parentProjectTaskId",
+            "unique": false,
+            "columnNames": [
+              "parentProjectTaskId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_project_sub_tasks_parentProjectTaskId` ON `${TABLE_NAME}` (`parentProjectTaskId`)"
+          },
+          {
+            "name": "index_project_sub_tasks_parentProjectId",
+            "unique": false,
+            "columnNames": [
+              "parentProjectId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_project_sub_tasks_parentProjectId` ON `${TABLE_NAME}` (`parentProjectId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "project_records",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "parentProjectTaskId"
+            ],
+            "referencedColumns": [
+              "recordId"
+            ]
+          },
+          {
+            "table": "projects",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "parentProjectId"
+            ],
+            "referencedColumns": [
+              "projectId"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "sub_task_intervals",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`subTaskIntervalId` TEXT NOT NULL, `parentSubTaskId` TEXT NOT NULL, `parentTaskIntervalId` TEXT NOT NULL, `parentProjectId` TEXT NOT NULL, `startDateTimeEpochMs` INTEGER NOT NULL, `endDateTimeEpochMs` INTEGER, `durationMillis` INTEGER NOT NULL, `startedParentTimer` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`subTaskIntervalId`), FOREIGN KEY(`parentSubTaskId`) REFERENCES `project_sub_tasks`(`projectSubTaskId`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`parentTaskIntervalId`) REFERENCES `task_intervals`(`intervalId`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`parentProjectId`) REFERENCES `projects`(`projectId`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "subTaskIntervalId",
+            "columnName": "subTaskIntervalId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "parentSubTaskId",
+            "columnName": "parentSubTaskId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "parentTaskIntervalId",
+            "columnName": "parentTaskIntervalId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "parentProjectId",
+            "columnName": "parentProjectId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startDateTimeEpochMs",
+            "columnName": "startDateTimeEpochMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endDateTimeEpochMs",
+            "columnName": "endDateTimeEpochMs",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "durationMillis",
+            "columnName": "durationMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startedParentTimer",
+            "columnName": "startedParentTimer",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "subTaskIntervalId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_sub_task_intervals_parentSubTaskId",
+            "unique": false,
+            "columnNames": [
+              "parentSubTaskId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_sub_task_intervals_parentSubTaskId` ON `${TABLE_NAME}` (`parentSubTaskId`)"
+          },
+          {
+            "name": "index_sub_task_intervals_parentTaskIntervalId",
+            "unique": false,
+            "columnNames": [
+              "parentTaskIntervalId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_sub_task_intervals_parentTaskIntervalId` ON `${TABLE_NAME}` (`parentTaskIntervalId`)"
+          },
+          {
+            "name": "index_sub_task_intervals_parentProjectId",
+            "unique": false,
+            "columnNames": [
+              "parentProjectId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_sub_task_intervals_parentProjectId` ON `${TABLE_NAME}` (`parentProjectId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "project_sub_tasks",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "parentSubTaskId"
+            ],
+            "referencedColumns": [
+              "projectSubTaskId"
+            ]
+          },
+          {
+            "table": "task_intervals",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "parentTaskIntervalId"
+            ],
+            "referencedColumns": [
+              "intervalId"
+            ]
+          },
+          {
+            "table": "projects",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "parentProjectId"
+            ],
+            "referencedColumns": [
+              "projectId"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "pending_sync_operations",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`operationId` TEXT NOT NULL, `entityId` TEXT NOT NULL, `entityType` TEXT NOT NULL, `operationType` TEXT NOT NULL, `createdAtEpochMs` INTEGER NOT NULL, `parentEntityId` TEXT, PRIMARY KEY(`operationId`))",
+        "fields": [
+          {
+            "fieldPath": "operationId",
+            "columnName": "operationId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "entityId",
+            "columnName": "entityId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "entityType",
+            "columnName": "entityType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "operationType",
+            "columnName": "operationType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAtEpochMs",
+            "columnName": "createdAtEpochMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "parentEntityId",
+            "columnName": "parentEntityId",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "operationId"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'ef30151b56ab32a39b37983162a9c3c7')"
+    ]
+  }
+}
