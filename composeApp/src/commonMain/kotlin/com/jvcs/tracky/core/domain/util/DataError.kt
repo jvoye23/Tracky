@@ -34,3 +34,19 @@ fun DataError.Remote.isTransient(): Boolean = when (this) {
     DataError.Remote.UNKNOWN -> true
     else -> false
 }
+
+/**
+ * True when the server is saying "that row is not there for you" — it never existed, it was already
+ * deleted, or it belongs to someone else.
+ *
+ * The API deliberately collapses all three into `403`, so a response never confirms that a stranger's
+ * id exists. The single exception is creating a subtask interval, where the `404` branch is only
+ * reachable for a task interval the caller already owns and so leaks nothing
+ * (Requirements/api/backend_documentation.md).
+ *
+ * Sync cannot tell the three apart and does not need to: the local row is authoritative for what
+ * happens next either way. A delete is already done, and a write whose parent is missing gets one
+ * more attempt through the queue before the drain gives up on it.
+ */
+fun DataError.Remote.isMissingOrForbidden(): Boolean =
+    this == DataError.Remote.NOT_FOUND || this == DataError.Remote.FORBIDDEN

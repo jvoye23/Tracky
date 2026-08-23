@@ -11,6 +11,7 @@ import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.core.domain.util.asEmptyDataResult
 import com.jvcs.tracky.core.domain.util.getOrDefault
+import com.jvcs.tracky.core.domain.util.isMissingOrForbidden
 import com.jvcs.tracky.core.domain.util.isTransient
 import com.jvcs.tracky.features.project.domain.interval.IntervalRepository
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
@@ -70,9 +71,9 @@ class OfflineFirstTaskRepository(
             is Result.Success -> localTaskDataSource.upsertProjectTask(remoteResult.data).asEmptyDataResult()
             is Result.Error -> when {
                 remoteResult.error == DataError.Remote.CONFLICT -> resolveTaskConflict(stamped)
-                // NOT_FOUND means the parent project is missing server-side after all — the backstop
+                // A miss means the parent project is not on the server after all — the backstop
                 // for a queue row that went missing. Queue rather than drop, or the task is lost.
-                remoteResult.error == DataError.Remote.NOT_FOUND || remoteResult.error.isTransient() ->
+                remoteResult.error.isMissingOrForbidden() || remoteResult.error.isTransient() ->
                     queueForLater(stamped.projectTaskId, projectId, operation)
                 else -> remoteResult.asEmptyDataResult()
             }
@@ -109,7 +110,7 @@ class OfflineFirstTaskRepository(
                     queueForLater(taskId, projectId, PendingSyncOperation.OP_DELETE)
                 }
                 // Server already has no such task → the delete is effectively done.
-                remoteResult.error == DataError.Remote.NOT_FOUND -> Result.Success(Unit)
+                remoteResult.error.isMissingOrForbidden() -> Result.Success(Unit)
                 else -> remoteResult.asEmptyDataResult()
             }
         }

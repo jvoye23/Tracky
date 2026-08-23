@@ -11,6 +11,7 @@ import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.core.domain.util.asEmptyDataResult
 import com.jvcs.tracky.core.domain.util.getOrDefault
+import com.jvcs.tracky.core.domain.util.isMissingOrForbidden
 import com.jvcs.tracky.core.domain.util.isTransient
 import com.jvcs.tracky.features.project.domain.interval.IntervalRepository
 import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
@@ -98,7 +99,7 @@ class OfflineFirstSubTaskRepository(
                 remoteResult.error.isTransient() ->
                     queueForLater(subTaskId, taskId, PendingSyncOperation.OP_DELETE)
                 // Server already has no such subtask -> the delete is effectively done.
-                remoteResult.error == DataError.Remote.NOT_FOUND -> Result.Success(Unit)
+                remoteResult.error.isMissingOrForbidden() -> Result.Success(Unit)
                 else -> remoteResult.asEmptyDataResult()
             }
         }
@@ -187,7 +188,7 @@ class OfflineFirstSubTaskRepository(
      * back from it, as an ordinary failure:
      * - The parent task is still queued for creation. There is no route to POST to yet, so the
      *   subtask is queued straight away rather than spending a request to learn that.
-     * - `NOT_FOUND` means the parent task does not exist server-side after all — the backstop for a
+     * - A miss means the parent task does not exist server-side after all — the backstop for a
      *   queue row that went missing. That must be queued rather than dropped: the drain runs tasks
      *   before subtasks, so the retry then succeeds.
      */
@@ -211,7 +212,7 @@ class OfflineFirstSubTaskRepository(
             is Result.Success -> localSubTaskDataSource.upsertSubTask(remoteResult.data).asEmptyDataResult()
             is Result.Error -> when {
                 remoteResult.error == DataError.Remote.CONFLICT -> resolveSubTaskConflict(subTask)
-                remoteResult.error == DataError.Remote.NOT_FOUND || remoteResult.error.isTransient() ->
+                remoteResult.error.isMissingOrForbidden() || remoteResult.error.isTransient() ->
                     queueForLater(subTask.projectSubTaskId, taskId, operation)
                 // Permanent error — the local row stands, nothing left to try.
                 else -> remoteResult.asEmptyDataResult()

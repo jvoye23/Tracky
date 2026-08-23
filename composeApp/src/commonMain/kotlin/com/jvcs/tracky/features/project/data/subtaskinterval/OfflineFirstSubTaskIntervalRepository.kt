@@ -11,6 +11,7 @@ import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.core.domain.util.asEmptyDataResult
 import com.jvcs.tracky.core.domain.util.getOrDefault
+import com.jvcs.tracky.core.domain.util.isMissingOrForbidden
 import com.jvcs.tracky.core.domain.util.isTransient
 import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import com.jvcs.tracky.features.project.domain.models.SubTaskInterval
@@ -106,7 +107,7 @@ class OfflineFirstSubTaskIntervalRepository(
                     queueForLater(intervalId, subTaskId, PendingSyncOperation.OP_DELETE)
                 }
                 // Server already has no such interval — the delete is effectively done.
-                remoteResult.error == DataError.Remote.NOT_FOUND -> Result.Success(Unit)
+                remoteResult.error.isMissingOrForbidden() -> Result.Success(Unit)
                 else -> remoteResult.asEmptyDataResult()
             }
         }
@@ -120,7 +121,7 @@ class OfflineFirstSubTaskIntervalRepository(
      * - `CONFLICT` on a create means the POST already landed and only its response was lost, so the
      *   same interval is retried as an update rather than resolved by last-write-wins. An interval
      *   carries no stamp of its own, so there would be nothing to compare.
-     * - `NOT_FOUND` means the parent subtask does not exist server-side after all. That must be
+     * - A miss means the parent subtask does not exist server-side after all. That must be
      *   queued rather than dropped: the drain runs subtasks before their intervals, so the retry
      *   then succeeds. Dropping would silently lose tracked time in exactly the offline case this
      *   feature exists for.
@@ -152,7 +153,7 @@ class OfflineFirstSubTaskIntervalRepository(
             is Result.Error -> when {
                 isCreate && remoteResult.error == DataError.Remote.CONFLICT ->
                     resolveIntervalConflict(interval, subTask)
-                remoteResult.error == DataError.Remote.NOT_FOUND || remoteResult.error.isTransient() ->
+                remoteResult.error.isMissingOrForbidden() || remoteResult.error.isTransient() ->
                     queueForLater(interval.subTaskIntervalId, subTaskId, operation)
                 // Permanent error — the local row stands, nothing left to try.
                 else -> remoteResult.asEmptyDataResult()

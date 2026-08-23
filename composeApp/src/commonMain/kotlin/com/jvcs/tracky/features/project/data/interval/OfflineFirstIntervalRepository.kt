@@ -11,6 +11,7 @@ import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.core.domain.util.asEmptyDataResult
 import com.jvcs.tracky.core.domain.util.getOrDefault
+import com.jvcs.tracky.core.domain.util.isMissingOrForbidden
 import com.jvcs.tracky.core.domain.util.isTransient
 import com.jvcs.tracky.features.project.domain.interval.IntervalRepository
 import com.jvcs.tracky.features.project.domain.interval.LocalIntervalDataSource
@@ -89,7 +90,7 @@ class OfflineFirstIntervalRepository(
                     queued
                 }
                 // Server already has no such interval — the delete is effectively done.
-                remoteResult.error == DataError.Remote.NOT_FOUND -> Result.Success(Unit)
+                remoteResult.error.isMissingOrForbidden() -> Result.Success(Unit)
                 else -> remoteResult.asEmptyDataResult()
             }
         }
@@ -103,7 +104,7 @@ class OfflineFirstIntervalRepository(
      *   interval is queued straight away rather than spending a request to learn that.
      * - `CONFLICT` on a create means the POST already landed and only its response was lost, so the
      *   same interval is retried as an update rather than resolved by last-write-wins.
-     * - `NOT_FOUND` means the parent task does not exist server-side after all — the backstop for a
+     * - A miss means the parent task does not exist server-side after all — the backstop for a
      *   task that was pushed and then deleted, or a queue row that went missing. That must be
      *   queued rather than dropped: the drain runs tasks before intervals, so the retry then
      *   succeeds. Dropping here would silently lose tracked time in exactly the offline case this
@@ -129,7 +130,7 @@ class OfflineFirstIntervalRepository(
             is Result.Error -> when {
                 isCreate && remoteResult.error == DataError.Remote.CONFLICT ->
                     resolveIntervalConflict(interval)
-                remoteResult.error == DataError.Remote.NOT_FOUND || remoteResult.error.isTransient() ->
+                remoteResult.error.isMissingOrForbidden() || remoteResult.error.isTransient() ->
                     queueForLater(interval.intervalId, taskId, operation)
                 // Permanent error — the local row stands, nothing left to try.
                 else -> remoteResult.asEmptyDataResult()

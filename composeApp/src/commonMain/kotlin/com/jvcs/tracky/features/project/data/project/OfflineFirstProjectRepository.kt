@@ -11,6 +11,7 @@ import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.core.domain.util.asEmptyDataResult
 import com.jvcs.tracky.core.domain.util.getOrDefault
+import com.jvcs.tracky.core.domain.util.isMissingOrForbidden
 import com.jvcs.tracky.core.domain.util.isTransient
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.project.LocalProjectDataSource
@@ -255,7 +256,7 @@ class OfflineFirstProjectRepository(
                     queued
                 }
                 // Server already has no such project → the delete is effectively done.
-                remoteResult.error == DataError.Remote.NOT_FOUND -> Result.Success(Unit)
+                remoteResult.error.isMissingOrForbidden() -> Result.Success(Unit)
                 else -> remoteResult.asEmptyDataResult()
             }
         }
