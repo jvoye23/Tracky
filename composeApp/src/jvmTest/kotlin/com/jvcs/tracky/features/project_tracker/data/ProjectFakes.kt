@@ -15,6 +15,7 @@ import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.features.project.data.interval.OfflineFirstIntervalRepository
 import com.jvcs.tracky.features.project.data.project.OfflineFirstProjectRepository
 import com.jvcs.tracky.features.project.data.subtask.OfflineFirstSubTaskRepository
+import com.jvcs.tracky.features.project.data.subtaskinterval.OfflineFirstSubTaskIntervalRepository
 import com.jvcs.tracky.features.project.data.task.OfflineFirstTaskRepository
 import com.jvcs.tracky.features.project.domain.interval.LocalIntervalDataSource
 import com.jvcs.tracky.features.project.domain.interval.RemoteIntervalDataSource
@@ -753,10 +754,12 @@ internal class RepoFixture(
     val localTask = FakeLocalTaskDataSource(db)
     val localInterval = FakeLocalIntervalDataSource(db)
     val localSubTask = FakeLocalSubTaskDataSource(db)
+    val localSubTaskInterval = FakeLocalSubTaskIntervalDataSource(db)
     val remoteProject = FakeRemoteProjectDataSource()
     val remoteTask = FakeRemoteTaskDataSource()
     val remoteInterval = FakeRemoteIntervalDataSource()
     val remoteSubTask = FakeRemoteSubTaskDataSource()
+    val remoteSubTaskInterval = FakeRemoteSubTaskIntervalDataSource()
     val queue = FakePendingSyncDataSource()
     val scheduler = FakeSyncScheduler()
 
@@ -789,6 +792,16 @@ internal class RepoFixture(
         intervalRepository = intervalRepository,
         timeProvider = time,
         applicationScope = scope
+    )
+
+    val subTaskIntervalRepository = OfflineFirstSubTaskIntervalRepository(
+        localSubTaskIntervalDataSource = localSubTaskInterval,
+        remoteSubTaskIntervalDataSource = remoteSubTaskInterval,
+        localSubTaskDataSource = localSubTask,
+        pendingSyncDataSource = queue,
+        syncScheduler = scheduler,
+        applicationScope = scope,
+        timeProvider = time
     )
 
     // Subtasks after tasks: a subtask timer pushes through the interval and task repositories.
