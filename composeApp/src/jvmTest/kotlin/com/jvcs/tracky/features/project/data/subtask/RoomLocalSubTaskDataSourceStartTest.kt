@@ -92,11 +92,13 @@ internal class RoomLocalSubTaskDataSourceStartTest {
         assertTrue(result is Result.Success)
         val openTaskInterval = db.projectDao.getOpenIntervalBySessionId("t1")
         assertNotNull(openTaskInterval, "the subtask interval needs a task interval to sit in")
-        assertEquals(openTaskInterval.intervalId, result.data.parentTaskIntervalId)
+        assertEquals(openTaskInterval.intervalId, result.data.subTaskInterval.parentTaskIntervalId)
         assertTrue(taskIsRunning())
         assertTrue(subTaskIsRunning("s1"))
         // It opened the parent, so stopping it later has to close the parent again.
-        assertTrue(result.data.startedParentTimer)
+        assertTrue(result.data.subTaskInterval.startedParentTimer)
+        // And it is handed back, because that row syncs and only the caller can push it.
+        assertEquals(openTaskInterval.intervalId, result.data.taskInterval?.intervalId)
     }
 
     @Test
@@ -114,9 +116,11 @@ internal class RoomLocalSubTaskDataSourceStartTest {
         val result = dataSource.startSubTask("s1")
 
         assertTrue(result is Result.Success)
-        assertEquals("i-manual", result.data.parentTaskIntervalId)
+        assertEquals("i-manual", result.data.subTaskInterval.parentTaskIntervalId)
+        // Nothing new to push: that interval is already on its way to the server.
+        assertNull(result.data.taskInterval)
         // The task timer was the user's doing, so this subtask must not claim it.
-        assertFalse(result.data.startedParentTimer)
+        assertFalse(result.data.subTaskInterval.startedParentTimer)
         assertEquals(1, db.projectDao.getTaskWithSubTasksById("t1").first()!!.intervals.size)
     }
 
@@ -145,10 +149,10 @@ internal class RoomLocalSubTaskDataSourceStartTest {
         val second = dataSource.startSubTask("s2")
 
         assertTrue(first is Result.Success && second is Result.Success)
-        assertEquals(first.data.parentTaskIntervalId, second.data.parentTaskIntervalId)
+        assertEquals(first.data.subTaskInterval.parentTaskIntervalId, second.data.subTaskInterval.parentTaskIntervalId)
         // Only s1 may claim the parent: if s2 claimed it too, stopping either would stop the task.
-        assertTrue(first.data.startedParentTimer)
-        assertFalse(second.data.startedParentTimer)
+        assertTrue(first.data.subTaskInterval.startedParentTimer)
+        assertFalse(second.data.subTaskInterval.startedParentTimer)
     }
 
     @Test

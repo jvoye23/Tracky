@@ -1,10 +1,21 @@
 package com.jvcs.tracky.features.project.domain.subtask
 
 import com.jvcs.tracky.core.domain.util.DataError
+import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
-import com.jvcs.tracky.features.project.domain.models.SubTaskInterval
+import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
+import kotlinx.coroutines.flow.Flow
 
 interface LocalSubTaskDataSource {
+    /** The stream the task detail screen observes, each subtask carrying its intervals. */
+    fun getSubTasksForTask(taskId: String): Flow<List<ProjectSubTask>>
+
+    /** One-shot read — repositories need a value, not a subscription. */
+    suspend fun getSubTaskById(subTaskId: String): Result<ProjectSubTask?, DataError.Local>
+
+    suspend fun upsertSubTask(subTask: ProjectSubTask): EmptyResult<DataError.Local>
+    suspend fun deleteSubTask(subTaskId: String): EmptyResult<DataError.Local>
+
     /**
      * Opens an interval on [subTaskId] and flags its timer as running.
      *
@@ -14,11 +25,8 @@ interface LocalSubTaskDataSource {
      * was the one to do it.
      *
      * Only one subtask under a task may run at a time — a sibling still running is closed first.
-     *
-     * Returns the interval it created; the id is generated in here, so there is no other way for
-     * the caller to know which row it is.
      */
-    suspend fun startSubTask(subTaskId: String): Result<SubTaskInterval, DataError.Local>
+    suspend fun startSubTask(subTaskId: String): Result<SubTaskTimerChange, DataError.Local>
 
     /**
      * Closes the subtask's open interval, banks its duration and clears its timer flag.
@@ -26,7 +34,7 @@ interface LocalSubTaskDataSource {
      * The parent task keeps running — unless this subtask is what started it, which the interval
      * itself records, in which case the task is stopped again too.
      *
-     * Returns the interval it closed, or null when the timer was not running.
+     * Returns null when the timer was not running.
      */
-    suspend fun stopSubTask(subTaskId: String): Result<SubTaskInterval?, DataError.Local>
+    suspend fun stopSubTask(subTaskId: String): Result<SubTaskTimerChange?, DataError.Local>
 }

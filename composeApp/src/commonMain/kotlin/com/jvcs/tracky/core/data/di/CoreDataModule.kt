@@ -23,6 +23,8 @@ import com.jvcs.tracky.features.project.data.project.KtorRemoteProjectDataSource
 import com.jvcs.tracky.features.project.data.project.OfflineFirstProjectRepository
 import com.jvcs.tracky.features.project.data.project.RoomLocalProjectDataSource
 import com.jvcs.tracky.features.project.data.task.KtorRemoteTaskDataSource
+import com.jvcs.tracky.features.project.data.subtask.OfflineFirstSubTaskRepository
+import com.jvcs.tracky.features.project.data.subtask.RoomLocalSubTaskDataSource
 import com.jvcs.tracky.features.project.data.task.OfflineFirstTaskRepository
 import com.jvcs.tracky.features.project.data.task.RoomLocalTaskDataSource
 import com.jvcs.tracky.features.project.domain.interval.IntervalRepository
@@ -31,6 +33,8 @@ import com.jvcs.tracky.features.project.domain.interval.RemoteIntervalDataSource
 import com.jvcs.tracky.features.project.domain.project.LocalProjectDataSource
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
 import com.jvcs.tracky.features.project.domain.project.RemoteProjectDataSource
+import com.jvcs.tracky.features.project.domain.subtask.LocalSubTaskDataSource
+import com.jvcs.tracky.features.project.domain.subtask.SubTaskRepository
 import com.jvcs.tracky.features.project.domain.task.LocalTaskDataSource
 import com.jvcs.tracky.features.project.domain.task.ProjectTaskRepository
 import com.jvcs.tracky.features.project.domain.task.RemoteTaskDataSource
@@ -58,6 +62,7 @@ val coreDataModule = module {
     singleOf(::RoomLocalProjectDataSource) bind LocalProjectDataSource::class
     singleOf(::KtorRemoteProjectDataSource) bind RemoteProjectDataSource::class
     singleOf(::RoomLocalTaskDataSource) bind LocalTaskDataSource::class
+    singleOf(::RoomLocalSubTaskDataSource) bind LocalSubTaskDataSource::class
     singleOf(::KtorRemoteTaskDataSource) bind RemoteTaskDataSource::class
     singleOf(::RoomLocalIntervalDataSource) bind LocalIntervalDataSource::class
     singleOf(::KtorRemoteIntervalDataSource) bind RemoteIntervalDataSource::class
@@ -99,6 +104,19 @@ val coreDataModule = module {
             applicationScope = get(qualifier = named("AppScope"))
         )
     } bind ProjectTaskRepository::class
+
+    // Subtasks after tasks: a subtask timer pushes the task interval it opened through the interval
+    // repository and the changed task row through the task repository. No cycle — neither of those
+    // knows subtasks exist.
+    single {
+        OfflineFirstSubTaskRepository(
+            localSubTaskDataSource = get(),
+            localTaskDataSource = get(),
+            intervalRepository = get(),
+            projectTaskRepository = get(),
+            timeProvider = get()
+        )
+    } bind SubTaskRepository::class
 
     // The one place the projects → tasks → intervals sync order is expressed.
     singleOf(::SyncCoordinator) bind SyncRepository::class
