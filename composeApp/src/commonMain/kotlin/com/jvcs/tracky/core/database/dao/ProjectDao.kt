@@ -5,11 +5,15 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Upsert
 import com.jvcs.tracky.core.database.entity.ProjectEntity
+import com.jvcs.tracky.core.database.entity.ProjectSubTaskEntity
 import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
+import com.jvcs.tracky.core.database.entity.SubTaskIntervalEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 import com.jvcs.tracky.core.database.relation.ProjectSortIndexEntity
 import com.jvcs.tracky.core.database.relation.ProjectWithTasksEntity
+import com.jvcs.tracky.core.database.relation.SubTaskWithIntervals
 import com.jvcs.tracky.core.database.relation.TaskWithIntervals
+import com.jvcs.tracky.core.database.relation.TaskWithSubTasks
 import com.jvcs.tracky.core.domain.sync.serverWinsOnPull
 import com.jvcs.tracky.core.domain.sync.serverWinsOnPullForInterval
 import kotlinx.coroutines.flow.Flow
@@ -145,4 +149,44 @@ interface ProjectDao {
 
     @Query("UPDATE project_records SET description = :title WHERE recordId = :taskId")
     suspend fun updateTaskTitle(taskId: String, title: String)
+    // ---- Subtasks ---------------------------------------------------------------------------
+    // Local-only for now: the backend exposes no subtask routes, so nothing here feeds the pending
+    // sync queue. The reads mirror their task-level counterparts so the two levels stay swappable.
+
+    @Upsert
+    suspend fun upsertProjectSubTask(subTask: ProjectSubTaskEntity)
+
+    @Transaction
+    @Query("SELECT * FROM project_records WHERE recordId = :taskId")
+    fun getTaskWithSubTasksById(taskId: String): Flow<TaskWithSubTasks?>
+
+    @Transaction
+    @Query("SELECT * FROM project_sub_tasks WHERE parentProjectTaskId = :taskId")
+    fun getSubTasksWithIntervals(taskId: String): Flow<List<SubTaskWithIntervals>>
+
+    @Query("SELECT * FROM project_sub_tasks WHERE projectSubTaskId = :subTaskId")
+    suspend fun getSubTaskById(subTaskId: String): ProjectSubTaskEntity?
+
+    @Query("DELETE FROM project_sub_tasks WHERE projectSubTaskId = :subTaskId")
+    suspend fun deleteProjectSubTask(subTaskId: String)
+
+    @Query("UPDATE project_sub_tasks SET isTimerRunning = :isRunning WHERE projectSubTaskId = :subTaskId")
+    suspend fun updateSubTaskTimerStatus(subTaskId: String, isRunning: Boolean)
+
+    @Query("UPDATE project_sub_tasks SET durationMillis = COALESCE(durationMillis, 0) + :additionalDuration WHERE projectSubTaskId = :subTaskId")
+    suspend fun addSubTaskDuration(subTaskId: String, additionalDuration: Long)
+
+    @Upsert
+    suspend fun upsertSubTaskInterval(interval: SubTaskIntervalEntity)
+
+    @Query("SELECT * FROM sub_task_intervals WHERE subTaskIntervalId = :subTaskIntervalId")
+    suspend fun getSubTaskIntervalById(subTaskIntervalId: String): SubTaskIntervalEntity?
+
+    @Query("DELETE FROM sub_task_intervals WHERE subTaskIntervalId = :subTaskIntervalId")
+    suspend fun deleteSubTaskInterval(subTaskIntervalId: String)
+
+    // The open-interval lookup the timer needs, mirroring getOpenIntervalBySessionId. At most one
+    // row can come back: a subtask has one timer, and closing it stamps endDateTimeEpochMs.
+    @Query("SELECT * FROM sub_task_intervals WHERE parentSubTaskId = :subTaskId AND endDateTimeEpochMs IS NULL LIMIT 1")
+    suspend fun getOpenSubTaskInterval(subTaskId: String): SubTaskIntervalEntity?
 }
