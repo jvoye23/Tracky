@@ -18,10 +18,14 @@ import com.jvcs.tracky.features.project.data.task.OfflineFirstTaskRepository
 import com.jvcs.tracky.features.project.domain.interval.LocalIntervalDataSource
 import com.jvcs.tracky.features.project.domain.interval.RemoteIntervalDataSource
 import com.jvcs.tracky.features.project.domain.models.Project
+import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import com.jvcs.tracky.features.project.domain.project.LocalProjectDataSource
 import com.jvcs.tracky.features.project.domain.project.RemoteProjectDataSource
+import com.jvcs.tracky.features.project.domain.subtask.LocalSubTaskDataSource
+import com.jvcs.tracky.features.project.domain.subtask.RemoteSubTaskDataSource
+import com.jvcs.tracky.features.project.domain.subtask.SubTaskTimerChange
 import com.jvcs.tracky.features.project.domain.task.LocalTaskDataSource
 import com.jvcs.tracky.features.project.domain.task.RemoteTaskDataSource
 import kotlinx.coroutines.CoroutineScope
@@ -45,6 +49,7 @@ class FakeDb {
     val projects = linkedMapOf<String, Project>()
     val tasks = linkedMapOf<String, ProjectTask>()
     val intervals = linkedMapOf<String, TaskInterval>()
+    val subTasks = linkedMapOf<String, ProjectSubTask>()
 
     val projectsFlow = MutableStateFlow<List<Project>>(emptyList())
 
@@ -64,6 +69,13 @@ class FakeDb {
         intervals.values.filter { it.parentTaskId == taskId }
             .map { it.intervalId }
             .forEach { intervals.remove(it) }
+        subTasks.values.filter { it.parentProjectTaskId == taskId }
+            .map { it.projectSubTaskId }
+            .forEach { cascadeDeleteSubTask(it) }
+    }
+
+    fun cascadeDeleteSubTask(subTaskId: String) {
+        subTasks.remove(subTaskId)
     }
 
     /**
@@ -93,8 +105,21 @@ class FakeDb {
     /** Stores the row as if it were already there — a project the server and device both know. */
     fun seedProject(id: String) = newProject(id).also { projects[id] = it; emit() }
 
+    fun newSubTask(subTaskId: String, taskId: String, projectId: String) = ProjectSubTask(
+        projectSubTaskId = subTaskId,
+        parentProjectTaskId = taskId,
+        parentProjectId = projectId,
+        title = "subtask-$subTaskId",
+        durationMillis = 0,
+        isTimerRunning = false,
+        startDateTimeUtc = Instant.fromEpochMilliseconds(0),
+    )
+
     fun seedTask(taskId: String, projectId: String) =
         newTask(taskId, projectId).also { tasks[taskId] = it }
+
+    fun seedSubTask(subTaskId: String, taskId: String, projectId: String) =
+        newSubTask(subTaskId, taskId, projectId).also { subTasks[subTaskId] = it }
 }
 
 // --- Local data sources ---------------------------------------------------------------------------
@@ -414,6 +439,96 @@ class FakeRemoteIntervalDataSource : RemoteIntervalDataSource {
         intervalRoutes += "$projectId/$taskId"
         deleteFailWith?.let { return Result.Error(it) }
         deletedIntervalIds += intervalId
+        return Result.Success(Unit)
+    }
+}
+
+/**
+ * Backed by [FakeDb] rather than by scripted return values, so the cascades a subtask write
+ * triggers (a sibling timer closing, a task interval closing with it) are real in tests.
+ *
+ * [startResult] and [stopResult] stay as overrides for the timer tests, which need to force a
+ * specific SubTaskTimerChange without driving the whole start/stop machinery.
+ */
+class FakeLocalSubTaskDataSource(private val db: FakeDb = FakeDb()) : LocalSubTaskDataSource {
+    var startResult: SubTaskTimerChange? = null
+    var stopResult: SubTaskTimerChange? = null
+    var failReadWith: DataError.Local? = null
+    val upserted = mutableListOf<ProjectSubTask>()
+    val deleted = mutableListOf<String>()
+
+    override fun getSubTasksForTask(taskId: String): Flow<List<ProjectSubTask>> =
+        flowOf(db.subTasks.values.filter { it.parentProjectTaskId == taskId })
+
+    override suspend fun getSubTaskById(subTaskId: String): Result<ProjectSubTask?, DataError.Local> {
+        failReadWith?.let { return Result.Error(it) }
+        return Result.Success(db.subTasks[subTaskId])
+    }
+
+    override suspend fun upsertSubTask(subTask: ProjectSubTask): EmptyResult<DataError.Local> {
+        upserted += subTask
+        db.subTasks[subTask.projectSubTaskId] = subTask
+        return Result.Success(Unit)
+    }
+
+    override suspend fun deleteSubTask(subTaskId: String): EmptyResult<DataError.Local> {
+        deleted += subTaskId
+        db.cascadeDeleteSubTask(subTaskId)
+        return Result.Success(Unit)
+    }
+
+    override suspend fun startSubTask(subTaskId: String) = Result.Success(startResult!!)
+    override suspend fun stopSubTask(subTaskId: String) = Result.Success(stopResult)
+}
+
+class FakeRemoteSubTaskDataSource : RemoteSubTaskDataSource {
+    // Separate failure switches per verb, matching FakeRemoteIntervalDataSource.
+    var postFailWith: DataError.Remote? = null
+    var updateFailWith: DataError.Remote? = null
+    var deleteFailWith: DataError.Remote? = null
+    /** What a conflict-resolving read sees — the server's copy of the row. */
+    var serverSubTasks = listOf<ProjectSubTask>()
+    val postedSubTaskIds = mutableListOf<String>()
+    val updatedSubTaskIds = mutableListOf<String>()
+    val deletedSubTaskIds = mutableListOf<String>()
+    /** "<projectId>/<taskId>" per call, so tests can assert the route was resolved. */
+    val subTaskRoutes = mutableListOf<String>()
+
+    override suspend fun getSubTasksByTaskId(
+        projectId: String,
+        taskId: String
+    ): Result<List<ProjectSubTask>, DataError.Remote> = Result.Success(serverSubTasks)
+
+    override suspend fun postSubTask(
+        projectId: String,
+        taskId: String,
+        subTask: ProjectSubTask
+    ): Result<ProjectSubTask, DataError.Remote> {
+        subTaskRoutes += "$projectId/$taskId"
+        postFailWith?.let { return Result.Error(it) }
+        postedSubTaskIds += subTask.projectSubTaskId
+        return Result.Success(subTask)
+    }
+
+    override suspend fun updateSubTask(
+        projectId: String,
+        taskId: String,
+        subTask: ProjectSubTask
+    ): Result<ProjectSubTask, DataError.Remote> {
+        subTaskRoutes += "$projectId/$taskId"
+        updateFailWith?.let { return Result.Error(it) }
+        updatedSubTaskIds += subTask.projectSubTaskId
+        return Result.Success(subTask)
+    }
+
+    override suspend fun deleteSubTask(
+        projectId: String,
+        taskId: String,
+        subTaskId: String
+    ): EmptyResult<DataError.Remote> {
+        subTaskRoutes += "$projectId/$taskId"
+        deleteFailWith?.let { return Result.Error(it) }
+        deletedSubTaskIds += subTaskId
         return Result.Success(Unit)
     }
 }

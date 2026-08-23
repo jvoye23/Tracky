@@ -4,8 +4,12 @@ package com.jvcs.tracky.features.project.data.mappers
 
 import com.jvcs.tracky.core.data.networking.CreateProjectRequest
 import com.jvcs.tracky.core.data.networking.CreateProjectTaskRequest
+import com.jvcs.tracky.core.data.networking.CreateSubTaskIntervalRequest
+import com.jvcs.tracky.core.data.networking.CreateSubTaskRequest
 import com.jvcs.tracky.core.data.networking.CreateTaskIntervalRequest
 import com.jvcs.tracky.core.data.networking.UpdateProjectRequest
+import com.jvcs.tracky.core.data.networking.UpdateSubTaskIntervalRequest
+import com.jvcs.tracky.core.data.networking.UpdateSubTaskRequest
 import com.jvcs.tracky.core.data.networking.UpdateProjectTaskRequest
 import com.jvcs.tracky.core.data.networking.UpdateTaskIntervalRequest
 import com.jvcs.tracky.core.database.entity.ProjectEntity
@@ -294,5 +298,52 @@ fun TaskWithSubTasks.toProjectTask(): ProjectTask {
         intervals = intervals.map { it.toTaskInterval() },
         ownUpdatedAt = task.updatedAtEpochMs?.let(Instant::fromEpochMilliseconds),
         subTasks = subTasks.map { it.toProjectSubTask() },
+    )
+}
+
+// ---- Subtask request bodies -------------------------------------------------------------------
+// The parent project and task are both in the route, so neither appears in a body.
+
+fun ProjectSubTask.toCreateSubTaskRequest(): CreateSubTaskRequest {
+    return CreateSubTaskRequest(
+        id = projectSubTaskId,
+        title = title,
+        description = description,
+        durationMillis = durationMillis,
+        startDateTimeUtc = startDateTimeUtc.toString(),
+        endDateTimeUtc = endDateTimeUtc?.toString(),
+        isFinished = isFinished,
+        isTimerRunning = isTimerRunning,
+    )
+}
+
+fun ProjectSubTask.toUpdateSubTaskRequest(): UpdateSubTaskRequest {
+    return UpdateSubTaskRequest(
+        title = title,
+        description = description,
+        durationMillis = durationMillis,
+        startDateTimeUtc = startDateTimeUtc.toString(),
+        endDateTimeUtc = endDateTimeUtc?.toString(),
+        isFinished = isFinished,
+        isTimerRunning = isTimerRunning,
+    )
+}
+
+// parentTaskIntervalId and startedParentTimer are absent by design — the server has no column for
+// either. See Requirements/backend-subtask-interval-nesting.md.
+fun SubTaskInterval.toCreateSubTaskIntervalRequest(): CreateSubTaskIntervalRequest {
+    return CreateSubTaskIntervalRequest(
+        id = subTaskIntervalId,
+        startDateTimeUtc = startDateTimeUtc.toString(),
+        endDateTimeUtc = endDateTimeUtc?.toString(),
+        durationMillis = durationMillis,
+    )
+}
+
+fun SubTaskInterval.toUpdateSubTaskIntervalRequest(): UpdateSubTaskIntervalRequest {
+    return UpdateSubTaskIntervalRequest(
+        startDateTimeUtc = startDateTimeUtc.toString(),
+        endDateTimeUtc = endDateTimeUtc?.toString(),
+        durationMillis = durationMillis,
     )
 }
