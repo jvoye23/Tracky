@@ -88,12 +88,12 @@ https://tracky.jv-coding-solutions.com
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/api/projects` | Bearer / API Key | List all projects (includes tasks and intervals) |
+| GET | `/api/projects` | Bearer / API Key | List all projects (full tree: tasks, intervals, subtasks, subtask intervals) |
 | POST | `/api/projects` | Bearer / API Key | Create a new project |
-| GET | `/api/projects/{id}` | Bearer / API Key | Get project by ID (includes tasks) |
+| GET | `/api/projects/{id}` | Bearer / API Key | Get project by ID (full tree) |
 | PUT | `/api/projects/sort` | Bearer / API Key | Batch-update the manual sort order (204, no body) |
 | PUT | `/api/projects/{id}` | Bearer / API Key | Update a project |
-| DELETE | `/api/projects/{id}` | Bearer / API Key | Delete project and all tasks |
+| DELETE | `/api/projects/{id}` | Bearer / API Key | Delete project and its whole tree (tasks, intervals, subtasks, subtask intervals) |
 
 ### Project Tasks (`/api/projects/{projectId}/tasks`)
 
@@ -103,7 +103,7 @@ https://tracky.jv-coding-solutions.com
 | POST | `/api/projects/{projectId}/tasks` | Bearer / API Key | Create a task |
 | GET | `/api/projects/{projectId}/tasks/{id}` | Bearer / API Key | Get task by ID |
 | PUT | `/api/projects/{projectId}/tasks/{id}` | Bearer / API Key | Update a task |
-| DELETE | `/api/projects/{projectId}/tasks/{id}` | Bearer / API Key | Delete a task |
+| DELETE | `/api/projects/{projectId}/tasks/{id}` | Bearer / API Key | Delete a task, its intervals and its subtasks |
 
 ### Task Intervals (`/api/projects/{projectId}/tasks/{taskId}/intervals`)
 
@@ -116,6 +116,34 @@ https://tracky.jv-coding-solutions.com
 | PUT | `/api/projects/{projectId}/tasks/{taskId}/intervals/{id}` | Bearer / API Key | Update an interval |
 | DELETE | `/api/projects/{projectId}/tasks/{taskId}/intervals/{id}` | Bearer / API Key | Delete an interval |
 | DELETE | `/api/projects/{projectId}/tasks/{taskId}/intervals` | Bearer / API Key | Delete all intervals for a task |
+
+### Project SubTasks (`/api/projects/{projectId}/tasks/{taskId}/subtasks`)
+
+Subtasks are optional. A task with none returns `"subTasks": []`.
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/projects/{projectId}/tasks/{taskId}/subtasks` | Bearer / API Key | List all subtasks of a task |
+| POST | `/api/projects/{projectId}/tasks/{taskId}/subtasks` | Bearer / API Key | Create a subtask |
+| GET | `/api/projects/{projectId}/tasks/{taskId}/subtasks/{id}` | Bearer / API Key | Get subtask by ID |
+| PUT | `/api/projects/{projectId}/tasks/{taskId}/subtasks/{id}` | Bearer / API Key | Update a subtask |
+| DELETE | `/api/projects/{projectId}/tasks/{taskId}/subtasks/{id}` | Bearer / API Key | Delete a subtask and all its intervals |
+
+### SubTask Intervals (`/api/projects/{projectId}/tasks/{taskId}/subtasks/{subTaskId}/intervals`)
+
+The same seven operations `Task Intervals` offers, one level down.
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `.../subtasks/{subTaskId}/intervals` | Bearer / API Key | List all intervals for a subtask |
+| POST | `.../subtasks/{subTaskId}/intervals` | Bearer / API Key | Create an interval |
+| GET | `.../subtasks/{subTaskId}/intervals/open` | Bearer / API Key | Get the currently open (unfinished) interval, or 204 if none |
+| GET | `.../subtasks/{subTaskId}/intervals/{id}` | Bearer / API Key | Get interval by ID |
+| PUT | `.../subtasks/{subTaskId}/intervals/{id}` | Bearer / API Key | Update an interval |
+| DELETE | `.../subtasks/{subTaskId}/intervals/{id}` | Bearer / API Key | Delete an interval |
+| DELETE | `.../subtasks/{subTaskId}/intervals` | Bearer / API Key | Delete all intervals for a subtask |
+
+(Paths are abbreviated; each is prefixed with `/api/projects/{projectId}/tasks/{taskId}`.)
 
 ### Request/Response Examples
 
@@ -182,9 +210,11 @@ curl https://tracky.jv-coding-solutions.com/api/projects \
   -H "Authorization: Bearer <accessToken>"
 ```
 
-Returns **the full tree** — every project the caller owns, each with its complete `tasks` array, and each task with its complete `intervals` array. This is the same shape `GET /api/projects/{id}` returns, for the whole collection, so one call is enough to hydrate the client's offline store; the per-project `/tasks` and per-task `/intervals` endpoints remain available for targeted reads.
+Returns **the full tree** — every project the caller owns, each with its complete `tasks` array, each task with its complete `intervals` and `subTasks` arrays, and each subtask with its own `intervals`. This is the same shape `GET /api/projects/{id}` returns, for the whole collection, so one call is enough to hydrate the client's offline store; the per-project `/tasks`, per-task `/subtasks` and per-parent `/intervals` endpoints remain available for targeted reads.
 
-A project with no tasks comes back with `"tasks": []`, never `null`; likewise a task with no intervals gets `"intervals": []`.
+Empty collections always serialise as `[]`, never `null`: a project with no tasks gets `"tasks": []`, a task with no intervals gets `"intervals": []`, a task with no subtasks gets `"subTasks": []`.
+
+Each of the four levels is fetched with one batched query (`@BatchSize(100)` on every association), so the whole tree costs five statements regardless of how many rows it holds — asserted in `ProjectServiceTreeIntegrationTest`.
 
 ```json
 [
@@ -198,7 +228,8 @@ A project with no tasks comes back with `"tasks": []`, never `null`; likewise a 
     "tasks": [
       {
         "id": "fe316e35-bd3f-4c6f-9d7d-23d6b6e8877e",
-        "description": "Work task",
+        "title": "Work task",
+        "description": "Quarterly report",
         "durationMillis": 3600000,
         "startDateTimeUtc": "2026-03-28T15:16:40Z",
         "endDateTimeUtc": null,
@@ -214,6 +245,30 @@ A project with no tasks comes back with `"tasks": []`, never `null`; likewise a 
             "durationMillis": 3600000,
             "updatedAtUtc": "2026-03-28T16:16:40.402000000Z"
           }
+        ],
+        "subTasks": [
+          {
+            "id": "3d90b1ac-51f7-4a02-9e64-1c7b2f0e5d48",
+            "parentTaskId": "fe316e35-bd3f-4c6f-9d7d-23d6b6e8877e",
+            "title": "Draft the outline",
+            "description": null,
+            "durationMillis": 600000,
+            "startDateTimeUtc": "2026-03-28T15:16:40Z",
+            "endDateTimeUtc": "2026-03-28T15:26:40Z",
+            "isFinished": true,
+            "isTimerRunning": false,
+            "updatedAtUtc": "2026-03-28T15:26:40.771000000Z",
+            "intervals": [
+              {
+                "id": "7a41e0c9-2b8d-4f31-8c05-9e6a3d1f4b72",
+                "parentSubTaskId": "3d90b1ac-51f7-4a02-9e64-1c7b2f0e5d48",
+                "startDateTimeUtc": "2026-03-28T15:16:40Z",
+                "endDateTimeUtc": "2026-03-28T15:26:40Z",
+                "durationMillis": 600000,
+                "updatedAtUtc": "2026-03-28T15:26:40.771000000Z"
+              }
+            ]
+          }
         ]
       }
     ]
@@ -223,7 +278,7 @@ A project with no tasks comes back with `"tasks": []`, never `null`; likewise a 
 
 (Scalar project fields are elided above for brevity — the response carries the same field set as the create-project response shown earlier, plus `tasks`.)
 
-Result order is **not** guaranteed: neither the projects nor the nested tasks and intervals are sorted server-side. In particular `sortIndex` is stored and echoed verbatim but never ordered by — the client applies its own ordering. See the `sortIndex` note above.
+Result order is **not** guaranteed: neither the projects nor the nested tasks, subtasks and intervals are sorted server-side. In particular `sortIndex` is stored and echoed verbatim but never ordered by — the client applies its own ordering. See the `sortIndex` note above.
 
 #### Reorder Projects
 
@@ -259,24 +314,83 @@ One request per drag gesture. The whole batch is applied in a single database tr
 curl -X POST https://tracky.jv-coding-solutions.com/api/projects/{projectId}/tasks \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <accessToken>" \
-  -d '{"id":"fe316e35-bd3f-4c6f-9d7d-23d6b6e8877e","description":"Work task","durationMillis":3600000,"startDateTimeUtc":"2026-03-28T15:16:40Z","isTimerRunning":true}'
+  -d '{"id":"fe316e35-bd3f-4c6f-9d7d-23d6b6e8877e","title":"Work task","description":"Quarterly report","durationMillis":3600000,"startDateTimeUtc":"2026-03-28T15:16:40Z","isTimerRunning":true}'
 ```
 
 ```json
 {
   "id": "fe316e35-bd3f-4c6f-9d7d-23d6b6e8877e",
-  "description": "Work task",
+  "title": "Work task",
+  "description": "Quarterly report",
   "durationMillis": 3600000,
   "startDateTimeUtc": "2026-03-28T15:16:40Z",
   "endDateTimeUtc": null,
   "isFinished": false,
   "isTimerRunning": true,
   "updatedAtUtc": "2026-03-28T15:16:40.845724101Z",
+  "intervals": [],
+  "subTasks": []
+}
+```
+
+`id` is a client-generated UUID. `id`, `title` and `startDateTimeUtc` are required — **`title` must be present and non-blank**; see the breaking-change note below. `description` and `durationMillis` are both optional and nullable. `intervals` and `subTasks` are empty until children are created via their own endpoints.
+
+> **Breaking change (API 1.6.0).** `title` was added to `CreateProjectTaskRequest` and
+> `UpdateProjectTaskRequest` as a required `@NotBlank` field. A client that omits it now gets
+> `400 Bad Request`. Rows that predate the change were backfilled from `description`, falling back
+> to `'Untitled task'` — see `scripts/migrations/2026-08-23-subtasks.sql`.
+
+#### Create SubTask
+
+```bash
+curl -X POST https://tracky.jv-coding-solutions.com/api/projects/{projectId}/tasks/{taskId}/subtasks \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <accessToken>" \
+  -d '{"id":"3d90b1ac-51f7-4a02-9e64-1c7b2f0e5d48","title":"Draft the outline","startDateTimeUtc":"2026-03-28T15:16:40Z"}'
+```
+
+```json
+{
+  "id": "3d90b1ac-51f7-4a02-9e64-1c7b2f0e5d48",
+  "parentTaskId": "fe316e35-bd3f-4c6f-9d7d-23d6b6e8877e",
+  "title": "Draft the outline",
+  "description": null,
+  "durationMillis": null,
+  "startDateTimeUtc": "2026-03-28T15:16:40Z",
+  "endDateTimeUtc": null,
+  "isFinished": false,
+  "isTimerRunning": false,
+  "updatedAtUtc": "2026-03-28T15:16:40.845724101Z",
   "intervals": []
 }
 ```
 
-`id` is a client-generated UUID and is the only required field besides `startDateTimeUtc`. `description` and `durationMillis` are both optional and nullable. `intervals` is empty until the first interval is created via the intervals endpoints.
+Same contract as a task: `id`, `title` and `startDateTimeUtc` are required, everything else is
+optional. The parent project is derived from the parent task, so it is never sent in the body.
+Deleting the parent task — or the project above it — deletes the subtask and its intervals.
+
+#### Create SubTask Interval
+
+```bash
+curl -X POST https://tracky.jv-coding-solutions.com/api/projects/{projectId}/tasks/{taskId}/subtasks/{subTaskId}/intervals \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <accessToken>" \
+  -d '{"id":"7a41e0c9-2b8d-4f31-8c05-9e6a3d1f4b72","startDateTimeUtc":"2026-03-28T15:16:40Z"}'
+```
+
+```json
+{
+  "id": "7a41e0c9-2b8d-4f31-8c05-9e6a3d1f4b72",
+  "parentSubTaskId": "3d90b1ac-51f7-4a02-9e64-1c7b2f0e5d48",
+  "startDateTimeUtc": "2026-03-28T15:16:40Z",
+  "endDateTimeUtc": null,
+  "durationMillis": 0,
+  "updatedAtUtc": "2026-03-28T15:16:40.694098965Z"
+}
+```
+
+Identical semantics to a task interval, including `GET .../intervals/open` returning 204 No Content
+when nothing is running.
 
 #### Create Task Interval
 
@@ -300,3 +414,4 @@ curl -X POST https://tracky.jv-coding-solutions.com/api/projects/{projectId}/tas
 
 `id` is a client-generated UUID. `endDateTimeUtc: null` means the interval is open (timer running). Close it by `PUT`-ing the same path with `endDateTimeUtc` and `durationMillis` filled in. `GET .../intervals/open` returns 204 No Content when there is no open interval.
 
+---

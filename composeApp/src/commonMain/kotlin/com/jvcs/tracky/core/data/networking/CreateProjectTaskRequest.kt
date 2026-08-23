@@ -2,10 +2,19 @@ package com.jvcs.tracky.core.data.networking
 
 import kotlinx.serialization.Serializable
 
+/**
+ * Body for POST /api/projects/{projectId}/tasks.
+ *
+ * [title] is required and must be non-blank — API 1.6.0 added it as a `@NotBlank` field, and a
+ * request without it is rejected with 400. [description] is the task's *other* text, which the
+ * domain does not model yet, so it is always sent null; it stays on the body so adding it later is
+ * a mapper change rather than a contract change.
+ */
 @Serializable
 data class CreateProjectTaskRequest(
     val id: String,
-    val description: String,
+    val title: String,
+    val description: String? = null,
     val durationMillis: Long,
     val startDateTimeUtc: String,
     val endDateTimeUtc: String?,

@@ -25,6 +25,10 @@ data class ProjectDto(
 @Serializable
 data class ProjectTaskDto(
     val id: String,
+    // Required and non-blank on the wire since API 1.6.0. Defaulted here rather than mandatory so a
+    // response from a pre-1.6.0 deployment still decodes; toProjectTask() falls back to description
+    // for those, which is where the title used to live.
+    val title: String = "",
     val description: String? = null,
     val durationMillis: Long? = null,
     val startDateTimeUtc: String,
