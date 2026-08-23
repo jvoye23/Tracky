@@ -182,7 +182,7 @@ fun Project.toUpdateProjectRequest(): UpdateProjectRequest {
 fun ProjectTask.toCreateProjectTaskRequest(): CreateProjectTaskRequest {
     return CreateProjectTaskRequest(
         id = projectTaskId,
-        description = title,
+        title = title,
         durationMillis = durationMillis ?: 0,
         startDateTimeUtc = startDateTimeUtc.toString(),
         endDateTimeUtc = endDateTimeUtc?.toString(),
@@ -193,7 +193,7 @@ fun ProjectTask.toCreateProjectTaskRequest(): CreateProjectTaskRequest {
 
 fun ProjectTask.toUpdateProjectTaskRequest(): UpdateProjectTaskRequest {
     return UpdateProjectTaskRequest(
-        description = title,
+        title = title,
         durationMillis = durationMillis ?: 0,
         startDateTimeUtc = startDateTimeUtc.toString(),
         endDateTimeUtc = endDateTimeUtc?.toString(),

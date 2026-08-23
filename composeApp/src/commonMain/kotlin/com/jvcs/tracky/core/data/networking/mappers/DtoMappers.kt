@@ -34,7 +34,10 @@ fun ProjectDto.toProject(): Project {
 fun ProjectTaskDto.toProjectTask(parentProjectId: String): ProjectTask {
     return ProjectTask(
         projectTaskId = id,
-        title = description ?: "",
+        // Before API 1.6.0 the wire had no title field and the client put the task's title in
+        // description. The fallback keeps a device talking to an older deployment readable; against
+        // 1.6.0 and later, title is always populated and description is a separate (unused) field.
+        title = title.ifBlank { description.orEmpty() },
         durationMillis = durationMillis,
         startDateTimeUtc = Instant.parse(startDateTimeUtc),
         endDateTimeUtc = endDateTimeUtc?.let(Instant::parse),
@@ -82,7 +85,9 @@ fun Project.toProjectDto(): ProjectDto {
 fun ProjectTask.toProjectTaskDto(): ProjectTaskDto {
     return ProjectTaskDto(
         id = projectTaskId,
-        description = title,
+        title = title,
+        // The domain has no description of its own yet, so there is nothing to send.
+        description = null,
         durationMillis = durationMillis,
         startDateTimeUtc = startDateTimeUtc.toString(),
         endDateTimeUtc = endDateTimeUtc?.toString(),
