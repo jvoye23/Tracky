@@ -61,9 +61,10 @@ internal class RoomLocalSubTaskDataSourceStopTest {
                 trashedAtEpochMs = null, isPinned = false, updatedAtEpochMs = null
             )
         )
-        db.projectDao.upsertProjectRecord(
+        db.projectDao.upsertProjectTask(
             ProjectTaskEntity(
-                recordId = "t1", parentProjectId = "p1", description = "task", durationMillis = 0,
+                projectTaskId = "t1", parentProjectId = "p1", title = "task", description = null,
+                durationMillis = 0,
                 startDateTimeEpochMs = 0, endDateTimeEpochMs = null, isFinished = false,
                 isTimerRunning = false, updatedAtEpochMs = null
             )

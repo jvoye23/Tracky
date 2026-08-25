@@ -1,10 +1,5 @@
 package com.jvcs.tracky.features.project.presentation.project_detail
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,25 +14,19 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
@@ -59,16 +48,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
 import com.jvcs.tracky.features.project.presentation.models.ProjectUi
@@ -77,9 +60,11 @@ import com.jvcs.tracky.design_system.components.DurationHeroCard
 import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.design_system.util.ObserveAsEvents
 import com.jvcs.tracky.features.project.domain.project.EditTextType
+import com.jvcs.tracky.features.project.presentation.models.ProjectSubTaskUi
 import com.jvcs.tracky.features.project.presentation.project_detail.components.AddNewProjectTaskBottomSheet
 import com.jvcs.tracky.features.project.presentation.project_detail.components.ColorInfoCard
 import com.jvcs.tracky.features.project.presentation.project_detail.components.InfoCard
+import com.jvcs.tracky.features.project.presentation.project_detail.components.TaskItemCard
 import com.jvcs.tracky.features.project.presentation.project_detail.components.TrackyColorPicker
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -109,7 +94,6 @@ fun ProjectDetailScreenRoot(
     ObserveAsEvents(viewModel.events) { event ->
         when(event) {
             is ProjectDetailEvent.Error -> {
-                viewModel.onAction(ProjectDetailAction.OnToggleAddNewProjectSessionBottomSheet)
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar(
                         message = event.error.toString(),
@@ -261,19 +245,45 @@ fun NewProjectDetailScreen(
 
                 // 5. Session Items
                 itemsIndexed(project.projectTasks ?: emptyList()) { index, session ->
-                    TaskItem(
+                    TaskItemCard(
                         index = index + 1,
                         task = session,
                         projectColor = state.selectedColor ?: MaterialTheme.colorScheme.primary,
                         isEditMode = state.isEditMode,
                         onToggleTimer = {
-                            session.id?.let { onAction(ProjectDetailAction.OnToggleSessionTimer(it)) }
+                            onAction(ProjectDetailAction.OnToggleSessionTimer(session.projectTaskId))
                         },
                         onDeleteClick = {
-                            session.id?.let { onAction(ProjectDetailAction.OnDeleteSessionClick(it)) }
+                            onAction(ProjectDetailAction.OnDeleteSessionClick(session.projectTaskId))
                         },
                         onCardClick = {
-                            session.id?.let { onAction(ProjectDetailAction.OnProjectSessionCardClick(it)) }
+                            onAction(ProjectDetailAction.OnProjectSessionCardClick(session.projectTaskId))
+                        },
+                        onCheckedChange = {},
+                        onToggleSubTaskTimer = { subTaskId ->
+                            onAction(ProjectDetailAction.OnToggleSubTaskTimer(subTaskId))
+                        },
+                        onDeleteSubTaskClick = { subTaskId ->
+                            onAction(ProjectDetailAction.OnDeleteSubTaskClick(subTaskId))
+                        },
+                        onSubTaskCheckedChange = { subTaskId ->
+                            onAction(ProjectDetailAction.OnSubTaskCheckedChange(subTaskId))
+                        },
+                        isExpanded = session.projectTaskId !in state.collapsedTaskIds,
+                        onToggleExpanded = {
+                            onAction(ProjectDetailAction.OnToggleTaskExpanded(session.projectTaskId))
+                        },
+                        editingSubTaskId = state.editingSubTaskId,
+                        editSubTaskTextFieldState = state.editSubTaskTextFieldState,
+                        isAddingSubTask = state.pendingSubTaskParentTaskId == session.projectTaskId,
+                        onAddSubTaskClick = {
+                            onAction(ProjectDetailAction.OnAddSubTaskClick(session.projectTaskId))
+                        },
+                        onSubTaskTitleClick = { subTaskId, currentTitle ->
+                            onAction(ProjectDetailAction.OnSubTaskTitleClick(subTaskId, currentTitle))
+                        },
+                        onCommitSubTaskTitle = {
+                            onAction(ProjectDetailAction.OnCommitSubTaskTitle)
                         }
                     )
                 }
@@ -463,119 +473,7 @@ private fun TasksHeader(onAddClick: () -> Unit) {
     }
 }
 
-@Composable
-private fun TaskItem(
-    index: Int,
-    task: ProjectTaskUi,
-    projectColor: Color,
-    isEditMode: Boolean,
-    onToggleTimer: () -> Unit,
-    onDeleteClick: () -> Unit,
-    onCardClick: () -> Unit
-) {
-    val isCompleted = task.formattedEndDateTimeUtc.isNotBlank()
 
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 0.7f,
-        animationSpec = infiniteRepeatable(tween(1000), RepeatMode.Reverse),
-        label = "alpha"
-    )
-
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onCardClick() },
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        border = BorderStroke(
-            1.dp,
-            if (task.isTimerRunning) projectColor.copy(0.2f) else MaterialTheme.colorScheme.outlineVariant
-        ),
-        shadowElevation = if (task.isTimerRunning) 4.dp else 0.dp
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.Top,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (task.isTimerRunning) projectColor.copy(alpha = pulseAlpha)
-                        else Color(0xFFF0F3FA)
-                    )
-                    .clickable { onToggleTimer() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    if (task.isTimerRunning) Icons.Default.Stop else Icons.Default.PlayArrow,
-                    contentDescription = null,
-                    tint = if (task.isTimerRunning) Color.White else projectColor
-                )
-            }
-
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    val textDecoration = if (isCompleted) TextDecoration.LineThrough else null
-                    val alpha = if (isCompleted) 0.4f else 1f
-
-                    Text(
-                        text = index.toString().padStart(2, '0'),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (task.isTimerRunning) projectColor.copy(alpha = 0.6f) else MaterialTheme.colorScheme.outline.copy(alpha = alpha),
-                        textDecoration = textDecoration
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = task.title,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (task.isTimerRunning) projectColor.copy(alpha = 0.6f) else MaterialTheme.colorScheme.outline.copy(alpha = alpha),
-                        textDecoration = textDecoration,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = task.formattedDuration,
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold,
-                    color = if (task.isTimerRunning) projectColor else MaterialTheme.colorScheme.onSurface.copy(alpha = if (isCompleted) 0.5f else 1f),
-                    letterSpacing = (-1).sp
-                )
-            }
-
-            // Status Indicator Icon / Delete Icon
-            if (isEditMode) {
-                IconButton(
-                    onClick = onDeleteClick
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete",
-                        tint = MaterialTheme.colorScheme.error
-                    )
-                }
-            } else {
-                Checkbox(
-                    checked = false,
-                    onCheckedChange = {
-
-                    }
-                )
-            }
-        }
-    }
-}
 
 @Preview(device = Devices.PIXEL_9_PRO)
 @Composable
@@ -604,28 +502,67 @@ private fun NewProjectDetailScreenPreview() {
 
 private val projectSessionsPreview = listOf(
     ProjectTaskUi(
-        id = "1",
+        projectTaskId = "1",
         title = "This is session One",
+        description = "Description 1",
         formattedDuration = "10:00:00",
         formattedStateDateTime = "2023-01-01T00:00:00Z",
         formattedEndDateTimeUtc = "2023-01-01T00:00:00Z",
-        isTimerRunning = false
+        isTimerRunning = false,
+        subTasks = emptyList(),
+        isFinished = false
     ),
     ProjectTaskUi(
-        id = "2",
+        projectTaskId = "2",
         title = "This is session Two",
+        description = "Description 2",
         formattedDuration = "10:00:00",
         formattedStateDateTime = "2023-01-01T00:00:00Z",
         formattedEndDateTimeUtc = "2023-01-01T00:00:00Z",
-        isTimerRunning = false
-
+        isTimerRunning = false,
+        subTasks = listOf(
+            ProjectSubTaskUi(
+                projectSubTaskId = "1",
+                title = "SubTask 1",
+                description = "Description SubTask 1",
+                formattedDuration = "05:35:53",
+                formattedStartDateTime = "23.08.2026, 10:15",
+                formattedEndDateTimeUtc = null,
+                isTimerRunning = false,
+                isFinished = false
+            ),
+            ProjectSubTaskUi(
+                projectSubTaskId = "2",
+                title = "SubTask 2",
+                description = "Description SubTask 2",
+                formattedDuration = "05:35:53",
+                formattedStartDateTime = "23.08.2026, 13:15",
+                formattedEndDateTimeUtc = null,
+                isTimerRunning = true,
+                isFinished = false
+            ),
+            ProjectSubTaskUi(
+                projectSubTaskId = "3",
+                title = "SubTask 3",
+                description = "Description SubTask 3",
+                formattedDuration = "05:35:53",
+                formattedStartDateTime = "23.08.2026, 16:30",
+                formattedEndDateTimeUtc = "23.08.2026, 17:00",
+                isTimerRunning = false,
+                isFinished = true
+            )
+        ),
+        isFinished = false
     ),
     ProjectTaskUi(
-        id = "3",
+        projectTaskId = "3",
         title = "This is session Three",
+        description = null,
         formattedDuration = "10:00:00",
         formattedStateDateTime = "2023-01-01T00:00:00Z",
         formattedEndDateTimeUtc = "2023-01-01T00:00:00Z",
-        isTimerRunning = false
+        isTimerRunning = false,
+        subTasks = emptyList(),
+        isFinished = false
     )
 )

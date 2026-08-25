@@ -89,22 +89,25 @@ fun ProjectWithTasksEntity.toProject(): Project {
 
 fun ProjectTaskEntity.toProjectTask(): ProjectTask {
     return ProjectTask(
-        projectTaskId = recordId,
-        title = description,
+        projectTaskId = projectTaskId,
+        title = title,
+        description = description,
         durationMillis = durationMillis,
         startDateTimeUtc = Instant.fromEpochMilliseconds(startDateTimeEpochMs),
         endDateTimeUtc = endDateTimeEpochMs?.let(Instant::fromEpochMilliseconds),
         isFinished = isFinished,
         parentProjectId = parentProjectId,
         isTimerRunning = isTimerRunning,
-        ownUpdatedAt = updatedAtEpochMs?.let(Instant::fromEpochMilliseconds),
+        ownUpdatedAt = updatedAtEpochMs?.let(Instant::fromEpochMilliseconds)
+
     )
 }
 
 fun TaskWithIntervals.toProjectTask(): ProjectTask {
     return ProjectTask(
-        projectTaskId = task.recordId,
-        title = task.description,
+        projectTaskId = task.projectTaskId,
+        title = task.title,
+        description = task.description,
         durationMillis = task.durationMillis,
         startDateTimeUtc = Instant.fromEpochMilliseconds(task.startDateTimeEpochMs),
         endDateTimeUtc = task.endDateTimeEpochMs?.let(Instant::fromEpochMilliseconds),
@@ -116,11 +119,12 @@ fun TaskWithIntervals.toProjectTask(): ProjectTask {
     )
 }
 
-fun ProjectTask.toProjectSessionEntity(): ProjectTaskEntity {
+fun ProjectTask.toProjectTaskEntity(): ProjectTaskEntity {
     return ProjectTaskEntity(
-        recordId = projectTaskId,
+        projectTaskId = projectTaskId,
         parentProjectId = parentProjectId,
-        description = title,
+        title = title,
+        description = description,
         durationMillis = durationMillis ?: 0L,
         startDateTimeEpochMs = startDateTimeUtc.toEpochMilliseconds(),
         endDateTimeEpochMs = endDateTimeUtc?.toEpochMilliseconds(),
@@ -187,6 +191,7 @@ fun ProjectTask.toCreateProjectTaskRequest(): CreateProjectTaskRequest {
     return CreateProjectTaskRequest(
         id = projectTaskId,
         title = title,
+        description = description,
         durationMillis = durationMillis ?: 0,
         startDateTimeUtc = startDateTimeUtc.toString(),
         endDateTimeUtc = endDateTimeUtc?.toString(),
@@ -198,6 +203,7 @@ fun ProjectTask.toCreateProjectTaskRequest(): CreateProjectTaskRequest {
 fun ProjectTask.toUpdateProjectTaskRequest(): UpdateProjectTaskRequest {
     return UpdateProjectTaskRequest(
         title = title,
+        description = description,
         durationMillis = durationMillis ?: 0,
         startDateTimeUtc = startDateTimeUtc.toString(),
         endDateTimeUtc = endDateTimeUtc?.toString(),
@@ -287,8 +293,9 @@ fun SubTaskInterval.toSubTaskIntervalEntity(): SubTaskIntervalEntity {
 /** The task's whole subtree: its own intervals plus its subtasks, each with theirs. */
 fun TaskWithSubTasks.toProjectTask(): ProjectTask {
     return ProjectTask(
-        projectTaskId = task.recordId,
-        title = task.description,
+        projectTaskId = task.projectTaskId,
+        title = task.title,
+        description = task.description,
         durationMillis = task.durationMillis,
         startDateTimeUtc = Instant.fromEpochMilliseconds(task.startDateTimeEpochMs),
         endDateTimeUtc = task.endDateTimeEpochMs?.let(Instant::fromEpochMilliseconds),
@@ -297,7 +304,7 @@ fun TaskWithSubTasks.toProjectTask(): ProjectTask {
         isTimerRunning = task.isTimerRunning,
         intervals = intervals.map { it.toTaskInterval() },
         ownUpdatedAt = task.updatedAtEpochMs?.let(Instant::fromEpochMilliseconds),
-        subTasks = subTasks.map { it.toProjectSubTask() },
+        subTasks = subTasks.map { it.toProjectSubTask() }
     )
 }
 

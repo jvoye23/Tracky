@@ -42,6 +42,10 @@ fun ProjectTaskDto.toProjectTask(parentProjectId: String): ProjectTask {
         // description. The fallback keeps a device talking to an older deployment readable; against
         // 1.6.0 and later, title is always populated and description is a separate (unused) field.
         title = title.ifBlank { description.orEmpty() },
+        // When that fallback fires, description *is* the title, so carrying it across as well
+        // would write the title into the task's own description column - exactly the conflation
+        // this field was split out to end.
+        description = description.takeIf { title.isNotBlank() },
         durationMillis = durationMillis,
         startDateTimeUtc = Instant.parse(startDateTimeUtc),
         endDateTimeUtc = endDateTimeUtc?.let(Instant::parse),
@@ -50,7 +54,7 @@ fun ProjectTaskDto.toProjectTask(parentProjectId: String): ProjectTask {
         isTimerRunning = isTimerRunning,
         intervals = intervals.map { it.toTaskInterval(parentProjectId) },
         ownUpdatedAt = updatedAt?.let(Instant::parse),
-        subTasks = subTasks.map { it.toProjectSubTask(parentProjectId) },
+        subTasks = subTasks.map { it.toProjectSubTask(parentProjectId) }
     )
 }
 
@@ -137,8 +141,7 @@ fun ProjectTask.toProjectTaskDto(): ProjectTaskDto {
     return ProjectTaskDto(
         id = projectTaskId,
         title = title,
-        // The domain has no description of its own yet, so there is nothing to send.
-        description = null,
+        description = description,
         durationMillis = durationMillis,
         startDateTimeUtc = startDateTimeUtc.toString(),
         endDateTimeUtc = endDateTimeUtc?.toString(),

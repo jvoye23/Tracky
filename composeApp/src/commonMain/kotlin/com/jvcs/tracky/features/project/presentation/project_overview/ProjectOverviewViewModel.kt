@@ -433,10 +433,10 @@ class ProjectOverviewViewModel(
     private fun ProjectUi.withRunningTimer(runningTimer: Pair<String, TimerState>?): ProjectUi {
         if (runningTimer == null) return this
         val (runningTaskId, timerState) = runningTimer
-        if (projectTasks?.none { it.id == runningTaskId } == true) return this
+        if (projectTasks?.none { it.projectTaskId == runningTaskId } == true) return this
 
         val updatedTasks = projectTasks?.map { task ->
-            if (task.id == runningTaskId) {
+            if (task.projectTaskId == runningTaskId) {
                 task.copy(
                     formattedDuration = timerState.formattedTime,
                     isTimerRunning = true

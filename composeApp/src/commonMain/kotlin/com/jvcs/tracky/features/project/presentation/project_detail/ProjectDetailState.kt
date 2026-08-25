@@ -17,6 +17,15 @@ data class ProjectDetailState(
     val errorMessage: String? = null,
     val isAddNewProjectTaskBottomSheetVisible: Boolean = false,
     val addProjectTaskTextFieldState: TextFieldState = TextFieldState(),
+    // Ids of tasks whose subtask list is collapsed. Held here rather than in the card because the
+    // cards are LazyColumn items — remember{} inside one is dropped when it scrolls out of view.
+    val collapsedTaskIds: Set<String> = emptySet(),
+    // The subtask currently being renamed inline in edit mode, and the buffer backing its field.
+    // Same reasoning as collapsedTaskIds: LazyColumn recycling would drop card-local state.
+    val editingSubTaskId: String? = null,
+    // Set while a not-yet-persisted subtask draft row is open on that task.
+    val pendingSubTaskParentTaskId: String? = null,
+    val editSubTaskTextFieldState: TextFieldState = TextFieldState(),
     val isColorPickerVisible: Boolean = false,
     val selectedColor: Color? = null,
     val selectedColorHex: String = "#00FFFF",

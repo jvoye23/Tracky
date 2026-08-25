@@ -41,6 +41,12 @@ class RoomLocalSubTaskDataSource(
         projectDao.getSubTaskById(subTaskId)?.toProjectSubTask()
     }
 
+    override suspend fun lastStartedSubTaskId(
+        taskId: String
+    ): Result<String?, DataError.Local> = read {
+        projectDao.getLastStartedSubTaskId(taskId)
+    }
+
     override suspend fun upsertSubTask(subTask: ProjectSubTask): EmptyResult<DataError.Local> =
         write { projectDao.upsertProjectSubTask(subTask.toProjectSubTaskEntity()) }
 

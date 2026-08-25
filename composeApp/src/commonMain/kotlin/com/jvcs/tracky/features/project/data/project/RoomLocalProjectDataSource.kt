@@ -6,7 +6,7 @@ import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.features.project.data.mappers.toProject
 import com.jvcs.tracky.features.project.data.mappers.toProjectEntity
-import com.jvcs.tracky.features.project.data.mappers.toProjectSessionEntity
+import com.jvcs.tracky.features.project.data.mappers.toProjectTaskEntity
 import com.jvcs.tracky.features.project.data.mappers.toProjectSubTaskEntity
 import com.jvcs.tracky.features.project.data.mappers.toSubTaskIntervalEntity
 import com.jvcs.tracky.features.project.data.mappers.toTaskIntervalEntity
@@ -91,7 +91,7 @@ class RoomLocalProjectDataSource (
         val subTasks = tasks.flatMap { task -> task.subTasks.orEmpty() }
         projectDao.upsertServerTree(
             projects = projects.map { it.toProjectEntity() },
-            tasks = tasks.map { it.toProjectSessionEntity() },
+            tasks = tasks.map { it.toProjectTaskEntity() },
             intervals = tasks.flatMap { task -> task.intervals }
                 .map { it.toTaskIntervalEntity() },
             subTasks = subTasks.map { it.toProjectSubTaskEntity() },
@@ -105,7 +105,7 @@ class RoomLocalProjectDataSource (
     }
 
     override suspend fun deleteAllProjects(): EmptyResult<DataError.Local> = write {
-        // task_intervals cascades from both project_records and projects, so dropping the projects
+        // task_intervals cascades from both project_tasks and projects, so dropping the projects
         // takes every task and interval with it.
         projectDao.deleteAllProjects()
     }

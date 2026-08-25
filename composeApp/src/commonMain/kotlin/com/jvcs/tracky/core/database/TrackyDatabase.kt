@@ -24,7 +24,7 @@ import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
         SubTaskIntervalEntity::class,
         PendingSyncEntity::class
     ],
-    version = 15,
+    version = 16,
 )
 @ConstructedBy(TrackyDatabaseConstructor::class)
 abstract class TrackyDatabase: RoomDatabase() {
@@ -484,6 +484,137 @@ abstract class TrackyDatabase: RoomDatabase() {
                 // task-level start, so none of them opened their parent.
                 connection.execSQL(
                     "ALTER TABLE sub_task_intervals ADD COLUMN startedParentTimer INTEGER NOT NULL DEFAULT 0"
+                )
+            }
+        }
+
+        val MIGRATION_15_16 = object : Migration(15, 16) {
+            override fun migrate(connection: SQLiteConnection) {
+                // project_records becomes project_tasks, recordId becomes projectTaskId, and the
+                // table finally gets a title column of its own. Until now `description` did double
+                // duty: the write mapper put the title into it and the read mappers took the title
+                // back out, so a description pulled from the server - the wire has carried both
+                // fields since API 1.6.0 - was destroyed by the next local write. Backfilling title
+                // from description is therefore lossless, because description has never held
+                // anything else, and description itself is emptied to NULL so it starts clean.
+                //
+                // task_intervals and project_sub_tasks are rebuilt too, but only for their
+                // REFERENCES clauses. SQLite rewrites a child's foreign key on
+                // ALTER TABLE ... RENAME TO only when PRAGMA foreign_keys is ON, and Room migrates
+                // with them OFF, inside a transaction where the pragma is a no-op. Left alone, both
+                // tables would go on pointing at a project_records that no longer exists and Room
+                // would reject the database on open. sub_task_intervals needs no such treatment: it
+                // names project_sub_tasks and task_intervals, and neither of those names changes.
+
+                // project_tasks (was project_records)
+                connection.execSQL(
+                    """
+                    CREATE TABLE project_tasks_new (
+                        projectTaskId TEXT NOT NULL PRIMARY KEY,
+                        parentProjectId TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        description TEXT,
+                        durationMillis INTEGER NOT NULL,
+                        startDateTimeEpochMs INTEGER NOT NULL,
+                        endDateTimeEpochMs INTEGER,
+                        isFinished INTEGER NOT NULL,
+                        isTimerRunning INTEGER NOT NULL,
+                        updatedAtEpochMs INTEGER,
+                        FOREIGN KEY(parentProjectId) REFERENCES projects(projectId) ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                connection.execSQL(
+                    """
+                    INSERT INTO project_tasks_new
+                      (projectTaskId, parentProjectId, title, description, durationMillis,
+                       startDateTimeEpochMs, endDateTimeEpochMs, isFinished, isTimerRunning,
+                       updatedAtEpochMs)
+                    SELECT recordId, parentProjectId, description, NULL, durationMillis,
+                           startDateTimeEpochMs, endDateTimeEpochMs, isFinished, isTimerRunning,
+                           updatedAtEpochMs
+                    FROM project_records
+                    """.trimIndent()
+                )
+                connection.execSQL("DROP TABLE project_records")
+                connection.execSQL("ALTER TABLE project_tasks_new RENAME TO project_tasks")
+                connection.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_project_tasks_parentProjectId ON project_tasks(parentProjectId)"
+                )
+
+                // task_intervals: same columns, foreign key repointed at project_tasks.
+                connection.execSQL(
+                    """
+                    CREATE TABLE task_intervals_new (
+                        intervalId TEXT NOT NULL PRIMARY KEY,
+                        parentTaskId TEXT NOT NULL,
+                        parentProjectId TEXT NOT NULL,
+                        startDateTimeEpochMs INTEGER NOT NULL,
+                        endDateTimeEpochMs INTEGER,
+                        durationMillis INTEGER NOT NULL,
+                        FOREIGN KEY(parentTaskId) REFERENCES project_tasks(projectTaskId) ON DELETE CASCADE,
+                        FOREIGN KEY(parentProjectId) REFERENCES projects(projectId) ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                connection.execSQL(
+                    """
+                    INSERT INTO task_intervals_new
+                      (intervalId, parentTaskId, parentProjectId,
+                       startDateTimeEpochMs, endDateTimeEpochMs, durationMillis)
+                    SELECT intervalId, parentTaskId, parentProjectId,
+                           startDateTimeEpochMs, endDateTimeEpochMs, durationMillis
+                    FROM task_intervals
+                    """.trimIndent()
+                )
+                connection.execSQL("DROP TABLE task_intervals")
+                connection.execSQL("ALTER TABLE task_intervals_new RENAME TO task_intervals")
+                connection.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_task_intervals_parentTaskId ON task_intervals(parentTaskId)"
+                )
+                connection.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_task_intervals_parentProjectId ON task_intervals(parentProjectId)"
+                )
+
+                // project_sub_tasks: likewise, only the foreign key moves.
+                connection.execSQL(
+                    """
+                    CREATE TABLE project_sub_tasks_new (
+                        projectSubTaskId TEXT NOT NULL PRIMARY KEY,
+                        parentProjectTaskId TEXT NOT NULL,
+                        parentProjectId TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        description TEXT,
+                        durationMillis INTEGER,
+                        isTimerRunning INTEGER NOT NULL,
+                        startDateTimeEpochMs INTEGER NOT NULL,
+                        endDateTimeEpochMs INTEGER,
+                        isFinished INTEGER NOT NULL,
+                        updatedAtEpochMs INTEGER,
+                        FOREIGN KEY(parentProjectTaskId) REFERENCES project_tasks(projectTaskId) ON DELETE CASCADE,
+                        FOREIGN KEY(parentProjectId) REFERENCES projects(projectId) ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                connection.execSQL(
+                    """
+                    INSERT INTO project_sub_tasks_new
+                      (projectSubTaskId, parentProjectTaskId, parentProjectId, title, description,
+                       durationMillis, isTimerRunning, startDateTimeEpochMs, endDateTimeEpochMs,
+                       isFinished, updatedAtEpochMs)
+                    SELECT projectSubTaskId, parentProjectTaskId, parentProjectId, title, description,
+                           durationMillis, isTimerRunning, startDateTimeEpochMs, endDateTimeEpochMs,
+                           isFinished, updatedAtEpochMs
+                    FROM project_sub_tasks
+                    """.trimIndent()
+                )
+                connection.execSQL("DROP TABLE project_sub_tasks")
+                connection.execSQL("ALTER TABLE project_sub_tasks_new RENAME TO project_sub_tasks")
+                connection.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_project_sub_tasks_parentProjectTaskId ON project_sub_tasks(parentProjectTaskId)"
+                )
+                connection.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_project_sub_tasks_parentProjectId ON project_sub_tasks(parentProjectId)"
                 )
             }
         }

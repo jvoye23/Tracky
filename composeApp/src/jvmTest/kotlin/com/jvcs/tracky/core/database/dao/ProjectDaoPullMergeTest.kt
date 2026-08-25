@@ -61,9 +61,10 @@ class ProjectDaoPullMergeTest {
     )
 
     private fun taskEntity(id: String, projectId: String, title: String, updatedAt: Long?) = ProjectTaskEntity(
-        recordId = id,
+        projectTaskId = id,
         parentProjectId = projectId,
-        description = title,
+        title = title,
+        description = null,
         durationMillis = 0,
         startDateTimeEpochMs = 0,
         endDateTimeEpochMs = null,
@@ -100,21 +101,21 @@ class ProjectDaoPullMergeTest {
         assertEquals(60_000L, dao.getIntervalById("i1")?.durationMillis)
     }
 
-    /** project_records has a CASCADE foreign key onto projects, so the parent must exist first. */
+    /** project_tasks has a CASCADE foreign key onto projects, so the parent must exist first. */
     private suspend fun seedProject(id: String = "p1") {
         dao.upsertProject(projectEntity(id, updatedAt = 0))
     }
 
-    /** task_intervals cascades from both project_records and projects, so seed the whole chain. */
+    /** task_intervals cascades from both project_tasks and projects, so seed the whole chain. */
     private suspend fun seedTask(taskId: String = "t1", projectId: String = "p1") {
         seedProject(projectId)
-        dao.upsertProjectRecord(taskEntity(taskId, projectId, "seeded", updatedAt = 0))
+        dao.upsertProjectTask(taskEntity(taskId, projectId, "seeded", updatedAt = 0))
     }
 
     @Test
     fun keepsALocalTaskThatIsNewerThanTheServer() = runBlocking {
         seedProject()
-        dao.upsertProjectRecord(taskEntity("t1", "p1", "edited offline", updatedAt = 500))
+        dao.upsertProjectTask(taskEntity("t1", "p1", "edited offline", updatedAt = 500))
 
         dao.upsertServerTree(
             projects = emptyList(),
@@ -122,13 +123,13 @@ class ProjectDaoPullMergeTest {
             intervals = emptyList(),
         )
 
-        assertEquals("edited offline", dao.getTaskById("t1")?.description)
+        assertEquals("edited offline", dao.getTaskById("t1")?.title)
     }
 
     @Test
     fun takesTheServerTaskWhenItIsNewer() = runBlocking {
         seedProject()
-        dao.upsertProjectRecord(taskEntity("t1", "p1", "old local copy", updatedAt = 100))
+        dao.upsertProjectTask(taskEntity("t1", "p1", "old local copy", updatedAt = 100))
 
         dao.upsertServerTree(
             projects = emptyList(),
@@ -136,7 +137,7 @@ class ProjectDaoPullMergeTest {
             intervals = emptyList(),
         )
 
-        assertEquals("fresh from server", dao.getTaskById("t1")?.description)
+        assertEquals("fresh from server", dao.getTaskById("t1")?.title)
     }
 
     @Test
@@ -156,7 +157,7 @@ class ProjectDaoPullMergeTest {
     @Test
     fun leavesRowsTheServerDoesNotKnowAbout() = runBlocking {
         seedProject()
-        dao.upsertProjectRecord(taskEntity("local-only", "p1", "created offline", updatedAt = null))
+        dao.upsertProjectTask(taskEntity("local-only", "p1", "created offline", updatedAt = null))
         dao.upsertTaskInterval(intervalEntity("i-local", "local-only", end = 1_000))
 
         dao.upsertServerTree(projects = emptyList(), tasks = emptyList(), intervals = emptyList())
@@ -246,7 +247,7 @@ class ProjectDaoPullMergeTest {
 
     @Test
     fun skipsAnOrphanSubTaskInsteadOfLosingTheWholePull() = runBlocking<Unit> {
-        // project_sub_tasks has a CASCADE foreign key onto project_records. Without the filter this
+        // project_sub_tasks has a CASCADE foreign key onto project_tasks. Without the filter this
         // row throws inside the transaction and takes the project and task rows down with it — the
         // whole pull, not just the bad row.
         dao.upsertServerTree(

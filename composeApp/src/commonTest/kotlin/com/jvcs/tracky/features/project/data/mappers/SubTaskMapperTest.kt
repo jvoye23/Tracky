@@ -112,9 +112,10 @@ class SubTaskMapperTest {
     fun taskRelationCarriesBothItsIntervalsAndItsSubTasks() {
         val relation = TaskWithSubTasks(
             task = ProjectTaskEntity(
-                recordId = "t1",
+                projectTaskId = "t1",
                 parentProjectId = "p1",
-                description = "task title",
+                title = "task title",
+                description = null,
                 durationMillis = 0,
                 startDateTimeEpochMs = 0,
                 endDateTimeEpochMs = null,

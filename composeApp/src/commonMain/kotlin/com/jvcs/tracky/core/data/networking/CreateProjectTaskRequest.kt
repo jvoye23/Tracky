@@ -6,9 +6,8 @@ import kotlinx.serialization.Serializable
  * Body for POST /api/projects/{projectId}/tasks.
  *
  * [title] is required and must be non-blank — API 1.6.0 added it as a `@NotBlank` field, and a
- * request without it is rejected with 400. [description] is the task's *other* text, which the
- * domain does not model yet, so it is always sent null; it stays on the body so adding it later is
- * a mapper change rather than a contract change.
+ * request without it is rejected with 400. [description] is the task's *other* text, optional on
+ * the wire and null until the user writes one.
  */
 @Serializable
 data class CreateProjectTaskRequest(

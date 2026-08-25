@@ -18,7 +18,7 @@ import kotlin.test.assertNull
  * Pins down the cascading deletes on a real (in-memory) database.
  *
  * Deleting a project used to leave every interval underneath it in the table forever: only
- * `project_records` cascaded, and `task_intervals` had no foreign key at all. The delete paths in
+ * `project_tasks` cascaded, and `task_intervals` had no foreign key at all. The delete paths in
  * the data source are now plain single-table deletes that rely entirely on the schema, so this is
  * what proves the cleanup actually happens — and that Room really does enable foreign key
  * enforcement at runtime.
@@ -62,11 +62,12 @@ class ProjectDaoCascadeTest {
             )
         )
         listOf("t1", "t2").forEach { taskId ->
-            dao.upsertProjectRecord(
+            dao.upsertProjectTask(
                 ProjectTaskEntity(
-                    recordId = taskId,
+                    projectTaskId = taskId,
                     parentProjectId = "p1",
-                    description = "task-$taskId",
+                    title = "task-$taskId",
+                    description = null,
                     durationMillis = 0,
                     startDateTimeEpochMs = 0,
                     endDateTimeEpochMs = null,
@@ -104,7 +105,7 @@ class ProjectDaoCascadeTest {
     fun deletingASingleTaskDeletesOnlyItsOwnIntervals() = runBlocking {
         seedTree()
 
-        dao.deleteProjectRecord("t1")
+        dao.deleteProjectTask("t1")
 
         assertNull(dao.getIntervalById("i-t1"))
         // The sibling task is untouched, so its tracked time has to survive.

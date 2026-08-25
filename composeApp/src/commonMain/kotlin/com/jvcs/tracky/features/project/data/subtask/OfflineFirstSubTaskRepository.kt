@@ -125,6 +125,9 @@ class OfflineFirstSubTaskRepository(
     }
 
     /** Stops the subtask's timer. Pushes the same four rows [startSubTask] does — see its KDoc. */
+    override suspend fun lastStartedSubTaskId(taskId: String): String? =
+        localSubTaskDataSource.lastStartedSubTaskId(taskId).getOrDefault(null)
+
     override suspend fun stopSubTask(subTaskId: String): EmptyResult<DataError> {
         val change = when (val stopped = localSubTaskDataSource.stopSubTask(subTaskId)) {
             is Result.Success -> stopped.data ?: return Result.Success(Unit) // timer was not running

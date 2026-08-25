@@ -8,7 +8,7 @@ import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 data class TaskWithIntervals(
     @Embedded val task: ProjectTaskEntity,
     @Relation(
-        parentColumn = "recordId",
+        parentColumn = "projectTaskId",
         entityColumn = "parentTaskId"
     )
     val intervals: List<TaskIntervalEntity>
