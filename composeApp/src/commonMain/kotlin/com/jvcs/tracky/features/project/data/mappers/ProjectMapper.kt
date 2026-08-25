@@ -17,6 +17,7 @@ import com.jvcs.tracky.core.database.entity.ProjectSubTaskEntity
 import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
 import com.jvcs.tracky.core.database.entity.SubTaskIntervalEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
+import com.jvcs.tracky.core.database.relation.ProjectWithTaskTreeEntity
 import com.jvcs.tracky.core.database.relation.ProjectWithTasksEntity
 import com.jvcs.tracky.core.database.relation.SubTaskWithIntervals
 import com.jvcs.tracky.core.database.relation.TaskWithIntervals
@@ -68,6 +69,30 @@ fun ProjectEntity.toProject(): Project {
 }
 
 fun ProjectWithTasksEntity.toProject(): Project {
+    return Project(
+        projectId = project.projectId,
+        title = project.title,
+        description = project.description,
+        colorArgb = project.color,
+        totalDurationMillis = project.totalDuration,
+        startDateTimeUtc = Instant.fromEpochMilliseconds(project.startDateTimeEpochMs),
+        isFinished = project.isFinished,
+        useLightTextColor = project.useLightTextColor,
+        endDateTimeUtc = project.endDateTimeEpochMs?.let(Instant::fromEpochMilliseconds),
+        projectTasks = projectTasks.map { it.toProjectTask() },
+        isArchived = project.isArchived,
+        trashedAt = project.trashedAtEpochMs?.let(Instant::fromEpochMilliseconds),
+        isPinned = project.isPinned,
+        ownUpdatedAt = project.updatedAtEpochMs?.let(Instant::fromEpochMilliseconds),
+        sortIndex = project.sortIndex,
+    )
+}
+
+/**
+ * Same as [ProjectWithTasksEntity.toProject], except the tasks keep their intervals and subtasks
+ * because they map through the [TaskWithSubTasks] overload of `toProjectTask`.
+ */
+fun ProjectWithTaskTreeEntity.toProject(): Project {
     return Project(
         projectId = project.projectId,
         title = project.title,

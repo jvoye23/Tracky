@@ -10,6 +10,7 @@ import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
 import com.jvcs.tracky.core.database.entity.SubTaskIntervalEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 import com.jvcs.tracky.core.database.relation.ProjectSortIndexEntity
+import com.jvcs.tracky.core.database.relation.ProjectWithTaskTreeEntity
 import com.jvcs.tracky.core.database.relation.ProjectWithTasksEntity
 import com.jvcs.tracky.core.database.relation.SubTaskWithIntervals
 import com.jvcs.tracky.core.database.relation.TaskWithIntervals
@@ -143,6 +144,11 @@ interface ProjectDao {
     @Transaction
     @Query("SELECT * FROM projects WHERE projectId = :projectId")
     suspend fun getProjectWithTasksById(projectId: String): ProjectWithTasksEntity?
+
+    /** The detail-screen read: tasks arrive hydrated with their intervals and subtasks. */
+    @Transaction
+    @Query("SELECT * FROM projects WHERE projectId = :projectId")
+    suspend fun getProjectWithTaskTreeById(projectId: String): ProjectWithTaskTreeEntity?
 
     @Upsert
     suspend fun upsertProjectTask(task: ProjectTaskEntity)

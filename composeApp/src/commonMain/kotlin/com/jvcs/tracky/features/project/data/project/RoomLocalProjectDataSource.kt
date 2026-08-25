@@ -64,7 +64,7 @@ class RoomLocalProjectDataSource (
     override suspend fun getProjectWithTasksByProjectId(
         projectId: String
     ): Result<Project?, DataError.Local> = read {
-        projectDao.getProjectWithTasksById(projectId)?.toProject()
+        projectDao.getProjectWithTaskTreeById(projectId)?.toProject()
     }
 
     override suspend fun getSortIndices(): Result<Map<String, Long?>, DataError.Local> = read {
