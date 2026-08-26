@@ -52,7 +52,7 @@ fun ProjectSessionCard(
             if (state.isEditMode) {
                 IconButton(
                     onClick = {
-                        onAction(ProjectDetailAction.OnDeleteSessionClick(projectTaskUi.id!!))
+                        onAction(ProjectDetailAction.OnDeleteSessionClick(projectTaskUi.projectTaskId!!))
                     }
                 ) {
                     Icon(
@@ -76,7 +76,7 @@ fun ProjectSessionCard(
                 modifier = Modifier
                     .size(40.dp)
                     .clickable {
-                        onAction(ProjectDetailAction.OnToggleSessionTimer(projectTaskUi.id!!))
+                        onAction(ProjectDetailAction.OnToggleSessionTimer(projectTaskUi.projectTaskId!!))
                     }
                     .background(
                         color = if (projectTaskUi.isTimerRunning) {
@@ -110,12 +110,15 @@ fun ProjectSessionCardPreview() {
     TrackyTheme {
         ProjectSessionCard(
             projectTaskUi = ProjectTaskUi(
-                id = "1",
+                projectTaskId = "1",
                 title = "This is session One",
+                description = "Description One",
                 formattedDuration = "00:30:59",
                 formattedStateDateTime = "2023-01-01",
                 formattedEndDateTimeUtc = "2023-01-01",
-                isTimerRunning = false
+                isTimerRunning = false,
+                subTasks = emptyList(),
+                isFinished = false
             ),
             onAction = {},
             state = ProjectDetailState()

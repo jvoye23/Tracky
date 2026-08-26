@@ -7,13 +7,13 @@ import androidx.room.PrimaryKey
 
 
 @Entity(
-    tableName = "project_records",
+    tableName = "project_tasks",
     foreignKeys = [
         ForeignKey(
             entity = ProjectEntity::class,
             parentColumns = ["projectId"],
             childColumns = ["parentProjectId"],
-            onDelete = ForeignKey.CASCADE // Deleting a parent project will delete all associated records
+            onDelete = ForeignKey.CASCADE // Deleting a parent project will delete all associated tasks
         )
     ],
     // Indexing the foreign key is a best practice for performance
@@ -21,9 +21,10 @@ import androidx.room.PrimaryKey
 )
 data class ProjectTaskEntity(
     @PrimaryKey(autoGenerate = false)
-    val recordId: String,
+    val projectTaskId: String,
     val parentProjectId: String, // The Foreign Key link
-    val description: String,
+    val title: String,
+    val description: String?,
     val durationMillis: Long,
     val startDateTimeEpochMs: Long,
     val endDateTimeEpochMs: Long?,

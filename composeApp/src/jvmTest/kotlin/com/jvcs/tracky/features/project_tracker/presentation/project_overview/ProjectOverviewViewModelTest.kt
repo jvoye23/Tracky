@@ -150,6 +150,7 @@ class ProjectOverviewViewModelTest {
     private fun task(id: String, parentProjectId: String, ownUpdatedAt: Instant) = ProjectTask(
         projectTaskId = id,
         title = "title-$id",
+        description = null,
         durationMillis = null,
         startDateTimeUtc = Instant.fromEpochMilliseconds(0),
         parentProjectId = parentProjectId,

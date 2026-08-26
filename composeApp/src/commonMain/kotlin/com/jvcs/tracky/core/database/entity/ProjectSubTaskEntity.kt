@@ -10,7 +10,7 @@ import androidx.room.PrimaryKey
     foreignKeys = [
         ForeignKey(
             entity = ProjectTaskEntity::class,
-            parentColumns = ["recordId"],
+            parentColumns = ["projectTaskId"],
             childColumns = ["parentProjectTaskId"],
             onDelete = ForeignKey.CASCADE // Deleting a task will delete the subtasks under it
         ),

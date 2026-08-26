@@ -37,4 +37,7 @@ interface LocalSubTaskDataSource {
      * Returns null when the timer was not running.
      */
     suspend fun stopSubTask(subTaskId: String): Result<SubTaskTimerChange?, DataError.Local>
+
+    /** Id of the subtask under [taskId] whose timer ran most recently, or null if none ever has. */
+    suspend fun lastStartedSubTaskId(taskId: String): Result<String?, DataError.Local>
 }

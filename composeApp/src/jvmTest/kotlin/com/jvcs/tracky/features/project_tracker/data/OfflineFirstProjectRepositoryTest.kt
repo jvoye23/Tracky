@@ -403,6 +403,7 @@ class OfflineFirstProjectRepositoryTest {
     ) = ProjectTask(
         projectTaskId = taskId,
         title = "task-$taskId",
+        description = null,
         durationMillis = 0,
         startDateTimeUtc = Instant.fromEpochMilliseconds(0),
         parentProjectId = projectId,

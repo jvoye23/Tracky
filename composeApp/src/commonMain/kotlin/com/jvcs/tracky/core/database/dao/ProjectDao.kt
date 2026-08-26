@@ -10,6 +10,7 @@ import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
 import com.jvcs.tracky.core.database.entity.SubTaskIntervalEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 import com.jvcs.tracky.core.database.relation.ProjectSortIndexEntity
+import com.jvcs.tracky.core.database.relation.ProjectWithTaskTreeEntity
 import com.jvcs.tracky.core.database.relation.ProjectWithTasksEntity
 import com.jvcs.tracky.core.database.relation.SubTaskWithIntervals
 import com.jvcs.tracky.core.database.relation.TaskWithIntervals
@@ -56,9 +57,9 @@ interface ProjectDao {
             }
         }
         tasks.forEach { incoming ->
-            val local = getTaskById(incoming.recordId)
+            val local = getTaskById(incoming.projectTaskId)
             if (serverWinsOnPull(local?.updatedAtEpochMs, incoming.updatedAtEpochMs)) {
-                upsertProjectRecord(incoming)
+                upsertProjectTask(incoming)
             }
         }
         intervals.forEach { incoming ->
@@ -102,7 +103,7 @@ interface ProjectDao {
     @Query("DELETE FROM projects WHERE projectId = :projectId")
     suspend fun deleteProject(projectId: String)
 
-    // task_intervals and project_records both cascade from projects, so this clears the whole tree.
+    // task_intervals and project_tasks both cascade from projects, so this clears the whole tree.
     @Query("DELETE FROM projects")
     suspend fun deleteAllProjects()
 
@@ -144,20 +145,25 @@ interface ProjectDao {
     @Query("SELECT * FROM projects WHERE projectId = :projectId")
     suspend fun getProjectWithTasksById(projectId: String): ProjectWithTasksEntity?
 
+    /** The detail-screen read: tasks arrive hydrated with their intervals and subtasks. */
+    @Transaction
+    @Query("SELECT * FROM projects WHERE projectId = :projectId")
+    suspend fun getProjectWithTaskTreeById(projectId: String): ProjectWithTaskTreeEntity?
+
     @Upsert
-    suspend fun upsertProjectRecord(record: ProjectTaskEntity)
+    suspend fun upsertProjectTask(task: ProjectTaskEntity)
 
-    @Query("SELECT * FROM project_records WHERE recordId = :recordId")
-    suspend fun getTaskById(recordId: String): ProjectTaskEntity?
+    @Query("SELECT * FROM project_tasks WHERE projectTaskId = :projectTaskId")
+    suspend fun getTaskById(projectTaskId: String): ProjectTaskEntity?
 
-    @Query("DELETE FROM project_records WHERE recordId = :recordId")
-    suspend fun deleteProjectRecord(recordId: String)
+    @Query("DELETE FROM project_tasks WHERE projectTaskId = :projectTaskId")
+    suspend fun deleteProjectTask(projectTaskId: String)
 
-    @Query("UPDATE project_records SET durationMillis = :newDurationMillis WHERE recordId = :taskId")
+    @Query("UPDATE project_tasks SET durationMillis = :newDurationMillis WHERE projectTaskId = :taskId")
     suspend fun updateTaskDuration(taskId: String, newDurationMillis: Long)
 
     @Transaction
-    @Query("SELECT * FROM project_records WHERE recordId = :taskId")
+    @Query("SELECT * FROM project_tasks WHERE projectTaskId = :taskId")
     fun getTaskWithIntervalsById(taskId: String): Flow<TaskWithIntervals?>
 
     @Upsert
@@ -174,13 +180,13 @@ interface ProjectDao {
     @Query("SELECT * FROM task_intervals WHERE parentTaskId = :sessionId AND endDateTimeEpochMs IS NULL LIMIT 1")
     suspend fun getOpenIntervalBySessionId(sessionId: String): TaskIntervalEntity?
 
-    @Query("UPDATE project_records SET isTimerRunning = :isRunning WHERE recordId = :sessionId")
+    @Query("UPDATE project_tasks SET isTimerRunning = :isRunning WHERE projectTaskId = :sessionId")
     suspend fun updateSessionTimerStatus(sessionId: String, isRunning: Boolean)
 
-    @Query("UPDATE project_records SET durationMillis = durationMillis + :additionalDuration WHERE recordId = :taskId")
+    @Query("UPDATE project_tasks SET durationMillis = durationMillis + :additionalDuration WHERE projectTaskId = :taskId")
     suspend fun addTaskDuration(taskId: String, additionalDuration: Long)
 
-    @Query("UPDATE project_records SET description = :title WHERE recordId = :taskId")
+    @Query("UPDATE project_tasks SET title = :title WHERE projectTaskId = :taskId")
     suspend fun updateTaskTitle(taskId: String, title: String)
     // ---- Subtasks ---------------------------------------------------------------------------
     // Local-only for now: the backend exposes no subtask routes, so nothing here feeds the pending
@@ -190,7 +196,7 @@ interface ProjectDao {
     suspend fun upsertProjectSubTask(subTask: ProjectSubTaskEntity)
 
     @Transaction
-    @Query("SELECT * FROM project_records WHERE recordId = :taskId")
+    @Query("SELECT * FROM project_tasks WHERE projectTaskId = :taskId")
     fun getTaskWithSubTasksById(taskId: String): Flow<TaskWithSubTasks?>
 
     @Transaction
@@ -232,4 +238,14 @@ interface ProjectDao {
             "WHERE s.parentProjectTaskId = :taskId AND si.endDateTimeEpochMs IS NULL LIMIT 1"
     )
     suspend fun getOpenSubTaskIntervalForTask(taskId: String): SubTaskIntervalEntity?
+
+    // Backs the parent task's play button, which resumes whatever was worked on last rather than
+    // opening a task-level interval of its own. Same join as above; ordered instead of filtered.
+    @Query(
+        "SELECT si.parentSubTaskId FROM sub_task_intervals AS si " +
+            "JOIN project_sub_tasks AS s ON s.projectSubTaskId = si.parentSubTaskId " +
+            "WHERE s.parentProjectTaskId = :taskId " +
+            "ORDER BY si.startDateTimeEpochMs DESC LIMIT 1"
+    )
+    suspend fun getLastStartedSubTaskId(taskId: String): String?
 }

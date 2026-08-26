@@ -34,6 +34,7 @@ val projectModule = module {
             projectId = projectId,
             projectRepository = get(),
             projectTaskRepository = get(),
+            subTaskRepository = get(),
             timeManager = get(),
             timeProvider = get()
         )

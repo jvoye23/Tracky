@@ -6,7 +6,7 @@ import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeProvider
-import com.jvcs.tracky.features.project.data.mappers.toProjectSessionEntity
+import com.jvcs.tracky.features.project.data.mappers.toProjectTaskEntity
 import com.jvcs.tracky.features.project.data.mappers.toProjectTask
 import com.jvcs.tracky.features.project.data.mappers.toTaskInterval
 import com.jvcs.tracky.features.project.data.timer.closeSubTaskInterval
@@ -42,11 +42,11 @@ class RoomLocalTaskDataSource(
     }
 
     override suspend fun upsertProjectTask(projectTask: ProjectTask): EmptyResult<DataError.Local> = write {
-        projectDao.upsertProjectRecord(projectTask.toProjectSessionEntity())
+        projectDao.upsertProjectTask(projectTask.toProjectTaskEntity())
     }
 
     override suspend fun deleteProjectTask(taskId: String): EmptyResult<DataError.Local> = write {
-        projectDao.deleteProjectRecord(taskId)
+        projectDao.deleteProjectTask(taskId)
     }
 
     override suspend fun updateTaskDuration(

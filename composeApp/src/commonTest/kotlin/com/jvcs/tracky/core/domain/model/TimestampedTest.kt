@@ -143,6 +143,7 @@ class TimestampedTest {
     ) = ProjectTask(
         projectTaskId = id,
         title = "title-$id",
+        description = null,
         durationMillis = null,
         startDateTimeUtc = Instant.fromEpochMilliseconds(0),
         parentProjectId = "p1",

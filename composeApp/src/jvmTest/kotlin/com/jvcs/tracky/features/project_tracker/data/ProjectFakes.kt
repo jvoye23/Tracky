@@ -61,7 +61,7 @@ class FakeDb {
 
     fun emit() { projectsFlow.value = projects.values.toList() }
 
-    /** Room cascades projects -> project_records -> task_intervals; the fake has to as well. */
+    /** Room cascades projects -> project_tasks -> task_intervals; the fake has to as well. */
     fun cascadeDeleteProject(projectId: String) {
         projects.remove(projectId)
         tasks.values.filter { it.parentProjectId == projectId }
@@ -116,6 +116,7 @@ class FakeDb {
     fun newTask(taskId: String, projectId: String) = ProjectTask(
         projectTaskId = taskId,
         title = "task-$taskId",
+        description = null,
         durationMillis = 0,
         startDateTimeUtc = Instant.fromEpochMilliseconds(0),
         parentProjectId = projectId,
@@ -548,6 +549,14 @@ class FakeLocalSubTaskDataSource(private val db: FakeDb = FakeDb()) : LocalSubTa
 
     override suspend fun startSubTask(subTaskId: String) = Result.Success(startResult!!)
     override suspend fun stopSubTask(subTaskId: String) = Result.Success(stopResult)
+
+    /** Set by tests that exercise the parent button's "resume what ran last" branch. */
+    var lastStarted: String? = null
+
+    override suspend fun lastStartedSubTaskId(taskId: String): Result<String?, DataError.Local> {
+        failReadWith?.let { return Result.Error(it) }
+        return Result.Success(lastStarted)
+    }
 }
 
 class FakeRemoteSubTaskDataSource : RemoteSubTaskDataSource {

@@ -287,12 +287,15 @@ fun ProjectCardPreview() {
                         endDateTimeUtc = null,
                         projectTasks = listOf(
                             ProjectTaskUi(
-                                id = "t1",
+                                projectTaskId = "t1",
                                 title = "Task 1",
+                                description = null,
                                 formattedDuration = "1h 0m",
                                 formattedStateDateTime = "10:00",
                                 formattedEndDateTimeUtc = "",
-                                isTimerRunning = true
+                                isTimerRunning = true,
+                                subTasks = emptyList(),
+                                isFinished = false
                             )
                         )
                     )
@@ -310,12 +313,15 @@ fun ProjectCardPreview() {
                         endDateTimeUtc = null,
                         projectTasks = listOf(
                             ProjectTaskUi(
-                                id = "t1",
+                                projectTaskId = "t1",
                                 title = "Task 1",
+                                description = null,
                                 formattedDuration = "1h 0m",
                                 formattedStateDateTime = "10:00",
                                 formattedEndDateTimeUtc = "11:00",
-                                isTimerRunning = false
+                                isTimerRunning = false,
+                                subTasks = emptyList(),
+                                isFinished = false
                             )
                         )
                     )
@@ -333,12 +339,15 @@ fun ProjectCardPreview() {
                         endDateTimeUtc = null,
                         projectTasks = listOf(
                             ProjectTaskUi(
-                                id = "t1",
+                                projectTaskId = "t1",
                                 title = "Task 1",
+                                description = null,
                                 formattedDuration = "1h 0m",
                                 formattedStateDateTime = "10:00",
                                 formattedEndDateTimeUtc = "",
-                                isTimerRunning = false
+                                isTimerRunning = false,
+                                subTasks = emptyList(),
+                                isFinished = false
                             )
                         ),
                         useLightTextColor = false

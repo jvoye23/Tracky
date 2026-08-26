@@ -15,13 +15,13 @@ import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 data class TaskWithSubTasks(
     @Embedded val task: ProjectTaskEntity,
     @Relation(
-        parentColumn = "recordId",
+        parentColumn = "projectTaskId",
         entityColumn = "parentTaskId"
     )
     val intervals: List<TaskIntervalEntity>,
     @Relation(
         entity = ProjectSubTaskEntity::class,
-        parentColumn = "recordId",
+        parentColumn = "projectTaskId",
         entityColumn = "parentProjectTaskId"
     )
     val subTasks: List<SubTaskWithIntervals>

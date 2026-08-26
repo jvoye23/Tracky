@@ -27,6 +27,12 @@ interface SubTaskRepository {
     suspend fun stopSubTask(subTaskId: String): EmptyResult<DataError>
 
     /**
+     * Id of the subtask under [taskId] whose timer ran most recently, or null if none ever has.
+     * Local-only: it answers "what was I working on", which the pending queue has no bearing on.
+     */
+    suspend fun lastStartedSubTaskId(taskId: String): String?
+
+    /**
      * Drains the queued subtask writes. Runs after the task drain: a subtask has no route until its
      * task exists on the server, so ops whose task is still pending stay queued.
      */

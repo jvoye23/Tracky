@@ -4,6 +4,7 @@ import com.jvcs.tracky.core.data.networking.CreateProjectTaskRequest
 import com.jvcs.tracky.core.data.networking.mappers.toProjectTask
 import com.jvcs.tracky.core.data.networking.mappers.toProjectTaskDto
 import com.jvcs.tracky.features.project.data.mappers.toCreateProjectTaskRequest
+import com.jvcs.tracky.features.project.data.mappers.toUpdateProjectTaskRequest
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -63,6 +64,9 @@ class ProjectTaskDtoTest {
 
         assertEquals("", dto.title)
         assertEquals("Work task", dto.toProjectTask("p1").title)
+        // The title was only ever in description because the deployment is old; it must not also
+        // land in the task's description, or the fallback re-creates the conflation.
+        assertNull(dto.toProjectTask("p1").description)
     }
 
     @Test
@@ -74,7 +78,29 @@ class ProjectTaskDtoTest {
         val encoded = json.encodeToString(task.toProjectTaskDto())
 
         assertTrue(encoded.contains(""""title":"Work task""""), encoded)
+        // Nothing supplied a description, so none is invented to fill the field.
         assertNull(task.toProjectTaskDto().description)
+    }
+
+    @Test
+    fun titleAndDescriptionBothSurviveARoundTrip() {
+        // Since the local table gained its own title column, description is the task's *other*
+        // text rather than a second copy of the title, and both have to survive a round trip.
+        val task = json.decodeFromString<ProjectTaskDto>(
+            """{"id":"t1","title":"Work task","description":"Quarterly report",""" +
+                """"startDateTimeUtc":"2026-03-28T15:16:40Z"}"""
+        ).toProjectTask("p1")
+
+        assertEquals("Work task", task.title)
+        assertEquals("Quarterly report", task.description)
+
+        val dto = task.toProjectTaskDto()
+        assertEquals("Work task", dto.title)
+        assertEquals("Quarterly report", dto.description)
+
+        // The update body carries it too, so editing a task no longer blanks its description.
+        assertEquals("Quarterly report", task.toUpdateProjectTaskRequest().description)
+        assertEquals("Quarterly report", task.toCreateProjectTaskRequest().description)
     }
 
     @Test

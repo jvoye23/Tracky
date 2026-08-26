@@ -5,6 +5,7 @@ import kotlin.time.Instant
 data class ProjectTask(
     val projectTaskId: String,
     val title: String,
+    val description: String?,
     val durationMillis: Long?,
     val startDateTimeUtc: Instant,
     val endDateTimeUtc: Instant? = null,

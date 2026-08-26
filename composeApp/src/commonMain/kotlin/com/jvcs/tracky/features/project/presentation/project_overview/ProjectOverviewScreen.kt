@@ -627,12 +627,15 @@ private fun previewProjects(): List<ProjectUi> = listOf(
         endDateTimeUtc = null,
         projectTasks = listOf(
             ProjectTaskUi(
-                id = "t1",
+                projectTaskId = "t1",
                 title = "Task 1",
+                description = null,
                 formattedDuration = "2h 30m",
                 formattedStateDateTime = "10:00",
                 formattedEndDateTimeUtc = "",
-                isTimerRunning = true
+                isTimerRunning = true,
+                subTasks = emptyList(),
+                isFinished = false
             )
         )
     ),
@@ -648,12 +651,15 @@ private fun previewProjects(): List<ProjectUi> = listOf(
         isPinned = true,
         projectTasks = listOf(
             ProjectTaskUi(
-                id = "t2",
+                projectTaskId = "t2",
                 title = "Task 2",
+                description = null,
                 formattedDuration = "5h 15m",
                 formattedStateDateTime = "09:00",
                 formattedEndDateTimeUtc = "17:00",
-                isTimerRunning = false
+                isTimerRunning = false,
+                subTasks = emptyList(),
+                isFinished = false
             )
         )
     ),

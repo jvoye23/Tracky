@@ -36,6 +36,10 @@
     <string name="last_active">Start Date</string>
     <string name="color">Color</string>
     <string name="done">Done</string>
+    <string name="subtask_progress">%1$d/%2$d DONE</string>
+    <string name="show_subtasks">Show subtasks</string>
+    <string name="hide_subtasks">Hide subtasks</string>
+    <string name="add_subtask">Subtask</string>
     <string name="in_progress">In progress</string>
     <string name="duration">Duration</string>
     <string name="current_projects">Current projects</string>
