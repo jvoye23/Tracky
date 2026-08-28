@@ -26,8 +26,10 @@ data class ProjectDetailState(
     // Set while a not-yet-persisted subtask draft row is open on that task.
     val pendingSubTaskParentTaskId: String? = null,
     val editSubTaskTextFieldState: TextFieldState = TextFieldState(),
+    // Raised when the user tries to uncheck a task that owns subtasks; see onTaskCheckedChange.
+    val isUncheckTaskBlockedDialogVisible: Boolean = false,
     val isColorPickerVisible: Boolean = false,
-    val selectedColor: Color? = null,
+    val projectColor: Color? = null,
     val selectedColorHex: String = "#00FFFF",
     val useLightTextColor: Boolean = false
 )

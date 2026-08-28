@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -44,12 +45,14 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -234,12 +237,23 @@ fun ProjectOverviewScreen(
     drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed)
 ) {
 
-    val enterAlwaysScrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
-    val pinnedScrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+    val listState = rememberLazyListState()
+    // Without this the bar collapses on any drag, even when the whole list fits on screen and
+    // there is nothing to scroll to.
+    val canScrollList = { listState.canScrollForward || listState.canScrollBackward }
+    val enterAlwaysScrollBehavior =
+        TopAppBarDefaults.enterAlwaysScrollBehavior(canScroll = canScrollList)
+    val pinnedScrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(canScroll = canScrollList)
     val scrollBehavior =
         if (state.isEditModeActive) pinnedScrollBehavior else enterAlwaysScrollBehavior
-    val listState = rememberLazyListState()
     val fabExpanded = listState.isScrollingUp()
+
+    // If the content shrinks below one screen while the bar is collapsed, no scroll is left to
+    // bring it back, so release it explicitly.
+    LaunchedEffect(scrollBehavior) {
+        snapshotFlow { listState.canScrollForward || listState.canScrollBackward }
+            .collect { scrollable -> if (!scrollable) scrollBehavior.state.heightOffset = 0f }
+    }
     val drawerScope = rememberCoroutineScope()
     val backState = rememberNavigationEventState(NavigationEventInfo.None)
 
@@ -326,10 +340,14 @@ fun ProjectOverviewScreen(
         }
 
     ) { innerPadding ->
+        // Applied per-child rather than to the Column, so the list can scroll its items
+        // through the top bar / status bar band instead of being clipped below it.
+        val topInset = innerPadding.calculateTopPadding()
+        val bottomInset = innerPadding.calculateBottomPadding()
+        // When the offline banner is shown it already sits under the bar and reserves the inset.
+        val contentTopInset = if (state.isOnline) topInset else 0.dp
         Column(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(innerPadding),
+            modifier = modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -339,6 +357,7 @@ fun ProjectOverviewScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(MaterialTheme.colorScheme.secondary)
+                        .padding(top = topInset)
                         .padding(vertical = 4.dp),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
@@ -357,6 +376,7 @@ fun ProjectOverviewScreen(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
+                        .padding(top = contentTopInset, bottom = bottomInset)
                         .padding(horizontal = 8.dp)
                 )
             } else {
@@ -373,6 +393,10 @@ fun ProjectOverviewScreen(
                             .fillMaxSize()
                             .padding(horizontal = 10.dp)
                             .testTag("project_overview"),
+                        contentPadding = PaddingValues(
+                            top = contentTopInset,
+                            bottom = bottomInset
+                        ),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         if (pinnedItems.isNotEmpty()) {

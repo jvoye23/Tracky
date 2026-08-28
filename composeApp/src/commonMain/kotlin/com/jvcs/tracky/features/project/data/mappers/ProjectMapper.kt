@@ -220,8 +220,8 @@ fun ProjectTask.toCreateProjectTaskRequest(): CreateProjectTaskRequest {
         durationMillis = durationMillis ?: 0,
         startDateTimeUtc = startDateTimeUtc.toString(),
         endDateTimeUtc = endDateTimeUtc?.toString(),
-        finished = isFinished,
-        timerRunning = isTimerRunning,
+        isFinished = isFinished,
+        isTimerRunning = isTimerRunning,
     )
 }
 
@@ -232,8 +232,8 @@ fun ProjectTask.toUpdateProjectTaskRequest(): UpdateProjectTaskRequest {
         durationMillis = durationMillis ?: 0,
         startDateTimeUtc = startDateTimeUtc.toString(),
         endDateTimeUtc = endDateTimeUtc?.toString(),
-        finished = isFinished,
-        timerRunning = isTimerRunning,
+        isFinished = isFinished,
+        isTimerRunning = isTimerRunning,
     )
 }
 

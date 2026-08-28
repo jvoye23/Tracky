@@ -24,6 +24,7 @@
     <string name="project_overview">Project Overview</string>
     <string name="sessions">Sessions</string>
     <string name="tasks">Tasks</string>
+    <string name="tasks_completed">Tasks completed</string>
     <string name="total_duration">Total duration</string>
     <string name="close">Close</string>
     <string name="log_out">Log out</string>
@@ -33,13 +34,18 @@
     <string name="logout_not_possible_desc">Logging out in offline mode is not possible.</string>
     <string name="submit">Submit</string>
     <string name="start_date">Start Date</string>
-    <string name="last_active">Start Date</string>
+    <string name="last_active">Last Updated</string>
     <string name="color">Color</string>
     <string name="done">Done</string>
+    <string name="task_progress">%1$d/%2$d DONE</string>
     <string name="subtask_progress">%1$d/%2$d DONE</string>
+    <string name="task_completed_count">%1$d of %2$d</string>
     <string name="show_subtasks">Show subtasks</string>
     <string name="hide_subtasks">Hide subtasks</string>
     <string name="add_subtask">Subtask</string>
+    <string name="ok">OK</string>
+    <string name="uncheck_task_blocked_title">Can't uncheck this task</string>
+    <string name="uncheck_task_blocked_message">Unchecking a task with subtasks is not possible. You have to uncheck a subtask or create a new subtask.</string>
     <string name="in_progress">In progress</string>
     <string name="duration">Duration</string>
     <string name="current_projects">Current projects</string>
@@ -51,7 +57,7 @@
     <string name="sort_creation_date">Creation date</string>
     <string name="sort_modification_date">Modification date</string>
     <string name="project_duration">PROJECT DURATION</string>
-    <string name="project_color">PROJECT COLOR</string>
+    <string name="select_project_color">SELECT PROJECT COLOR</string>
     <string name="session_duration">SESSION DURATION</string>
     <string name="task_duration">TASK DURATION</string>
     <string name="session_details">SESSION DETAILS</string>

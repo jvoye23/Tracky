@@ -17,6 +17,7 @@ data class CreateProjectTaskRequest(
     val durationMillis: Long,
     val startDateTimeUtc: String,
     val endDateTimeUtc: String?,
-    val finished: Boolean,
-    val timerRunning: Boolean,
+    // See UpdateProjectTaskRequest: the server's names, not Kotlin's property names.
+    val isFinished: Boolean,
+    val isTimerRunning: Boolean,
 )

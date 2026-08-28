@@ -38,6 +38,13 @@ data class ProjectUi(
     val allTasksDone: Boolean
         get() = !projectTasks.isNullOrEmpty() &&
                 projectTasks.all { it.formattedEndDateTimeUtc.isNotBlank() }
+
+    val doneTaskCount: Int
+        get() = projectTasks?.count { it.isFinished } ?: 0
+
+    /** 0f..1f, for the task progress row. A project without tasks has no progress to show. */
+    val taskProgress: Float
+        get() = if (projectTasks.isNullOrEmpty()) 0f else doneTaskCount.toFloat() / projectTasks.size
 }
 
 data class ProjectTaskUi(

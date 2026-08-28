@@ -25,6 +25,9 @@ sealed interface ProjectDetailAction {
     data class OnProjectSessionCardClick(val projectSessionId: String): ProjectDetailAction
     data class OnDeleteSessionClick(val sessionId: String): ProjectDetailAction
 
+    data class OnTaskCheckedChange(val taskId: String): ProjectDetailAction
+    data object OnDismissUncheckTaskDialog: ProjectDetailAction
+
     data class OnToggleSubTaskTimer(val subTaskId: String): ProjectDetailAction
     data class OnDeleteSubTaskClick(val subTaskId: String): ProjectDetailAction
     data class OnSubTaskCheckedChange(val subTaskId: String): ProjectDetailAction
