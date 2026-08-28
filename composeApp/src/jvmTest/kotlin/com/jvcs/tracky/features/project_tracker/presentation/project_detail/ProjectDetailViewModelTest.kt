@@ -2,6 +2,7 @@
 
 package com.jvcs.tracky.features.project_tracker.presentation.project_detail
 
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import app.cash.turbine.test
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
@@ -70,7 +71,11 @@ class ProjectDetailViewModelTest {
             isFinished = isFinished
         )
 
-    private fun project(vararg subTasks: ProjectSubTask, taskDurationMillis: Long = 0L) = Project(
+    private fun project(
+        vararg subTasks: ProjectSubTask,
+        taskDurationMillis: Long = 0L,
+        taskFinished: Boolean = false
+    ) = Project(
         projectId = PROJECT_ID,
         title = "project",
         description = null,
@@ -88,6 +93,7 @@ class ProjectDetailViewModelTest {
                 startDateTimeUtc = Instant.fromEpochMilliseconds(0),
                 parentProjectId = PROJECT_ID,
                 isTimerRunning = false,
+                isFinished = taskFinished,
                 subTasks = subTasks.toList()
             )
         )
@@ -95,13 +101,17 @@ class ProjectDetailViewModelTest {
 
     private fun TestScope.viewModel(
         project: Project,
-        subTaskRepository: FakeSubTaskRepository = FakeSubTaskRepository()
+        subTaskRepository: FakeSubTaskRepository = FakeSubTaskRepository(),
+        // Seeded from the project by default: setTaskFinished reads the task row back before
+        // writing, so a repository that answers null would make every finish silently no-op.
+        taskRepository: FakeProjectTaskRepository =
+            FakeProjectTaskRepository(project.projectTasks?.firstOrNull())
     ): Pair<ProjectDetailViewModel, FakeSubTaskRepository> {
         val vm = ProjectDetailViewModel(
             isEdit = false,
             projectId = PROJECT_ID,
             projectRepository = FakeDetailProjectRepository(project),
-            projectTaskRepository = FakeProjectTaskRepository(),
+            projectTaskRepository = taskRepository,
             subTaskRepository = subTaskRepository,
             // backgroundScope, not the test scope: the ticker is an endless loop, and a live job
             // on the test scope would keep runTest from ever completing.
@@ -328,6 +338,324 @@ class ProjectDetailViewModelTest {
             cancelAndIgnoreRemainingEvents()
         }
     }
+
+    @Test
+    fun `checking a subtask marks it finished in state without a reload`() = runTest {
+        // The screen loads its project once, so the flip has to land in state itself or the card
+        // keeps rendering the stale row until the user leaves and comes back.
+        val s1 = subTask("s1")
+        val (vm, repo) = viewModel(project(s1, subTask("s2")), FakeSubTaskRepository(listOf(s1)))
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+
+            vm.onAction(ProjectDetailAction.OnSubTaskCheckedChange("s1"))
+            advanceUntilIdle()
+
+            val task = vm.task()!!
+            assertTrue(task.subTasks.first { it.projectSubTaskId == "s1" }.isFinished)
+            assertEquals(1, task.doneSubTaskCount, "the progress row reads off state too")
+            assertTrue(repo.upserted.last().isFinished)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `unchecking a finished subtask clears it in state`() = runTest {
+        val s1 = subTask("s1", isFinished = true)
+        val (vm, repo) = viewModel(project(s1), FakeSubTaskRepository(listOf(s1)))
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+
+            vm.onAction(ProjectDetailAction.OnSubTaskCheckedChange("s1"))
+            advanceUntilIdle()
+
+            assertFalse(vm.task()!!.subTasks.first().isFinished)
+            assertFalse(repo.upserted.last().isFinished)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    // --- task checkbox ---------------------------------------------------------------------
+
+    @Test
+    fun `checking a task without subtasks finishes it`() = runTest {
+        val taskRepo = FakeProjectTaskRepository(project().projectTasks!!.first())
+        val (vm, _) = viewModel(project(), taskRepository = taskRepo)
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+
+            vm.onAction(ProjectDetailAction.OnTaskCheckedChange(TASK_ID))
+            advanceUntilIdle()
+
+            assertTrue(vm.task()!!.isFinished)
+            assertTrue(taskRepo.upserted.last().isFinished)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `checking a running task without subtasks stops its timer`() = runTest {
+        val taskRepo = FakeProjectTaskRepository(project().projectTasks!!.first())
+        val (vm, _) = viewModel(project(), taskRepository = taskRepo)
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+
+            vm.onAction(ProjectDetailAction.OnToggleSessionTimer(TASK_ID))
+            settle()
+            assertTrue(vm.task()!!.isTimerRunning, "precondition: the timer is running")
+
+            vm.onAction(ProjectDetailAction.OnTaskCheckedChange(TASK_ID))
+            settle()
+
+            assertTrue(taskRepo.stopped.contains(TASK_ID), "a finished task must not keep counting")
+            assertFalse(vm.task()!!.isTimerRunning)
+            assertTrue(vm.task()!!.isFinished)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `unchecking a task without subtasks clears it`() = runTest {
+        val finished = project(taskFinished = true)
+        val taskRepo = FakeProjectTaskRepository(finished.projectTasks!!.first())
+        val (vm, _) = viewModel(finished, taskRepository = taskRepo)
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+
+            vm.onAction(ProjectDetailAction.OnTaskCheckedChange(TASK_ID))
+            advanceUntilIdle()
+
+            assertFalse(vm.task()!!.isFinished, "a task with no subtasks toggles freely")
+            assertFalse(taskRepo.upserted.last().isFinished)
+            assertFalse(vm.state.value.isUncheckTaskBlockedDialogVisible)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `checking a task finishes every one of its subtasks`() = runTest {
+        val open1 = subTask("s1")
+        val done = subTask("s2", isFinished = true)
+        val open2 = subTask("s3")
+        val proj = project(open1, done, open2)
+        val taskRepo = FakeProjectTaskRepository(proj.projectTasks!!.first())
+        val (vm, subTaskRepo) = viewModel(
+            proj,
+            FakeSubTaskRepository(listOf(open1, done, open2)),
+            taskRepository = taskRepo
+        )
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+
+            vm.onAction(ProjectDetailAction.OnTaskCheckedChange(TASK_ID))
+            advanceUntilIdle()
+
+            val task = vm.task()!!
+            assertTrue(task.isFinished)
+            assertTrue(task.subTasks.all { it.isFinished }, "checking the parent finishes them all")
+            assertEquals(3, task.doneSubTaskCount)
+            assertTrue(taskRepo.upserted.last().isFinished)
+            // The already-finished one is left alone rather than re-queued for sync.
+            assertEquals(
+                setOf("s1", "s3"),
+                subTaskRepo.upserted.map { it.projectSubTaskId }.toSet()
+            )
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `checking a task stops a running subtask`() = runTest {
+        val s1 = subTask("s1")
+        val proj = project(s1)
+        val taskRepo = FakeProjectTaskRepository(proj.projectTasks!!.first())
+        val (vm, subTaskRepo) = viewModel(
+            proj,
+            FakeSubTaskRepository(listOf(s1)),
+            taskRepository = taskRepo
+        )
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+
+            vm.onAction(ProjectDetailAction.OnToggleSubTaskTimer("s1"))
+            settle()
+            assertTrue(vm.task()!!.subTasks.first().isTimerRunning, "precondition: it is running")
+
+            vm.onAction(ProjectDetailAction.OnTaskCheckedChange(TASK_ID))
+            settle()
+
+            assertTrue(subTaskRepo.stopped.contains("s1"))
+            assertFalse(vm.task()!!.subTasks.first().isTimerRunning)
+            assertTrue(vm.task()!!.subTasks.first().isFinished)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `unchecking a task with subtasks is refused and raises the dialog`() = runTest {
+        val done = subTask("s1", isFinished = true)
+        val proj = project(done, taskFinished = true)
+        val taskRepo = FakeProjectTaskRepository(proj.projectTasks!!.first())
+        val (vm, subTaskRepo) = viewModel(
+            proj,
+            FakeSubTaskRepository(listOf(done)),
+            taskRepository = taskRepo
+        )
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+
+            vm.onAction(ProjectDetailAction.OnTaskCheckedChange(TASK_ID))
+            advanceUntilIdle()
+
+            assertTrue(vm.state.value.isUncheckTaskBlockedDialogVisible)
+            assertTrue(vm.task()!!.isFinished, "the refusal changes nothing")
+            assertTrue(taskRepo.upserted.isEmpty())
+            assertTrue(subTaskRepo.upserted.isEmpty())
+
+            vm.onAction(ProjectDetailAction.OnDismissUncheckTaskDialog)
+            advanceUntilIdle()
+            assertFalse(vm.state.value.isUncheckTaskBlockedDialogVisible)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `unchecking a subtask un-finishes its parent task`() = runTest {
+        // The escape route the uncheck-blocked dialog points the user at.
+        val done = subTask("s1", isFinished = true)
+        val proj = project(done, taskFinished = true)
+        val taskRepo = FakeProjectTaskRepository(proj.projectTasks!!.first())
+        val (vm, _) = viewModel(
+            proj,
+            FakeSubTaskRepository(listOf(done)),
+            taskRepository = taskRepo
+        )
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+
+            vm.onAction(ProjectDetailAction.OnSubTaskCheckedChange("s1"))
+            advanceUntilIdle()
+
+            assertFalse(vm.task()!!.subTasks.first().isFinished)
+            assertFalse(vm.task()!!.isFinished, "the parent follows its subtasks")
+            assertFalse(taskRepo.upserted.last().isFinished)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `checking the last open subtask finishes the parent task`() = runTest {
+        val done = subTask("s1", isFinished = true)
+        val open = subTask("s2")
+        val proj = project(done, open)
+        val taskRepo = FakeProjectTaskRepository(proj.projectTasks!!.first())
+        val (vm, _) = viewModel(
+            proj,
+            FakeSubTaskRepository(listOf(done, open)),
+            taskRepository = taskRepo
+        )
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+
+            vm.onAction(ProjectDetailAction.OnSubTaskCheckedChange("s2"))
+            advanceUntilIdle()
+
+            assertTrue(vm.task()!!.isFinished)
+            assertTrue(taskRepo.upserted.last().isFinished)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `checking a task keeps the time a running subtask just banked`() = runTest {
+        val s1 = subTask("s1", durationMillis = 1_000L)
+        val proj = project(s1)
+        val taskRepo = FakeProjectTaskRepository(proj.projectTasks!!.first())
+        val (vm, subTaskRepo) = viewModel(
+            proj,
+            FakeSubTaskRepository(listOf(s1)),
+            taskRepository = taskRepo
+        )
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+
+            vm.onAction(ProjectDetailAction.OnToggleSubTaskTimer("s1"))
+            settle()
+
+            vm.onAction(ProjectDetailAction.OnTaskCheckedChange(TASK_ID))
+            settle()
+
+            // The finishing write must be built on the post-stop row, not the snapshot taken
+            // before it, or the tracked time is silently thrown away.
+            val finishing = subTaskRepo.upserted.last { it.projectSubTaskId == "s1" }
+            assertTrue(finishing.isFinished)
+            assertEquals(1_000L + BANKED_MILLIS, finishing.durationMillis)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `checking a running subtask keeps the time it just banked`() = runTest {
+        val s1 = subTask("s1", durationMillis = 1_000L)
+        val proj = project(s1)
+        val (vm, subTaskRepo) = viewModel(proj, FakeSubTaskRepository(listOf(s1)))
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+
+            vm.onAction(ProjectDetailAction.OnToggleSubTaskTimer("s1"))
+            settle()
+
+            vm.onAction(ProjectDetailAction.OnSubTaskCheckedChange("s1"))
+            settle()
+
+            val finishing = subTaskRepo.upserted.last { it.projectSubTaskId == "s1" }
+            assertTrue(finishing.isFinished)
+            assertEquals(1_000L + BANKED_MILLIS, finishing.durationMillis)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `adding a subtask un-finishes a finished parent task`() = runTest {
+        // The other escape route named by the dialog.
+        val done = subTask("s1", isFinished = true)
+        val proj = project(done, taskFinished = true)
+        val taskRepo = FakeProjectTaskRepository(proj.projectTasks!!.first())
+        val (vm, _) = viewModel(
+            proj,
+            FakeSubTaskRepository(listOf(done)),
+            taskRepository = taskRepo
+        )
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+
+            vm.onAction(ProjectDetailAction.OnAddSubTaskClick(TASK_ID))
+            // beginAddSubTask swaps in a fresh TextFieldState, and state only republishes it once
+            // the scheduler runs — typing before this would fill the discarded buffer.
+            advanceUntilIdle()
+            vm.state.value.editSubTaskTextFieldState.setTextAndPlaceCursorAtEnd("Follow-up")
+            vm.onAction(ProjectDetailAction.OnCommitSubTaskTitle)
+            advanceUntilIdle()
+
+            assertEquals(2, vm.task()!!.subTasks.size)
+            assertFalse(vm.task()!!.isFinished, "a new open subtask re-opens its parent")
+            assertFalse(taskRepo.upserted.last().isFinished)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
 }
 
 // --- fakes -------------------------------------------------------------------------------------
@@ -352,9 +680,14 @@ private class FakeDetailProjectRepository(private val project: Project) : Projec
     override suspend fun syncPendingProjects() = Unit
 }
 
-private class FakeProjectTaskRepository : ProjectTaskRepository {
+private class FakeProjectTaskRepository(
+    initial: ProjectTask? = null
+) : ProjectTaskRepository {
     val started = mutableListOf<String>()
     val stopped = mutableListOf<String>()
+    val upserted = mutableListOf<ProjectTask>()
+
+    private val task = MutableStateFlow(initial)
 
     override suspend fun startProjectTask(taskId: String): EmptyResult<DataError> {
         started += taskId
@@ -366,22 +699,32 @@ private class FakeProjectTaskRepository : ProjectTaskRepository {
         return Result.Success(Unit)
     }
 
-    override suspend fun upsertProjectTask(projectTask: ProjectTask): EmptyResult<DataError> = Result.Success(Unit)
+    override suspend fun upsertProjectTask(projectTask: ProjectTask): EmptyResult<DataError> {
+        upserted += projectTask
+        task.value = projectTask
+        return Result.Success(Unit)
+    }
+
     override suspend fun deleteProjectTask(projectId: String, taskId: String): EmptyResult<DataError> = Result.Success(Unit)
     override suspend fun updateProjectTaskDuration(taskId: String, newDurationMillis: Long): EmptyResult<DataError> = Result.Success(Unit)
     override suspend fun updateProjectTaskTitle(taskId: String, title: String): EmptyResult<DataError> = Result.Success(Unit)
-    override fun getProjectTaskWithIntervalsById(taskId: String): Flow<ProjectTask?> = flowOf(null)
+    override fun getProjectTaskWithIntervalsById(taskId: String): Flow<ProjectTask?> = task
     override suspend fun syncPendingTasks() = Unit
 }
 
-private class FakeSubTaskRepository : SubTaskRepository {
+/** What [FakeSubTaskRepository.stopSubTask] adds to a subtask's duration, standing in for a real interval. */
+private const val BANKED_MILLIS = 5_000L
+
+private class FakeSubTaskRepository(
+    initial: List<ProjectSubTask> = emptyList()
+) : SubTaskRepository {
     val started = mutableListOf<String>()
     val stopped = mutableListOf<String>()
     val upserted = mutableListOf<ProjectSubTask>()
     val deleted = mutableListOf<String>()
     var lastStarted: String? = null
 
-    private val subTasks = MutableStateFlow<List<ProjectSubTask>>(emptyList())
+    private val subTasks = MutableStateFlow(initial)
 
     override fun getSubTasksForTask(taskId: String): Flow<List<ProjectSubTask>> = subTasks
 
@@ -398,14 +741,32 @@ private class FakeSubTaskRepository : SubTaskRepository {
         return Result.Success(Unit)
     }
 
+    // Both mirror production, which writes the flag to the row as well as opening/closing the
+    // interval (RoomLocalSubTaskDataSource.startTask, IntervalClosing). Callers that read the row
+    // back to decide whether a timer needs stopping depend on it.
     override suspend fun startSubTask(subTaskId: String): EmptyResult<DataError> {
         started += subTaskId
+        setTimerRunning(subTaskId, true)
         return Result.Success(Unit)
     }
 
     override suspend fun stopSubTask(subTaskId: String): EmptyResult<DataError> {
         stopped += subTaskId
+        // Production banks the elapsed interval into durationMillis here. Callers that copy a
+        // snapshot taken before the stop would silently write that back to zero, so the fake has
+        // to reproduce the write for a test to be able to catch it.
+        subTasks.value = subTasks.value.map {
+            if (it.projectSubTaskId == subTaskId) {
+                it.copy(isTimerRunning = false, durationMillis = (it.durationMillis ?: 0) + BANKED_MILLIS)
+            } else it
+        }
         return Result.Success(Unit)
+    }
+
+    private fun setTimerRunning(subTaskId: String, isRunning: Boolean) {
+        subTasks.value = subTasks.value.map {
+            if (it.projectSubTaskId == subTaskId) it.copy(isTimerRunning = isRunning) else it
+        }
     }
 
     override suspend fun lastStartedSubTaskId(taskId: String): String? = lastStarted

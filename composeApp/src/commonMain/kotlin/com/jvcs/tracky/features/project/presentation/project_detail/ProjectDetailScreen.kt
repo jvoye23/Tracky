@@ -9,13 +9,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -26,6 +30,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.History
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -33,6 +38,7 @@ import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -42,13 +48,21 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -72,12 +86,17 @@ import org.koin.compose.viewmodel.koinViewModel
 import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.description
 import tracky.composeapp.generated.resources.last_active
+import tracky.composeapp.generated.resources.ok
 import tracky.composeapp.generated.resources.light_text_color
-import tracky.composeapp.generated.resources.project_color
 import tracky.composeapp.generated.resources.project_duration
+import tracky.composeapp.generated.resources.select_project_color
 import tracky.composeapp.generated.resources.start_date
+import tracky.composeapp.generated.resources.task_completed_count
 import tracky.composeapp.generated.resources.tasks
+import tracky.composeapp.generated.resources.tasks_completed
 import tracky.composeapp.generated.resources.title
+import tracky.composeapp.generated.resources.uncheck_task_blocked_message
+import tracky.composeapp.generated.resources.uncheck_task_blocked_title
 
 @Composable
 fun ProjectDetailScreenRoot(
@@ -134,19 +153,49 @@ fun NewProjectDetailScreen(
     onAction: (ProjectDetailAction) -> Unit,
     snackbarHostState: SnackbarHostState
 ) {
-    val project = state.project
+
+    val listState = rememberLazyListState()
+    // Without this the bar collapses on any drag, even when the whole list fits on screen and
+    // there is nothing to scroll to.
+    val canScrollList = { listState.canScrollForward || listState.canScrollBackward }
+    val enterAlwaysScrollBehavior =
+        TopAppBarDefaults.enterAlwaysScrollBehavior(canScroll = canScrollList)
+    val pinnedScrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(canScroll = canScrollList)
+    val scrollBehavior =
+        if (state.isEditMode) pinnedScrollBehavior else enterAlwaysScrollBehavior
+
+    // If the content shrinks below one screen while the bar is collapsed, no scroll is left to
+    // bring it back, so release it explicitly.
+    LaunchedEffect(scrollBehavior) {
+        snapshotFlow { listState.canScrollForward || listState.canScrollBackward }
+            .collect { scrollable -> if (!scrollable) scrollBehavior.state.heightOffset = 0f }
+    }
+
+    // Composited against the Scaffold background so it is fully opaque: the top bar uses this
+    // colour too, and list items scrolling underneath must not show through it.
+    val headerColor = state.projectColor?.copy(alpha = 0.12f)
+        ?.compositeOver(MaterialTheme.colorScheme.surfaceContainerLow)
+        ?: MaterialTheme.colorScheme.onSurface
+    // The header paints edge-to-edge behind the status bar, so it has to reserve the space
+    // the bar and the status bar occupy itself. Both values are constant, unlike the
+    // Scaffold's top padding, which shrinks frame by frame as the bar collapses.
+    val headerTopInset = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding() +
+            TopAppBarDefaults.TopAppBarExpandedHeight
 
     Scaffold(
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState)
         },
+        modifier = Modifier
+            .fillMaxSize()
+            .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
                     Text(
                         if (state.isEditMode) "EDIT PROJECT" else "PROJECT DETAILS",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.outline
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 },
                 navigationIcon = {
@@ -170,31 +219,79 @@ fun NewProjectDetailScreen(
                             contentDescription = "Action"
                         )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = headerColor,
+                    scrolledContainerColor = headerColor
+                ),
+                scrollBehavior = scrollBehavior
             )
         },
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        contentWindowInsets = WindowInsets.safeDrawing
     ) { paddingValues ->
-        if (project == null) {
+        if (state.project == null) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
         } else {
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = paddingValues.calculateBottomPadding()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // 1. Header
                 item {
-                    ProjectHeader(
-                        title = state.titleText ?: stringResource(Res.string.title),
-                        description = state.descriptionText ?: stringResource(Res.string.description),
-                        onAction = onAction,
-                        state = state
-                    )
+                    Column(
+                        modifier = Modifier
+                            .background(
+                                color = headerColor,
+                                shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
+                            )
+                            .padding(top = headerTopInset),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        ProjectHeader(
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp),
+                            title = state.titleText ?: stringResource(Res.string.title),
+                            description = state.descriptionText ?: stringResource(Res.string.description),
+                            onAction = onAction,
+                            state = state
+                        )
+                        if (state.isEditMode) {
+                            ColorInfoCard(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp),
+                                label = stringResource(Res.string.select_project_color),
+                                colorValue = state.projectColor ?: Color.Cyan,
+                                hexCode = state.selectedColorHex,
+                                isEditMode = state.isEditMode,
+                                onClick = { onAction(ProjectDetailAction.OnToggleColorPicker) }
+                            )
+                            TextColorToggle(
+                                modifier = Modifier
+                                    .padding(horizontal = 16.dp),
+                                useLightTextColor = state.useLightTextColor,
+                                onToggle = { onAction(ProjectDetailAction.OnUseLightTextColorToggled(it)) }
+                            )
+                        }
+                        DurationHeroCard(
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .padding(bottom = 16.dp),
+                            label = stringResource(Res.string.project_duration),
+                            totalDuration = state.project.totalProjectDuration ?: "00:00:00:00",
+                            projectColor = state.projectColor ?: MaterialTheme.colorScheme.onSurface,
+                            useLightTextColor = state.useLightTextColor,
+                            onStartStopClick = {
+                                // Logic for project-wide tracker if needed
+                                onAction(ProjectDetailAction.OnStartTrackerClick)
+                            }
+                        )
+                    }
                 }
 
                 // 2. Info Grid
@@ -205,50 +302,33 @@ fun NewProjectDetailScreen(
                         startDate = state.project.startDateTimeUtc,
                         lastActive = state.project.startDateTimeUtc,
                         sessionCount = state.project.projectTasks?.size ?: 0,
-                        color = state.selectedColor ?: Color.Cyan,
+                        color = state.projectColor ?: Color.Cyan,
                         state = state,
                         onAction = onAction
                     )
                 }
 
-                // 3. Project Duration Hero Card
+                // 4. Sessions Header
                 item {
-                    DurationHeroCard(
+                    TasksHeader(
                         modifier = Modifier
-                            .padding(bottom = 16.dp),
-                        label = stringResource(Res.string.project_duration),
-                        totalDuration = state.project.totalProjectDuration ?: "00:00:00:00",
-                        projectColor = state.selectedColor ?: MaterialTheme.colorScheme.primary,
-                        useLightTextColor = state.useLightTextColor,
-                        onStartStopClick = {
-                            // Logic for project-wide tracker if needed
-                            onAction(ProjectDetailAction.OnStartTrackerClick)
-                        }
+                            .padding(horizontal = 16.dp),
+                        onAddClick = {
+                            onAction(ProjectDetailAction.OnToggleAddNewProjectSessionBottomSheet)
+                        },
+                        addButtonContainerColor = state.projectColor ?: MaterialTheme.colorScheme.primary,
+                        addButtonContentColor = if (state.useLightTextColor) Color.White else Color.Black
                     )
                 }
 
-                if (state.isEditMode) {
-                    item {
-                        TextColorToggle(
-                            useLightTextColor = state.useLightTextColor,
-                            onToggle = { onAction(ProjectDetailAction.OnUseLightTextColorToggled(it)) }
-                        )
-                    }
-                }
-
-                // 4. Sessions Header
-                item {
-                    TasksHeader(onAddClick = {
-                        onAction(ProjectDetailAction.OnToggleAddNewProjectSessionBottomSheet)
-                    })
-                }
-
                 // 5. Session Items
-                itemsIndexed(project.projectTasks ?: emptyList()) { index, session ->
+                itemsIndexed(state.project.projectTasks ?: emptyList()) { index, session ->
                     TaskItemCard(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp),
                         index = index + 1,
                         task = session,
-                        projectColor = state.selectedColor ?: MaterialTheme.colorScheme.primary,
+                        projectColor = state.projectColor ?: MaterialTheme.colorScheme.primary,
                         isEditMode = state.isEditMode,
                         onToggleTimer = {
                             onAction(ProjectDetailAction.OnToggleSessionTimer(session.projectTaskId))
@@ -259,7 +339,9 @@ fun NewProjectDetailScreen(
                         onCardClick = {
                             onAction(ProjectDetailAction.OnProjectSessionCardClick(session.projectTaskId))
                         },
-                        onCheckedChange = {},
+                        onCheckedChange = {
+                            onAction(ProjectDetailAction.OnTaskCheckedChange(session.projectTaskId))
+                        },
                         onToggleSubTaskTimer = { subTaskId ->
                             onAction(ProjectDetailAction.OnToggleSubTaskTimer(subTaskId))
                         },
@@ -286,6 +368,7 @@ fun NewProjectDetailScreen(
                             onAction(ProjectDetailAction.OnCommitSubTaskTitle)
                         }
                     )
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
             }
         }
@@ -298,9 +381,22 @@ fun NewProjectDetailScreen(
     }
     if (state.isColorPickerVisible) {
         TrackyColorPicker(
-            currentColor = state.selectedColor ?: Color.Cyan,
+            currentColor = state.projectColor ?: Color.Cyan,
             onCancel = { onAction(ProjectDetailAction.OnToggleColorPicker) },
             onSave = { onAction(ProjectDetailAction.OnColorChanged(it)) }
+        )
+    }
+    // Purely informational — there is nothing to confirm, so it gets one OK and no dismiss button.
+    if (state.isUncheckTaskBlockedDialogVisible) {
+        AlertDialog(
+            onDismissRequest = { onAction(ProjectDetailAction.OnDismissUncheckTaskDialog) },
+            title = { Text(text = stringResource(Res.string.uncheck_task_blocked_title)) },
+            text = { Text(text = stringResource(Res.string.uncheck_task_blocked_message)) },
+            confirmButton = {
+                TextButton(onClick = { onAction(ProjectDetailAction.OnDismissUncheckTaskDialog) }) {
+                    Text(text = stringResource(Res.string.ok))
+                }
+            }
         )
     }
 }
@@ -314,9 +410,12 @@ private fun ProjectHeader(
     onAction: (ProjectDetailAction) -> Unit,
     state: ProjectDetailState,
 ) {
-    Column {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
         Row(
-            modifier = modifier
+            modifier = Modifier
                 .fillMaxWidth()
                 .background(if (state.isEditMode) MaterialTheme.colorScheme.surfaceContainerLow else Color.Transparent)
                 .padding(vertical = 4.dp)
@@ -325,7 +424,6 @@ private fun ProjectHeader(
                         ProjectDetailAction.OnEditTextClick(
                             text = state.titleText,
                             editTextType = EditTextType.TITLE
-
                         )
                     )
                 },
@@ -348,10 +446,10 @@ private fun ProjectHeader(
                 else MaterialTheme.colorScheme.primary.copy(alpha = 0f),
             )
         }
+
         //Description
-        Spacer(modifier = Modifier.height(8.dp))
         Row(
-            modifier = modifier
+            modifier = Modifier
                 .fillMaxWidth()
                 .background(if (state.isEditMode) MaterialTheme.colorScheme.surfaceContainerLow else Color.Transparent)
                 .padding(vertical = 4.dp)
@@ -370,6 +468,8 @@ private fun ProjectHeader(
                 modifier = Modifier
                     .weight(1f),
                 text = description,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -396,22 +496,39 @@ private fun InfoGrid(
     onAction: (ProjectDetailAction) -> Unit
 ) {
     Column(
-        modifier = modifier,
+        modifier = modifier
+            .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             InfoCard(Modifier.weight(1f), Icons.Outlined.DateRange, stringResource(Res.string.start_date), startDate)
             InfoCard(Modifier.weight(1f), Icons.Outlined.History, stringResource(Res.string.last_active), lastActive)
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            InfoCard(Modifier.weight(1f), Icons.Outlined.GridView, stringResource(Res.string.tasks), "$sessionCount Total")
-            ColorInfoCard(
-                modifier = Modifier.weight(1f),
-                label = stringResource(Res.string.project_color),
-                colorValue = color,
-                hexCode = state.selectedColorHex,
-                isEditMode = state.isEditMode,
-                onClick = { onAction(ProjectDetailAction.OnToggleColorPicker) }
+
+        InfoCard(
+            modifier = Modifier
+                .fillMaxWidth(),
+            icon = Icons.Outlined.GridView,
+            label = stringResource(Res.string.tasks_completed),
+            value = stringResource(
+                Res.string.task_completed_count,
+                state.project?.doneTaskCount ?: 0,
+                state.project?.projectTasks?.size ?: 0
+            )
+        ) {
+            Spacer(modifier = Modifier.height(8.dp))
+            LinearProgressIndicator(
+                // Lambda overload: the progress is read in the draw phase, so animating it
+                // later will not recompose the card.
+                progress = { state.project?.taskProgress ?: 0f },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp),
+                color = state.projectColor ?: MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                strokeCap = StrokeCap.Round,
+                gapSize = 0.dp,
+                drawStopIndicator = {}
             )
         }
     }
@@ -453,9 +570,14 @@ private fun TextColorToggle(
 }
 
 @Composable
-private fun TasksHeader(onAddClick: () -> Unit) {
+private fun TasksHeader(
+    modifier: Modifier = Modifier,
+    onAddClick: () -> Unit,
+    addButtonContainerColor: Color,
+    addButtonContentColor: Color
+) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -464,8 +586,8 @@ private fun TasksHeader(onAddClick: () -> Unit) {
             onClick = onAddClick,
             shape = RoundedCornerShape(16.dp),
             colors = IconButtonDefaults.filledIconButtonColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                containerColor =  addButtonContainerColor,
+                contentColor = addButtonContentColor
             )
         ) {
             Icon(Icons.Default.Add, contentDescription = "Add Task")
@@ -487,6 +609,31 @@ private fun NewProjectDetailScreenPreview() {
                     title = "Project One",
                     description = "Description 1",
                     color = Color.Red,
+                    totalDuration = "10:00:00",
+                    startDateTimeUtc = "2023-01-01T00:00:00Z",
+                    isFinished = false,
+                    endDateTimeUtc = null,
+                    projectTasks = projectSessionsPreview
+                ),
+                isEditMode = false
+            ),
+            snackbarHostState = SnackbarHostState()
+        )
+    }
+}
+
+@Preview(device = Devices.PIXEL_9_PRO)
+@Composable
+private fun NewProjectDetailScreenEditModePreview() {
+    TrackyTheme {
+        NewProjectDetailScreen(
+            onAction = {},
+            state = ProjectDetailState(
+                project = ProjectUi(
+                    projectId = "1",
+                    title = "Project One",
+                    description = "Description 1",
+                    color = Color.Yellow,
                     totalDuration = "10:00:00",
                     startDateTimeUtc = "2023-01-01T00:00:00Z",
                     isFinished = false,

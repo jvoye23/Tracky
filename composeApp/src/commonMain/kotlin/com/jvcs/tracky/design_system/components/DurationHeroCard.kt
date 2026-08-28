@@ -58,20 +58,6 @@ fun DurationHeroCard(
                 fontWeight = FontWeight.Bold,
                 color = contentColor
             )
-            Spacer(modifier = Modifier.height(16.dp))
-            Surface(
-                color = contentColor.copy(alpha = 0.2f),
-                shape = CircleShape
-            ) {
-                Row(
-                    Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.Schedule, null, Modifier.size(12.dp), tint = contentColor)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("TRACKER", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = contentColor)
-                }
-            }
         }
     }
 }

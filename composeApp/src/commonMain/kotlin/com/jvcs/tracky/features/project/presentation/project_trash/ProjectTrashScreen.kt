@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
@@ -29,9 +30,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
@@ -124,7 +127,19 @@ fun ProjectTrashScreen(
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed)
 ) {
-    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+    val listState = rememberLazyListState()
+    // Without this the bar collapses on any drag, even when the whole list fits on screen and
+    // there is nothing to scroll to.
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(
+        canScroll = { listState.canScrollForward || listState.canScrollBackward }
+    )
+
+    // If the content shrinks below one screen while the bar is collapsed, no scroll is left to
+    // bring it back, so release it explicitly.
+    LaunchedEffect(scrollBehavior) {
+        snapshotFlow { listState.canScrollForward || listState.canScrollBackward }
+            .collect { scrollable -> if (!scrollable) scrollBehavior.state.heightOffset = 0f }
+    }
     val drawerScope = rememberCoroutineScope()
     val backState = rememberNavigationEventState(NavigationEventInfo.None)
 
@@ -178,6 +193,7 @@ fun ProjectTrashScreen(
             contentWindowInsets = WindowInsets.safeDrawing
         ) { innerPadding ->
             LazyColumn(
+                state = listState,
                 modifier = modifier
                     .fillMaxSize()
                     .padding(horizontal = 10.dp)
