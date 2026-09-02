@@ -46,9 +46,7 @@ fun ColorInfoCard(
     ) {
         Row(
             modifier = Modifier.padding(
-                start = 16.dp,
-                top = 16.dp,
-                bottom = 16.dp
+                all = 16.dp
             ),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
@@ -83,14 +81,6 @@ fun ColorInfoCard(
                         fontWeight = FontWeight.SemiBold
                     )
                 }
-            }
-            if (isEditMode) {
-                Icon(
-                    modifier = Modifier.size(20.dp),
-                    imageVector = Icon_ChevronRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                )
             }
         }
     }

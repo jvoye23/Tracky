@@ -91,6 +91,54 @@ val Typography.timerStyle: TextStyle
         lineHeight = 24.sp
     )
 
+val Typography.authLabelStyle: TextStyle
+    @Composable
+    get() = TextStyle(
+        fontFamily = Inter,
+        fontWeight = FontWeight.Normal,
+        fontSize = 15.sp,
+        lineHeight = 20.sp,
+    )
+
+val Typography.authElevatedLabelStyle: TextStyle
+    @Composable
+    get() = TextStyle(
+        fontFamily = Inter,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 11.sp,
+        lineHeight = 14.sp,
+        letterSpacing = 0.5.sp
+    )
+
+val Typography.authTextStyle: TextStyle
+    @Composable
+    get() = TextStyle(
+        fontFamily = Inter,
+        fontWeight = FontWeight.Normal,
+        fontSize = 15.sp,
+        lineHeight = 20.sp,
+    )
+
+val Typography.projectLabelStyle: TextStyle
+    @Composable
+    get() = TextStyle(
+        fontFamily = Inter,
+        fontWeight = FontWeight.Normal,
+        fontSize = 15.sp,
+        lineHeight = 20.sp,
+    )
+
+val Typography.projectElevatedLabelStyle: TextStyle
+    @Composable
+    get() = TextStyle(
+        fontFamily = Inter,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 11.sp,
+        lineHeight = 14.sp,
+        letterSpacing = 0.5.sp
+    )
+
+
 val Typography.labelXSmall: TextStyle
     @Composable
     get() = TextStyle(

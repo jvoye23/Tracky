@@ -1,7 +1,6 @@
 package com.jvcs.tracky.features.project.presentation.project_detail
 
 import androidx.compose.ui.graphics.Color
-import com.jvcs.tracky.features.project.domain.project.EditTextType
 
 sealed interface ProjectDetailAction {
 
@@ -13,7 +12,7 @@ sealed interface ProjectDetailAction {
 
     data object OnEditModeClick: ProjectDetailAction
 
-    data class OnEditTextClick(val text: String?, val editTextType: EditTextType): ProjectDetailAction
+    data class OnEditTextClick(val title: String, val description: String): ProjectDetailAction
 
     data object OnStartTrackerClick: ProjectDetailAction
     data class OnToggleSessionTimer(val projectSessionId: String): ProjectDetailAction
@@ -21,7 +20,7 @@ sealed interface ProjectDetailAction {
 
     data object OnToggleAddNewProjectSessionBottomSheet: ProjectDetailAction
 
-    data class OnEditTextChanged(val editTextType: EditTextType, val value: String): ProjectDetailAction
+    data class OnEditTextChanged(val title: String, val description: String): ProjectDetailAction
     data class OnProjectSessionCardClick(val projectSessionId: String): ProjectDetailAction
     data class OnDeleteSessionClick(val sessionId: String): ProjectDetailAction
 

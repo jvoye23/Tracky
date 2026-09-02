@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
@@ -36,7 +37,7 @@ import org.koin.core.parameter.parametersOf
 fun NavigationRoot(
     backStack: NavBackStack<NavKey>
 ) {
-    val editTextCallback = remember { mutableStateOf<((String) -> Unit)?>(null) }
+    val editTextCallback = remember { mutableStateOf<((String, String) -> Unit)?>(null) }
 
     NavDisplay(
         modifier = Modifier.fillMaxSize(),
@@ -177,26 +178,28 @@ fun NavigationRoot(
             }
             entry<Route.ProjectRoute.ProjectDetail> { key ->
                 val detailVm: ProjectDetailViewModel = koinViewModel {
-                    parametersOf(key.isEditMode, key.projectId, key.editedText, key.editedTextType)
+                    parametersOf(key.isEditMode, key.projectId)
                 }
                 ProjectDetailScreenRoot(
                     navigateBack = {
                         backStack.remove(key)
                     },
                     viewModel = detailVm,
-                    onEditTextClick = { text, editTextType ->
-                        editTextCallback.value = { newText ->
+                    onEditTextClick = { isEditMode, title, description, colorArgb ->
+                        editTextCallback.value = { newTitle, newDescription ->
                             detailVm.onAction(
                                 action = ProjectDetailAction.OnEditTextChanged(
-                                    editTextType = editTextType,
-                                    value = newText
+                                    title = newTitle,
+                                    description = newDescription
                                 )
                             )
                         }
                         backStack.add(
                             Route.ProjectRoute.EditTextNavKey(
-                                editText = text,
-                                editTextType = editTextType
+                                isEditMode = isEditMode,
+                                titleText = title,
+                                descriptionText = description,
+                                colorArgb = colorArgb
                             )
                         )
                     },
@@ -217,13 +220,15 @@ fun NavigationRoot(
             }
             entry<Route.ProjectRoute.EditTextNavKey> { key ->
                 EditTextScreenRoot(
-                    editTextType = key.editTextType,
-                    editText = key.editText,
+                    isEditMode = key.isEditMode,
+                    titleText = key.titleText,
+                    descriptionText = key.descriptionText,
+                    projectColor = key.colorArgb?.let { Color(it) },
                     onCancelClick = {
                         backStack.remove(key)
                     },
-                    onSaveClick = { updatedText, _ ->
-                        editTextCallback.value?.invoke(updatedText)
+                    onSaveClick = { updatedTitle, updatedDescription ->
+                        editTextCallback.value?.invoke(updatedTitle, updatedDescription)
                         backStack.remove(key)
                     }
                 )
