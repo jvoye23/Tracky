@@ -104,6 +104,7 @@ kotlin {
             implementation(libs.material.icons.extended)
 
             implementation(libs.navigation.compose)
+            implementation(libs.androidx.navigationevent.compose)
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.adaptive)
             implementation(libs.kotlinx.datetime)
@@ -134,13 +135,27 @@ kotlin {
     }
 }
 
+// Compose Multiplatform 1.12.0 pulls org.jetbrains.androidx.navigationevent:navigationevent-compose
+// 1.1.0, which is an empty forwarder to the AndroidX artifact it depends on. Both publish a klib
+// named `navigationevent-compose_commonMain`, and the metadata transformation keeps only one of
+// them -- the empty one wins, so androidx.navigationevent.compose vanishes from commonMain while
+// still resolving on the Android and JVM targets. Drop the forwarder; the real artifact is declared
+// above.
+configurations.configureEach {
+    exclude(group = "org.jetbrains.androidx.navigationevent", module = "navigationevent-compose")
+}
+
 room{
     schemaDirectory("${projectDir}/schemas")
 }
 
 dependencies {
     // KSP support for Room Compiler.
-    ksp(libs.room.compiler)
+    // KMP has no generic `ksp` configuration; each target needs its own.
+    add("kspAndroid", libs.room.compiler)
+    add("kspJvm", libs.room.compiler)
+    add("kspIosArm64", libs.room.compiler)
+    add("kspIosSimulatorArm64", libs.room.compiler)
 }
 
 

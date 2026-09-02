@@ -3,7 +3,6 @@ package com.jvcs.tracky.navigation
 import androidx.navigation3.runtime.NavKey
 import androidx.savedstate.serialization.decodeFromSavedState
 import androidx.savedstate.serialization.encodeToSavedState
-import com.jvcs.tracky.features.project.domain.project.EditTextType
 import kotlinx.serialization.PolymorphicSerializer
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -75,13 +74,12 @@ class RouteSerialNameTest {
             Route.ProjectRoute.ProjectTrash,
             Route.ProjectRoute.ProjectDetail(
                 isEditMode = true,
-                projectId = "id",
-                editedText = "text",
-                editedTextType = EditTextType.DESCRIPTION
+                projectId = "id"
             ),
             Route.ProjectRoute.EditTextNavKey(
-                editText = "text",
-                editTextType = EditTextType.TITLE
+                isEditMode = true,
+                titleText = "title",
+                descriptionText = "description"
             ),
             Route.ProjectRoute.TaskDetail(taskId = "id"),
         )
@@ -102,13 +100,5 @@ class RouteSerialNameTest {
 
             assertEquals(route, decoded)
         }
-    }
-
-    @Test
-    fun `edit text type serial names are stable`() {
-        val descriptor = EditTextType.serializer().descriptor
-        val entryNames = (0 until descriptor.elementsCount).map(descriptor::getElementName)
-
-        assertEquals(listOf("key_title", "key_description"), entryNames)
     }
 }

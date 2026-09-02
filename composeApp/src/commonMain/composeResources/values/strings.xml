@@ -21,6 +21,9 @@
     <string name="cancel">Cancel</string>
     <string name="save">Save</string>
     <string name="description">Description</string>
+    <string name="back">Back</string>
+    <string name="project_details_uppercase">PROJECT DETAILS</string>
+    <string name="edit_project_uppercase">EDIT PROJECT</string>
     <string name="project_overview">Project Overview</string>
     <string name="sessions">Sessions</string>
     <string name="tasks">Tasks</string>

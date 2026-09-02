@@ -37,7 +37,7 @@ data class ProjectUi(
 
     val allTasksDone: Boolean
         get() = !projectTasks.isNullOrEmpty() &&
-                projectTasks.all { it.formattedEndDateTimeUtc.isNotBlank() }
+                doneTaskCount == projectTasks.size
 
     val doneTaskCount: Int
         get() = projectTasks?.count { it.isFinished } ?: 0

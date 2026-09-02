@@ -13,6 +13,7 @@ import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeManager
 import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.core.domain.util.TimerState
+import com.jvcs.tracky.design_system.util.UiText
 import com.jvcs.tracky.features.project.presentation.mappers.toProject
 import com.jvcs.tracky.features.project.presentation.models.ProjectSubTaskUi
 import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
@@ -21,7 +22,6 @@ import com.jvcs.tracky.features.project.presentation.mappers.toProjectTaskUi
 import com.jvcs.tracky.features.project.presentation.mappers.toProjectUi
 import com.jvcs.tracky.features.project.presentation.util.toUiText
 import com.jvcs.tracky.design_system.util.parseDuration
-import com.jvcs.tracky.features.project.domain.project.EditTextType
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
 import com.jvcs.tracky.features.project.domain.task.ProjectTaskRepository
 import kotlinx.coroutines.CoroutineDispatcher
@@ -36,6 +36,9 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
+import tracky.composeapp.generated.resources.Res
+import tracky.composeapp.generated.resources.title
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -95,7 +98,7 @@ class ProjectDetailViewModel(
             is ProjectDetailAction.OnEditTextClick -> {}
             ProjectDetailAction.OnStartTrackerClick -> {}
             ProjectDetailAction.OnStopTrackerClick -> {}
-            is ProjectDetailAction.OnEditTextChanged -> {onEditTextChanged(action.value, action.editTextType)}
+            is ProjectDetailAction.OnEditTextChanged -> {onEditTextChanged(action.title, action.description)}
             is ProjectDetailAction.OnProjectSessionCardClick -> {}
             ProjectDetailAction.OnToggleAddNewProjectSessionBottomSheet -> {toggleAddNewProjectSessionBottomSheet()}
             is ProjectDetailAction.OnCreateProjectSession -> {createProjectTask(action.projectSessionTitle)}
@@ -278,7 +281,7 @@ class ProjectDetailViewModel(
                 descriptionText = newProject?.description ?:"",
                 projectColor = color,
                 selectedColorHex = color?.toHex() ?: "#00FFFF",
-                useLightTextColor = newProject?.useLightTextColor ?: true
+                useLightTextColor = newProject?.useLightTextColor ?: true,
             ) }
         }
     }
@@ -708,13 +711,16 @@ class ProjectDetailViewModel(
         }
     }
 
-    private fun onEditTextChanged(value: String, editTextType: EditTextType) {
-        when(editTextType) {
-            EditTextType.TITLE ->
-                _state.update { it.copy(titleText = value) }
-            EditTextType.DESCRIPTION ->
-                _state.update { it.copy(descriptionText = value) }
-        }
+    // The EditText screen hands both fields back at once. It never writes to the repository itself,
+    // so edit mode is switched on here: that surfaces the pending strings on the detail screen and
+    // leaves saveProjectDetails() - reachable through the detail screen's own Save - the only
+    // persistence path.
+    private fun onEditTextChanged(title: String, description: String) {
+        _state.update { it.copy(
+            titleText = title,
+            descriptionText = description,
+            isEditMode = true
+        ) }
     }
 
     private fun toggleEditMode() {

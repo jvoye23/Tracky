@@ -26,6 +26,9 @@ import com.jvcs.tracky.design_system.Icon_Lock
 import com.jvcs.tracky.design_system.components.AuthHeaderIcon
 import com.jvcs.tracky.design_system.components.TrackyPrimaryButton
 import com.jvcs.tracky.design_system.components.TrackyTextField
+import com.jvcs.tracky.design_system.theme.authElevatedLabelStyle
+import com.jvcs.tracky.design_system.theme.authLabelStyle
+import com.jvcs.tracky.design_system.theme.authTextStyle
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import tracky.composeapp.generated.resources.Res
@@ -123,6 +126,9 @@ fun ResetPasswordScreen(
                     },
                     hint = stringResource(Res.string.password_hint),
                     modifier = Modifier.fillMaxWidth(),
+                    labelStyle = MaterialTheme.typography.authLabelStyle,
+                    elevatedLabelStyle = MaterialTheme.typography.authElevatedLabelStyle,
+                    textStyle = MaterialTheme.typography.authTextStyle,
                 )
 
                 if (state.errorText != null) {

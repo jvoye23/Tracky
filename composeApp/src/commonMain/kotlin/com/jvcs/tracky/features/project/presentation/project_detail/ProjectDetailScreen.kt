@@ -2,6 +2,7 @@ package com.jvcs.tracky.features.project.presentation.project_detail
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,7 +17,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -51,16 +51,15 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Devices
@@ -69,11 +68,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
 import com.jvcs.tracky.features.project.presentation.models.ProjectUi
-import com.jvcs.tracky.design_system.Icon_ChevronRight
 import com.jvcs.tracky.design_system.components.DurationHeroCard
 import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.design_system.util.ObserveAsEvents
-import com.jvcs.tracky.features.project.domain.project.EditTextType
+import com.jvcs.tracky.design_system.util.rememberCollapsibleScrollBehavior
 import com.jvcs.tracky.features.project.presentation.models.ProjectSubTaskUi
 import com.jvcs.tracky.features.project.presentation.project_detail.components.AddNewProjectTaskBottomSheet
 import com.jvcs.tracky.features.project.presentation.project_detail.components.ColorInfoCard
@@ -101,7 +99,7 @@ import tracky.composeapp.generated.resources.uncheck_task_blocked_title
 @Composable
 fun ProjectDetailScreenRoot(
     navigateBack: () -> Unit,
-    onEditTextClick: (String?, EditTextType) -> Unit,
+    onEditTextClick: (isEditMode: Boolean, title: String, description: String, colorArgb: Int?) -> Unit,
     onProjectTaskClick: (String) -> Unit,
     viewModel: ProjectDetailViewModel = koinViewModel ()
 ) {
@@ -131,12 +129,18 @@ fun ProjectDetailScreenRoot(
         }
     }
 
-    NewProjectDetailScreen(
+    ProjectDetailScreen(
         state = state,
         onAction = { action ->
             when(action) {
                 ProjectDetailAction.OnBackClick -> navigateBack()
-                is ProjectDetailAction.OnEditTextClick -> onEditTextClick(action.text, action.editTextType)
+                is ProjectDetailAction.OnEditTextClick ->
+                    onEditTextClick(
+                        state.isEditMode,
+                        action.title,
+                        action.description,
+                        state.projectColor?.toArgb()
+                    )
                 is ProjectDetailAction.OnProjectSessionCardClick -> onProjectTaskClick(action.projectSessionId)
                 else -> Unit
             }
@@ -148,28 +152,19 @@ fun ProjectDetailScreenRoot(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NewProjectDetailScreen(
+fun ProjectDetailScreen(
     state: ProjectDetailState,
     onAction: (ProjectDetailAction) -> Unit,
     snackbarHostState: SnackbarHostState
 ) {
 
     val listState = rememberLazyListState()
-    // Without this the bar collapses on any drag, even when the whole list fits on screen and
-    // there is nothing to scroll to.
-    val canScrollList = { listState.canScrollForward || listState.canScrollBackward }
-    val enterAlwaysScrollBehavior =
-        TopAppBarDefaults.enterAlwaysScrollBehavior(canScroll = canScrollList)
-    val pinnedScrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(canScroll = canScrollList)
-    val scrollBehavior =
-        if (state.isEditMode) pinnedScrollBehavior else enterAlwaysScrollBehavior
-
-    // If the content shrinks below one screen while the bar is collapsed, no scroll is left to
-    // bring it back, so release it explicitly.
-    LaunchedEffect(scrollBehavior) {
-        snapshotFlow { listState.canScrollForward || listState.canScrollBackward }
-            .collect { scrollable -> if (!scrollable) scrollBehavior.state.heightOffset = 0f }
-    }
+    // One instance, shared by the app bar and the nested-scroll connection below. Calling the
+    // helper again at either site would orphan a behavior and freeze the list.
+    val scrollBehavior = rememberCollapsibleScrollBehavior(
+        listState = listState,
+        pinned = state.isEditMode
+    )
 
     // Composited against the Scaffold background so it is fully opaque: the top bar uses this
     // colour too, and list items scrolling underneath must not show through it.
@@ -301,10 +296,7 @@ fun NewProjectDetailScreen(
                             .padding(vertical = 16.dp),
                         startDate = state.project.startDateTimeUtc,
                         lastActive = state.project.startDateTimeUtc,
-                        sessionCount = state.project.projectTasks?.size ?: 0,
-                        color = state.projectColor ?: Color.Cyan,
-                        state = state,
-                        onAction = onAction
+                        state = state
                     )
                 }
 
@@ -411,78 +403,51 @@ private fun ProjectHeader(
     state: ProjectDetailState,
 ) {
     Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(if (state.isEditMode) MaterialTheme.colorScheme.surfaceContainerLow else Color.Transparent)
-                .padding(vertical = 4.dp)
-                .clickable {
-                    if (state.isEditMode) onAction(
-                        ProjectDetailAction.OnEditTextClick(
-                            text = state.titleText,
-                            editTextType = EditTextType.TITLE
-                        )
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                color = if (state.isEditMode) MaterialTheme.colorScheme.surfaceContainerLow
+                else Color.Transparent,
+                shape = RoundedCornerShape(16.dp)
+            )
+            .border(
+                BorderStroke(
+                    width = 1.dp,
+                    color = if(state.isEditMode) MaterialTheme.colorScheme.outlineVariant
+                        else Color.Transparent
+                ),
+                shape = RoundedCornerShape(16.dp)
+            )
+            .clickable {
+                onAction(
+                    ProjectDetailAction.OnEditTextClick(
+                        title = state.titleText.orEmpty(),
+                        description = state.descriptionText.orEmpty()
                     )
-                },
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Start
+                )
+            },
         ) {
-            Text(
-                modifier = Modifier
-                    .weight(1f),
-                text = title,
-                style = MaterialTheme.typography.headlineLarge,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Icon(
-                modifier = Modifier
-                    .size(20.dp),
-                imageVector = Icon_ChevronRight,
-                contentDescription = null,
-                tint = if (state.isEditMode) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.primary.copy(alpha = 0f),
-            )
-        }
+        Text(
+            modifier = Modifier
+                .padding(16.dp),
+            text = title,
+            style = MaterialTheme.typography.headlineLarge,
+            color = MaterialTheme.colorScheme.onSurface
+        )
 
-        //Description
-        Row(
+        Text(
             modifier = Modifier
-                .fillMaxWidth()
-                .background(if (state.isEditMode) MaterialTheme.colorScheme.surfaceContainerLow else Color.Transparent)
-                .padding(vertical = 4.dp)
-                .clickable {
-                    if (state.isEditMode) onAction(
-                        ProjectDetailAction.OnEditTextClick(
-                            text = state.descriptionText,
-                            editTextType = EditTextType.DESCRIPTION
-                        )
-                    )
-                },
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Start
-        ) {
-            Text(
-                modifier = Modifier
-                    .weight(1f),
-                text = description,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Icon(
-                modifier = Modifier
-                    .size(20.dp),
-                imageVector = Icon_ChevronRight,
-                contentDescription = null,
-                tint = if (state.isEditMode) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.primary.copy(alpha = 0f),
-            )
-        }
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 16.dp),
+            text = description,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
     }
+
 }
 
 @Composable
@@ -490,10 +455,7 @@ private fun InfoGrid(
     modifier: Modifier = Modifier,
     startDate: String,
     lastActive: String,
-    sessionCount: Int,
-    color: Color,
     state: ProjectDetailState,
-    onAction: (ProjectDetailAction) -> Unit
 ) {
     Column(
         modifier = modifier
@@ -599,9 +561,9 @@ private fun TasksHeader(
 
 @Preview(device = Devices.PIXEL_9_PRO)
 @Composable
-private fun NewProjectDetailScreenPreview() {
+private fun ProjectDetailScreenPreview() {
     TrackyTheme {
-        NewProjectDetailScreen(
+        ProjectDetailScreen(
             onAction = {},
             state = ProjectDetailState(
                 project = ProjectUi(
@@ -624,9 +586,9 @@ private fun NewProjectDetailScreenPreview() {
 
 @Preview(device = Devices.PIXEL_9_PRO)
 @Composable
-private fun NewProjectDetailScreenEditModePreview() {
+private fun ProjectDetailScreenEditModePreview() {
     TrackyTheme {
-        NewProjectDetailScreen(
+        ProjectDetailScreen(
             onAction = {},
             state = ProjectDetailState(
                 project = ProjectUi(

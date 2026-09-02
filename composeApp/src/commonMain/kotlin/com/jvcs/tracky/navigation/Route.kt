@@ -1,7 +1,6 @@
 package com.jvcs.tracky.navigation
 
 import androidx.navigation3.runtime.NavKey
-import com.jvcs.tracky.features.project.domain.project.EditTextType
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -67,16 +66,16 @@ sealed interface Route : NavKey {
         @SerialName("project_detail")
         data class ProjectDetail(
             val isEditMode: Boolean,
-            val projectId: String? = null,
-            val editedText: String? = null,
-            val editedTextType: EditTextType? = null
+            val projectId: String? = null
         ) : Route, NavKey
 
         @Serializable
         @SerialName("edit_text")
         data class EditTextNavKey(
-            val editText: String?,
-            val editTextType: EditTextType
+            val isEditMode: Boolean,
+            val titleText: String,
+            val descriptionText: String,
+            val colorArgb: Int? = null
         ) : Route, NavKey
 
         @Serializable

@@ -47,6 +47,9 @@ import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.design_system.util.ObserveAsEvents
 import com.jvcs.tracky.features.auth.presentation.login.LoginScreen
 import com.jvcs.tracky.features.auth.presentation.login.LoginState
+import com.jvcs.tracky.design_system.theme.authElevatedLabelStyle
+import com.jvcs.tracky.design_system.theme.authLabelStyle
+import com.jvcs.tracky.design_system.theme.authTextStyle
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import tracky.composeapp.generated.resources.Res
@@ -148,6 +151,9 @@ fun RegisterScreen(
                     imeAction = ImeAction.Next,
                     error = state.nameError?.asString(),
                     hint = if (state.nameError == null) stringResource(Res.string.full_name_hint) else null,
+                    labelStyle = MaterialTheme.typography.authLabelStyle,
+                    elevatedLabelStyle = MaterialTheme.typography.authElevatedLabelStyle,
+                    textStyle = MaterialTheme.typography.authTextStyle,
                 )
                 TrackyTextField(
                     state = state.emailTextState,
@@ -156,6 +162,9 @@ fun RegisterScreen(
                     keyboardType = KeyboardType.Email,
                     imeAction = ImeAction.Next,
                     error = state.emailError?.asString(),
+                    labelStyle = MaterialTheme.typography.authLabelStyle,
+                    elevatedLabelStyle = MaterialTheme.typography.authElevatedLabelStyle,
+                    textStyle = MaterialTheme.typography.authTextStyle,
                 )
                 TrackyTextField(
                     state = state.passwordTextState,
@@ -165,6 +174,9 @@ fun RegisterScreen(
                     imeAction = ImeAction.Next,
                     error = state.passwordError?.asString(),
                     hint = if (state.passwordError == null) stringResource(Res.string.password_hint) else null,
+                    labelStyle = MaterialTheme.typography.authLabelStyle,
+                    elevatedLabelStyle = MaterialTheme.typography.authElevatedLabelStyle,
+                    textStyle = MaterialTheme.typography.authTextStyle,
                 )
                 TrackyTextField(
                     state = state.confirmPasswordTextState,
@@ -176,6 +188,9 @@ fun RegisterScreen(
                         if (state.canRegister) onAction(RegisterAction.OnRegisterClick)
                     },
                     error = state.confirmPasswordError?.asString(),
+                    labelStyle = MaterialTheme.typography.authLabelStyle,
+                    elevatedLabelStyle = MaterialTheme.typography.authElevatedLabelStyle,
+                    textStyle = MaterialTheme.typography.authTextStyle,
                 )
 
             }

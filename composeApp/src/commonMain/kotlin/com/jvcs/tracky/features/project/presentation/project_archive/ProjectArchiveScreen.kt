@@ -53,6 +53,7 @@ import com.jvcs.tracky.design_system.components.MainNavigationDrawer
 import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.design_system.util.DevicePreviews
 import com.jvcs.tracky.design_system.util.ObserveAsEvents
+import com.jvcs.tracky.design_system.util.rememberCollapsibleScrollBehavior
 import com.jvcs.tracky.features.project.presentation.project_archive.components.ProjectArchiveSearchTopAppBar
 import com.jvcs.tracky.features.project.presentation.project_archive.components.ProjectArchiveSelectionTopAppBar
 import com.jvcs.tracky.features.project.presentation.project_overview.components.ProjectCard
@@ -126,10 +127,11 @@ fun ProjectArchiveScreen(
     drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed)
 ) {
     val listState = rememberLazyListState()
-    // Without this the bar collapses on any drag, even when the whole list fits on screen and
-    // there is nothing to scroll to.
-    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(
-        canScroll = { listState.canScrollForward || listState.canScrollBackward }
+    // One instance, shared by the app bar and the nested-scroll connection below. Calling the
+    // helper again at either site would orphan a behavior and freeze the list.
+    val scrollBehavior = rememberCollapsibleScrollBehavior(
+        listState = listState,
+        pinned = state.isEditModeActive
     )
 
     // If the content shrinks below one screen while the bar is collapsed, no scroll is left to

@@ -59,6 +59,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.features.auth.presentation.register.RegisterScreen
 import com.jvcs.tracky.features.auth.presentation.register.RegisterState
+import com.jvcs.tracky.design_system.theme.authElevatedLabelStyle
+import com.jvcs.tracky.design_system.theme.authLabelStyle
+import com.jvcs.tracky.design_system.theme.authTextStyle
 import tracky.composeapp.generated.resources.or_continue_with
 
 @Composable
@@ -142,6 +145,9 @@ fun LoginScreen(
                     imeAction = ImeAction.Next,
                     error = state.emailError?.asString(),
                     modifier = Modifier.testTag("login_email"),
+                    labelStyle = MaterialTheme.typography.authLabelStyle,
+                    elevatedLabelStyle = MaterialTheme.typography.authElevatedLabelStyle,
+                    textStyle = MaterialTheme.typography.authTextStyle,
                 )
                 TrackyTextField(
                     state = state.passwordTextFieldState,
@@ -154,6 +160,9 @@ fun LoginScreen(
                     },
                     error = state.passwordError?.asString(),
                     modifier = Modifier.testTag("login_password"),
+                    labelStyle = MaterialTheme.typography.authLabelStyle,
+                    elevatedLabelStyle = MaterialTheme.typography.authElevatedLabelStyle,
+                    textStyle = MaterialTheme.typography.authTextStyle,
                 )
             }
 

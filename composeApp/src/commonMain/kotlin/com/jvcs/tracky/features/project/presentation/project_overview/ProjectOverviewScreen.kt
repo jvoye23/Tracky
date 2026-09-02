@@ -41,18 +41,15 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -77,6 +74,7 @@ import com.jvcs.tracky.design_system.components.MainNavigationDrawer
 import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.design_system.util.DevicePreviews
 import com.jvcs.tracky.design_system.util.ObserveAsEvents
+import com.jvcs.tracky.design_system.util.rememberCollapsibleScrollBehavior
 import com.jvcs.tracky.features.project.presentation.project_overview.components.AddNewProjectBottomSheet
 import com.jvcs.tracky.features.project.presentation.project_overview.components.EmptySection
 import com.jvcs.tracky.features.project.presentation.project_overview.components.ProjectCard
@@ -238,22 +236,13 @@ fun ProjectOverviewScreen(
 ) {
 
     val listState = rememberLazyListState()
-    // Without this the bar collapses on any drag, even when the whole list fits on screen and
-    // there is nothing to scroll to.
-    val canScrollList = { listState.canScrollForward || listState.canScrollBackward }
-    val enterAlwaysScrollBehavior =
-        TopAppBarDefaults.enterAlwaysScrollBehavior(canScroll = canScrollList)
-    val pinnedScrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(canScroll = canScrollList)
-    val scrollBehavior =
-        if (state.isEditModeActive) pinnedScrollBehavior else enterAlwaysScrollBehavior
+    // One instance, shared by both top app bars and the nested-scroll connection below. Calling
+    // the helper again at either site would orphan a behavior and freeze the list.
+    val scrollBehavior = rememberCollapsibleScrollBehavior(
+        listState = listState,
+        pinned = state.isEditModeActive
+    )
     val fabExpanded = listState.isScrollingUp()
-
-    // If the content shrinks below one screen while the bar is collapsed, no scroll is left to
-    // bring it back, so release it explicitly.
-    LaunchedEffect(scrollBehavior) {
-        snapshotFlow { listState.canScrollForward || listState.canScrollBackward }
-            .collect { scrollable -> if (!scrollable) scrollBehavior.state.heightOffset = 0f }
-    }
     val drawerScope = rememberCoroutineScope()
     val backState = rememberNavigationEventState(NavigationEventInfo.None)
 
