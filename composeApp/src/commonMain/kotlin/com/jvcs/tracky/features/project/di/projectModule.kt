@@ -1,5 +1,6 @@
 package com.jvcs.tracky.features.project.di
 
+import com.jvcs.tracky.features.project.presentation.projectEditTextScreen.ProjectEditTextViewModel
 import com.jvcs.tracky.features.project.presentation.project_detail.ProjectDetailViewModel
 import com.jvcs.tracky.features.project.presentation.project_overview.ProjectOverviewViewModel
 import com.jvcs.tracky.features.project.presentation.task_detail.TaskDetailViewModel
@@ -37,6 +38,15 @@ val projectModule = module {
             subTaskRepository = get(),
             timeManager = get(),
             timeProvider = get()
+        )
+    }
+
+    viewModel { (isEditMode: Boolean, projectId: String) ->
+        ProjectEditTextViewModel(
+            isEditMode = isEditMode,
+            projectId = projectId,
+            projectRepository = get(),
+            savedStateHandle = get(),
         )
     }
 

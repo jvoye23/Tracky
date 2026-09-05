@@ -22,6 +22,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -105,12 +106,13 @@ class ProjectDetailViewModelTest {
         // Seeded from the project by default: setTaskFinished reads the task row back before
         // writing, so a repository that answers null would make every finish silently no-op.
         taskRepository: FakeProjectTaskRepository =
-            FakeProjectTaskRepository(project.projectTasks?.firstOrNull())
+            FakeProjectTaskRepository(project.projectTasks?.firstOrNull()),
+        projectRepository: FakeDetailProjectRepository = FakeDetailProjectRepository(project)
     ): Pair<ProjectDetailViewModel, FakeSubTaskRepository> {
         val vm = ProjectDetailViewModel(
             isEdit = false,
             projectId = PROJECT_ID,
-            projectRepository = FakeDetailProjectRepository(project),
+            projectRepository = projectRepository,
             projectTaskRepository = taskRepository,
             subTaskRepository = subTaskRepository,
             // backgroundScope, not the test scope: the ticker is an endless loop, and a live job
@@ -656,16 +658,50 @@ class ProjectDetailViewModelTest {
             cancelAndIgnoreRemainingEvents()
         }
     }
+
+    /**
+     * The edit-text screen writes the project row through its own ViewModel while this entry sits
+     * on the back stack, so the row has to reach this state on its own — there is no second load.
+     */
+    @Test
+    fun `an edit to the project row reaches the state without a reload`() = runTest {
+        val loaded = project(subTask("s1"))
+        val projectRepository = FakeDetailProjectRepository(loaded)
+        val (vm, _) = viewModel(loaded, projectRepository = projectRepository)
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+            assertEquals("project", vm.state.value.titleText)
+
+            projectRepository.emit(loaded.copy(title = "renamed", description = "new description"))
+            advanceUntilIdle()
+
+            val state = vm.state.value
+            assertEquals("renamed", state.titleText)
+            assertEquals("new description", state.descriptionText)
+            assertEquals("renamed", state.project?.title)
+            // The row carries no tasks, so the loaded tree has to survive the merge untouched.
+            assertEquals(1, state.project?.projectTasks?.size)
+            assertEquals(1, state.project?.projectTasks?.first()?.subTasks?.size)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
 }
 
 // --- fakes -------------------------------------------------------------------------------------
 
-private class FakeDetailProjectRepository(private val project: Project) : ProjectRepository {
-    override suspend fun getProjectWithTasksByProjectId(projectId: String): Project? = project
-    override suspend fun getProjectById(projectId: String): Project? = project
+private class FakeDetailProjectRepository(project: Project) : ProjectRepository {
+    // Held in a MutableStateFlow so a test can push an edited row the way the edit-text screen does.
+    private val projectFlow = MutableStateFlow(project)
 
-    override fun getProjects(): Flow<List<Project>> = flowOf(listOf(project))
-    override fun getActiveProjects(): Flow<List<Project>> = flowOf(listOf(project))
+    fun emit(project: Project) { projectFlow.value = project }
+
+    override suspend fun getProjectWithTasksByProjectId(projectId: String): Project? = projectFlow.value
+    override suspend fun getProjectById(projectId: String): Project? = projectFlow.value
+    override fun observeProjectById(projectId: String): Flow<Project?> = projectFlow
+
+    override fun getProjects(): Flow<List<Project>> = projectFlow.map { listOf(it) }
+    override fun getActiveProjects(): Flow<List<Project>> = projectFlow.map { listOf(it) }
     override fun getArchivedProjects(): Flow<List<Project>> = flowOf(emptyList())
     override fun getTrashedProjects(): Flow<List<Project>> = flowOf(emptyList())
     override suspend fun fetchProjects(): EmptyResult<DataError> = Result.Success(Unit)

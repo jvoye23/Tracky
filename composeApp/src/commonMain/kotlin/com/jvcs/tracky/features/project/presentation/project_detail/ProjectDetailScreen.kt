@@ -99,7 +99,7 @@ import tracky.composeapp.generated.resources.uncheck_task_blocked_title
 @Composable
 fun ProjectDetailScreenRoot(
     navigateBack: () -> Unit,
-    onEditTextClick: (isEditMode: Boolean, title: String, description: String, colorArgb: Int?) -> Unit,
+    onEditTextClick: (isEditMode: Boolean, projectId: String) -> Unit,
     onProjectTaskClick: (String) -> Unit,
     viewModel: ProjectDetailViewModel = koinViewModel ()
 ) {
@@ -134,12 +134,10 @@ fun ProjectDetailScreenRoot(
         onAction = { action ->
             when(action) {
                 ProjectDetailAction.OnBackClick -> navigateBack()
-                is ProjectDetailAction.OnEditTextClick ->
+                is ProjectDetailAction.OnProjectEditTextClick ->
                     onEditTextClick(
-                        state.isEditMode,
-                        action.title,
-                        action.description,
-                        state.projectColor?.toArgb()
+                        action.isEditMode,
+                        action.projectId
                     )
                 is ProjectDetailAction.OnProjectSessionCardClick -> onProjectTaskClick(action.projectSessionId)
                 else -> Unit
@@ -419,12 +417,14 @@ private fun ProjectHeader(
                 shape = RoundedCornerShape(16.dp)
             )
             .clickable {
-                onAction(
-                    ProjectDetailAction.OnEditTextClick(
-                        title = state.titleText.orEmpty(),
-                        description = state.descriptionText.orEmpty()
+                state.project?.let {
+                    onAction(
+                        ProjectDetailAction.OnProjectEditTextClick(
+                            isEditMode = state.isEditMode,
+                            projectId = it.projectId
+                        )
                     )
-                )
+                }
             },
         ) {
         Text(

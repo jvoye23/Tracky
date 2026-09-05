@@ -61,6 +61,9 @@ class RoomLocalProjectDataSource (
         projectDao.getProjectById(projectId)?.toProject()
     }
 
+    override fun observeProjectById(projectId: String): Flow<Project?> =
+        projectDao.observeProjectById(projectId).map { it?.toProject() }
+
     override suspend fun getProjectWithTasksByProjectId(
         projectId: String
     ): Result<Project?, DataError.Local> = read {

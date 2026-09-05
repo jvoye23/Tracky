@@ -12,7 +12,7 @@ sealed interface ProjectDetailAction {
 
     data object OnEditModeClick: ProjectDetailAction
 
-    data class OnEditTextClick(val title: String, val description: String): ProjectDetailAction
+    data class OnProjectEditTextClick(val isEditMode: Boolean, val projectId: String): ProjectDetailAction
 
     data object OnStartTrackerClick: ProjectDetailAction
     data class OnToggleSessionTimer(val projectSessionId: String): ProjectDetailAction
@@ -20,7 +20,6 @@ sealed interface ProjectDetailAction {
 
     data object OnToggleAddNewProjectSessionBottomSheet: ProjectDetailAction
 
-    data class OnEditTextChanged(val title: String, val description: String): ProjectDetailAction
     data class OnProjectSessionCardClick(val projectSessionId: String): ProjectDetailAction
     data class OnDeleteSessionClick(val sessionId: String): ProjectDetailAction
 

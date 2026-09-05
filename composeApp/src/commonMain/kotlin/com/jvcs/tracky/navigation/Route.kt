@@ -73,9 +73,7 @@ sealed interface Route : NavKey {
         @SerialName("edit_text")
         data class EditTextNavKey(
             val isEditMode: Boolean,
-            val titleText: String,
-            val descriptionText: String,
-            val colorArgb: Int? = null
+            val projectId: String? = null
         ) : Route, NavKey
 
         @Serializable

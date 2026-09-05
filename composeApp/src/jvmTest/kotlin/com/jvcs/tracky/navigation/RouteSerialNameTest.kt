@@ -78,8 +78,7 @@ class RouteSerialNameTest {
             ),
             Route.ProjectRoute.EditTextNavKey(
                 isEditMode = true,
-                titleText = "title",
-                descriptionText = "description"
+                projectId = "id"
             ),
             Route.ProjectRoute.TaskDetail(taskId = "id"),
         )
