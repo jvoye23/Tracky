@@ -66,6 +66,12 @@ class OfflineFirstProjectRepository(
         return localProjectDataSource.getProjectById(projectId).getOrDefault(null)
     }
 
+    // Local only: Room is the source of truth, and every remote change reaches it through a sync
+    // pull, so the stream picks those up without a call of its own.
+    override fun observeProjectById(projectId: String): Flow<Project?> {
+        return localProjectDataSource.observeProjectById(projectId)
+    }
+
     override suspend fun getProjectWithTasksByProjectId(projectId: String): Project? {
         return localProjectDataSource.getProjectWithTasksByProjectId(projectId).getOrDefault(null)
     }

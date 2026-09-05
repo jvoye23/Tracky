@@ -18,9 +18,12 @@
     <string name="enter_session_name">Enter session name</string>
     <string name="edit_uppercase">EDIT</string>
     <string name="title">Title</string>
+    <string name="project_title_cannot_be_blank">The project title cannot be blank</string>
+    <string name="project_info_saved">Project info saved</string>
     <string name="cancel">Cancel</string>
     <string name="save">Save</string>
     <string name="description">Description</string>
+    <string name="project_cannot_be_found">Project cannot be found</string>
     <string name="back">Back</string>
     <string name="project_details_uppercase">PROJECT DETAILS</string>
     <string name="edit_project_uppercase">EDIT PROJECT</string>

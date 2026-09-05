@@ -16,7 +16,6 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarColors
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -35,7 +34,7 @@ import kotlin.time.ExperimentalTime
 fun EditTextTopAppBar(
     title: String,
     isEditMode: Boolean,
-    onCancelClick: () -> Unit,
+    onNavigateBack: () -> Unit,
     onEditClick: () -> Unit,
     onSaveClick: () -> Unit,
     projectColor: Color = MaterialTheme.colorScheme.primary
@@ -56,7 +55,7 @@ fun EditTextTopAppBar(
         },
         navigationIcon = {
             IconButton(
-                onClick = { onCancelClick() },
+                onClick = { onNavigateBack() },
                 colors = IconButtonDefaults.iconButtonColors(
                     containerColor = projectColor.copy(alpha = 0.12f),
                     contentColor = projectColor
@@ -120,7 +119,7 @@ private fun EditTextTopAppBarEditModePreview() {
             EditTextTopAppBar(
                 title = "EDIT PROJECT",
                 isEditMode = true,
-                onCancelClick = {},
+                onNavigateBack = {},
                 onEditClick = {},
                 onSaveClick = {},
                 projectColor = PreviewEditTextProjectColor
@@ -142,7 +141,7 @@ private fun EditTextTopAppBarReadModePreview() {
             EditTextTopAppBar(
                 title = "PROJECT DETAILS",
                 isEditMode = false,
-                onCancelClick = {},
+                onNavigateBack = {},
                 onEditClick = {},
                 onSaveClick = {},
                 projectColor = PreviewEditTextProjectColor

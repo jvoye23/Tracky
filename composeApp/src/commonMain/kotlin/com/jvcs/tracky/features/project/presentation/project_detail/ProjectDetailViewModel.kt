@@ -7,6 +7,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jvcs.tracky.features.project.domain.subtask.SubTaskRepository
+import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.core.domain.util.Result
@@ -29,7 +30,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -61,7 +64,22 @@ class ProjectDetailViewModel(
 
     private var hasLoadedInitialData = false
 
-    val state = _state
+    /**
+     * The locally held state folded over the live project row.
+     *
+     * The row is streamed rather than read once because the title and description are edited on
+     * their own screen: that ViewModel writes straight to the database, and this entry stays on the
+     * back stack with its state intact, so a snapshot taken on entry would still be on screen after
+     * the user navigates back. The task tree is deliberately not part of the stream — it stays on
+     * the one-shot [getProject] read, so the timer values [updateUiWithTimerValues] maintains are
+     * never overwritten by a row change.
+     */
+    val state = combine(
+        _state,
+        // A missing id has no row to observe; flowOf(null) keeps the combine emitting, so the
+        // error state below still reaches the screen.
+        if (projectId != null) projectRepository.observeProjectById(projectId) else flowOf(null)
+    ) { state, projectRow -> state.withProjectRow(projectRow) }
         .onStart {
             if (!hasLoadedInitialData) {
                 if (projectId != null) {
@@ -95,10 +113,8 @@ class ProjectDetailViewModel(
             ProjectDetailAction.OnEditModeClick -> {toggleEditMode()}
             ProjectDetailAction.OnCloseAndCancelClick -> {discardChangesAndExitEditMode()}
             ProjectDetailAction.OnBackClick -> {} // Handled in UI
-            is ProjectDetailAction.OnEditTextClick -> {}
             ProjectDetailAction.OnStartTrackerClick -> {}
             ProjectDetailAction.OnStopTrackerClick -> {}
-            is ProjectDetailAction.OnEditTextChanged -> {onEditTextChanged(action.title, action.description)}
             is ProjectDetailAction.OnProjectSessionCardClick -> {}
             ProjectDetailAction.OnToggleAddNewProjectSessionBottomSheet -> {toggleAddNewProjectSessionBottomSheet()}
             is ProjectDetailAction.OnCreateProjectSession -> {createProjectTask(action.projectSessionTitle)}
@@ -118,6 +134,7 @@ class ProjectDetailViewModel(
             ProjectDetailAction.OnToggleColorPicker -> {toggleColorPicker()}
             is ProjectDetailAction.OnColorChanged -> {onColorChanged(action.color)}
             is ProjectDetailAction.OnUseLightTextColorToggled -> {onUseLightTextColorToggled(action.useLightTextColor)}
+            else -> Unit
         }
     }
 
@@ -287,12 +304,16 @@ class ProjectDetailViewModel(
     }
 
     private fun saveProjectDetails(){
-        val newTitle = _state.value.titleText.toString()
-        val newDescription = _state.value.descriptionText.toString()
-        val newColor = _state.value.projectColor
-        val useLightTextColor = _state.value.useLightTextColor
+        // Reads the merged state, not _state: the title and description live in the project row
+        // stream, so the pre-merge copy still holds whatever was loaded on entry and would write a
+        // stale title back over an edit made on the edit-text screen.
+        val current = state.value
+        val newTitle = current.titleText.toString()
+        val newDescription = current.descriptionText.toString()
+        val newColor = current.projectColor
+        val useLightTextColor = current.useLightTextColor
 
-        val newProject = _state.value.project?.copy(
+        val newProject = current.project?.copy(
             title = newTitle,
             description = newDescription,
             color = newColor,
@@ -319,13 +340,6 @@ class ProjectDetailViewModel(
             selectedColorHex = color.toHex(),
             isColorPickerVisible = false
         ) }
-    }
-
-    private fun Color.toHex(): String {
-        val r = (red * 255).toInt().toString(16).padStart(2, '0')
-        val g = (green * 255).toInt().toString(16).padStart(2, '0')
-        val b = (blue * 255).toInt().toString(16).padStart(2, '0')
-        return "#$r$g$b".uppercase()
     }
 
     private fun onUseLightTextColorToggled(useLightTextColor: Boolean) {
@@ -711,17 +725,6 @@ class ProjectDetailViewModel(
         }
     }
 
-    // The EditText screen hands both fields back at once. It never writes to the repository itself,
-    // so edit mode is switched on here: that surfaces the pending strings on the detail screen and
-    // leaves saveProjectDetails() - reachable through the detail screen's own Save - the only
-    // persistence path.
-    private fun onEditTextChanged(title: String, description: String) {
-        _state.update { it.copy(
-            titleText = title,
-            descriptionText = description,
-            isEditMode = true
-        ) }
-    }
 
     private fun toggleEditMode() {
         _state.update { it.copy(
@@ -738,6 +741,34 @@ class ProjectDetailViewModel(
             useLightTextColor = it.project?.useLightTextColor ?: false
         ) }
     }
+}
+
+private fun Color.toHex(): String {
+    val r = (red * 255).toInt().toString(16).padStart(2, '0')
+    val g = (green * 255).toInt().toString(16).padStart(2, '0')
+    val b = (blue * 255).toInt().toString(16).padStart(2, '0')
+    return "#$r$g$b".uppercase()
+}
+
+/**
+ * Folds the live project row over the locally held state. Only the fields the row owns are
+ * rewritten: the loaded task tree and the running timer values live in the state itself and are
+ * left alone, so a row change never disturbs them.
+ */
+private fun ProjectDetailState.withProjectRow(row: Project?): ProjectDetailState {
+    if (row == null) return this
+    val color = row.colorArgb?.let { Color(it) }
+    return copy(
+        titleText = row.title,
+        descriptionText = row.description ?: "",
+        // copy, not replace: the row carries no tasks.
+        project = project?.copy(title = row.title, description = row.description),
+        // Edit mode owns the colour picker's uncommitted selection, so a row change arriving
+        // mid-edit must not overwrite a pick the user has not saved yet.
+        projectColor = if (isEditMode) projectColor else color,
+        selectedColorHex = if (isEditMode) selectedColorHex else color?.toHex() ?: "#00FFFF",
+        useLightTextColor = if (isEditMode) useLightTextColor else row.useLightTextColor
+    )
 }
 
 /** Rewrites one task in the loaded project, leaving the rest of the state untouched. */
