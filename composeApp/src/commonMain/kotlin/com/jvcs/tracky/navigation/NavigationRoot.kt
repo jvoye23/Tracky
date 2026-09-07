@@ -5,7 +5,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
@@ -21,8 +20,8 @@ import com.jvcs.tracky.features.auth.presentation.register_success.RegisterSucce
 import com.jvcs.tracky.features.auth.presentation.register_success.RegisterSuccessViewModel
 import com.jvcs.tracky.features.auth.presentation.reset_password.ResetPasswordScreenRoot
 import com.jvcs.tracky.features.auth.presentation.reset_password.ResetPasswordViewModel
-import com.jvcs.tracky.features.project.presentation.project_detail.EditTextScreenRoot
-import com.jvcs.tracky.features.project.presentation.project_detail.ProjectDetailAction
+import com.jvcs.tracky.features.project.presentation.projectEditTextScreen.EditTextScreenRoot
+import com.jvcs.tracky.features.project.presentation.projectEditTextScreen.ProjectEditTextViewModel
 import com.jvcs.tracky.features.project.presentation.project_archive.ProjectArchiveScreenRoot
 import com.jvcs.tracky.features.project.presentation.project_archive_detail.ProjectArchiveDetailScreen
 import com.jvcs.tracky.features.project.presentation.project_trash.ProjectTrashScreenRoot
@@ -185,21 +184,11 @@ fun NavigationRoot(
                         backStack.remove(key)
                     },
                     viewModel = detailVm,
-                    onEditTextClick = { isEditMode, title, description, colorArgb ->
-                        editTextCallback.value = { newTitle, newDescription ->
-                            detailVm.onAction(
-                                action = ProjectDetailAction.OnEditTextChanged(
-                                    title = newTitle,
-                                    description = newDescription
-                                )
-                            )
-                        }
+                    onEditTextClick = { isEditMode, projectId ->
                         backStack.add(
                             Route.ProjectRoute.EditTextNavKey(
                                 isEditMode = isEditMode,
-                                titleText = title,
-                                descriptionText = description,
-                                colorArgb = colorArgb
+                                projectId = projectId
                             )
                         )
                     },
@@ -219,18 +208,14 @@ fun NavigationRoot(
                 )
             }
             entry<Route.ProjectRoute.EditTextNavKey> { key ->
+                val editTextVm: ProjectEditTextViewModel = koinViewModel {
+                    parametersOf(key.isEditMode, key.projectId)
+                }
                 EditTextScreenRoot(
-                    isEditMode = key.isEditMode,
-                    titleText = key.titleText,
-                    descriptionText = key.descriptionText,
-                    projectColor = key.colorArgb?.let { Color(it) },
-                    onCancelClick = {
+                    onNavigateBack = {
                         backStack.remove(key)
                     },
-                    onSaveClick = { updatedTitle, updatedDescription ->
-                        editTextCallback.value?.invoke(updatedTitle, updatedDescription)
-                        backStack.remove(key)
-                    }
+                    viewModel = editTextVm
                 )
             }
         }

@@ -32,6 +32,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -44,6 +45,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -86,9 +88,18 @@ fun TrackyTextField(
     labelStyle: TextStyle = TextStyle.Default,
     elevatedLabelStyle: TextStyle = TextStyle.Default,
     textStyle: TextStyle = TextStyle.Default,
-    lineLimits: TextFieldLineLimits = TextFieldLineLimits.SingleLine,
+    lineLimits: TextFieldLineLimits = TextFieldLineLimits.Default,
     enabled: Boolean = true,
-    showLabel: Boolean = true
+    showLabel: Boolean = true,
+    borderDefaultColor: Color = MaterialTheme.colorScheme.outlineVariant,
+    borderErrorColor: Color = MaterialTheme.colorScheme.error,
+    borderIsFocusedColor: Color = MaterialTheme.colorScheme.primary,
+    backgroundDefaultColor: Color = MaterialTheme.colorScheme.surfaceContainer,
+    backgroundErrorColor: Color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.33f ),
+    labelDefaultColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    labelErrorColor: Color = MaterialTheme.colorScheme.error,
+    labelIsFocusedColor: Color = MaterialTheme.colorScheme.onSurfaceVariant
+
 ) {
     val keyboardActionHandler: KeyboardActionHandler? = onImeAction?.let { handler ->
         KeyboardActionHandler { _ -> handler() }
@@ -108,23 +119,24 @@ fun TrackyTextField(
 
     val borderColor by animateColorAsState(
         targetValue = when {
-            isError -> MaterialTheme.colorScheme.error
-            isFocused -> MaterialTheme.colorScheme.primary
-            else -> MaterialTheme.colorScheme.outlineVariant
+            isError -> borderErrorColor
+            isFocused -> borderIsFocusedColor
+            else -> borderDefaultColor
         }
     )
 
-    val backgroundColor = if (isError) {
-        MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.33f)
-    } else {
-        MaterialTheme.colorScheme.surfaceContainer
-    }
+    val backgroundColor by animateColorAsState(
+        targetValue = when {
+            isError -> backgroundErrorColor
+            else -> backgroundDefaultColor
+        }
+    )
 
     val labelColor by animateColorAsState(
         targetValue = when {
-            isError -> MaterialTheme.colorScheme.error
-            isFocused -> MaterialTheme.colorScheme.primary
-            else -> MaterialTheme.colorScheme.onSurfaceVariant
+            isError -> labelErrorColor
+            isFocused -> labelIsFocusedColor
+            else -> labelDefaultColor
         }
     )
 

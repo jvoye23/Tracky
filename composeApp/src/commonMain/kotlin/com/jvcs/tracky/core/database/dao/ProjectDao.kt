@@ -100,6 +100,11 @@ interface ProjectDao {
     @Query("SELECT * FROM projects WHERE projectId = :id")
     suspend fun getProjectById(id: String): ProjectEntity?
 
+    // The row on its own, without the task tree: the detail screen keeps its tasks on a one-shot
+    // read and only needs the project's own fields to stay live.
+    @Query("SELECT * FROM projects WHERE projectId = :id")
+    fun observeProjectById(id: String): Flow<ProjectEntity?>
+
     @Query("DELETE FROM projects WHERE projectId = :projectId")
     suspend fun deleteProject(projectId: String)
 

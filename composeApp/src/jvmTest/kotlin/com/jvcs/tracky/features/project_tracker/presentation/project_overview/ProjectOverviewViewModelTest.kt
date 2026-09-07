@@ -367,6 +367,8 @@ private class FakeProjectRepository(initial: List<Project>) : ProjectRepository 
     override fun getArchivedProjects(): Flow<List<Project>> = flowOf(emptyList())
     override fun getTrashedProjects(): Flow<List<Project>> = flowOf(emptyList())
     override suspend fun getProjectById(projectId: String): Project? = projectsFlow.value.find { it.projectId == projectId }
+    override fun observeProjectById(projectId: String): Flow<Project?> =
+        projectsFlow.map { projects -> projects.find { it.projectId == projectId } }
     override suspend fun getProjectWithTasksByProjectId(projectId: String): Project? = getProjectById(projectId)
     override suspend fun upsertProject(project: Project): EmptyResult<DataError> = Result.Success(Unit)
     override suspend fun setProjectArchived(projectId: String, isArchived: Boolean): EmptyResult<DataError> = Result.Success(Unit)

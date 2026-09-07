@@ -202,6 +202,9 @@ class FakeLocalProjectDataSource(private val db: FakeDb = FakeDb()) : LocalProje
     override suspend fun getProjectById(projectId: String): Result<Project?, DataError.Local> =
         Result.Success(projects[projectId])
 
+    override fun observeProjectById(projectId: String): Flow<Project?> =
+        db.projectsFlow.map { list -> list.find { it.projectId == projectId } }
+
     override suspend fun getProjectWithTasksByProjectId(projectId: String): Result<Project?, DataError.Local> =
         Result.Success(projects[projectId])
 
