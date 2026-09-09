@@ -174,3 +174,21 @@ val Typography.agendaItemFinished: TextStyle
         lineHeight = 24.sp,
         textDecoration = TextDecoration.LineThrough
     )
+
+val Typography.monoLabelSmall: TextStyle
+    @Composable
+    get() = TextStyle(
+        fontFamily = RobotoMono,
+        fontWeight = FontWeight.Bold,
+        fontSize = 11.sp,
+        lineHeight = 14.sp
+    )
+
+val Typography.monoLabelXSmall: TextStyle
+    @Composable
+    get() = TextStyle(
+        fontFamily = RobotoMono,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 9.sp,
+        lineHeight = 12.sp
+    )

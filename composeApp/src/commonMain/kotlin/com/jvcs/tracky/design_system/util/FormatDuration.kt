@@ -36,3 +36,23 @@ fun parseDuration(timeString: String): Duration {
             seconds.seconds +
             (centiseconds * 10).milliseconds
 }
+
+/**
+ * "HH:mm", e.g. `01:00` — a coarse read of a duration. Seconds are truncated, not rounded:
+ * rounding 00:59:30 up to 01:00 would claim a full hour that was never tracked.
+ */
+fun formatDurationHoursMinutes(duration: Duration): String {
+    return duration.toComponents { hours, minutes, _, _ ->
+        "${hours.toString().padStart(2, '0')}:" +
+                minutes.toString().padStart(2, '0')
+    }
+}
+
+/** "HH:mm:ss", e.g. `00:04:02` — [formatDuration] without the centiseconds. */
+fun formatDurationHoursMinutesSeconds(duration: Duration): String {
+    return duration.toComponents { hours, minutes, seconds, _ ->
+        "${hours.toString().padStart(2, '0')}:" +
+                "${minutes.toString().padStart(2, '0')}:" +
+                seconds.toString().padStart(2, '0')
+    }
+}

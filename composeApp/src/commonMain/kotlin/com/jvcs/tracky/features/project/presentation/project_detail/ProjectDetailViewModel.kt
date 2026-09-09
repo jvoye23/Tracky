@@ -15,7 +15,9 @@ import com.jvcs.tracky.core.domain.util.TimeManager
 import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.core.domain.util.TimerState
 import com.jvcs.tracky.design_system.util.UiText
+import com.jvcs.tracky.features.project.presentation.mappers.toPerDayStripUi
 import com.jvcs.tracky.features.project.presentation.mappers.toProject
+import com.jvcs.tracky.features.project.presentation.models.PerDayStripUi
 import com.jvcs.tracky.features.project.presentation.models.ProjectSubTaskUi
 import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
 import com.jvcs.tracky.features.project.presentation.mappers.toProjectSubTaskUi
@@ -39,9 +41,12 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.stringResource
 import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.title
+import kotlin.time.ExperimentalTime
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -214,6 +219,7 @@ class ProjectDetailViewModel(
             viewModelScope.launch {
                 projectTaskRepository.stopProjectTask(taskId)
                 timeManager.stopAndResetTimer(taskId)
+                refreshPerDayStrip()
             }
         } else {
             viewModelScope.launch {
@@ -299,8 +305,35 @@ class ProjectDetailViewModel(
                 projectColor = color,
                 selectedColorHex = color?.toHex() ?: "#00FFFF",
                 useLightTextColor = newProject?.useLightTextColor ?: true,
+                // Built from the domain project, before toProjectUi() drops the intervals it needs.
+                perDayStrip = newProject?.perDayStrip(),
             ) }
         }
+    }
+
+    /**
+     * Rebuilds only the per-day strip from a fresh read of the project.
+     *
+     * getProject runs once, from onStart, and the strip is derived from intervals that
+     * ProjectTaskUi does not carry — so there is nothing in state to patch incrementally the way
+     * the task tree is patched. Without this the strip would go stale the moment the user banked
+     * any time without leaving the screen. Called after the timer stops, which is when an interval
+     * gains its duration.
+     */
+    private suspend fun refreshPerDayStrip() {
+        val projectId = projectId ?: return
+        val strip = projectRepository.getProjectWithTasksByProjectId(projectId)?.perDayStrip()
+        _state.update { it.copy(perDayStrip = strip) }
+    }
+
+    /** Today in the same zone the strip buckets its intervals by. */
+    @OptIn(ExperimentalTime::class)
+    private fun Project.perDayStrip(): PerDayStripUi? {
+        val timeZone = TimeZone.currentSystemDefault()
+        return toPerDayStripUi(
+            today = timeProvider.nowInstant.toLocalDateTime(timeZone).date,
+            timeZone = timeZone
+        )
     }
 
     private fun saveProjectDetails(){
@@ -379,6 +412,7 @@ class ProjectDetailViewModel(
             viewModelScope.launch {
                 subTaskRepository.stopSubTask(subTaskId)
                 timeManager.stopAndResetTimer(subTaskId)
+                refreshPerDayStrip()
             }
         } else {
             // Only one subtask per task may run: startSubTask closes a running sibling's interval
@@ -523,6 +557,8 @@ class ProjectDetailViewModel(
         val open = subTaskRepository.getSubTasksForTask(taskId).first().filterNot { it.isFinished }
         val finishedIds = open.map { it.projectSubTaskId }.toSet()
 
+        val stoppedAnyTimer = open.any { it.isTimerRunning }
+
         // Stop first, then re-read. stopSubTask banks the elapsed time into the row, so upserting
         // a copy of the pre-stop snapshot would write the old duration back over it and lose the
         // time the user just tracked.
@@ -548,6 +584,10 @@ class ProjectDetailViewModel(
                 if (ui.projectSubTaskId in finishedIds) ui.copy(isFinished = true) else ui
             }
         }
+
+        // Only when a timer actually stopped: finishing already-idle subtasks banks no new time,
+        // and the strip would be rebuilt from an unchanged database for nothing.
+        if (stoppedAnyTimer) refreshPerDayStrip()
     }
 
     /**

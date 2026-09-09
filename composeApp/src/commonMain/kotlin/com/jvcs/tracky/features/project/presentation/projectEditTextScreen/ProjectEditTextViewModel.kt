@@ -42,6 +42,8 @@ class ProjectEditTextViewModel(
     private val restoredTitle: String? = savedStateHandle[KEY_TITLE]
     private val restoredDescription: String? = savedStateHandle[KEY_DESCRIPTION]
 
+    private val restoredEditMode: Boolean? = savedStateHandle[KEY_IS_EDIT_MODE]
+
     // Owned by the ViewModel and never replaced, so the text (and the focus and undo history that
     // hang off it) survives every state update.
     private val titleState = TextFieldState(
@@ -53,11 +55,13 @@ class ProjectEditTextViewModel(
         initialSelection = TextRange(restoredDescription?.length ?: 0),
     )
 
+    private val editModeState  = restoredEditMode ?: isEditMode
+
     private val _state = MutableStateFlow(
         ProjectEditTextState(
             titleState = titleState,
             descriptionState = descriptionState,
-            isEditMode = savedStateHandle[KEY_IS_EDIT_MODE] ?: isEditMode,
+            isEditMode = editModeState,
         )
     )
 
@@ -65,6 +69,9 @@ class ProjectEditTextViewModel(
         .onStart {
             if (!hasLoadedInitialData) {
                 getProject(projectId)
+                observeTitleChanges()
+                observeDescriptionChanges()
+                observeEditModeChanges()
                 hasLoadedInitialData = true
             }
         }
@@ -74,21 +81,9 @@ class ProjectEditTextViewModel(
             initialValue = _state.value
         )
 
-    init {
-        // Keep the unsaved draft in the handle so process death can't swallow it.
-        viewModelScope.launch {
-            snapshotFlow { titleState.text.toString() }.collect { savedStateHandle[KEY_TITLE] = it }
-        }
-        viewModelScope.launch {
-            snapshotFlow { descriptionState.text.toString() }.collect {
-                savedStateHandle[KEY_DESCRIPTION] = it
-            }
-        }
-    }
-
     fun onAction(action: ProjectEditTextAction) {
         when (action) {
-            ProjectEditTextAction.OnEditClick -> setEditMode(true)
+            ProjectEditTextAction.OnEditClick -> toggleEditMode()
             ProjectEditTextAction.OnSaveClick -> saveProject(
                 title = _state.value.titleState.text.toString(),
                 description = _state.value.descriptionState.text.toString(),
@@ -97,9 +92,32 @@ class ProjectEditTextViewModel(
         }
     }
 
-    private fun setEditMode(isEditMode: Boolean) {
-        savedStateHandle[KEY_IS_EDIT_MODE] = isEditMode
-        _state.update { it.copy(isEditMode = isEditMode) }
+    private fun observeTitleChanges() {
+        viewModelScope.launch {
+            snapshotFlow { titleState.text.toString() }.collect {
+                run { savedStateHandle[KEY_TITLE] = it }
+            }
+        }
+    }
+
+    private fun observeDescriptionChanges() {
+        viewModelScope.launch {
+            snapshotFlow { descriptionState.text.toString() }.collect {
+                run { savedStateHandle[KEY_DESCRIPTION] = it }
+            }
+        }
+    }
+
+    private fun observeEditModeChanges() {
+        viewModelScope.launch {
+            snapshotFlow { editModeState }.collect {
+                run { savedStateHandle[KEY_IS_EDIT_MODE] = it }
+            }
+        }
+    }
+
+    fun toggleEditMode() {
+        _state.update { it.copy(isEditMode = !it.isEditMode) }
     }
 
     private fun getProject(projectId: String) {
@@ -141,7 +159,7 @@ class ProjectEditTextViewModel(
                 is Result.Success -> {
                     // Only leave edit mode once the save actually landed, so a blank title or a
                     // failed upsert keeps the user in the field they still have to correct.
-                    setEditMode(false)
+                    toggleEditMode()
                     eventChannel.send(ProjectEditTextEvent.OnSavedSuccess)
                 }
             }

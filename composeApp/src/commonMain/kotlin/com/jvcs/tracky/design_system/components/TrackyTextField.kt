@@ -88,7 +88,7 @@ fun TrackyTextField(
     labelStyle: TextStyle = TextStyle.Default,
     elevatedLabelStyle: TextStyle = TextStyle.Default,
     textStyle: TextStyle = TextStyle.Default,
-    lineLimits: TextFieldLineLimits = TextFieldLineLimits.Default,
+    lineLimits: TextFieldLineLimits = TextFieldLineLimits.SingleLine,
     enabled: Boolean = true,
     showLabel: Boolean = true,
     borderDefaultColor: Color = MaterialTheme.colorScheme.outlineVariant,
