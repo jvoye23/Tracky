@@ -57,8 +57,8 @@ private const val MAX_INTENSITY = 0.55f
 /**
  * Width of a day tile. An `HH:mm:ss` duration measures ~55dp in `titleSmall`, so 20dp of
  * horizontal padding and a little headroom for a heavier weight land here. Sizing every tile to
- * the widest content it can hold keeps the untracked tiles — which carry only the placeholder
- * glyph — exactly as wide as the tracked ones, so the strip reads as an even row.
+ * the widest content it can hold keeps a tile carrying only the placeholder glyph exactly as
+ * wide as a tracked one, so the strip reads as an even row.
  */
 private val MIN_TILE_WIDTH = 80.dp
 
@@ -66,8 +66,10 @@ private val MIN_TILE_WIDTH = 80.dp
  * "Per day" activity strip: one tile per day, tinted by how much time was tracked that
  * day relative to the busiest day in [days].
  *
- * Stateless — the caller supplies already-formatted labels. The strip scrolls
- * horizontally because 14 tiles do not fit a phone at the design's fixed tile width.
+ * Stateless — the caller supplies already-formatted labels, so a tile whose
+ * [PerDayUi.formattedDuration] is `null` still renders as untracked even though the mapper
+ * now feeds only active days. The strip scrolls horizontally because ten tiles do not fit a
+ * phone at the design's fixed tile width.
  *
  * @param busiestDayLabel weekday plus date of the busiest day, carrying the month the
  * same way the tiles do (see [PerDayUi.dateLabel]), e.g. "Sat 05.9"; `null` when nothing
@@ -269,34 +271,27 @@ private fun minutes(value: Long): Long = value * 60_000L
 
 private fun seconds(value: Long): Long = value * 1_000L
 
-/** The exact 14 days from the design reference. */
+/**
+ * A full strip: the ten most recent active days, drawn from the design reference. The dates skip
+ * 26.8, 28.8, 29.8, 31.8, 3.9 and 4.9 the way the mapper does — an untracked day takes no tile.
+ */
 private fun referenceDays(): List<PerDayUi> = listOf(
-    PerDayUi("Sun", "23.8", null, 0L),
     PerDayUi("Mon", "24.8", "00:52:12", minutes(52) + seconds(12)),
     PerDayUi("Tue", "25.8", "00:23:41", minutes(23) + seconds(41)),
-    PerDayUi("Wed", "26.8", null, 0L),
     PerDayUi("Thu", "27.8", "00:41:07", minutes(41) + seconds(7)),
-    PerDayUi("Fri", "28.8", null, 0L),
-    PerDayUi("Sat", "29.8", null, 0L),
     PerDayUi("Sun", "30.8", "00:12:30", minutes(12) + seconds(30)),
-    PerDayUi("Mon", "31.8", null, 0L),
     PerDayUi("Tue", "01.9", "00:35:00", minutes(35)),
     PerDayUi("Wed", "02.9", "00:19:55", minutes(19) + seconds(55)),
-    PerDayUi("Thu", "03.9", null, 0L),
-    PerDayUi("Fri", "04.9", null, 0L),
-    PerDayUi("Sat", "05.9", "01:00:02", minutes(60) + seconds(2))
+    PerDayUi("Sat", "05.9", "01:00:02", minutes(60) + seconds(2)),
+    PerDayUi("Sun", "06.9", "00:08:44", minutes(8) + seconds(44)),
+    PerDayUi("Tue", "08.9", "00:27:03", minutes(27) + seconds(3)),
+    PerDayUi("Wed", "09.9", "00:44:20", minutes(44) + seconds(20))
 )
 
-private fun emptyDays(): List<PerDayUi> = referenceDays().map {
-    it.copy(formattedDuration = null, trackedMillis = 0L)
-}
-
-private fun singleTrackedDay(): List<PerDayUi> = emptyDays().toMutableList().apply {
-    this[13] = this[13].copy(
-        formattedDuration = "00:07:18",
-        trackedMillis = minutes(7) + seconds(18)
-    )
-}
+/** The first day a project banks time: one tile, which is also the busiest. */
+private fun singleTrackedDay(): List<PerDayUi> = listOf(
+    PerDayUi("Wed", "09.9", "00:07:18", minutes(7) + seconds(18))
+)
 
 @Composable
 private fun PerDayCardPreviewContainer(content: @Composable () -> Unit) {
@@ -323,23 +318,11 @@ private fun PerDayCardDefaultPreview() {
 
 @PreviewLightDark
 @Composable
-private fun PerDayCardNoActivityPreview() {
-    PerDayCardPreviewContainer {
-        PerDayCard(
-            days = emptyDays(),
-            busiestDayLabel = null,
-            projectColor = PreviewProjectColor
-        )
-    }
-}
-
-@PreviewLightDark
-@Composable
 private fun PerDayCardSingleTrackedDayPreview() {
     PerDayCardPreviewContainer {
         PerDayCard(
             days = singleTrackedDay(),
-            busiestDayLabel = "Sat 05.9",
+            busiestDayLabel = "Wed 09.9",
             projectColor = PreviewProjectColor
         )
     }

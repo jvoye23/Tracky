@@ -42,11 +42,9 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.stringResource
 import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.title
-import kotlin.time.ExperimentalTime
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -326,15 +324,9 @@ class ProjectDetailViewModel(
         _state.update { it.copy(perDayStrip = strip) }
     }
 
-    /** Today in the same zone the strip buckets its intervals by. */
-    @OptIn(ExperimentalTime::class)
-    private fun Project.perDayStrip(): PerDayStripUi? {
-        val timeZone = TimeZone.currentSystemDefault()
-        return toPerDayStripUi(
-            today = timeProvider.nowInstant.toLocalDateTime(timeZone).date,
-            timeZone = timeZone
-        )
-    }
+    /** The zone the strip buckets its intervals by. */
+    private fun Project.perDayStrip(): PerDayStripUi? =
+        toPerDayStripUi(timeZone = TimeZone.currentSystemDefault())
 
     private fun saveProjectDetails(){
         // Reads the merged state, not _state: the title and description live in the project row

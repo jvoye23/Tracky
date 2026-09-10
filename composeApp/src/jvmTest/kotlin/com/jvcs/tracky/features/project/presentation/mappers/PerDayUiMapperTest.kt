@@ -7,34 +7,33 @@ import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.features.project.domain.models.SubTaskInterval
 import com.jvcs.tracky.features.project.domain.models.TaskInterval
-import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.time.Duration.Companion.days
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
 /**
  * The mapper is pure, so every case here is plain data in, data out — no dispatcher, no clock.
- * `today` and the zone are always passed explicitly for the same reason.
+ * The zone is always passed explicitly for the same reason: it is the only thing that decides
+ * which local day an interval lands on.
  */
 class PerDayUiMapperTest {
-
-    private val today = LocalDate(2026, 9, 8)
 
     // --- empty cases -------------------------------------------------------------------------
 
     @Test
     fun `returns null when the project has no tasks`() {
-        val strip = project().toPerDayStripUi(today, TimeZone.UTC)
+        val strip = project().toPerDayStripUi(TimeZone.UTC)
 
         assertNull(strip)
     }
 
     @Test
     fun `returns null when the tasks have no intervals`() {
-        val strip = project(task()).toPerDayStripUi(today, TimeZone.UTC)
+        val strip = project(task()).toPerDayStripUi(TimeZone.UTC)
 
         assertNull(strip)
     }
@@ -43,7 +42,7 @@ class PerDayUiMapperTest {
     fun `returns null when every interval is still open`() {
         val strip = project(
             task(intervals = listOf(interval("2026-09-05T09:00:00Z", minutes = 30, open = true)))
-        ).toPerDayStripUi(today, TimeZone.UTC)
+        ).toPerDayStripUi(TimeZone.UTC)
 
         assertNull(strip)
     }
@@ -52,7 +51,7 @@ class PerDayUiMapperTest {
     fun `returns null when the only intervals are zero length`() {
         val strip = project(
             task(intervals = listOf(interval("2026-09-05T09:00:00Z", minutes = 0)))
-        ).toPerDayStripUi(today, TimeZone.UTC)
+        ).toPerDayStripUi(TimeZone.UTC)
 
         assertNull(strip)
     }
@@ -60,10 +59,10 @@ class PerDayUiMapperTest {
     // --- the strip ---------------------------------------------------------------------------
 
     @Test
-    fun `a single tracked day on today yields one tile`() {
+    fun `a single tracked day yields one tile`() {
         val strip = project(
             task(intervals = listOf(interval("2026-09-08T09:00:00Z", minutes = 52)))
-        ).toPerDayStripUi(today, TimeZone.UTC)!!
+        ).toPerDayStripUi(TimeZone.UTC)!!
 
         assertEquals(1, strip.days.size)
         assertEquals("Tue", strip.days.single().weekdayLabel)
@@ -77,13 +76,13 @@ class PerDayUiMapperTest {
     fun `a sub-minute remainder shows up in the seconds of the label`() {
         val strip = project(
             task(intervals = listOf(interval("2026-09-08T09:00:00Z", minutes = 52, seconds = 12)))
-        ).toPerDayStripUi(today, TimeZone.UTC)!!
+        ).toPerDayStripUi(TimeZone.UTC)!!
 
         assertEquals("00:52:12", strip.days.single().formattedDuration)
     }
 
     @Test
-    fun `days between two tracked days are filled in as untracked`() {
+    fun `days between two tracked days are dropped, not filled in`() {
         val strip = project(
             task(
                 intervals = listOf(
@@ -91,26 +90,23 @@ class PerDayUiMapperTest {
                     interval("2026-09-08T09:00:00Z", minutes = 12)
                 )
             )
-        ).toPerDayStripUi(today, TimeZone.UTC)!!
+        ).toPerDayStripUi(TimeZone.UTC)!!
 
-        assertEquals(listOf("05.9", "06.9", "07.9", "08.9"), strip.days.map { it.dateLabel })
+        assertEquals(listOf("05.9", "08.9"), strip.days.map { it.dateLabel })
         assertEquals(
-            listOf("01:00:00", null, null, "00:12:00"),
+            listOf("01:00:00", "00:12:00"),
             strip.days.map { it.formattedDuration }
         )
-        assertEquals(listOf(0L, 0L), strip.days.subList(1, 3).map { it.trackedMillis })
     }
 
     @Test
-    fun `the strip runs through today even when the last tracked day is earlier`() {
+    fun `the strip ends on the last active day, not on today`() {
         val strip = project(
             task(intervals = listOf(interval("2026-09-05T09:00:00Z", minutes = 35)))
-        ).toPerDayStripUi(today, TimeZone.UTC)!!
+        ).toPerDayStripUi(TimeZone.UTC)!!
 
-        assertEquals(4, strip.days.size)
-        assertEquals("05.9", strip.days.first().dateLabel)
-        assertEquals("08.9", strip.days.last().dateLabel)
-        assertNull(strip.days.last().formattedDuration)
+        assertEquals(1, strip.days.size)
+        assertEquals("05.9", strip.days.single().dateLabel)
     }
 
     @Test
@@ -118,7 +114,7 @@ class PerDayUiMapperTest {
         val strip = project(
             task(intervals = listOf(interval("2026-09-05T09:00:00Z", minutes = 35))),
             // The project row itself starts 2026-08-01; see the project() builder.
-        ).toPerDayStripUi(today, TimeZone.UTC)!!
+        ).toPerDayStripUi(TimeZone.UTC)!!
 
         assertEquals("05.9", strip.days.first().dateLabel)
     }
@@ -132,10 +128,53 @@ class PerDayUiMapperTest {
                     interval("2026-09-01T09:00:00Z", minutes = 10)
                 )
             )
-        ).toPerDayStripUi(LocalDate(2026, 9, 1), TimeZone.UTC)!!
+        ).toPerDayStripUi(TimeZone.UTC)!!
 
-        assertEquals(listOf("30.8", "31.8", "01.9"), strip.days.map { it.dateLabel })
-        assertEquals(listOf("Sun", "Mon", "Tue"), strip.days.map { it.weekdayLabel })
+        assertEquals(listOf("30.8", "01.9"), strip.days.map { it.dateLabel })
+        assertEquals(listOf("Sun", "Tue"), strip.days.map { it.weekdayLabel })
+    }
+
+    // --- the ten-day window ---------------------------------------------------------------------
+
+    @Test
+    fun `only the ten most recent active days get a tile`() {
+        // Twelve consecutive active days: 2026-08-29 through 2026-09-09.
+        val strip = project(
+            task(intervals = (0..11).map { day ->
+                interval("2026-08-29T09:00:00Z".plusDays(day), minutes = 10)
+            })
+        ).toPerDayStripUi(TimeZone.UTC)!!
+
+        assertEquals(10, strip.days.size)
+        assertEquals("31.8", strip.days.first().dateLabel)
+        assertEquals("09.9", strip.days.last().dateLabel)
+    }
+
+    @Test
+    fun `exactly ten active days are kept whole`() {
+        val strip = project(
+            task(intervals = (0..9).map { day ->
+                interval("2026-08-31T09:00:00Z".plusDays(day), minutes = 10)
+            })
+        ).toPerDayStripUi(TimeZone.UTC)!!
+
+        assertEquals(10, strip.days.size)
+        assertEquals("31.8", strip.days.first().dateLabel)
+    }
+
+    @Test
+    fun `the days stay in ascending date order`() {
+        val strip = project(
+            task(
+                intervals = listOf(
+                    interval("2026-09-08T09:00:00Z", minutes = 12),
+                    interval("2026-09-05T09:00:00Z", minutes = 60),
+                    interval("2026-09-06T09:00:00Z", minutes = 30)
+                )
+            )
+        ).toPerDayStripUi(TimeZone.UTC)!!
+
+        assertEquals(listOf("05.9", "06.9", "08.9"), strip.days.map { it.dateLabel })
     }
 
     // --- which intervals count -----------------------------------------------------------------
@@ -151,7 +190,7 @@ class PerDayUiMapperTest {
                     subTask(listOf(subInterval("2026-09-08T09:00:00Z", minutes = 60)))
                 )
             )
-        ).toPerDayStripUi(today, TimeZone.UTC)!!
+        ).toPerDayStripUi(TimeZone.UTC)!!
 
         assertEquals(60 * 60_000L, strip.days.single().trackedMillis)
     }
@@ -163,7 +202,7 @@ class PerDayUiMapperTest {
                 intervals = listOf(interval("2026-09-08T09:00:00Z", minutes = 20)),
                 subTasks = emptyList()
             )
-        ).toPerDayStripUi(today, TimeZone.UTC)!!
+        ).toPerDayStripUi(TimeZone.UTC)!!
 
         assertEquals(20 * 60_000L, strip.days.single().trackedMillis)
     }
@@ -177,7 +216,7 @@ class PerDayUiMapperTest {
                     interval("2026-09-08T11:00:00Z", minutes = 99, open = true)
                 )
             )
-        ).toPerDayStripUi(today, TimeZone.UTC)!!
+        ).toPerDayStripUi(TimeZone.UTC)!!
 
         assertEquals(20 * 60_000L, strip.days.single().trackedMillis)
     }
@@ -187,7 +226,7 @@ class PerDayUiMapperTest {
         val strip = project(
             task(intervals = listOf(interval("2026-09-08T09:00:00Z", minutes = 20))),
             task(intervals = listOf(interval("2026-09-08T14:00:00Z", minutes = 25)))
-        ).toPerDayStripUi(today, TimeZone.UTC)!!
+        ).toPerDayStripUi(TimeZone.UTC)!!
 
         assertEquals(45 * 60_000L, strip.days.single().trackedMillis)
         assertEquals("00:45:00", strip.days.single().formattedDuration)
@@ -204,7 +243,7 @@ class PerDayUiMapperTest {
                     interval("2026-09-08T09:00:00Z", minutes = 12)
                 )
             )
-        ).toPerDayStripUi(today, TimeZone.UTC)!!
+        ).toPerDayStripUi(TimeZone.UTC)!!
 
         assertEquals("Sat 05.9", strip.busiestDayLabel)
     }
@@ -218,9 +257,26 @@ class PerDayUiMapperTest {
                     interval("2026-09-08T09:00:00Z", minutes = 30)
                 )
             )
-        ).toPerDayStripUi(today, TimeZone.UTC)!!
+        ).toPerDayStripUi(TimeZone.UTC)!!
 
         assertEquals("Sat 05.9", strip.busiestDayLabel)
+    }
+
+    @Test
+    fun `a busier day outside the ten-day window is not the busiest`() {
+        // The long day falls off the left edge once ten more recent active days exist.
+        val strip = project(
+            task(
+                intervals = listOf(interval("2026-08-29T09:00:00Z", minutes = 600)) +
+                    (0..9).map { day -> interval("2026-08-31T09:00:00Z".plusDays(day), minutes = 10) } +
+                    interval("2026-09-09T14:00:00Z", minutes = 5)
+            )
+        ).toPerDayStripUi(TimeZone.UTC)!!
+
+        assertEquals(10, strip.days.size)
+        assertEquals("31.8", strip.days.first().dateLabel)
+        // 09.9 banks 10 + 5 minutes; every other visible day banks 10.
+        assertEquals("Wed 09.9", strip.busiestDayLabel)
     }
 
     // --- time zones --------------------------------------------------------------------------
@@ -230,9 +286,9 @@ class PerDayUiMapperTest {
         // 22:30 UTC on the 4th is 08:30 on the 5th in Sydney.
         val strip = project(
             task(intervals = listOf(interval("2026-09-04T22:30:00Z", minutes = 30)))
-        ).toPerDayStripUi(today, TimeZone.of("Australia/Sydney"))!!
+        ).toPerDayStripUi(TimeZone.of("Australia/Sydney"))!!
 
-        assertEquals("05.9", strip.days.first().dateLabel)
+        assertEquals("05.9", strip.days.single().dateLabel)
         assertEquals("Sat 05.9", strip.busiestDayLabel)
     }
 
@@ -241,11 +297,15 @@ class PerDayUiMapperTest {
         // 02:00 UTC on the 5th is 22:00 on the 4th in New York.
         val strip = project(
             task(intervals = listOf(interval("2026-09-05T02:00:00Z", minutes = 30)))
-        ).toPerDayStripUi(today, TimeZone.of("America/New_York"))!!
+        ).toPerDayStripUi(TimeZone.of("America/New_York"))!!
 
-        assertEquals("04.9", strip.days.first().dateLabel)
+        assertEquals("04.9", strip.days.single().dateLabel)
         assertEquals("Fri 04.9", strip.busiestDayLabel)
     }
+
+    /** "2026-08-29T09:00:00Z" plus n whole days, so a run of active days reads as a range. */
+    private fun String.plusDays(days: Int): String =
+        Instant.parse(this).plus(days.days).toString()
 
     // --- builders ----------------------------------------------------------------------------
 
