@@ -228,4 +228,11 @@
     <string name="calendar_day_description">%1$s, %2$s</string>
     <string name="calendar_day_untracked">no time tracked</string>
 
+    <!-- Daily overview day list -->
+    <string name="day_total">TOTAL</string>
+    <string name="day_interval_count">%1$d intervals · %2$d tasks</string>
+    <string name="day_interval_count_single">%1$d interval · %2$d task</string>
+    <string name="day_empty">Nothing tracked on this day</string>
+    <string name="day_interval_description">%1$s, %2$s, %3$s</string>
+
 </resources>
