@@ -2,6 +2,7 @@ package com.jvcs.tracky.features.project.presentation.daily_overview.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,10 +12,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.outlined.Today
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -22,11 +27,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -35,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.features.project.presentation.models.CalendarMonthUi
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.YearMonth
 import kotlinx.datetime.format.DayOfWeekNames
 import org.jetbrains.compose.resources.stringResource
 import tracky.composeapp.generated.resources.Res
@@ -44,30 +57,54 @@ import tracky.composeapp.generated.resources.calendar_intensity_more
 import tracky.composeapp.generated.resources.calendar_next_month
 import tracky.composeapp.generated.resources.calendar_previous_month
 import tracky.composeapp.generated.resources.calendar_select_date_title
+import tracky.composeapp.generated.resources.calendar_select_year
 
 /**
- * The calendar card: month title and running total, the weekday header, the grid, and a footer
- * naming the busiest day beside a key for the tints.
+ * The calendar card: a fixed header and footer around a pager of month grids.
  *
- * Stateless, and paging is hoisted to the caller as [onPreviousMonth] / [onNextMonth] so that
- * swiping can replace the chevrons later without this card changing shape.
+ * Only the grid pages, the way Material 3's own date picker works — the title, chevrons and
+ * legend stay put while the days slide. [months] is every page the calendar can show, built up
+ * front, so a swipe never waits on a recomputation.
+ *
+ * Stateless about *which* month is showing: [currentIndex] and [onMonthChange] are hoisted, so
+ * the selected date and the visible month stay the ViewModel's business. The only thing kept
+ * locally is whether the year grid is open, which is view state and nothing else.
  */
 @Composable
 fun CalendarMonthCard(
-    month: CalendarMonthUi,
+    months: List<CalendarMonthUi>,
+    currentIndex: Int,
     selectedDate: LocalDate?,
     selectedDateLabel: String?,
     projectColor: Color,
     onDateSelected: (LocalDate) -> Unit,
-    onPreviousMonth: () -> Unit,
-    onNextMonth: () -> Unit,
-    modifier: Modifier = Modifier,
-    canGoBack: Boolean = true,
-    canGoForward: Boolean = true
+    onMonthChange: (Int) -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    // Today is already flagged on its cell, so the header's jump-to-today needs no extra input
-    // and no ViewModel round trip - selecting the date is the whole behaviour.
-    val todayDate = month.monthDays.firstOrNull { it.isToday }?.date
+    if (months.isEmpty()) return
+    val index = currentIndex.coerceIn(months.indices)
+    val month = months[index]
+
+    val pagerState = rememberPagerState(initialPage = index) { months.size }
+    var isYearPickerOpen by remember { mutableStateOf(false) }
+
+    // Today is already flagged on its cell, so jump-to-today needs no extra input and no round
+    // trip through the ViewModel - selecting the date is the whole behaviour, and selectDate
+    // pages the calendar there. toCalendarMonthsUi always includes today's month, so this only
+    // comes back null for a caller that passed a partial page list.
+    val todayDate = months.firstNotNullOfOrNull { m -> m.monthDays.firstOrNull { it.isToday }?.date }
+
+    // Two directions to keep in step: a swipe settles the pager and has to tell the caller, and
+    // a caller-driven jump (the chevrons, or a year) has to move the pager.
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.settledPage }.collect { settled ->
+            if (settled != index) onMonthChange(settled)
+        }
+    }
+    LaunchedEffect(index) {
+        if (pagerState.currentPage != index) pagerState.animateScrollToPage(index)
+    }
+
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.surface,
@@ -79,26 +116,47 @@ fun CalendarMonthCard(
                 month = month,
                 selectedDateLabel = selectedDateLabel,
                 onJumpToToday = todayDate?.let { date -> { onDateSelected(date) } },
-                onPreviousMonth = onPreviousMonth,
-                onNextMonth = onNextMonth,
-                canGoBack = canGoBack,
-                canGoForward = canGoForward,
+                isYearPickerOpen = isYearPickerOpen,
+                onToggleYearPicker = { isYearPickerOpen = !isYearPickerOpen },
+                onPreviousMonth = { onMonthChange(index - 1) },
+                onNextMonth = { onMonthChange(index + 1) },
+                canGoBack = index > 0,
+                canGoForward = index < months.lastIndex,
                 modifier = Modifier.padding(horizontal = 8.dp)
             )
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            WeekdayHeaderRow(modifier = Modifier.padding(horizontal = 12.dp))
+            if (isYearPickerOpen) {
+                CalendarYearPicker(
+                    years = months.map { it.yearMonth.year }.distinct(),
+                    selectedYear = month.yearMonth.year,
+                    projectColor = projectColor,
+                    onYearSelected = { year ->
+                        // Land on the same month of that year when it exists, so picking a year
+                        // does not silently move the user to January.
+                        val target = months.indexOfFirst {
+                            it.yearMonth.year == year && it.yearMonth.month == month.yearMonth.month
+                        }.takeIf { it >= 0 } ?: months.indexOfFirst { it.yearMonth.year == year }
+                        if (target >= 0) onMonthChange(target)
+                        isYearPickerOpen = false
+                    }
+                )
+            } else {
+                WeekdayHeaderRow(modifier = Modifier.padding(horizontal = 12.dp))
 
-            Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
-            CalendarMonthGrid(
-                month = month,
-                selectedDate = selectedDate,
-                projectColor = projectColor,
-                onDateSelected = onDateSelected,
-                modifier = Modifier.padding(horizontal = 12.dp)
-            )
+                HorizontalPager(state = pagerState) { page ->
+                    CalendarMonthGrid(
+                        month = months[page],
+                        selectedDate = selectedDate,
+                        projectColor = projectColor,
+                        onDateSelected = onDateSelected,
+                        modifier = Modifier.padding(horizontal = 12.dp)
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(10.dp))
 
@@ -114,14 +172,16 @@ fun CalendarMonthCard(
  * Follows Material 3's date-picker header: a supporting title, the selected date as the
  * headline, then the month and its chevrons below a divider.
  *
- * @param onJumpToToday null when today is not on this page, which disables the action rather
- * than offering a jump that would go nowhere.
+ * @param onJumpToToday null when today is on none of the pages, which disables the action
+ * rather than offering a jump that would go nowhere.
  */
 @Composable
 private fun MonthHeader(
     month: CalendarMonthUi,
     selectedDateLabel: String?,
     onJumpToToday: (() -> Unit)?,
+    isYearPickerOpen: Boolean,
+    onToggleYearPicker: () -> Unit,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
     canGoBack: Boolean,
@@ -138,10 +198,7 @@ private fun MonthHeader(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = selectedDateLabel.orEmpty(),
                 modifier = Modifier.weight(1f).padding(start = 8.dp),
@@ -160,16 +217,25 @@ private fun MonthHeader(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = month.monthLabel,
-                modifier = Modifier.padding(start = 8.dp),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable(onClick = onToggleYearPicker)
+                    .padding(start = 8.dp, top = 4.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = month.monthLabel,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Icon(
+                    imageVector = if (isYearPickerOpen) Icons.Filled.ArrowDropUp else Icons.Filled.ArrowDropDown,
+                    contentDescription = stringResource(Res.string.calendar_select_year),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             Spacer(modifier = Modifier.weight(1f))
 
@@ -270,23 +336,38 @@ private fun CardPreviewContainer(content: @Composable () -> Unit) {
     }
 }
 
+/** August and September 2026, so the pager and the year picker both have somewhere to go. */
+private fun previewMonths(): List<CalendarMonthUi> = listOf(
+    previewCalendarMonth().copy(
+        yearMonth = YearMonth(2026, 8),
+        monthLabel = "August 2026",
+        monthTotalLabel = "12:40",
+        busiestDayLabel = "Mon 24"
+    ),
+    previewCalendarMonth()
+)
+
 @Composable
-private fun PreviewCard(month: CalendarMonthUi, projectColor: Color = PreviewProjectColor) {
+private fun PreviewCard(
+    months: List<CalendarMonthUi> = previewMonths(),
+    currentIndex: Int = 1,
+    projectColor: Color = PreviewProjectColor
+) {
     CalendarMonthCard(
-        month = month,
+        months = months,
+        currentIndex = currentIndex,
         selectedDate = LocalDate(2026, 9, 8),
         selectedDateLabel = "Sep 8, 2026",
         projectColor = projectColor,
         onDateSelected = {},
-        onPreviousMonth = {},
-        onNextMonth = {}
+        onMonthChange = {}
     )
 }
 
 @PreviewLightDark
 @Composable
 private fun CalendarMonthCardDefaultPreview() {
-    CardPreviewContainer { PreviewCard(previewCalendarMonth()) }
+    CardPreviewContainer { PreviewCard() }
 }
 
 /** Nothing tracked: the header says so, and the footer has no busiest day to name. */
@@ -295,8 +376,11 @@ private fun CalendarMonthCardDefaultPreview() {
 private fun CalendarMonthCardEmptyPreview() {
     CardPreviewContainer {
         PreviewCard(
-            previewCalendarMonth(tracked = emptyMap())
-                .copy(monthTotalLabel = null, busiestDayLabel = null)
+            months = listOf(
+                previewCalendarMonth(tracked = emptyMap())
+                    .copy(monthTotalLabel = null, busiestDayLabel = null)
+            ),
+            currentIndex = 0
         )
     }
 }
@@ -305,44 +389,25 @@ private fun CalendarMonthCardEmptyPreview() {
 @Preview(name = "At the start of the range")
 @Composable
 private fun CalendarMonthCardAtRangeStartPreview() {
-    CardPreviewContainer {
-        CalendarMonthCard(
-            month = previewCalendarMonth(),
-            selectedDate = LocalDate(2026, 9, 8),
-            selectedDateLabel = "Sep 8, 2026",
-            projectColor = PreviewProjectColor,
-            onDateSelected = {},
-            onPreviousMonth = {},
-            onNextMonth = {},
-            canGoBack = false
-        )
-    }
-}
-
-/** Paged away from today: the jump-to-today action has nowhere to go, so it disables. */
-@Preview(name = "Today not on this page")
-@Composable
-private fun CalendarMonthCardTodayElsewherePreview() {
-    CardPreviewContainer {
-        PreviewCard(previewCalendarMonth(today = LocalDate(2026, 11, 3)))
-    }
+    // The oldest page: nothing before it, so the back chevron disables itself.
+    CardPreviewContainer { PreviewCard(currentIndex = 0) }
 }
 
 @Preview(name = "Compact", widthDp = 320)
 @Composable
 private fun CalendarMonthCardCompactPreview() {
-    CardPreviewContainer { PreviewCard(previewCalendarMonth()) }
+    CardPreviewContainer { PreviewCard() }
 }
 
 @Preview(name = "Expanded width", widthDp = 840)
 @Composable
 private fun CalendarMonthCardExpandedWidthPreview() {
-    CardPreviewContainer { PreviewCard(previewCalendarMonth()) }
+    CardPreviewContainer { PreviewCard() }
 }
 
 /** The footer packs a label and six swatches onto one row, so large text is the tight case. */
 @Preview(name = "Font scale 2x", fontScale = 2f)
 @Composable
 private fun CalendarMonthCardFontScalePreview() {
-    CardPreviewContainer { PreviewCard(previewCalendarMonth()) }
+    CardPreviewContainer { PreviewCard() }
 }
