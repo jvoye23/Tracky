@@ -77,6 +77,15 @@ sealed interface Route : NavKey {
         ) : Route, NavKey
 
         @Serializable
+        @SerialName("daily_overview")
+        data class DailyOverview(
+            val projectId: String,
+            // Epoch day rather than a LocalDate: the saved back stack handles primitives
+            // predictably, and -1 stands for "open on today" because day 0 is a real date.
+            val preselectedDateEpochDay: Long = -1L
+        ) : Route, NavKey
+
+        @Serializable
         @SerialName("task_detail")
         data class TaskDetail(
             val taskId: String

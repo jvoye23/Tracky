@@ -29,6 +29,7 @@ class RouteSerialNameTest {
         "project_detail" to Route.ProjectRoute.ProjectDetail.serializer().descriptor.serialName,
         "edit_text" to Route.ProjectRoute.EditTextNavKey.serializer().descriptor.serialName,
         "task_detail" to Route.ProjectRoute.TaskDetail.serializer().descriptor.serialName,
+        "daily_overview" to Route.ProjectRoute.DailyOverview.serializer().descriptor.serialName,
     )
 
     @Test
@@ -40,7 +41,7 @@ class RouteSerialNameTest {
 
     @Test
     fun `every route is covered by this test`() {
-        assertEquals(13, expectedSerialNames.size)
+        assertEquals(14, expectedSerialNames.size)
     }
 
     @Test
@@ -81,6 +82,7 @@ class RouteSerialNameTest {
                 projectId = "id"
             ),
             Route.ProjectRoute.TaskDetail(taskId = "id"),
+            Route.ProjectRoute.DailyOverview(projectId = "id", preselectedDateEpochDay = 20_700L),
         )
 
         assertEquals(expectedSerialNames.size, routes.size)

@@ -1,5 +1,6 @@
 package com.jvcs.tracky.features.project.di
 
+import com.jvcs.tracky.features.project.presentation.daily_overview.DailyOverviewViewModel
 import com.jvcs.tracky.features.project.presentation.projectEditTextScreen.ProjectEditTextViewModel
 import com.jvcs.tracky.features.project.presentation.project_detail.ProjectDetailViewModel
 import com.jvcs.tracky.features.project.presentation.project_overview.ProjectOverviewViewModel
@@ -47,6 +48,18 @@ val projectModule = module {
             projectId = projectId,
             projectRepository = get(),
             savedStateHandle = get(),
+        )
+    }
+
+    // The destructured parameter list must match parametersOf(...) at the nav entry exactly -
+    // a mismatch compiles and only fails when the screen is opened.
+    viewModel { (projectId: String, preselectedDateEpochDay: Long) ->
+        DailyOverviewViewModel(
+            projectId = projectId,
+            preselectedDateEpochDay = preselectedDateEpochDay,
+            projectRepository = get(),
+            timeProvider = get(),
+            savedStateHandle = get()
         )
     }
 

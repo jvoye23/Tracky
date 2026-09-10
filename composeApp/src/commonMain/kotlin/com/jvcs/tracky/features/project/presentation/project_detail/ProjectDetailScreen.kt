@@ -70,13 +70,13 @@ import com.jvcs.tracky.features.project.presentation.models.PerDayStripUi
 import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
 import com.jvcs.tracky.features.project.presentation.models.ProjectUi
 import com.jvcs.tracky.design_system.components.DurationHeroCard
+import com.jvcs.tracky.design_system.components.InfoCard
 import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.design_system.util.ObserveAsEvents
 import com.jvcs.tracky.design_system.util.rememberCollapsibleScrollBehavior
 import com.jvcs.tracky.features.project.presentation.models.ProjectSubTaskUi
 import com.jvcs.tracky.features.project.presentation.project_detail.components.AddNewProjectTaskBottomSheet
 import com.jvcs.tracky.features.project.presentation.project_detail.components.ColorInfoCard
-import com.jvcs.tracky.features.project.presentation.project_detail.components.InfoCard
 import com.jvcs.tracky.features.project.presentation.project_detail.components.PerDayCard
 import com.jvcs.tracky.features.project.presentation.project_detail.components.TaskItemCard
 import com.jvcs.tracky.features.project.presentation.project_detail.components.TrackyColorPicker
