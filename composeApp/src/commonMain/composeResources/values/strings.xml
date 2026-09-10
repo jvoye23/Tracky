@@ -218,6 +218,12 @@
     <string name="per_day_cell_untracked">no time tracked</string>
 
     <!-- Daily overview calendar -->
+    <string name="calendar_select_date_title">Select date</string>
+    <string name="calendar_jump_to_today">Jump to today</string>
+    <string name="calendar_intensity_less">LESS</string>
+    <string name="calendar_intensity_more">MORE</string>
+    <string name="calendar_previous_month">Previous month</string>
+    <string name="calendar_next_month">Next month</string>
     <string name="calendar_day_description">%1$s, %2$s</string>
     <string name="calendar_day_untracked">no time tracked</string>
 
