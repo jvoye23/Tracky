@@ -2,6 +2,7 @@ package com.jvcs.tracky.features.project.presentation.project_detail
 
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.ui.graphics.Color
+import com.jvcs.tracky.features.project.presentation.models.PerDayStripUi
 import com.jvcs.tracky.features.project.presentation.models.ProjectUi
 import kotlin.time.Duration
 
@@ -31,5 +32,9 @@ data class ProjectDetailState(
     val isColorPickerVisible: Boolean = false,
     val projectColor: Color? = null,
     val selectedColorHex: String = "#00FFFF",
-    val useLightTextColor: Boolean = false
+    val useLightTextColor: Boolean = false,
+    // Null until the project loads, and stays null for a project with no banked time — the
+    // strip is omitted rather than drawn empty. Survives the project-row combine because
+    // withProjectRow only rewrites the fields the row owns.
+    val perDayStrip: PerDayStripUi? = null
 )

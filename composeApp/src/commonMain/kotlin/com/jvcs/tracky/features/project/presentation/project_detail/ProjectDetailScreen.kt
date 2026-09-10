@@ -66,6 +66,7 @@ import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.jvcs.tracky.features.project.presentation.models.PerDayStripUi
 import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
 import com.jvcs.tracky.features.project.presentation.models.ProjectUi
 import com.jvcs.tracky.design_system.components.DurationHeroCard
@@ -76,6 +77,7 @@ import com.jvcs.tracky.features.project.presentation.models.ProjectSubTaskUi
 import com.jvcs.tracky.features.project.presentation.project_detail.components.AddNewProjectTaskBottomSheet
 import com.jvcs.tracky.features.project.presentation.project_detail.components.ColorInfoCard
 import com.jvcs.tracky.features.project.presentation.project_detail.components.InfoCard
+import com.jvcs.tracky.features.project.presentation.project_detail.components.PerDayCard
 import com.jvcs.tracky.features.project.presentation.project_detail.components.TaskItemCard
 import com.jvcs.tracky.features.project.presentation.project_detail.components.TrackyColorPicker
 import kotlinx.coroutines.launch
@@ -294,6 +296,8 @@ fun ProjectDetailScreen(
                             .padding(vertical = 16.dp),
                         startDate = state.project.startDateTimeUtc,
                         lastActive = state.project.startDateTimeUtc,
+                        perDayStrip = state.perDayStrip,
+                        projectColor = state.projectColor ?: MaterialTheme.colorScheme.primary,
                         state = state
                     )
                 }
@@ -455,6 +459,8 @@ private fun InfoGrid(
     modifier: Modifier = Modifier,
     startDate: String,
     lastActive: String,
+    perDayStrip: PerDayStripUi?,
+    projectColor: Color,
     state: ProjectDetailState,
 ) {
     Column(
@@ -465,6 +471,20 @@ private fun InfoGrid(
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             InfoCard(Modifier.weight(1f), Icons.Outlined.DateRange, stringResource(Res.string.start_date), startDate)
             InfoCard(Modifier.weight(1f), Icons.Outlined.History, stringResource(Res.string.last_active), lastActive)
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            // Null for a project with no banked time: an empty strip would say less than no strip.
+            // The column's spacedBy(12.dp) supplies the gaps, so the card needs no padding of its own.
+            perDayStrip?.let { strip ->
+                PerDayCard(
+                    days = strip.days,
+                    busiestDayLabel = strip.busiestDayLabel,
+                    projectColor = projectColor
+                )
+            }
         }
 
         InfoCard(
@@ -486,7 +506,7 @@ private fun InfoGrid(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(6.dp),
-                color = state.projectColor ?: MaterialTheme.colorScheme.primary,
+                color = projectColor,
                 trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                 strokeCap = StrokeCap.Round,
                 gapSize = 0.dp,
