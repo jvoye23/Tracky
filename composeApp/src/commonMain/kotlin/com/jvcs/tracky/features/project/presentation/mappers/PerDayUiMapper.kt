@@ -9,10 +9,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.format
 import kotlinx.datetime.format.DayOfWeekNames
 import kotlinx.datetime.format.Padding
-import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.ExperimentalTime
-import kotlin.time.Instant
 
 /** "Sat" — the abbreviated weekday, used whole in both the tiles and the footer. */
 private val weekdayFormat = LocalDate.Format {
@@ -43,10 +40,9 @@ private const val MAX_ACTIVE_DAYS = 10
  * Returns `null` when the project has no banked time at all: with no active days there is nothing
  * to draw, and the screen simply omits the card.
  */
-@OptIn(ExperimentalTime::class)
 fun Project.toPerDayStripUi(timeZone: TimeZone): PerDayStripUi? {
-    val activeDays = countedIntervals()
-        .groupingBy { it.startedAt.toLocalDateTime(timeZone).date }
+    val activeDays = countedDayIntervals(timeZone)
+        .groupingBy { it.date }
         .fold(0L) { total, interval -> total + interval.durationMillis }
         // A day whose intervals all came out zero-length banked nothing, so it is not active.
         .filterValues { it > 0L }
@@ -75,12 +71,6 @@ fun Project.toPerDayStripUi(timeZone: TimeZone): PerDayStripUi? {
     )
 }
 
-/** One closed interval: when it started, and how long it lasted. */
-private data class TrackedInterval(
-    val startedAt: Instant,
-    val durationMillis: Long
-)
-
 /** How much time one day collected. */
 private data class DayTotal(
     val date: LocalDate,
@@ -89,31 +79,3 @@ private data class DayTotal(
 
 /** Busiest first. Equal days go to the earlier one, which the eye reaches first. */
 private val busiestFirst = compareByDescending<DayTotal> { it.millis }.thenBy { it.date }
-
-/**
- * The intervals whose time the strip counts.
- *
- * Mirrors [com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi.displayDuration]: a
- * subtask interval always nests inside one of its parent task's intervals, so counting both would
- * bill the same stretch of time twice. A task that owns subtasks therefore contributes only their
- * intervals, and the strip's total agrees with the project total in the hero card.
- *
- * Open intervals are dropped — their elapsed time is not banked into `durationMillis` until the
- * timer stops, the same rule `TaskDetailViewModel.calculateDailyStatistics` applies.
- */
-@OptIn(ExperimentalTime::class)
-private fun Project.countedIntervals(): List<TrackedInterval> =
-    projectTasks.orEmpty().flatMap { task ->
-        val subTasks = task.subTasks.orEmpty()
-        if (subTasks.isEmpty()) {
-            task.intervals
-                .filter { it.endDateTimeUtc != null }
-                .map { TrackedInterval(it.startDateTimeUtc, it.durationMillis) }
-        } else {
-            subTasks.flatMap { subTask ->
-                subTask.subTaskIntervals
-                    .filter { it.endDateTimeUtc != null }
-                    .map { TrackedInterval(it.startDateTimeUtc, it.durationMillis) }
-            }
-        }
-    }
