@@ -1,5 +1,7 @@
 package com.jvcs.tracky.features.project.presentation.models
 
+import kotlinx.datetime.LocalDate
+
 /**
  * One day in the "Per day" activity strip.
  *
@@ -15,7 +17,12 @@ data class PerDayUi(
     /** Display duration such as "00:52:12", or `null` when nothing was tracked that day. */
     val formattedDuration: String?,
     /** Total tracked time for the day; drives the cell tint. */
-    val trackedMillis: Long
+    val trackedMillis: Long,
+    /**
+     * The day this tile stands for, so a tap can carry it. Last and defaulted, because the
+     * previews build tiles positionally; [dateLabel] cannot stand in, as "25.8" has no year.
+     */
+    val date: LocalDate? = null
 )
 
 

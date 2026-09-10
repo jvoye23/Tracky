@@ -7,6 +7,7 @@ import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.features.project.domain.models.SubTaskInterval
 import com.jvcs.tracky.features.project.domain.models.TaskInterval
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -301,6 +302,16 @@ class PerDayUiMapperTest {
 
         assertEquals("04.9", strip.days.single().dateLabel)
         assertEquals("Fri 04.9", strip.busiestDayLabel)
+    }
+
+    @Test
+    fun `a tile carries the real date, which its label cannot round-trip`() {
+        val strip = project(
+            task(intervals = listOf(interval("2026-09-08T09:00:00Z", minutes = 52)))
+        ).toPerDayStripUi(TimeZone.UTC)!!
+
+        // "08.9" has no year, so tapping a tile needs the date itself.
+        assertEquals(LocalDate(2026, 9, 8), strip.days.single().date)
     }
 
     /** "2026-08-29T09:00:00Z" plus n whole days, so a run of active days reads as a range. */

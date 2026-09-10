@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.History
@@ -84,6 +85,7 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import tracky.composeapp.generated.resources.Res
+import tracky.composeapp.generated.resources.daily_overview_title
 import tracky.composeapp.generated.resources.description
 import tracky.composeapp.generated.resources.last_active
 import tracky.composeapp.generated.resources.ok
@@ -98,11 +100,15 @@ import tracky.composeapp.generated.resources.title
 import tracky.composeapp.generated.resources.uncheck_task_blocked_message
 import tracky.composeapp.generated.resources.uncheck_task_blocked_title
 
+/** Sentinel for "open on today", matching the route's default. */
+private const val OPEN_ON_TODAY = -1L
+
 @Composable
 fun ProjectDetailScreenRoot(
     navigateBack: () -> Unit,
     onEditTextClick: (isEditMode: Boolean, projectId: String) -> Unit,
     onProjectTaskClick: (String) -> Unit,
+    onDailyOverviewClick: (epochDay: Long) -> Unit,
     viewModel: ProjectDetailViewModel = koinViewModel ()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -136,6 +142,7 @@ fun ProjectDetailScreenRoot(
         onAction = { action ->
             when(action) {
                 ProjectDetailAction.OnBackClick -> navigateBack()
+                is ProjectDetailAction.OnDailyOverviewClick -> onDailyOverviewClick(action.epochDay)
                 is ProjectDetailAction.OnProjectEditTextClick ->
                     onEditTextClick(
                         action.isEditMode,
@@ -205,6 +212,17 @@ fun ProjectDetailScreen(
                     }
                 },
                 actions = {
+                    // Hidden in edit mode: leaving the screen mid-edit would drop the changes.
+                    if (!state.isEditMode) {
+                        IconButton(onClick = {
+                            onAction(ProjectDetailAction.OnDailyOverviewClick(OPEN_ON_TODAY))
+                        }) {
+                            Icon(
+                                imageVector = Icons.Outlined.CalendarMonth,
+                                contentDescription = stringResource(Res.string.daily_overview_title)
+                            )
+                        }
+                    }
                     IconButton(onClick = {
                         if (state.isEditMode) onAction(ProjectDetailAction.OnSaveClick)
                         else onAction(ProjectDetailAction.OnEditModeClick)
