@@ -16,6 +16,8 @@ import com.jvcs.tracky.features.project.presentation.util.toUiText
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -95,7 +97,7 @@ class ProjectEditTextViewModel(
     private fun observeTitleChanges() {
         viewModelScope.launch {
             snapshotFlow { titleState.text.toString() }.collect {
-                run { savedStateHandle[KEY_TITLE] = it }
+                savedStateHandle[KEY_TITLE] = it
             }
         }
     }
@@ -103,16 +105,16 @@ class ProjectEditTextViewModel(
     private fun observeDescriptionChanges() {
         viewModelScope.launch {
             snapshotFlow { descriptionState.text.toString() }.collect {
-                run { savedStateHandle[KEY_DESCRIPTION] = it }
+                savedStateHandle[KEY_DESCRIPTION] = it
             }
         }
     }
 
     private fun observeEditModeChanges() {
         viewModelScope.launch {
-            snapshotFlow { editModeState }.collect {
-                run { savedStateHandle[KEY_IS_EDIT_MODE] = it }
-            }
+            _state.map { it.isEditMode }
+                .distinctUntilChanged()
+                .collect { savedStateHandle[KEY_IS_EDIT_MODE] = it }
         }
     }
 
