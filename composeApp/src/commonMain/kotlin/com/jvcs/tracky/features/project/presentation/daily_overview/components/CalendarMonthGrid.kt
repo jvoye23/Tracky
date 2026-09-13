@@ -177,7 +177,8 @@ private val PreviewAlternateProjectColor = Color(0xFF3E8E8A)
  * September 2026, drawn from the design reference: opens on a Tuesday, so one leading padding
  * cell, and the busiest day is Tue 08 at full tint.
  */
-private fun previewMonth(
+/** Shared with [CalendarMonthCard]'s previews, so the fixture is written once. */
+internal fun previewCalendarMonth(
     tracked: Map<Int, Long> = mapOf(
         1 to 42L, 2 to 38L, 4 to 95L, 5 to 24L, 7 to 78L, 8 to 206L, 9 to 31L,
         11 to 52L, 12 to 64L, 15 to 18L, 16 to 71L, 18 to 45L, 21 to 33L, 22 to 68L,
@@ -224,7 +225,7 @@ private fun GridPreviewContainer(content: @Composable () -> Unit) {
 private fun CalendarMonthGridDefaultPreview() {
     GridPreviewContainer {
         CalendarMonthGrid(
-            month = previewMonth(),
+            month = previewCalendarMonth(),
             selectedDate = LocalDate(2026, 9, 8),
             projectColor = PreviewProjectColor,
             onDateSelected = {}
@@ -238,7 +239,7 @@ private fun CalendarMonthGridDefaultPreview() {
 private fun CalendarMonthGridEmptyPreview() {
     GridPreviewContainer {
         CalendarMonthGrid(
-            month = previewMonth(tracked = emptyMap()).copy(monthTotalLabel = null, busiestDayLabel = null),
+            month = previewCalendarMonth(tracked = emptyMap()).copy(monthTotalLabel = null, busiestDayLabel = null),
             selectedDate = LocalDate(2026, 9, 8),
             projectColor = PreviewProjectColor,
             onDateSelected = {}
@@ -252,7 +253,7 @@ private fun CalendarMonthGridEmptyPreview() {
 private fun CalendarMonthGridSingleTrackedDayPreview() {
     GridPreviewContainer {
         CalendarMonthGrid(
-            month = previewMonth(tracked = mapOf(8 to 27L)),
+            month = previewCalendarMonth(tracked = mapOf(8 to 27L)),
             selectedDate = LocalDate(2026, 9, 8),
             projectColor = PreviewProjectColor,
             onDateSelected = {}
@@ -265,7 +266,7 @@ private fun CalendarMonthGridSingleTrackedDayPreview() {
 private fun CalendarMonthGridAlternateColorPreview() {
     GridPreviewContainer {
         CalendarMonthGrid(
-            month = previewMonth(),
+            month = previewCalendarMonth(),
             selectedDate = LocalDate(2026, 9, 8),
             projectColor = PreviewAlternateProjectColor,
             onDateSelected = {}
@@ -278,7 +279,7 @@ private fun CalendarMonthGridAlternateColorPreview() {
 private fun CalendarMonthGridCompactPreview() {
     GridPreviewContainer {
         CalendarMonthGrid(
-            month = previewMonth(),
+            month = previewCalendarMonth(),
             selectedDate = LocalDate(2026, 9, 8),
             projectColor = PreviewProjectColor,
             onDateSelected = {}
@@ -291,7 +292,7 @@ private fun CalendarMonthGridCompactPreview() {
 private fun CalendarMonthGridExpandedWidthPreview() {
     GridPreviewContainer {
         CalendarMonthGrid(
-            month = previewMonth(),
+            month = previewCalendarMonth(),
             selectedDate = LocalDate(2026, 9, 8),
             projectColor = PreviewProjectColor,
             onDateSelected = {}
@@ -305,7 +306,7 @@ private fun CalendarMonthGridExpandedWidthPreview() {
 private fun CalendarMonthGridFontScalePreview() {
     GridPreviewContainer {
         CalendarMonthGrid(
-            month = previewMonth(),
+            month = previewCalendarMonth(),
             selectedDate = LocalDate(2026, 9, 8),
             projectColor = PreviewProjectColor,
             onDateSelected = {}
