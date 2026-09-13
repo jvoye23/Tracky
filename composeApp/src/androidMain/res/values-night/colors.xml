@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Matches onSurfaceDark / onSurfaceVariantDark in design_system/theme/Color.kt. -->
+    <color name="timer_notification_text_primary">#FFFFFFFF</color>
+    <color name="timer_notification_text_secondary">#FFC2C7CF</color>
+</resources>

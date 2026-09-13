@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      The notification's own text colours, rather than ?android:attr/textColorPrimary.
+
+      RemoteViews are inflated by SystemUI: the resources come from this app but the configuration
+      is SystemUI's, so a values-night qualifier follows the system's dark mode while a theme
+      attribute resolves against whichever theme happens to be in scope over there.
+
+      Matches onSurfaceLight / onSurfaceVariantLight in design_system/theme/Color.kt.
+    -->
+    <color name="timer_notification_text_primary">#FF1A1C1E</color>
+    <color name="timer_notification_text_secondary">#FF42474E</color>
+</resources>

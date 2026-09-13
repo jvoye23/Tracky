@@ -23,7 +23,7 @@
         android:ellipsize="end"
         android:textSize="14sp"
         android:textStyle="bold"
-        android:textColor="?android:attr/textColorPrimary"
+        android:textColor="@color/timer_notification_text_primary"
         tools:text="Token refresh" />
 
     <TextView
