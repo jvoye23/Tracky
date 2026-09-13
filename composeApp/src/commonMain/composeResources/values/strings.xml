@@ -217,4 +217,8 @@
     <string name="per_day_cell_description">%1$s %2$s, %3$s</string>
     <string name="per_day_cell_untracked">no time tracked</string>
 
+    <!-- Daily overview calendar -->
+    <string name="calendar_day_description">%1$s, %2$s</string>
+    <string name="calendar_day_untracked">no time tracked</string>
+
 </resources>
