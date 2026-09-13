@@ -35,7 +35,7 @@ import com.jvcs.tracky.design_system.theme.projectLabelStyle
 import com.jvcs.tracky.design_system.util.DevicePreviews
 import com.jvcs.tracky.design_system.util.ObserveAsEvents
 import com.jvcs.tracky.design_system.util.UiText
-import com.jvcs.tracky.features.project.presentation.project_detail.components.EditTextTopAppBar
+import com.jvcs.tracky.features.project.presentation.project_detail.components.ProjectSubDetailTopAppBar
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -111,7 +111,7 @@ private fun EditTextScreen(
         contentWindowInsets = WindowInsets.statusBars,
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
-            EditTextTopAppBar(
+            ProjectSubDetailTopAppBar(
                 isEditMode = state.isEditMode,
                 onNavigateBack = onNavigateBack,
                 onEditClick = { onAction(ProjectEditTextAction.OnEditClick) },
