@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The collapsed view. Android gives a custom collapsed notification about 48dp, so this is one row:
+  what is being timed on the left, the clock and the button on the right.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingStart="16dp"
+    android:paddingEnd="12dp"
+    android:paddingTop="4dp"
+    android:paddingBottom="8dp">
+
+    <TextView
+        android:id="@+id/timer_collapsed_title"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:textColor="?android:attr/textColorPrimary"
+        tools:text="Token refresh" />
+
+    <TextView
+        android:id="@+id/timer_collapsed_clock"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:fontFamily="@font/roboto_mono"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        tools:text="02:16:09" />
+
+    <ImageView
+        android:id="@+id/timer_collapsed_button"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginStart="8dp"
+        android:padding="8dp"
+        android:background="@drawable/bg_timer_pill"
+        android:scaleType="fitCenter"
+        android:contentDescription="@string/timer_notification_pause"
+        android:src="@drawable/ic_pause" />
+
+</LinearLayout>
