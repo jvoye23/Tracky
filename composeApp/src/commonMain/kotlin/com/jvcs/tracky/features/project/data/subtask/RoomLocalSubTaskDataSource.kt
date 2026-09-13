@@ -7,6 +7,7 @@ import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeProvider
+import com.jvcs.tracky.core.domain.util.platformIoDispatcher
 import com.jvcs.tracky.features.project.data.mappers.toProjectSubTask
 import com.jvcs.tracky.features.project.data.mappers.toProjectSubTaskEntity
 import com.jvcs.tracky.features.project.data.mappers.toSubTaskInterval
@@ -17,8 +18,6 @@ import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import com.jvcs.tracky.features.project.domain.subtask.LocalSubTaskDataSource
 import com.jvcs.tracky.features.project.domain.subtask.SubTaskTimerChange
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -30,7 +29,7 @@ class RoomLocalSubTaskDataSource(
 ) : LocalSubTaskDataSource {
 
     // Same single-writer funnel as the other Room data sources — see RoomLocalProjectDataSource.
-    private val dbWriteDispatcher = Dispatchers.IO.limitedParallelism(1)
+    private val dbWriteDispatcher = platformIoDispatcher.limitedParallelism(1)
 
     override fun getSubTasksForTask(taskId: String): Flow<List<ProjectSubTask>> =
         projectDao.getSubTasksWithIntervals(taskId).map { rows -> rows.map { it.toProjectSubTask() } }

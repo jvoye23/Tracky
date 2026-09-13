@@ -4,6 +4,7 @@ import com.jvcs.tracky.core.database.dao.ProjectDao
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
+import com.jvcs.tracky.core.domain.util.platformIoDispatcher
 import com.jvcs.tracky.features.project.data.mappers.toProject
 import com.jvcs.tracky.features.project.data.mappers.toProjectEntity
 import com.jvcs.tracky.features.project.data.mappers.toProjectTaskEntity
@@ -13,8 +14,6 @@ import com.jvcs.tracky.features.project.data.mappers.toTaskIntervalEntity
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.project.LocalProjectDataSource
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -25,7 +24,7 @@ class RoomLocalProjectDataSource (
     private val projectDao: ProjectDao
 ): LocalProjectDataSource {
 
-    private val dbWriteDispatcher = Dispatchers.IO.limitedParallelism(1)
+    private val dbWriteDispatcher = platformIoDispatcher.limitedParallelism(1)
 
     override fun getProjects(): Flow<List<Project>> {
         return projectDao.getProjectsWithTasks()
