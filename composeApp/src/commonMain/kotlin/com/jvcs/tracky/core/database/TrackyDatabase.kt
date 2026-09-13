@@ -12,6 +12,7 @@ import com.jvcs.tracky.core.database.entity.PendingSyncEntity
 import com.jvcs.tracky.core.database.entity.ProjectEntity
 import com.jvcs.tracky.core.database.entity.ProjectSubTaskEntity
 import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
+import com.jvcs.tracky.core.database.entity.StrandedIntervalEntity
 import com.jvcs.tracky.core.database.entity.SubTaskIntervalEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 
@@ -22,9 +23,10 @@ import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
         TaskIntervalEntity::class,
         ProjectSubTaskEntity::class,
         SubTaskIntervalEntity::class,
-        PendingSyncEntity::class
+        PendingSyncEntity::class,
+        StrandedIntervalEntity::class
     ],
-    version = 16,
+    version = 17,
 )
 @ConstructedBy(TrackyDatabaseConstructor::class)
 abstract class TrackyDatabase: RoomDatabase() {
@@ -615,6 +617,26 @@ abstract class TrackyDatabase: RoomDatabase() {
                 )
                 connection.execSQL(
                     "CREATE INDEX IF NOT EXISTS index_project_sub_tasks_parentProjectId ON project_sub_tasks(parentProjectId)"
+                )
+            }
+        }
+
+        val MIGRATION_16_17 = object : Migration(16, 17) {
+            override fun migrate(connection: SQLiteConnection) {
+                // Parks intervals found open at start-up, which were stranded by the process that
+                // was timing them dying. See StrandedIntervalEntity for why this is a table of its
+                // own rather than a column on task_intervals.
+                //
+                // Purely additive: no existing row is read, rewritten or deleted. Intervals already
+                // carrying an impossible duration keep it until the user deletes them by hand.
+                connection.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS stranded_intervals (
+                        intervalId TEXT NOT NULL PRIMARY KEY,
+                        isSubTaskInterval INTEGER NOT NULL,
+                        detectedAtEpochMs INTEGER NOT NULL
+                    )
+                    """.trimIndent()
                 )
             }
         }

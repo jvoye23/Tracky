@@ -8,6 +8,7 @@ import com.jvcs.tracky.core.domain.sync.toSyncOutcome
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
+import com.jvcs.tracky.core.domain.startup.StartupReconciliation
 import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.core.domain.util.asEmptyDataResult
 import com.jvcs.tracky.core.domain.util.getOrDefault
@@ -35,7 +36,8 @@ class OfflineFirstTaskRepository(
     private val syncScheduler: SyncScheduler,
     private val intervalRepository: IntervalRepository,
     private val timeProvider: TimeProvider,
-    private val applicationScope: CoroutineScope
+    private val applicationScope: CoroutineScope,
+    private val startupReconciliation: StartupReconciliation
 ) : ProjectTaskRepository {
 
     // CREATE/UPDATE task: local first (optimistic), then remote; on transient failure → queue.
@@ -140,10 +142,17 @@ class OfflineFirstTaskRepository(
     }
 
     override suspend fun startProjectTask(taskId: String): EmptyResult<DataError> {
-        val openedInterval = when (val started = localTaskDataSource.startTask(taskId)) {
+        // Before anything is opened: startTask reuses whatever interval is already open, so
+        // starting ahead of the stranded-timer pass would adopt a row nothing was timing and the
+        // next stop would bank every hour since it opened. Free once the pass has run.
+        startupReconciliation.awaitReconciled()
+
+        val start = when (val started = localTaskDataSource.startTask(taskId)) {
             is Result.Success -> started.data
             is Result.Error -> return started.asEmptyDataResult()
         }
+        // Null means an already-open interval was reused, so there is no new row to create.
+        val openedInterval = start.openedInterval ?: return Result.Success(Unit)
         return intervalRepository.createTaskInterval(openedInterval)
     }
 

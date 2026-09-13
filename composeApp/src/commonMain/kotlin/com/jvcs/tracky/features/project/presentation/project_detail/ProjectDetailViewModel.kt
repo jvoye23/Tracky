@@ -211,9 +211,13 @@ class ProjectDetailViewModel(
 
         val currentDuration = parseDuration( timeString = session.formattedDuration)
 
-        val timerState = timeManager.taskStates.value[taskId]
-
-        if (timerState != null && timerState.isRunning) {
+        // The rendered flag, not TimeManager's. The card draws its play/pause icon from
+        // session.isTimerRunning (TaskItemCard), so branching on anything else lets the button do
+        // the opposite of what it shows — which is how a task ends up with two open intervals:
+        // the icon says pause, the tap says start. updateUiWithTimerValues keeps this field equal
+        // to TimeManager's view for as long as there is one, so nothing changes while a timer runs;
+        // what changes is the window before the first emission, where this is the database's answer.
+        if (session.isTimerRunning) {
             viewModelScope.launch {
                 projectTaskRepository.stopProjectTask(taskId)
                 timeManager.stopAndResetTimer(taskId)

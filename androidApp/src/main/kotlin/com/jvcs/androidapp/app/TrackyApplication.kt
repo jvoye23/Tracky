@@ -4,6 +4,7 @@ import android.app.Application
 import com.jvcs.tracky.core.domain.sync.ProjectSyncManager
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
 import com.jvcs.tracky.core.domain.sync.TrashCleanupScheduler
+import com.jvcs.tracky.features.project.data.timer.StrandedTimerReconciler
 import com.jvcs.tracky.di.initKoin
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -22,6 +23,8 @@ class TrackyApplication: Application() {
             androidContext(this@TrackyApplication)
             androidLogger()
         }
+        // Before the sync manager: a pull must not land on intervals the pass has not parked yet.
+        get<StrandedTimerReconciler>().start()
         get<ProjectSyncManager>().start()
         get<CoroutineScope>(named("AppScope")).launch {
             get<SyncScheduler>().schedulePeriodicSyncOnStart()

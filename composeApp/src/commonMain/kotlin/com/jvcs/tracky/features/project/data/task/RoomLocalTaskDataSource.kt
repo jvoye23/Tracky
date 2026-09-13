@@ -14,6 +14,7 @@ import com.jvcs.tracky.features.project.data.timer.closeTaskInterval
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import com.jvcs.tracky.features.project.domain.task.LocalTaskDataSource
+import com.jvcs.tracky.features.project.domain.task.TaskTimerStart
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -60,13 +61,25 @@ class RoomLocalTaskDataSource(
         projectDao.updateTaskTitle(taskId, title)
     }
 
-    override suspend fun startTask(taskId: String): Result<TaskInterval, DataError.Local> {
+    override suspend fun startTask(taskId: String): Result<TaskTimerStart, DataError.Local> {
         return try {
-            val interval = withContext(dbWriteDispatcher) {
+            val start = withContext(dbWriteDispatcher) {
                 // The owning project has to be read before the interval can be written: it is part
                 // of the row now, and the cascading foreign key would reject an interval whose task
                 // no longer exists anyway.
                 val task = projectDao.getTaskById(taskId) ?: return@withContext null
+
+                // Reuse whatever is already open rather than stacking a second row on top, the way
+                // startSubTask does. The timer lives only in memory, so a process death leaves the
+                // open interval behind with nothing tracking it; starting again would strand that
+                // row, and the next stop would close it with the whole wall-clock gap since.
+                projectDao.getOpenIntervalBySessionId(taskId)?.let { open ->
+                    projectDao.updateSessionTimerStatus(taskId, true)
+                    // openedInterval stays null: that row is already on the server, or queued for
+                    // it, and pushing a CREATE for it a second time would be a duplicate.
+                    return@withContext TaskTimerStart(open.toTaskInterval(), openedInterval = null)
+                }
+
                 val now = timeProvider.nowInstant
                 val interval = TaskIntervalEntity(
                     intervalId = Uuid.random().toString(),
@@ -78,9 +91,10 @@ class RoomLocalTaskDataSource(
                 )
                 projectDao.upsertTaskInterval(interval)
                 projectDao.updateSessionTimerStatus(taskId, true)
-                interval
+                val domain = interval.toTaskInterval()
+                TaskTimerStart(domain, openedInterval = domain)
             } ?: return Result.Error(DataError.Local.NOT_FOUND)
-            Result.Success(interval.toTaskInterval())
+            Result.Success(start)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Result.Error(DataError.Local.DISK_FULL)

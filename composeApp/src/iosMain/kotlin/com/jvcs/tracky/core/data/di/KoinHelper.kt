@@ -7,6 +7,7 @@ import com.jvcs.tracky.core.domain.sync.TrashCleanupScheduler
 import com.jvcs.tracky.core.domain.sync.TrashRetention
 import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.di.initKoin
+import com.jvcs.tracky.features.project.data.timer.StrandedTimerReconciler
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -18,6 +19,8 @@ fun startKoinIos() {
     // initKoin already loads every module, including appModule, coreDataModule and projectModule.
     initKoin()
     val koin = KoinPlatform.getKoin()
+    // Before the sync manager: a pull must not land on intervals the pass has not parked yet.
+    koin.get<StrandedTimerReconciler>().start()
     koin.get<ProjectSyncManager>().start()
     koin.get<CoroutineScope>(named("AppScope")).launch {
         koin.get<SyncScheduler>().schedulePeriodicSyncOnStart()

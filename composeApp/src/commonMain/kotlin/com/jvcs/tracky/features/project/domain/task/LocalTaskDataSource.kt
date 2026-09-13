@@ -25,7 +25,7 @@ interface LocalTaskDataSource {
      * Returns the interval it created so the caller can push it remotely — the id is generated in
      * here, so there is no other way for the repository to know which row to sync.
      */
-    suspend fun startTask(taskId: String): Result<TaskInterval, DataError.Local>
+    suspend fun startTask(taskId: String): Result<TaskTimerStart, DataError.Local>
 
     /**
      * Closes the task's open interval, adds its duration to the task and clears the timer flag.
