@@ -14,8 +14,10 @@ import com.jvcs.tracky.core.domain.auth.SocialAuthProvider
 import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource
 import com.jvcs.tracky.core.domain.startup.StartupReconciliation
 import com.jvcs.tracky.core.domain.sync.ProjectSyncManager
+import com.jvcs.tracky.features.project.data.timer.OfflineFirstRunningTimerRepository
 import com.jvcs.tracky.features.project.data.timer.OfflineFirstStrandedTimerRepository
 import com.jvcs.tracky.features.project.data.timer.StrandedTimerReconciler
+import com.jvcs.tracky.features.project.domain.timer.RunningTimerRepository
 import com.jvcs.tracky.features.project.domain.timer.StrandedTimerRepository
 import com.jvcs.tracky.core.domain.sync.SyncRepository
 import com.jvcs.tracky.core.domain.util.SystemTimeProvider
@@ -166,6 +168,9 @@ val coreDataModule = module {
             subTaskRepository = get()
         )
     } bind StrandedTimerRepository::class
+
+    // The read-only counterpart to the parked-timer repository above: same join, opposite filter.
+    single { OfflineFirstRunningTimerRepository(projectDao = get()) } bind RunningTimerRepository::class
 
     // The one place the projects → tasks → intervals → subtasks → subtask intervals sync order
     // is expressed.
