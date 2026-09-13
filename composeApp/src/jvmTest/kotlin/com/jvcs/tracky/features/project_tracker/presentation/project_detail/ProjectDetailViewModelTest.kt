@@ -171,7 +171,7 @@ class ProjectDetailViewModelTest {
             awaitItem()
             advanceUntilIdle()
 
-            assertEquals("00:01:30:00", vm.task()!!.displayDuration)
+            assertEquals("00:01:30", vm.task()!!.displayDuration)
             cancelAndIgnoreRemainingEvents()
         }
     }

@@ -296,7 +296,7 @@ fun ProjectDetailScreen(
                                 .padding(horizontal = 16.dp)
                                 .padding(bottom = 16.dp),
                             label = stringResource(Res.string.project_duration),
-                            totalDuration = state.project.totalProjectDuration ?: "00:00:00:00",
+                            totalDuration = state.project.totalProjectDuration ?: "00:00:00",
                             projectColor = state.projectColor ?: MaterialTheme.colorScheme.onSurface,
                             useLightTextColor = state.useLightTextColor,
                             onStartStopClick = {
