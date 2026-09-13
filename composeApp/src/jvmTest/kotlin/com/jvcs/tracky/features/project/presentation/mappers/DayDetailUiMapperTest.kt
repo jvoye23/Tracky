@@ -29,7 +29,7 @@ class DayDetailUiMapperTest {
 
         assertTrue(detail.isEmpty)
         assertEquals("Tue, Sep 08", detail.dateLabel)
-        assertEquals("00:00", detail.totalDuration)
+        assertEquals("00:00:00", detail.totalDuration)
         assertEquals(0, detail.taskCount)
         assertEquals(0, detail.intervalCount)
     }
@@ -64,7 +64,7 @@ class DayDetailUiMapperTest {
         assertEquals("Design review", card.taskTitle)
         assertNull(card.subTaskTitle)
         assertEquals("09:30 – 10:12", card.timeRangeLabel)
-        assertEquals("00:42", card.formattedDuration)
+        assertEquals("00:42:00", card.formattedDuration)
     }
 
     @Test
@@ -80,7 +80,7 @@ class DayDetailUiMapperTest {
         assertEquals("Auth endpoints", card.taskTitle)
         assertEquals("Token refresh", card.subTaskTitle)
         assertEquals("13:15 – 14:47", card.timeRangeLabel)
-        assertEquals("01:32", card.formattedDuration)
+        assertEquals("01:32:00", card.formattedDuration)
     }
 
     @Test
@@ -100,11 +100,22 @@ class DayDetailUiMapperTest {
     }
 
     @Test
-    fun `an interval running past midnight belongs to its start day and reads backwards`() {
-        val detail = day(task(intervals = listOf(interval("2026-09-08T23:40:00Z", minutes = 40))))
+    fun `an interval running past midnight appears on both days, each reading forwards`() {
+        val crossing = task(intervals = listOf(interval("2026-09-08T23:40:00Z", minutes = 40)))
 
-        assertEquals("23:40 – 00:20", detail.intervals.single().timeRangeLabel)
-        assertTrue(day(on = LocalDate(2026, 9, 9), tasks = arrayOf()).isEmpty)
+        val first = day(crossing)
+        // 24:00, not 00:00: the same instant named from this day's side, so the range reads
+        // forwards instead of looking like a session that ran backwards.
+        assertEquals("23:40 – 24:00", first.intervals.single().timeRangeLabel)
+        assertEquals("00:20:00", first.totalDuration)
+
+        val second = day(crossing, on = LocalDate(2026, 9, 9))
+        assertEquals("00:00 – 00:20", second.intervals.single().timeRangeLabel)
+        assertEquals("00:20:00", second.totalDuration)
+
+        // One task's worth of work, counted once on each day it touched.
+        assertEquals(1, first.taskCount)
+        assertEquals(1, second.taskCount)
     }
 
     @Test
@@ -112,7 +123,7 @@ class DayDetailUiMapperTest {
         val detail = day(task(intervals = listOf(interval("2026-09-08T09:00:00Z", minutes = 0))))
 
         assertEquals(1, detail.intervalCount)
-        assertEquals("00:00", detail.intervals.single().formattedDuration)
+        assertEquals("00:00:00", detail.intervals.single().formattedDuration)
     }
 
     @Test
@@ -136,7 +147,23 @@ class DayDetailUiMapperTest {
             )
         )
 
-        assertEquals("02:48", detail.totalDuration)
+        assertEquals("02:48:00", detail.totalDuration)
+    }
+
+    @Test
+    fun `the total and the cards carry seconds, and the seconds carry into minutes`() {
+        val detail = day(
+            task(
+                intervals = listOf(
+                    interval("2026-09-08T09:30:00Z", minutes = 1, seconds = 30, id = "a"),
+                    interval("2026-09-08T13:15:00Z", minutes = 1, seconds = 28, id = "b")
+                )
+            )
+        )
+
+        // 90s + 88s is 178s: the seconds roll over into a second minute rather than being dropped.
+        assertEquals("00:02:58", detail.totalDuration)
+        assertEquals("00:01:30", detail.intervals.first().formattedDuration)
     }
 
     @Test
@@ -179,14 +206,14 @@ class DayDetailUiMapperTest {
         val detail = day(*tasks)
 
         assertEquals(1, detail.intervalCount)
-        assertEquals("00:42", detail.totalDuration)
+        assertEquals("00:42:00", detail.totalDuration)
 
         // The number the calendar tints that cell with must be the number the list totals.
         val cell = project(tasks = tasks.toList())
             .toCalendarMonthsUi(today = sep8, timeZone = TimeZone.UTC)
             .flatMap { it.monthDays }
             .single { it.date == sep8 }
-        assertEquals(detail.totalDuration, "00:42")
+        assertEquals(detail.totalDuration, "00:42:00")
         assertEquals(42 * 60_000L, cell.trackedMillis)
     }
 

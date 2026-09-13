@@ -24,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
@@ -161,7 +162,10 @@ private fun DailyOverviewScreen(
                     item(key = "day-empty") { DayEmptyState() }
                 } else {
                     items(day.intervals, key = { it.intervalId }) { interval ->
-                        DayIntervalCard(interval = interval)
+                        DayIntervalCard(
+                            interval = interval,
+                            projectColor = projectColor
+                        )
                     }
                 }
             }
@@ -174,7 +178,7 @@ private fun DailyOverviewScreen(
 // ---------------------------------------------------------------------------
 
 private fun previewInterval(index: String, task: String, subTask: String?, range: String, duration: String) =
-    DayIntervalUi("id-$index", index, task, subTask, range, duration)
+    DayIntervalUi("id-$index", index, task, subTask, range, duration, Color(0xFF475D92))
 
 private fun previewState(dayDetail: DayDetailUi) = DailyOverviewState(
     projectTitle = "Tracky",
@@ -189,12 +193,12 @@ private fun previewState(dayDetail: DayDetailUi) = DailyOverviewState(
 private fun previewDay() = DayDetailUi(
     dateLabel = "Tue, Sep 08",
     headlineLabel = "Sep 8, 2026",
-    totalDuration = "03:26",
+    totalDuration = "03:26:58",
     intervals = listOf(
-        previewInterval("01", "Design review", "Calendar spec", "09:30 – 10:12", "00:42"),
-        previewInterval("02", "Onboarding copy", null, "10:20 – 10:58", "00:38"),
-        previewInterval("03", "Auth endpoints", "Token refresh", "13:15 – 14:47", "01:32"),
-        previewInterval("04", "Testing Tasks", null, "15:30 – 16:04", "00:34")
+        previewInterval("01", "Design review", "Calendar spec", "09:30 – 10:12", "00:42:11"),
+        previewInterval("02", "Onboarding copy", null, "10:20 – 10:58", "00:38:22"),
+        previewInterval("03", "Auth endpoints", "Token refresh", "13:15 – 14:47", "01:32:07"),
+        previewInterval("04", "Testing Tasks", null, "15:30 – 16:04", "00:34:18")
     ),
     taskCount = 4
 )
@@ -214,7 +218,7 @@ private fun DailyOverviewScreenPreview() = ScreenPreview(previewState(previewDay
 @PreviewLightDark
 @Composable
 private fun DailyOverviewScreenEmptyDayPreview() =
-    ScreenPreview(previewState(DayDetailUi("Wed, Sep 09", "Sep 9, 2026", "00:00", emptyList(), 0)))
+    ScreenPreview(previewState(DayDetailUi("Wed, Sep 09", "Sep 9, 2026", "00:00:00", emptyList(), 0)))
 
 @Preview(name = "Loading")
 @Composable

@@ -1,6 +1,8 @@
 package com.jvcs.tracky.features.project.presentation.mappers
 
-import com.jvcs.tracky.design_system.util.formatDurationHoursMinutes
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.Color
+import com.jvcs.tracky.design_system.util.formatDurationHoursMinutesSeconds
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.presentation.models.DayDetailUi
 import com.jvcs.tracky.features.project.presentation.models.DayIntervalUi
@@ -43,11 +45,22 @@ private val clockFormat = LocalTime.Format {
 private const val RANGE_SEPARATOR = " – "
 
 /**
+ * How a slice cut at the day boundary reads.
+ *
+ * `00:00` is the *next* day's midnight, so rendering it literally gives "23:40 – 00:00", which
+ * reads like a session that ran backwards. `24:00` is the same instant named from this day's side.
+ */
+private const val END_OF_DAY = "24:00"
+
+/**
  * The interval list for one day, in the order it happened.
  *
  * One entry per interval rather than per task: the design numbers the cards 01, 02, 03 down the
  * day. Which intervals count is [countedDayIntervals]' decision, so a task owning subtasks
  * contributes its subtasks' intervals and the total here agrees with that day's calendar cell.
+ *
+ * An interval that ran past midnight appears on both days, each showing only that day's share —
+ * so this list, like every other per-day view, can never total more than 24 hours.
  *
  * Zero-length intervals are listed. They tint no calendar cell — a day that banked nothing is not
  * "active" — but the day did record them, and a list that silently dropped rows would be lying
@@ -68,16 +81,17 @@ fun Project.toDayDetailUi(date: LocalDate, timeZone: TimeZone): DayDetailUi {
     return DayDetailUi(
         dateLabel = date.format(dateLabelFormat),
         headlineLabel = date.format(headlineFormat),
-        totalDuration = formatDurationHoursMinutes(intervals.sumOf { it.durationMillis }.milliseconds),
+        totalDuration = formatDurationHoursMinutesSeconds(intervals.sumOf { it.durationMillis }.milliseconds),
         intervals = intervals.mapIndexed { index, interval ->
             DayIntervalUi(
                 intervalId = interval.intervalId,
                 indexLabel = (index + 1).toString().padStart(2, '0'),
                 taskTitle = interval.taskTitle,
                 subTaskTitle = interval.subTaskTitle,
-                timeRangeLabel = interval.start.format(clockFormat) +
-                        RANGE_SEPARATOR + interval.end.format(clockFormat),
-                formattedDuration = formatDurationHoursMinutes(interval.durationMillis.milliseconds)
+                timeRangeLabel = interval.start.format(clockFormat) + RANGE_SEPARATOR +
+                        if (interval.endsAtMidnight) END_OF_DAY else interval.end.format(clockFormat),
+                formattedDuration = formatDurationHoursMinutesSeconds(interval.durationMillis.milliseconds),
+                projectColor = if (this.colorArgb != null) Color(colorArgb) else Color(0xFF475D92)
             )
         },
         // Distinct parent tasks: two intervals of the same task, or of two of its subtasks, are

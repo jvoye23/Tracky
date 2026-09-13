@@ -10,12 +10,13 @@ import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
  * The three rules that live in [countedDayIntervals] and nowhere else: subtask-nesting dedupe,
- * open intervals dropped, and an interval billed to the day it started on.
+ * open intervals dropped, and an interval split at every local midnight it crosses.
  *
  * Pure — data in, data out. The zone is always explicit, because it is the only thing that
  * decides which local day an interval lands on.
@@ -156,16 +157,51 @@ class CountedDayIntervalsTest {
     }
 
     @Test
-    fun `an interval running past midnight stays on its start day`() {
+    fun `an interval running past midnight is split, each day taking its own share`() {
         val counted = project(
             tasks = listOf(task(intervals = listOf(interval("2026-09-08T23:40:00Z", minutes = 40))))
         ).countedDayIntervals(TimeZone.UTC)
 
-        // Billed to the 8th in full, even though it ends on the 9th - and the end reads earlier
-        // than the start, which is what the range label will render.
-        assertEquals(LocalDate(2026, 9, 8), counted.single().date)
-        assertEquals(LocalTime(23, 40), counted.single().start)
-        assertEquals(LocalTime(0, 20), counted.single().end)
+        // Two entries, not one: billing all 40 minutes to the 8th is what let a single day total
+        // more than 24 hours.
+        assertEquals(2, counted.size)
+
+        assertEquals(LocalDate(2026, 9, 8), counted[0].date)
+        assertEquals(LocalTime(23, 40), counted[0].start)
+        assertEquals(20 * 60 * 1000L, counted[0].durationMillis)
+        assertTrue(counted[0].endsAtMidnight, "cut at the boundary, so the label reads 24:00")
+        assertEquals(0, counted[0].sliceIndex)
+        assertEquals(2, counted[0].sliceCount)
+
+        assertEquals(LocalDate(2026, 9, 9), counted[1].date)
+        assertEquals(LocalTime(0, 0), counted[1].start)
+        assertEquals(LocalTime(0, 20), counted[1].end)
+        assertEquals(20 * 60 * 1000L, counted[1].durationMillis)
+        assertFalse(counted[1].endsAtMidnight)
+
+        // Same row on both days: the id still names the interval a delete would act on.
+        assertEquals(counted[0].intervalId, counted[1].intervalId)
+    }
+
+    @Test
+    fun `a split interval still sums to what was banked`() {
+        val counted = project(
+            tasks = listOf(task(intervals = listOf(interval("2026-09-08T23:40:00Z", minutes = 40))))
+        ).countedDayIntervals(TimeZone.UTC)
+
+        assertEquals(40 * 60 * 1000L, counted.sumOf { it.durationMillis })
+    }
+
+    @Test
+    fun `a same-day interval is still a single entry`() {
+        val counted = project(
+            tasks = listOf(task(intervals = listOf(interval("2026-09-08T09:30:00Z", minutes = 42))))
+        ).countedDayIntervals(TimeZone.UTC)
+
+        // The common case must not move: one row in, one row out, sliceCount 1.
+        assertEquals(1, counted.size)
+        assertEquals(1, counted.single().sliceCount)
+        assertFalse(counted.single().endsAtMidnight)
     }
 
     @Test
@@ -177,6 +213,20 @@ class CountedDayIntervalsTest {
             LocalDate(2026, 9, 4),
             project(tasks = tasks).countedDayIntervals(TimeZone.of("America/New_York")).single().date
         )
+    }
+
+    @Test
+    fun `one interval never yields two entries for the same day`() {
+        // The daily overview keys its LazyColumn on intervalId after filtering to a single date,
+        // so this is what makes that key unique. A split puts each slice on a different day.
+        val counted = project(
+            tasks = listOf(task(intervals = listOf(interval("2026-09-08T23:40:00Z", minutes = 40))))
+        ).countedDayIntervals(TimeZone.UTC)
+
+        val perDayIds = counted.groupBy { it.date }.mapValues { (_, slices) -> slices.map { it.intervalId } }
+        perDayIds.forEach { (date, ids) ->
+            assertEquals(ids.size, ids.distinct().size, "duplicate interval id on $date")
+        }
     }
 
     // --- zero length is the caller's decision -------------------------------------------------

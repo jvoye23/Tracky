@@ -2,10 +2,11 @@ package com.jvcs.tracky.features.project.presentation.task_detail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.jvcs.tracky.features.project.domain.models.TaskInterval
+import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.core.domain.util.TimeManager
+import com.jvcs.tracky.features.project.presentation.mappers.countedDayIntervals
 import com.jvcs.tracky.features.project.presentation.mappers.toProjectTaskUi
-import com.jvcs.tracky.design_system.util.formatDuration
+import com.jvcs.tracky.design_system.util.formatDurationHoursMinutesSeconds
 import com.jvcs.tracky.design_system.util.parseDuration
 import com.jvcs.tracky.features.project.domain.task.ProjectTaskRepository
 import com.jvcs.tracky.features.project.presentation.task_detail.model.DailyStatistic
@@ -16,7 +17,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Duration.Companion.milliseconds
 
 class TaskDetailViewModel(
@@ -61,7 +61,7 @@ class TaskDetailViewModel(
                         currentState.copy(
                             task = it.toProjectTaskUi(),
                             titleText = it.title,
-                            dailyStatistics = calculateDailyStatistics(it.intervals),
+                            dailyStatistics = it.toDailyStatistics(),
                             isTimerRunning = it.isTimerRunning
                         )
                     }
@@ -70,19 +70,32 @@ class TaskDetailViewModel(
         }
     }
 
-    private fun calculateDailyStatistics(intervals: List<TaskInterval>): List<DailyStatistic> {
-        return intervals
-            .filter { it.endDateTimeUtc != null }
-            .groupBy { it.startDateTimeUtc.toLocalDateTime(TimeZone.currentSystemDefault()).date }
-            .map { (date, dayIntervals) ->
-                val totalDurationMillis = dayIntervals.sumOf { it.durationMillis }
+    /**
+     * This task's tracked time, one row per local day.
+     *
+     * Goes through [countedDayIntervals] rather than folding `intervals` directly, which is what it
+     * used to do and what made this screen disagree with the rest of the app:
+     *
+     * - It counted a task's own intervals even when the task owns subtasks, double-billing every
+     *   stretch that a subtask had already claimed (rule 1).
+     * - It billed a multi-day interval entirely to the day it started on, which is how one day came
+     *   to read 75 hours (rule 3).
+     *
+     * The formatter changes for the same reason. [formatDuration]'s `HH:mm:ss:cc` is a stopwatch
+     * reading with an unbounded hours field — it is what let `75:21:06:12` render at all — while a
+     * day total is bounded and belongs in the same `HH:mm:ss` the daily overview uses.
+     */
+    private fun ProjectTask.toDailyStatistics(): List<DailyStatistic> =
+        countedDayIntervals(TimeZone.currentSystemDefault())
+            .groupingBy { it.date }
+            .fold(0L) { total, interval -> total + interval.durationMillis }
+            .map { (date, totalDurationMillis) ->
                 DailyStatistic(
                     formattedDate = date.toString(),
-                    formattedDuration = formatDuration(totalDurationMillis.milliseconds)
+                    formattedDuration = formatDurationHoursMinutesSeconds(totalDurationMillis.milliseconds)
                 )
             }
             .sortedByDescending { it.formattedDate }
-    }
 
     fun onAction(action: TaskDetailAction) {
         when (action) {
@@ -103,7 +116,10 @@ class TaskDetailViewModel(
                 timeManager.stopAndResetTimer(taskId)
             } else {
                 projectTaskRepository.startProjectTask(taskId)
-                val currentDurationString = _state.value.task?.formattedDuration ?: "00:00:00"
+                // Four segments: parseDuration reads formatDuration's HH:mm:ss:cc and returns
+                // ZERO for anything else, so a three-segment fallback would silently reset the
+                // accumulated total to nothing on the first start after a failed load.
+                val currentDurationString = _state.value.task?.formattedDuration ?: "00:00:00:00"
                 val currentDuration = parseDuration(currentDurationString)
                 timeManager.toggleTimer(taskId, currentDuration)
             }

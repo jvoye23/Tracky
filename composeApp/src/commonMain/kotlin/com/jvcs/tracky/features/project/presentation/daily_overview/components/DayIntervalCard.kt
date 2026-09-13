@@ -56,18 +56,22 @@ fun DayHeaderRow(
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.onSurface
             )
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(
-                    text = stringResource(Res.string.day_total),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = day.totalDuration,
-                    style = MaterialTheme.typography.monoLabelSmall,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+            if (day.intervalCount > 0) {
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        text = stringResource(Res.string.day_total),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = day.totalDuration,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
         }
 
@@ -95,7 +99,8 @@ fun DayHeaderRow(
 @Composable
 fun DayIntervalCard(
     interval: DayIntervalUi,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    projectColor: Color
 ) {
     val description = stringResource(
         Res.string.day_interval_description,
@@ -108,9 +113,12 @@ fun DayIntervalCard(
         modifier = modifier
             .fillMaxWidth()
             .semantics(mergeDescendants = true) { contentDescription = description },
-        color = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, Color.Black.copy(alpha = 0.03f))
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(
+            1.dp,
+            projectColor.copy(alpha = 0.2f)),
+        shadowElevation = 2.dp
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
@@ -118,8 +126,8 @@ fun DayIntervalCard(
         ) {
             Text(
                 text = interval.indexLabel,
-                style = MaterialTheme.typography.monoLabelXSmall,
-                color = MaterialTheme.colorScheme.outlineVariant
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             Spacer(modifier = Modifier.width(10.dp))
@@ -127,7 +135,8 @@ fun DayIntervalCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = interval.taskTitle,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -135,13 +144,13 @@ fun DayIntervalCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = interval.timeRangeLabel,
-                        style = MaterialTheme.typography.monoLabelXSmall,
+                        style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     interval.subTaskTitle?.let { subTask ->
                         Text(
                             text = " · $subTask",
-                            style = MaterialTheme.typography.labelSmall,
+                            style = MaterialTheme.typography.titleMedium,
                             // Lighter than the range: the subtask qualifies the interval, it does
                             // not title it.
                             color = MaterialTheme.colorScheme.outline,
@@ -156,7 +165,7 @@ fun DayIntervalCard(
 
             Text(
                 text = interval.formattedDuration,
-                style = MaterialTheme.typography.monoLabelSmall,
+                style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
@@ -182,13 +191,15 @@ fun DayEmptyState(modifier: Modifier = Modifier) {
 // Previews
 // ---------------------------------------------------------------------------
 
+private val PreviewProjectColor = Color(0xFF475D92)
 private fun previewInterval(
     index: String = "01",
     task: String = "Design review",
     subTask: String? = "Calendar spec",
     range: String = "09:30 – 10:12",
-    duration: String = "00:42"
-) = DayIntervalUi("id-$index", index, task, subTask, range, duration)
+    duration: String = "00:42:11",
+    projectColor: Color = Color(0xFF475D92),
+) = DayIntervalUi("id-$index", index, task, subTask, range, duration, projectColor)
 
 @Composable
 private fun DayPreviewContainer(content: @Composable () -> Unit) {
@@ -211,15 +222,14 @@ private fun DayListPreview() {
             DayDetailUi(
                 dateLabel = "Tue, Sep 08",
                 headlineLabel = "Sep 8, 2026",
-                totalDuration = "03:26",
+                totalDuration = "03:26:58",
                 intervals = List(4) { previewInterval(index = "0${it + 1}") },
                 taskCount = 4
             )
         )
-        DayIntervalCard(previewInterval())
-        DayIntervalCard(previewInterval(index = "02", task = "Onboarding copy", subTask = null, range = "10:20 – 10:58", duration = "00:38"))
-        DayIntervalCard(previewInterval(index = "03", task = "Auth endpoints", subTask = "Token refresh", range = "13:15 – 14:47", duration = "01:32"))
-        DayIntervalCard(previewInterval(index = "04", task = "Testing Tasks", subTask = null, range = "15:30 – 16:04", duration = "00:34"))
+        DayIntervalCard(previewInterval(index = "02", task = "Onboarding copy", subTask = null, range = "10:20 – 10:58", duration = "00:38:22"), projectColor = PreviewProjectColor)
+        DayIntervalCard(previewInterval(index = "03", task = "Auth endpoints", subTask = "Token refresh", range = "13:15 – 14:47", duration = "01:32:07"), projectColor = PreviewProjectColor)
+        DayIntervalCard(previewInterval(index = "04", task = "Testing Tasks", subTask = null, range = "15:30 – 16:04", duration = "00:34:18"), projectColor = PreviewProjectColor)
     }
 }
 
@@ -228,7 +238,7 @@ private fun DayListPreview() {
 @Composable
 private fun DayEmptyPreview() {
     DayPreviewContainer {
-        DayHeaderRow(DayDetailUi("Wed, Sep 09", "Sep 9, 2026", "00:00", emptyList(), 0))
+        DayHeaderRow(DayDetailUi("Wed, Sep 09", "Sep 9, 2026", "00:00:00", emptyList(), 0))
         DayEmptyState()
     }
 }
@@ -238,8 +248,9 @@ private fun DayEmptyPreview() {
 @Composable
 private fun DaySingleIntervalPreview() {
     DayPreviewContainer {
-        DayHeaderRow(DayDetailUi("Thu, Sep 10", "Sep 10, 2026", "00:42", listOf(previewInterval()), 1))
-        DayIntervalCard(previewInterval())
+        DayHeaderRow(DayDetailUi("Thu, Sep 10", "Sep 10, 2026", "00:42:11", listOf(previewInterval()), 1))
+
+        DayIntervalCard(previewInterval(range = "23:40 – 00:20", duration = "00:40:13", subTask = null), projectColor = PreviewProjectColor)
     }
 }
 
@@ -251,8 +262,10 @@ private fun DayLongTitlesPreview() {
         DayIntervalCard(
             previewInterval(
                 task = "Rework the onboarding flow copy for the returning-user case",
-                subTask = "Second pass over the empty-state wording"
-            )
+                subTask = "Second pass over the empty-state wording",
+                projectColor = PreviewProjectColor
+            ),
+            projectColor = PreviewProjectColor
         )
     }
 }
@@ -262,7 +275,7 @@ private fun DayLongTitlesPreview() {
 @Composable
 private fun DayPastMidnightPreview() {
     DayPreviewContainer {
-        DayIntervalCard(previewInterval(range = "23:40 – 00:20", duration = "00:40", subTask = null))
+        DayIntervalCard(previewInterval(range = "23:40 – 00:20", duration = "00:40:13", subTask = null), projectColor = PreviewProjectColor)
     }
 }
 
@@ -270,8 +283,9 @@ private fun DayPastMidnightPreview() {
 @Composable
 private fun DayCompactPreview() {
     DayPreviewContainer {
-        DayHeaderRow(DayDetailUi("Tue, Sep 08", "Sep 8, 2026", "03:26", List(4) { previewInterval() }, 4))
-        DayIntervalCard(previewInterval())
+        DayHeaderRow(DayDetailUi("Tue, Sep 08", "Sep 8, 2026", "03:26:58", List(4) { previewInterval() }, 4))
+
+        DayIntervalCard(previewInterval(range = "23:40 – 00:20", duration = "00:40:13", subTask = null), projectColor = PreviewProjectColor)
     }
 }
 
@@ -279,7 +293,8 @@ private fun DayCompactPreview() {
 @Composable
 private fun DayFontScalePreview() {
     DayPreviewContainer {
-        DayHeaderRow(DayDetailUi("Tue, Sep 08", "Sep 8, 2026", "03:26", List(4) { previewInterval() }, 4))
-        DayIntervalCard(previewInterval())
+        DayHeaderRow(DayDetailUi("Tue, Sep 08", "Sep 8, 2026", "03:26:58", List(4) { previewInterval() }, 4))
+
+        DayIntervalCard(previewInterval(range = "23:40 – 00:20", duration = "00:40:13", subTask = null), projectColor = PreviewProjectColor)
     }
 }

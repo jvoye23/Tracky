@@ -228,7 +228,7 @@ private fun PerDayFooter(
     ) {
         Text(
             text = if (busiestDayLabel != null) {
-                stringResource(Res.string.per_day_summary, dayCount, busiestDayLabel)
+                stringResource(Res.string.per_day_summary, busiestDayLabel)
             } else {
                 stringResource(Res.string.per_day_no_activity, dayCount)
             },
