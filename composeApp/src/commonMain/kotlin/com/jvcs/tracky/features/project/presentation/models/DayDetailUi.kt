@@ -1,5 +1,7 @@
 package com.jvcs.tracky.features.project.presentation.models
 
+import androidx.compose.ui.graphics.Color
+
 /**
  * One card in the day list: a single interval, exactly as the design draws it.
  *
@@ -14,8 +16,9 @@ data class DayIntervalUi(
     val subTaskTitle: String?,
     /** "09:30 – 10:12". Reads backwards for an interval that ran past midnight. */
     val timeRangeLabel: String,
-    /** "00:42" — hours and minutes, matching the totals above it. */
-    val formattedDuration: String
+    /** "00:42:11" — hours, minutes and seconds, matching the totals above it. */
+    val formattedDuration: String,
+    val projectColor: Color
 )
 
 /**
@@ -33,7 +36,7 @@ data class DayDetailUi(
      * paged years away from today.
      */
     val headlineLabel: String,
-    /** "03:26". */
+    /** "03:26:58". */
     val totalDuration: String,
     val intervals: List<DayIntervalUi>,
     /** Distinct parent tasks represented, not distinct intervals and not subtasks. */

@@ -25,11 +25,13 @@ private val monthLabelFormat = LocalDate.Format {
     year()
 }
 
-/** "Tue 08" — the footer's busiest-day name. */
+/** "Sep, 08, 2026" — the footer's busiest-day name. */
 private val busiestDayFormat = LocalDate.Format {
-    dayOfWeek(DayOfWeekNames.ENGLISH_ABBREVIATED)
-    chars(" ")
+    monthName(MonthNames.ENGLISH_ABBREVIATED)
+    chars(", ")
     day()
+    chars(", ")
+    year()
 }
 
 /** "01" — zero-padded, so the grid's columns line up. */

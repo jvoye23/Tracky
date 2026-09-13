@@ -316,7 +316,8 @@ fun ProjectDetailScreen(
                         lastActive = state.project.startDateTimeUtc,
                         perDayStrip = state.perDayStrip,
                         projectColor = state.projectColor ?: MaterialTheme.colorScheme.primary,
-                        state = state
+                        state = state,
+                        onAction = onAction
                     )
                 }
 
@@ -480,6 +481,7 @@ private fun InfoGrid(
     perDayStrip: PerDayStripUi?,
     projectColor: Color,
     state: ProjectDetailState,
+    onAction: (ProjectDetailAction) -> Unit,
 ) {
     Column(
         modifier = modifier
@@ -500,7 +502,10 @@ private fun InfoGrid(
                 PerDayCard(
                     days = strip.days,
                     busiestDayLabel = strip.busiestDayLabel,
-                    projectColor = projectColor
+                    projectColor = projectColor,
+                    // Each tile carries its own date, so the overview opens on the day that was
+                    // tapped. The top-bar icon sends OPEN_ON_TODAY instead.
+                    onDayClick = { onAction(ProjectDetailAction.OnDailyOverviewClick(it.toEpochDays())) }
                 )
             }
         }

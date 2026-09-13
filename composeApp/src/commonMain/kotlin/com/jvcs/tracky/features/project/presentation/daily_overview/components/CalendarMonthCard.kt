@@ -31,6 +31,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -38,7 +39,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -66,9 +66,11 @@ import tracky.composeapp.generated.resources.calendar_select_year
  * legend stay put while the days slide. [months] is every page the calendar can show, built up
  * front, so a swipe never waits on a recomputation.
  *
- * Stateless about *which* month is showing: [currentIndex] and [onMonthChange] are hoisted, so
- * the selected date and the visible month stay the ViewModel's business. The only thing kept
- * locally is whether the year grid is open, which is view state and nothing else.
+ * The pager owns which page is on screen, and the header reads it straight off the pager, so the
+ * two can never disagree. [currentIndex] is the command in - the chevrons, a year, or a date
+ * picked outside the visible month page the calendar through it - and [onMonthChange] the report
+ * out, telling the ViewModel where a swipe landed. The only thing kept locally is whether the year
+ * grid is open, which is view state and nothing else.
  */
 @Composable
 fun CalendarMonthCard(
@@ -83,10 +85,15 @@ fun CalendarMonthCard(
 ) {
     if (months.isEmpty()) return
     val index = currentIndex.coerceIn(months.indices)
-    val month = months[index]
 
     val pagerState = rememberPagerState(initialPage = index) { months.size }
     var isYearPickerOpen by remember { mutableStateOf(false) }
+
+    // What the pager is actually showing. Reading the hoisted index here instead would make the
+    // header wait on a round trip through the ViewModel, and leave it stuck on the wrong month
+    // whenever the trip does not happen.
+    val displayedIndex = pagerState.currentPage.coerceIn(months.indices)
+    val month = months[displayedIndex]
 
     // Today is already flagged on its cell, so jump-to-today needs no extra input and no round
     // trip through the ViewModel - selecting the date is the whole behaviour, and selectDate
@@ -96,9 +103,17 @@ fun CalendarMonthCard(
 
     // Two directions to keep in step: a swipe settles the pager and has to tell the caller, and
     // a caller-driven jump (the chevrons, or a year) has to move the pager.
+    //
+    // The reporting effect is keyed on the pager, whose identity never changes, so it runs the
+    // lambda it was launched with for the life of the card - anything it reads has to come through
+    // rememberUpdatedState or it is frozen at the first composition.
+    val latestIndex by rememberUpdatedState(index)
+    val latestOnMonthChange by rememberUpdatedState(onMonthChange)
     LaunchedEffect(pagerState) {
+        // settledPage, not currentPage: reporting mid-gesture would push a new index back down
+        // while the finger is still on the screen and let the jump below fight the settle.
         snapshotFlow { pagerState.settledPage }.collect { settled ->
-            if (settled != index) onMonthChange(settled)
+            if (settled != latestIndex) latestOnMonthChange(settled)
         }
     }
     LaunchedEffect(index) {
@@ -118,10 +133,10 @@ fun CalendarMonthCard(
                 onJumpToToday = todayDate?.let { date -> { onDateSelected(date) } },
                 isYearPickerOpen = isYearPickerOpen,
                 onToggleYearPicker = { isYearPickerOpen = !isYearPickerOpen },
-                onPreviousMonth = { onMonthChange(index - 1) },
-                onNextMonth = { onMonthChange(index + 1) },
-                canGoBack = index > 0,
-                canGoForward = index < months.lastIndex,
+                onPreviousMonth = { onMonthChange(displayedIndex - 1) },
+                onNextMonth = { onMonthChange(displayedIndex + 1) },
+                canGoBack = displayedIndex > 0,
+                canGoForward = displayedIndex < months.lastIndex,
                 modifier = Modifier.padding(horizontal = 8.dp)
             )
 

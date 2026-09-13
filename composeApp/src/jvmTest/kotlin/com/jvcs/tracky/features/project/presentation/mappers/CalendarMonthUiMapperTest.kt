@@ -171,7 +171,7 @@ class CalendarMonthUiMapperTest {
             task(intervals = listOf(interval("2026-09-08T09:00:00Z", minutes = 30), interval("2026-09-15T09:00:00Z", minutes = 30)))
         ).september()
 
-        assertEquals("Tue 08", sep.busiestDayLabel)
+        assertEquals("Sep, 08, 2026", sep.busiestDayLabel)
     }
 
     @Test
@@ -211,7 +211,7 @@ class CalendarMonthUiMapperTest {
     fun `the zone decides which cell a day's time lands on`() {
         val tasks = arrayOf(task(intervals = listOf(interval("2026-09-05T02:00:00Z", minutes = 30))))
 
-        assertEquals("Sat 05", months(*tasks).september().busiestDayLabel)
-        assertEquals("Fri 04", months(*tasks, zone = TimeZone.of("America/New_York")).september().busiestDayLabel)
+        assertEquals("Sep, 05, 2026", months(*tasks).september().busiestDayLabel)
+        assertEquals("Sep, 04, 2026", months(*tasks, zone = TimeZone.of("America/New_York")).september().busiestDayLabel)
     }
 }

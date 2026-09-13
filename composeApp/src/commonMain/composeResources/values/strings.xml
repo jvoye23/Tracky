@@ -210,9 +210,9 @@
     <string name="failed_to_delete_all_selected_projects">Failed to delete all selected projects.</string>
 
     <!-- Per day card -->
-    <string name="duration_per_day">Duration Per day</string>
+    <string name="duration_per_day">Duration per day (Last 10 active days)</string>
     <string name="per_day_total">%1$s total</string>
-    <string name="per_day_summary">last %1$d active days · busiest %2$s</string>
+    <string name="per_day_summary">Busiest day %1$s</string>
     <string name="per_day_no_activity">last %1$d active days · no activity</string>
     <string name="per_day_cell_description">%1$s %2$s, %3$s</string>
     <string name="per_day_cell_untracked">no time tracked</string>
@@ -235,7 +235,7 @@
     <string name="calendar_day_untracked">no time tracked</string>
 
     <!-- Daily overview day list -->
-    <string name="day_total">TOTAL</string>
+    <string name="day_total">Daily Total</string>
     <string name="day_interval_count">%1$d intervals · %2$d tasks</string>
     <string name="day_interval_count_single">%1$d interval · %2$d task</string>
     <string name="day_empty">Nothing tracked on this day</string>

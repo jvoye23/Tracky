@@ -71,10 +71,13 @@ fun subTask(
     subTaskIntervals = intervals
 )
 
-/** A task interval starting at [start] and, unless [open], ending [minutes] later. */
+private fun durationMillisOf(minutes: Long, seconds: Long) = minutes * 60_000L + seconds * 1_000L
+
+/** A task interval starting at [start] and, unless [open], ending [minutes] + [seconds] later. */
 fun interval(
     start: String,
     minutes: Long = 0L,
+    seconds: Long = 0L,
     open: Boolean = false,
     id: String = "interval-$start"
 ) = TaskInterval(
@@ -82,14 +85,15 @@ fun interval(
     parentTaskId = "task-0",
     parentProjectId = FAKE_PROJECT_ID,
     startDateTimeUtc = Instant.parse(start),
-    endDateTimeUtc = if (open) null else Instant.parse(start).plus((minutes * 60_000L).milliseconds),
-    durationMillis = if (open) 0L else minutes * 60_000L
+    endDateTimeUtc = if (open) null else Instant.parse(start).plus(durationMillisOf(minutes, seconds).milliseconds),
+    durationMillis = if (open) 0L else durationMillisOf(minutes, seconds)
 )
 
 /** The subtask equivalent of [interval]; nests inside a task interval by construction. */
 fun subInterval(
     start: String,
     minutes: Long = 0L,
+    seconds: Long = 0L,
     open: Boolean = false,
     id: String = "sub-interval-$start"
 ) = SubTaskInterval(
@@ -98,6 +102,6 @@ fun subInterval(
     parentSubTaskId = "sub-0",
     parentProjectId = FAKE_PROJECT_ID,
     startDateTimeUtc = Instant.parse(start),
-    endDateTimeUtc = if (open) null else Instant.parse(start).plus((minutes * 60_000L).milliseconds),
-    durationMillis = if (open) 0L else minutes * 60_000L
+    endDateTimeUtc = if (open) null else Instant.parse(start).plus(durationMillisOf(minutes, seconds).milliseconds),
+    durationMillis = if (open) 0L else durationMillisOf(minutes, seconds)
 )
