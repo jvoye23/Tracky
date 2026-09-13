@@ -224,6 +224,7 @@
     <string name="calendar_intensity_more">MORE</string>
     <string name="calendar_previous_month">Previous month</string>
     <string name="calendar_next_month">Next month</string>
+    <string name="calendar_select_year">Select year</string>
     <string name="calendar_day_description">%1$s, %2$s</string>
     <string name="calendar_day_untracked">no time tracked</string>
 

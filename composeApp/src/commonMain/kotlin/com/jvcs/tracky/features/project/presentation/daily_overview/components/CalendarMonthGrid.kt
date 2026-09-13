@@ -49,6 +49,19 @@ internal const val MAX_INTENSITY = 0.55f
 
 internal const val DAYS_PER_WEEK = 7
 
+/**
+ * Black or white, whichever stays readable on a surface filled with the project colour.
+ *
+ * A project colour is user-picked, so it cannot borrow a content colour from the theme - a bright
+ * one stays bright in dark mode. Composite the tint over the card first, then split at 0.18
+ * luminance, which is where black and white swap places on the WCAG contrast curve.
+ */
+@Composable
+internal fun onProjectColor(tint: Color): Color {
+    val composited = tint.compositeOver(MaterialTheme.colorScheme.surfaceContainerLow)
+    return if (composited.luminance() > 0.18f) Color.Black else Color.White
+}
+
 @Composable
 internal fun CalendarMonthGrid(
     month: CalendarMonthUi,
@@ -111,13 +124,8 @@ private fun DayCell(
         MaterialTheme.colorScheme.surfaceVariant
     }
 
-    // A tinted cell is filled with the project colour, so its content colour cannot come from the
-    // theme - a bright project colour stays bright in dark mode. Composite the tint over the card
-    // and pick black or white, the same way PerDayCard does. 0.18 is where they swap places on
-    // the WCAG contrast curve.
     val onCell = if (intensity != null) {
-        val composited = background.compositeOver(MaterialTheme.colorScheme.surfaceContainerLow)
-        if (composited.luminance() > 0.18f) Color.Black else Color.White
+        onProjectColor(background)
     } else {
         MaterialTheme.colorScheme.onSurfaceVariant
     }
