@@ -5,10 +5,10 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import com.jvcs.tracky.core.data.sync.AndroidSyncScheduler
 import com.jvcs.tracky.core.data.sync.AndroidTrashCleanupScheduler
+import com.jvcs.tracky.core.data.notification.AndroidTimerNotificationController
 import com.jvcs.tracky.core.database.DatabaseFactory
 import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
 import com.jvcs.tracky.core.domain.lifecycle.AppLifecycleObserver
-import com.jvcs.tracky.core.domain.notification.NoOpTimerNotificationController
 import com.jvcs.tracky.core.domain.notification.TimerNotificationController
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
 import com.jvcs.tracky.core.domain.sync.TrashCleanupScheduler
@@ -25,7 +25,7 @@ actual val platformCoreDataModule = module {
     single { AppLifecycleObserver() }
     single { AndroidSyncScheduler(androidContext()) } bind SyncScheduler::class
     single { AndroidTrashCleanupScheduler(androidContext()) } bind TrashCleanupScheduler::class
-    single { NoOpTimerNotificationController() } bind TimerNotificationController::class
+    single { AndroidTimerNotificationController(androidContext()) } bind TimerNotificationController::class
     single<HttpClientEngine> { OkHttp.create() }
     single<DataStore<Preferences>> {
         PreferenceDataStoreFactory.createWithPath(

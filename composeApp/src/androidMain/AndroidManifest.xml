@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- minSdk is 33, so the notification permission is always a runtime grant. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+    <application>
+        <!--
+          specialUse rather than dataSync: on Android 15+ a dataSync service is stopped after six
+          hours a day, which a work timer would hit on an ordinary long day and lose both the
+          notification and the user's only way to pause. The subtype string below is the
+          justification Google Play asks for at submission.
+
+          The name is fully qualified on purpose - this library's namespace is
+          com.jvcs.tracky.composeapp, so a leading dot would resolve to the wrong package.
+        -->
+        <service
+            android:name="com.jvcs.tracky.core.data.notification.TimerNotificationService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="@string/timer_notification_fgs_justification" />
+        </service>
+    </application>
+
+</manifest>
