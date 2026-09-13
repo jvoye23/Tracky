@@ -96,12 +96,36 @@ class TimerNotificationFactory(private val context: Context) {
             // The point of the feature: the timer has to be readable without unlocking.
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setColor(accent)
+            .setContentIntent(contentPendingIntent(session.projectId))
             .build()
     }
 
     /** The pill is a white shape drawable, so the project's colour arrives as a tint. */
     private fun RemoteViews.tint(viewId: Int, color: Int) =
         setColorStateList(viewId, "setBackgroundTintList", ColorStateList.valueOf(color))
+
+    /**
+     * Opens the project that owns the running timer. Resolved through the package manager rather
+     * than naming the activity: MainActivity lives in the app module, which depends on this one.
+     */
+    private fun contentPendingIntent(projectId: String): PendingIntent? {
+        val launch = context.packageManager
+            .getLaunchIntentForPackage(context.packageName)
+            ?.apply {
+                // singleTop plus CLEAR_TOP so a tap reaches the running activity through
+                // onNewIntent instead of building a second copy of it.
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra(TimerNotificationIntents.EXTRA_PROJECT_ID, projectId)
+            }
+            ?: return null
+
+        return PendingIntent.getActivity(
+            context,
+            projectId.hashCode(),
+            launch,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+    }
 
     private fun servicePendingIntent(action: String): PendingIntent =
         PendingIntent.getService(
