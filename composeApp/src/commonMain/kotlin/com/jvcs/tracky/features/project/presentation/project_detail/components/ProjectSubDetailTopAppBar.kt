@@ -31,12 +31,13 @@ import kotlin.time.ExperimentalTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditTextTopAppBar(
+fun ProjectSubDetailTopAppBar(
     title: String,
-    isEditMode: Boolean,
+    isEditMode: Boolean = false,
+    showEditAction: Boolean = true,
     onNavigateBack: () -> Unit,
-    onEditClick: () -> Unit,
-    onSaveClick: () -> Unit,
+    onEditClick: () -> Unit = {},
+    onSaveClick: () -> Unit = {},
     projectColor: Color = MaterialTheme.colorScheme.primary
 ) {
     TopAppBar(
@@ -68,33 +69,36 @@ fun EditTextTopAppBar(
             }
         },
         actions = {
-            if (isEditMode) {
-                IconButton(
-                    onClick = { onSaveClick() },
-                    colors = IconButtonDefaults.iconButtonColors(
-                        containerColor = projectColor.copy(alpha = 0.12f),
-                        contentColor = projectColor
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = stringResource(Res.string.edit_uppercase),
-                    )
+            if (showEditAction) {
+                if (isEditMode) {
+                    IconButton(
+                        onClick = { onSaveClick() },
+                        colors = IconButtonDefaults.iconButtonColors(
+                            containerColor = projectColor.copy(alpha = 0.12f),
+                            contentColor = projectColor
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = stringResource(Res.string.edit_uppercase),
+                        )
+                    }
+                } else {
+                    IconButton(
+                        onClick = { onEditClick() },
+                        colors = IconButtonDefaults.iconButtonColors(
+                            containerColor = projectColor.copy(alpha = 0.12f),
+                            contentColor = projectColor
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = stringResource(Res.string.edit_uppercase),
+                            tint = projectColor
+                        )
+                    }
                 }
-            } else {
-                IconButton(
-                    onClick = { onEditClick() },
-                    colors = IconButtonDefaults.iconButtonColors(
-                        containerColor = projectColor.copy(alpha = 0.12f),
-                        contentColor = projectColor
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = stringResource(Res.string.edit_uppercase),
-                        tint = projectColor
-                    )
-                }
+
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
@@ -116,7 +120,7 @@ private fun EditTextTopAppBarEditModePreview() {
                 .fillMaxSize(),
             verticalArrangement = Arrangement.Top
         ) {
-            EditTextTopAppBar(
+            ProjectSubDetailTopAppBar(
                 title = "EDIT PROJECT",
                 isEditMode = true,
                 onNavigateBack = {},
@@ -131,14 +135,14 @@ private fun EditTextTopAppBarEditModePreview() {
 @OptIn(ExperimentalTime::class)
 @Preview
 @Composable
-private fun EditTextTopAppBarReadModePreview() {
+private fun ProjectSubDetailTopAppBarReadModePreview() {
     TrackyTheme {
         Column(
             modifier = Modifier
                 .fillMaxSize(),
             verticalArrangement = Arrangement.Top
         ) {
-            EditTextTopAppBar(
+            ProjectSubDetailTopAppBar(
                 title = "PROJECT DETAILS",
                 isEditMode = false,
                 onNavigateBack = {},
