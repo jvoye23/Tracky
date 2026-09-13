@@ -1,5 +1,6 @@
 package com.jvcs.tracky.core.data.di
 
+import com.jvcs.tracky.core.domain.notification.TimerNotificationCoordinator
 import com.jvcs.tracky.core.domain.sync.ProjectSyncManager
 import com.jvcs.tracky.core.domain.sync.SyncRepository
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
@@ -22,6 +23,7 @@ fun startKoinIos() {
     // Before the sync manager: a pull must not land on intervals the pass has not parked yet.
     koin.get<StrandedTimerReconciler>().start()
     koin.get<ProjectSyncManager>().start()
+    koin.get<TimerNotificationCoordinator>().start()
     koin.get<CoroutineScope>(named("AppScope")).launch {
         koin.get<SyncScheduler>().schedulePeriodicSyncOnStart()
         koin.get<TrashCleanupScheduler>().scheduleCleanup()

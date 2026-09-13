@@ -1,6 +1,7 @@
 package com.jvcs.androidapp.app
 
 import android.app.Application
+import com.jvcs.tracky.core.domain.notification.TimerNotificationCoordinator
 import com.jvcs.tracky.core.domain.sync.ProjectSyncManager
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
 import com.jvcs.tracky.core.domain.sync.TrashCleanupScheduler
@@ -26,6 +27,7 @@ class TrackyApplication: Application() {
         // Before the sync manager: a pull must not land on intervals the pass has not parked yet.
         get<StrandedTimerReconciler>().start()
         get<ProjectSyncManager>().start()
+        get<TimerNotificationCoordinator>().start()
         get<CoroutineScope>(named("AppScope")).launch {
             get<SyncScheduler>().schedulePeriodicSyncOnStart()
             get<TrashCleanupScheduler>().scheduleCleanup()

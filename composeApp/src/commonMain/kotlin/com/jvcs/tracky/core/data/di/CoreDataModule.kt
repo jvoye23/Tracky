@@ -12,6 +12,7 @@ import com.jvcs.tracky.core.domain.auth.AuthService
 import com.jvcs.tracky.core.domain.auth.SessionStorage
 import com.jvcs.tracky.core.domain.auth.SocialAuthProvider
 import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource
+import com.jvcs.tracky.core.domain.notification.TimerNotificationCoordinator
 import com.jvcs.tracky.core.domain.startup.StartupReconciliation
 import com.jvcs.tracky.core.domain.sync.ProjectSyncManager
 import com.jvcs.tracky.features.project.data.timer.OfflineFirstRunningTimerRepository
@@ -194,6 +195,20 @@ val coreDataModule = module {
             projectRepository = get(),
             applicationScope = get(qualifier = named("AppScope")),
             timeProvider = get(),
+        )
+    }
+
+    // createdAtStart so a timer left running from a previous session puts its notification back up
+    // without waiting for a screen to compose. It gates itself on the stranded-timer pass.
+    single(createdAtStart = true) {
+        TimerNotificationCoordinator(
+            runningTimerRepository = get(),
+            projectTaskRepository = get(),
+            subTaskRepository = get(),
+            controller = get(),
+            startupReconciliation = get(),
+            timeProvider = get(),
+            applicationScope = get(qualifier = named("AppScope"))
         )
     }
 
