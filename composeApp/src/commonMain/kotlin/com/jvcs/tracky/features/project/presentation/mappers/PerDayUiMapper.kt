@@ -54,6 +54,7 @@ fun Project.toPerDayStripUi(timeZone: TimeZone): PerDayStripUi? {
 
     val days = activeDays.map { (date, millis) ->
         PerDayUi(
+            date = date,
             weekdayLabel = date.format(weekdayFormat),
             dateLabel = date.format(dateLabelFormat),
             formattedDuration = formatDurationHoursMinutesSeconds(millis.milliseconds),

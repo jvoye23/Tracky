@@ -198,6 +198,14 @@ fun NavigationRoot(
                         backStack.add(
                             Route.ProjectRoute.TaskDetail(sessionId)
                         )
+                    },
+                    onDailyOverviewClick = { epochDay ->
+                        backStack.add(
+                            Route.ProjectRoute.DailyOverview(
+                                projectId = key.projectId.orEmpty(),
+                                preselectedDateEpochDay = epochDay
+                            )
+                        )
                     }
                 )
             }

@@ -2,6 +2,7 @@ package com.jvcs.tracky.features.project.presentation.project_detail.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,6 +38,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
 import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.features.project.presentation.models.PerDayUi
+import kotlinx.datetime.LocalDate
 import org.jetbrains.compose.resources.stringResource
 import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.duration_per_day
@@ -80,7 +82,8 @@ fun PerDayCard(
     days: List<PerDayUi>,
     busiestDayLabel: String?,
     projectColor: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onDayClick: (LocalDate) -> Unit = {}
 ) {
     val maxMillis = days.maxOfOrNull { it.trackedMillis } ?: 0L
 
@@ -106,7 +109,8 @@ fun PerDayCard(
                     DayCell(
                         day = day,
                         maxMillis = maxMillis,
-                        projectColor = projectColor
+                        projectColor = projectColor,
+                        onClick = day.date?.let { date -> { onDayClick(date) } }
                     )
                 }
             }
@@ -145,7 +149,9 @@ private fun DayCell(
     day: PerDayUi,
     maxMillis: Long,
     projectColor: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    // Null for a tile built without a date, which keeps the older previews inert.
+    onClick: (() -> Unit)? = null
 ) {
     val intensity: Float? = when {
         day.trackedMillis <= 0L || maxMillis <= 0L -> null
@@ -180,6 +186,7 @@ private fun DayCell(
             .widthIn(min = MIN_TILE_WIDTH)
             .clip(RoundedCornerShape(16.dp))
             .background(background)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(vertical = 16.dp)
             .padding(10.dp)
             .semantics(mergeDescendants = true) { contentDescription = description },
