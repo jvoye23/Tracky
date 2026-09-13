@@ -21,6 +21,8 @@ val appModule = module {
 
     single {
         TimeManager(
+            runningTimerRepository = get(),
+            timeProvider = get(),
             scope = get(named("AppScope"))
         )
     }

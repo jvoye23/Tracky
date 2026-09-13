@@ -12,7 +12,7 @@ import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
 import com.jvcs.tracky.core.domain.util.Result
-import com.jvcs.tracky.core.domain.util.TimeManager
+import com.jvcs.tracky.core.domain.util.testTimeManager
 import com.jvcs.tracky.design_system.util.UiText
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
 import com.jvcs.tracky.features.project.presentation.project_overview.ProjectOverviewAction
@@ -83,7 +83,7 @@ class ProjectOverviewViewModelTest {
         authService: FakeAuthService = FakeAuthService(),
     ): ProjectOverviewViewModel = ProjectOverviewViewModel(
         projectRepository = repository,
-        timeManager = TimeManager(CoroutineScope(dispatcher)),
+        timeManager = testTimeManager(),
         timeProvider = FakeTimeProvider(),
         sessionStorage = sessionStorage,
         authService = authService,

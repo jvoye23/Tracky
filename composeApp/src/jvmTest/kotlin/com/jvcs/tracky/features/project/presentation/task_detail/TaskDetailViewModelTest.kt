@@ -3,7 +3,7 @@ package com.jvcs.tracky.features.project.presentation.task_detail
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
-import com.jvcs.tracky.core.domain.util.TimeManager
+import com.jvcs.tracky.core.domain.util.testTimeManager
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.features.project.domain.task.ProjectTaskRepository
 import com.jvcs.tracky.features.project.presentation.fakes.interval
@@ -50,7 +50,7 @@ internal class TaskDetailViewModelTest {
         val viewModel = TaskDetailViewModel(
             taskId = task.projectTaskId,
             projectTaskRepository = FakeProjectTaskRepository(),
-            timeManager = TimeManager(backgroundScope)
+            timeManager = testTimeManager()
         )
         // state is a WhileSubscribed stateIn, so loadSession does not run until something collects.
         backgroundScope.launch { viewModel.state.collect {} }

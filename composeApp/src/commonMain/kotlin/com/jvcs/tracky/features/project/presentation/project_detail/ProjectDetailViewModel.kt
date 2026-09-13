@@ -25,7 +25,6 @@ import com.jvcs.tracky.features.project.presentation.mappers.toProjectSubTaskUi
 import com.jvcs.tracky.features.project.presentation.mappers.toProjectTaskUi
 import com.jvcs.tracky.features.project.presentation.mappers.toProjectUi
 import com.jvcs.tracky.features.project.presentation.util.toUiText
-import com.jvcs.tracky.design_system.util.parseDuration
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
 import com.jvcs.tracky.features.project.domain.task.ProjectTaskRepository
 import kotlinx.coroutines.CoroutineDispatcher
@@ -102,9 +101,12 @@ class ProjectDetailViewModel(
 
     init {
         viewModelScope.launch {
+            // A stop leaves the card showing the last second the ticker drew, up to a second below
+            // the exact figure banked into the row. Re-reading the project here to close that gap
+            // would race the optimistic writes that follow a stop - finishing a task stops its
+            // timer first - and overwrite them with the pre-write row. The second is cheaper.
             timeManager.taskStates.collect { activeTimersMap ->
                 updateUiWithTimerValues(activeTimersMap)
-
             }
         }
     }
@@ -210,24 +212,17 @@ class ProjectDetailViewModel(
             return
         }
 
-        val currentDuration = parseDuration( timeString = session.formattedDuration)
-
-        // The rendered flag, not TimeManager's. The card draws its play/pause icon from
-        // session.isTimerRunning (TaskItemCard), so branching on anything else lets the button do
-        // the opposite of what it shows — which is how a task ends up with two open intervals:
-        // the icon says pause, the tap says start. updateUiWithTimerValues keeps this field equal
-        // to TimeManager's view for as long as there is one, so nothing changes while a timer runs;
-        // what changes is the window before the first emission, where this is the database's answer.
+        // The rendered flag, which is the database's answer: TimeManager derives it from the open
+        // interval, so the card's play/pause icon and this branch cannot disagree. Starting and
+        // stopping is only a repository write now - the clock follows the row.
         if (session.isTimerRunning) {
             viewModelScope.launch {
                 projectTaskRepository.stopProjectTask(taskId)
-                timeManager.stopAndResetTimer(taskId)
                 refreshPerDayStrip()
             }
         } else {
             viewModelScope.launch {
                 projectTaskRepository.startProjectTask(taskId)
-                timeManager.toggleTimer(taskId, currentDuration)
             }
         }
     }
@@ -402,26 +397,17 @@ class ProjectDetailViewModel(
             ?.find { task -> task.subTasks.any { it.projectSubTaskId == subTaskId } } ?: return
         val subTask = parentTask.subTasks.first { it.projectSubTaskId == subTaskId }
 
-        val currentDuration = parseDuration(timeString = subTask.formattedDuration)
-        val timerState = timeManager.taskStates.value[subTaskId]
-
-        if (timerState != null && timerState.isRunning) {
+        // Same flag the parent branches on, for the same reason.
+        if (subTask.isTimerRunning) {
             viewModelScope.launch {
                 subTaskRepository.stopSubTask(subTaskId)
-                timeManager.stopAndResetTimer(subTaskId)
                 refreshPerDayStrip()
             }
         } else {
-            // Only one subtask per task may run: startSubTask closes a running sibling's interval
-            // in the database, but TimeManager would keep ticking it — two rows would look live and
-            // the parent's summed duration would climb twice as fast.
-            parentTask.subTasks
-                .filter { it.projectSubTaskId != subTaskId && it.isTimerRunning }
-                .forEach { timeManager.stopAndResetTimer(it.projectSubTaskId) }
-
+            // Only one subtask per task may run, and startSubTask closes a running sibling's
+            // interval. Nothing else has to be told: closing the row is what stops its clock.
             viewModelScope.launch {
                 subTaskRepository.startSubTask(subTaskId)
-                timeManager.toggleTimer(subTaskId, currentDuration)
             }
         }
     }
@@ -469,7 +455,6 @@ class ProjectDetailViewModel(
             val nowFinished = !subTask.isFinished
             val stopped = if (nowFinished && subTask.isTimerRunning) {
                 subTaskRepository.stopSubTask(subTaskId)
-                timeManager.stopAndResetTimer(subTaskId)
                 // Re-read: stopSubTask banks the elapsed time into the row, so copying the
                 // pre-stop snapshot would write the old duration straight back over it.
                 subTaskRepository.getSubTasksForTask(parentTaskId).first()
@@ -539,7 +524,6 @@ class ProjectDetailViewModel(
                 if (task.subTasks.isEmpty()) {
                     if (task.isTimerRunning) {
                         projectTaskRepository.stopProjectTask(taskId)
-                        timeManager.stopAndResetTimer(taskId)
                     }
                 } else {
                     finishAllSubTasks(taskId)
@@ -561,7 +545,6 @@ class ProjectDetailViewModel(
         // time the user just tracked.
         open.filter { it.isTimerRunning }.forEach {
             subTaskRepository.stopSubTask(it.projectSubTaskId)
-            timeManager.stopAndResetTimer(it.projectSubTaskId)
         }
 
         subTaskRepository.getSubTasksForTask(taskId).first()
