@@ -4,6 +4,7 @@ import com.jvcs.tracky.features.project.presentation.daily_overview.DailyOvervie
 import com.jvcs.tracky.features.project.presentation.projectEditTextScreen.ProjectEditTextViewModel
 import com.jvcs.tracky.features.project.presentation.project_detail.ProjectDetailViewModel
 import com.jvcs.tracky.features.project.presentation.project_overview.ProjectOverviewViewModel
+import com.jvcs.tracky.features.project.presentation.stranded_timer.StrandedTimerViewModel
 import com.jvcs.tracky.features.project.presentation.task_detail.TaskDetailViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -16,6 +17,10 @@ val projectModule = module {
 
     single(named("AppScope")) {
         CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    }
+
+    viewModel {
+        StrandedTimerViewModel(strandedTimerRepository = get())
     }
 
     viewModel {

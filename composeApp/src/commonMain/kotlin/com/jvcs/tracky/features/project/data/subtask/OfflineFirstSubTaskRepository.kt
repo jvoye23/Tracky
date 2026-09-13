@@ -8,6 +8,7 @@ import com.jvcs.tracky.core.domain.sync.toSyncOutcome
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
+import com.jvcs.tracky.core.domain.startup.StartupReconciliation
 import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.core.domain.util.asEmptyDataResult
 import com.jvcs.tracky.core.domain.util.getOrDefault
@@ -47,7 +48,8 @@ class OfflineFirstSubTaskRepository(
     private val pendingSyncDataSource: PendingSyncDataSource,
     private val syncScheduler: SyncScheduler,
     private val applicationScope: CoroutineScope,
-    private val timeProvider: TimeProvider
+    private val timeProvider: TimeProvider,
+    private val startupReconciliation: StartupReconciliation
 ) : SubTaskRepository {
 
     override fun getSubTasksForTask(taskId: String): Flow<List<ProjectSubTask>> =
@@ -117,6 +119,10 @@ class OfflineFirstSubTaskRepository(
      * stopping early would silently drop writes that could have been queued.
      */
     override suspend fun startSubTask(subTaskId: String): EmptyResult<DataError> {
+        // Same reason as OfflineFirstTaskRepository.startProjectTask: startSubTask reuses the open
+        // parent task interval, which must not be a stranded one.
+        startupReconciliation.awaitReconciled()
+
         val change = when (val started = localSubTaskDataSource.startSubTask(subTaskId)) {
             is Result.Success -> started.data
             is Result.Error -> return started.asEmptyDataResult()

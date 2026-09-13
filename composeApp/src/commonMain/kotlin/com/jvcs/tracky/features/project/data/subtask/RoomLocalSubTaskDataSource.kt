@@ -120,9 +120,14 @@ class RoomLocalSubTaskDataSource(
                 // Only the subtask that opened the task's interval may close it again. A task the
                 // user started stays running, and a sibling that merely nested inside it never
                 // claimed it in the first place.
+                //
+                // The "still open" check reads the row directly rather than through
+                // getOpenIntervalBySessionId, so it needs its own stranded guard: a parked interval
+                // is open but untimed, and closing it here would bank every hour since it opened.
                 val closedTaskInterval = if (open.startedParentTimer) {
                     projectDao.getIntervalById(open.parentTaskIntervalId)
                         ?.takeIf { it.endDateTimeEpochMs == null }
+                        ?.takeIf { projectDao.getStrandedInterval(it.intervalId) == null }
                         ?.let { projectDao.closeTaskInterval(it, now) }
                 } else null
 

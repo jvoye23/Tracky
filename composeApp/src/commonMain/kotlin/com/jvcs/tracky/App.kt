@@ -9,6 +9,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.rememberNavBackStack
 import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.design_system.util.ObserveAsEvents
+import com.jvcs.tracky.features.project.presentation.stranded_timer.StrandedTimerDialogHost
 import com.jvcs.tracky.navigation.NavigationRoot
 import com.jvcs.tracky.navigation.Route
 import com.jvcs.tracky.navigation.routeSavedStateConfiguration
@@ -43,6 +44,13 @@ fun App(
                 isLoggedIn = state.isLoggedIn,
                 events = mainViewModel.events,
             )
+
+            // Above the nav host, not inside a screen: the back stack is restored across process
+            // death, which is the very thing that strands a timer, so the user can land on any
+            // screen. Only once signed in - the review names a project and a task.
+            if (state.isLoggedIn) {
+                StrandedTimerDialogHost()
+            }
         }
     }
 }

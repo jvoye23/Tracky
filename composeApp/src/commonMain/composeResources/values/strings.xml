@@ -241,4 +241,15 @@
     <string name="day_empty">Nothing tracked on this day</string>
     <string name="day_interval_description">%1$s, %2$s, %3$s</string>
 
+    <!-- Stranded timer review -->
+    <string name="stranded_timer_title">Timer left running</string>
+    <string name="stranded_timer_message">“%1$s” in %2$s has been running since %3$s — that\'s %4$s. The app closed before the timer was stopped, so how long you actually worked isn\'t known.</string>
+    <string name="stranded_timer_subtask_line">Subtask: %1$s</string>
+    <string name="stranded_timer_not_counted">This task is timed through its subtasks, so keeping this time would add it to the totals without it appearing on any day. Discarding is usually right.</string>
+    <string name="stranded_timer_keep">Keep %1$s</string>
+    <string name="stranded_timer_edit">Enter actual time</string>
+    <string name="stranded_timer_discard">Discard</string>
+    <string name="stranded_timer_duration_label">Time worked (h:mm)</string>
+    <string name="stranded_timer_remaining">%1$d more to review</string>
+
 </resources>

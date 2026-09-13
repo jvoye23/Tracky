@@ -7,6 +7,7 @@ import androidx.room.Upsert
 import com.jvcs.tracky.core.database.entity.ProjectEntity
 import com.jvcs.tracky.core.database.entity.ProjectSubTaskEntity
 import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
+import com.jvcs.tracky.core.database.entity.StrandedIntervalEntity
 import com.jvcs.tracky.core.database.entity.SubTaskIntervalEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 import com.jvcs.tracky.core.database.relation.ProjectSortIndexEntity
@@ -64,7 +65,7 @@ interface ProjectDao {
         }
         intervals.forEach { incoming ->
             val local = getIntervalById(incoming.intervalId)
-            if (local == null || serverWinsOnPullForInterval(local.endDateTimeEpochMs)) {
+            if (local == null || serverWinsOnPullForInterval(local.endDateTimeEpochMs, incoming.endDateTimeEpochMs)) {
                 upsertTaskInterval(incoming)
             }
         }
@@ -81,7 +82,7 @@ interface ProjectDao {
             if (getSubTaskById(incoming.parentSubTaskId) == null) return@forEach
             if (getIntervalById(incoming.parentTaskIntervalId) == null) return@forEach
             val local = getSubTaskIntervalById(incoming.subTaskIntervalId)
-            if (local == null || serverWinsOnPullForInterval(local.endDateTimeEpochMs)) {
+            if (local == null || serverWinsOnPullForInterval(local.endDateTimeEpochMs, incoming.endDateTimeEpochMs)) {
                 // startedParentTimer has no wire counterpart, so the server's copy is always false.
                 // Keeping the local value is what preserves "stopping this subtask also stops its
                 // parent task" across a pull. A row this device has never seen gets false, which is
@@ -182,7 +183,15 @@ interface ProjectDao {
     @Query("DELETE FROM task_intervals WHERE intervalId = :intervalId")
     suspend fun deleteTaskInterval(intervalId: String)
 
-    @Query("SELECT * FROM task_intervals WHERE parentTaskId = :sessionId AND endDateTimeEpochMs IS NULL LIMIT 1")
+    // More than one open interval per task is a bug (see startTask's reuse guard), but the rows can
+    // already exist on a device that ran an older build, and LIMIT 1 without an order leaves which
+    // one comes back to the query planner. Newest-first so a stop closes the interval the user just
+    // started, never a stranded one whose span covers the days since.
+    @Query(
+        "SELECT * FROM task_intervals WHERE parentTaskId = :sessionId AND endDateTimeEpochMs IS NULL " +
+            "AND intervalId NOT IN (SELECT intervalId FROM stranded_intervals) " +
+            "ORDER BY startDateTimeEpochMs DESC LIMIT 1"
+    )
     suspend fun getOpenIntervalBySessionId(sessionId: String): TaskIntervalEntity?
 
     @Query("UPDATE project_tasks SET isTimerRunning = :isRunning WHERE projectTaskId = :sessionId")
@@ -231,7 +240,11 @@ interface ProjectDao {
 
     // The open-interval lookup the timer needs, mirroring getOpenIntervalBySessionId. At most one
     // row can come back: a subtask has one timer, and closing it stamps endDateTimeEpochMs.
-    @Query("SELECT * FROM sub_task_intervals WHERE parentSubTaskId = :subTaskId AND endDateTimeEpochMs IS NULL LIMIT 1")
+    @Query(
+        "SELECT * FROM sub_task_intervals WHERE parentSubTaskId = :subTaskId AND endDateTimeEpochMs IS NULL " +
+            "AND subTaskIntervalId NOT IN (SELECT intervalId FROM stranded_intervals) " +
+            "ORDER BY startDateTimeEpochMs DESC LIMIT 1"
+    )
     suspend fun getOpenSubTaskInterval(subTaskId: String): SubTaskIntervalEntity?
 
     // Only one subtask under a task may run at a time, so starting one has to find whichever
@@ -240,12 +253,44 @@ interface ProjectDao {
     @Query(
         "SELECT si.* FROM sub_task_intervals AS si " +
             "JOIN project_sub_tasks AS s ON s.projectSubTaskId = si.parentSubTaskId " +
-            "WHERE s.parentProjectTaskId = :taskId AND si.endDateTimeEpochMs IS NULL LIMIT 1"
+            "WHERE s.parentProjectTaskId = :taskId AND si.endDateTimeEpochMs IS NULL " +
+            "AND si.subTaskIntervalId NOT IN (SELECT intervalId FROM stranded_intervals) " +
+            "ORDER BY si.startDateTimeEpochMs DESC LIMIT 1"
     )
     suspend fun getOpenSubTaskIntervalForTask(taskId: String): SubTaskIntervalEntity?
 
     // Backs the parent task's play button, which resumes whatever was worked on last rather than
     // opening a task-level interval of its own. Same join as above; ordered instead of filtered.
+    // ---- Stranded intervals -----------------------------------------------------------------
+    // Local-only, never synced. An interval listed here is open but nothing is timing it, so every
+    // "what is currently open" query above excludes it and no aggregation counts it - an open
+    // interval banks nothing until it closes. See StrandedIntervalEntity.
+
+    @Upsert
+    suspend fun upsertStrandedInterval(stranded: StrandedIntervalEntity)
+
+    @Query("DELETE FROM stranded_intervals WHERE intervalId = :intervalId")
+    suspend fun deleteStrandedInterval(intervalId: String)
+
+    @Query("SELECT * FROM stranded_intervals WHERE intervalId = :intervalId")
+    suspend fun getStrandedInterval(intervalId: String): StrandedIntervalEntity?
+
+    @Query("SELECT * FROM stranded_intervals ORDER BY detectedAtEpochMs ASC")
+    fun observeStrandedIntervals(): Flow<List<StrandedIntervalEntity>>
+
+    // The reconciler's two inputs. Unfiltered on purpose: it is the thing that decides what counts
+    // as stranded, so it has to see rows it has already flagged to stay idempotent.
+    @Query("SELECT * FROM task_intervals WHERE endDateTimeEpochMs IS NULL")
+    suspend fun getAllOpenTaskIntervals(): List<TaskIntervalEntity>
+
+    @Query("SELECT * FROM sub_task_intervals WHERE endDateTimeEpochMs IS NULL")
+    suspend fun getAllOpenSubTaskIntervals(): List<SubTaskIntervalEntity>
+
+    // Whether a task-level parked interval is worth keeping at all: a task that owns subtasks is
+    // counted through them, so time banked on the task itself renders nowhere. See StrandedTimer.
+    @Query("SELECT COUNT(*) FROM project_sub_tasks WHERE parentProjectTaskId = :taskId")
+    suspend fun countSubTasks(taskId: String): Int
+
     @Query(
         "SELECT si.parentSubTaskId FROM sub_task_intervals AS si " +
             "JOIN project_sub_tasks AS s ON s.projectSubTaskId = si.parentSubTaskId " +

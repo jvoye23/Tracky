@@ -12,6 +12,7 @@ import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import com.jvcs.tracky.features.project.domain.subtask.SubTaskTimerChange
 import com.jvcs.tracky.features.project.domain.subtaskinterval.SubTaskIntervalRepository
 import com.jvcs.tracky.features.project.domain.task.ProjectTaskRepository
+import com.jvcs.tracky.features.project_tracker.data.AlreadyReconciled
 import com.jvcs.tracky.features.project_tracker.data.FakeDb
 import com.jvcs.tracky.features.project_tracker.data.FakeLocalSubTaskDataSource
 import com.jvcs.tracky.features.project_tracker.data.FakeLocalTaskDataSource
@@ -51,6 +52,7 @@ internal class OfflineFirstSubTaskRepositoryTest {
     private val remoteSubTasks = FakeRemoteSubTaskDataSource()
 
     private val repository = OfflineFirstSubTaskRepository(
+        startupReconciliation = AlreadyReconciled,
         localSubTaskDataSource = localSubTasks,
         remoteSubTaskDataSource = remoteSubTasks,
         localTaskDataSource = localTasks,

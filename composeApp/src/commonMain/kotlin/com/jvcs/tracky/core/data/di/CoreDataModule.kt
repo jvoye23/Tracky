@@ -12,7 +12,11 @@ import com.jvcs.tracky.core.domain.auth.AuthService
 import com.jvcs.tracky.core.domain.auth.SessionStorage
 import com.jvcs.tracky.core.domain.auth.SocialAuthProvider
 import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource
+import com.jvcs.tracky.core.domain.startup.StartupReconciliation
 import com.jvcs.tracky.core.domain.sync.ProjectSyncManager
+import com.jvcs.tracky.features.project.data.timer.OfflineFirstStrandedTimerRepository
+import com.jvcs.tracky.features.project.data.timer.StrandedTimerReconciler
+import com.jvcs.tracky.features.project.domain.timer.StrandedTimerRepository
 import com.jvcs.tracky.core.domain.sync.SyncRepository
 import com.jvcs.tracky.core.domain.util.SystemTimeProvider
 import com.jvcs.tracky.core.domain.util.TimeProvider
@@ -112,7 +116,8 @@ val coreDataModule = module {
             syncScheduler = get(),
             intervalRepository = get(),
             timeProvider = get(),
-            applicationScope = get(qualifier = named("AppScope"))
+            applicationScope = get(qualifier = named("AppScope")),
+            startupReconciliation = get()
         )
     } bind ProjectTaskRepository::class
 
@@ -145,13 +150,36 @@ val coreDataModule = module {
             pendingSyncDataSource = get(),
             syncScheduler = get(),
             applicationScope = get(qualifier = named("AppScope")),
-            timeProvider = get()
+            timeProvider = get(),
+            startupReconciliation = get()
         )
     } bind SubTaskRepository::class
+
+    // After the four repositories it pushes through. Nothing depends on this one but the review
+    // dialog, so it closes no cycle.
+    single {
+        OfflineFirstStrandedTimerRepository(
+            projectDao = get(),
+            intervalRepository = get(),
+            subTaskIntervalRepository = get(),
+            projectTaskRepository = get(),
+            subTaskRepository = get()
+        )
+    } bind StrandedTimerRepository::class
 
     // The one place the projects → tasks → intervals → subtasks → subtask intervals sync order
     // is expressed.
     singleOf(::SyncCoordinator) bind SyncRepository::class
+
+    // Before the repositories that await it. createdAtStart so the pass is running by the time the
+    // first screen composes, rather than on first timer start.
+    single(createdAtStart = true) {
+        StrandedTimerReconciler(
+            projectDao = get(),
+            timeProvider = get(),
+            applicationScope = get(qualifier = named("AppScope"))
+        )
+    } bind StartupReconciliation::class
 
     single(createdAtStart = true) {
         ProjectSyncManager(
@@ -188,6 +216,7 @@ val coreDataModule = module {
                 TrackyDatabase.MIGRATION_13_14,
                 TrackyDatabase.MIGRATION_14_15,
                 TrackyDatabase.MIGRATION_15_16,
+                TrackyDatabase.MIGRATION_16_17,
             )
             .setDriver(BundledSQLiteDriver())
             // Single connection (no WAL reader pool). The reactive sync (ProjectSyncManager) does

@@ -43,14 +43,46 @@ class PullMergeRulesTest {
     }
 
     @Test
-    fun serverWins_forAClosedLocalInterval() {
+    fun serverWins_whenBothSidesAreClosed() {
         // A closed interval never changes again, so taking the server's copy is safe.
-        assertTrue(serverWinsOnPullForInterval(localEndDateTimeEpochMs = 500))
+        assertTrue(
+            serverWinsOnPullForInterval(
+                localEndDateTimeEpochMs = 500,
+                serverEndDateTimeEpochMs = 500
+            )
+        )
     }
 
     @Test
     fun localWins_forAnOpenLocalInterval() {
         // No end time means the timer is running on this device; a pull must not close it.
-        assertFalse(serverWinsOnPullForInterval(localEndDateTimeEpochMs = null))
+        assertFalse(
+            serverWinsOnPullForInterval(
+                localEndDateTimeEpochMs = null,
+                serverEndDateTimeEpochMs = 800
+            )
+        )
+    }
+
+    @Test
+    fun localWins_whenTheServerStillHasTheIntervalOpen() {
+        // Every offline stop looks like this until the queue drains: closed here, still open there.
+        // Letting the server win would reopen the row and discard the duration banked into it.
+        assertFalse(
+            serverWinsOnPullForInterval(
+                localEndDateTimeEpochMs = 500,
+                serverEndDateTimeEpochMs = null
+            )
+        )
+    }
+
+    @Test
+    fun localWins_whenNeitherSideIsClosed() {
+        assertFalse(
+            serverWinsOnPullForInterval(
+                localEndDateTimeEpochMs = null,
+                serverEndDateTimeEpochMs = null
+            )
+        )
     }
 }

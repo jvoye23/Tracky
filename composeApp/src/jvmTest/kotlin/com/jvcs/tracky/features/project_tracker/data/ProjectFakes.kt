@@ -7,6 +7,8 @@ import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
 import com.jvcs.tracky.core.domain.sync.serverWinsOnPull
+import com.jvcs.tracky.core.domain.startup.StartupReconciliation
+import com.jvcs.tracky.features.project.domain.task.TaskTimerStart
 import com.jvcs.tracky.core.domain.sync.serverWinsOnPullForInterval
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
@@ -254,7 +256,10 @@ class FakeLocalProjectDataSource(private val db: FakeDb = FakeDb()) : LocalProje
         }
         incomingTasks.flatMap { it.intervals }.forEach { incoming ->
             val local = intervals[incoming.intervalId]
-            if (local == null || serverWinsOnPullForInterval(local.endDateTimeUtc?.toEpochMilliseconds())) {
+            if (local == null || serverWinsOnPullForInterval(
+                    local.endDateTimeUtc?.toEpochMilliseconds(),
+                    incoming.endDateTimeUtc?.toEpochMilliseconds()
+                )) {
                 intervals[incoming.intervalId] = incoming
             }
         }
@@ -273,7 +278,10 @@ class FakeLocalProjectDataSource(private val db: FakeDb = FakeDb()) : LocalProje
             if (subTasks[incoming.parentSubTaskId] == null) return@forEach
             if (intervals[incoming.parentTaskIntervalId] == null) return@forEach
             val local = subTaskIntervals[incoming.subTaskIntervalId]
-            if (local == null || serverWinsOnPullForInterval(local.endDateTimeUtc?.toEpochMilliseconds())) {
+            if (local == null || serverWinsOnPullForInterval(
+                    local.endDateTimeUtc?.toEpochMilliseconds(),
+                    incoming.endDateTimeUtc?.toEpochMilliseconds()
+                )) {
                 // The wire carries no startedParentTimer, so the local value is what survives.
                 subTaskIntervals[incoming.subTaskIntervalId] =
                     incoming.copy(startedParentTimer = local?.startedParentTimer ?: false)
@@ -339,10 +347,20 @@ class FakeLocalTaskDataSource(private val db: FakeDb = FakeDb()) : LocalTaskData
         return Result.Success(Unit)
     }
 
-    override suspend fun startTask(taskId: String): Result<TaskInterval, DataError.Local> {
+    override suspend fun startTask(taskId: String): Result<TaskTimerStart, DataError.Local> {
         // Mirrors the Room implementation: the interval carries its project, so an unknown task
         // has nothing to hang the new row off.
         val task = tasks[taskId] ?: return Result.Error(DataError.Local.NOT_FOUND)
+
+        // And it reuses an interval that is already open rather than stacking a second one.
+        intervals.values
+            .filter { it.parentTaskId == taskId && it.endDateTimeUtc == null }
+            .maxByOrNull { it.startDateTimeUtc }
+            ?.let { open ->
+                tasks[taskId] = task.copy(isTimerRunning = true)
+                return Result.Success(TaskTimerStart(open, openedInterval = null))
+            }
+
         val interval = TaskInterval(
             intervalId = nextIntervalId,
             parentTaskId = taskId,
@@ -353,7 +371,7 @@ class FakeLocalTaskDataSource(private val db: FakeDb = FakeDb()) : LocalTaskData
         )
         intervals[interval.intervalId] = interval
         tasks[taskId] = task.copy(isTimerRunning = true)
-        return Result.Success(interval)
+        return Result.Success(TaskTimerStart(interval, openedInterval = interval))
     }
 
     override suspend fun stopTask(taskId: String): Result<TaskInterval?, DataError.Local> {
@@ -820,6 +838,7 @@ internal class RepoFixture(
     )
 
     val taskRepository = OfflineFirstTaskRepository(
+        startupReconciliation = AlreadyReconciled,
         localTaskDataSource = localTask,
         remoteTaskDataSource = remoteTask,
         pendingSyncDataSource = queue,
@@ -841,6 +860,7 @@ internal class RepoFixture(
 
     // Subtasks after tasks: a subtask timer pushes through the interval and task repositories.
     val subTaskRepository = OfflineFirstSubTaskRepository(
+        startupReconciliation = AlreadyReconciled,
         localSubTaskDataSource = localSubTask,
         remoteSubTaskDataSource = remoteSubTask,
         localTaskDataSource = localTask,
@@ -876,4 +896,9 @@ internal class RepoFixture(
         seedProjectWithTask(projectId, taskId)
         db.seedSubTask(subTaskId, taskId, projectId)
     }
+}
+
+/** The start-up pass is not what these tests are about, so the gate is always open. */
+internal object AlreadyReconciled : StartupReconciliation {
+    override suspend fun awaitReconciled() = Unit
 }
