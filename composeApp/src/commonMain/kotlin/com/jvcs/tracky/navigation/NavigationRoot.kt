@@ -28,6 +28,8 @@ import com.jvcs.tracky.features.project.presentation.project_trash.ProjectTrashS
 import com.jvcs.tracky.features.project.presentation.project_detail.ProjectDetailScreenRoot
 import com.jvcs.tracky.features.project.presentation.project_detail.ProjectDetailViewModel
 import com.jvcs.tracky.features.project.presentation.project_overview.ProjectOverviewScreenRoot
+import com.jvcs.tracky.features.project.presentation.daily_overview.DailyOverviewScreenRoot
+import com.jvcs.tracky.features.project.presentation.daily_overview.DailyOverviewViewModel
 import com.jvcs.tracky.features.project.presentation.task_detail.TaskDetailScreenRoot
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -197,6 +199,17 @@ fun NavigationRoot(
                             Route.ProjectRoute.TaskDetail(sessionId)
                         )
                     }
+                )
+            }
+            entry<Route.ProjectRoute.DailyOverview> { key ->
+                val dailyOverviewVm: DailyOverviewViewModel = koinViewModel {
+                    parametersOf(key.projectId, key.preselectedDateEpochDay)
+                }
+                DailyOverviewScreenRoot(
+                    navigateBack = {
+                        backStack.remove(key)
+                    },
+                    viewModel = dailyOverviewVm
                 )
             }
             entry<Route.ProjectRoute.TaskDetail> { key ->

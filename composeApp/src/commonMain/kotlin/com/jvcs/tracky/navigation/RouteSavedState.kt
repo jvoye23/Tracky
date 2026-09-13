@@ -25,6 +25,7 @@ val routeSavedStateConfiguration: SavedStateConfiguration = SavedStateConfigurat
             subclass(Route.ProjectRoute.ProjectDetail::class, Route.ProjectRoute.ProjectDetail.serializer())
             subclass(Route.ProjectRoute.EditTextNavKey::class, Route.ProjectRoute.EditTextNavKey.serializer())
             subclass(Route.ProjectRoute.TaskDetail::class, Route.ProjectRoute.TaskDetail.serializer())
+            subclass(Route.ProjectRoute.DailyOverview::class, Route.ProjectRoute.DailyOverview.serializer())
         }
     }
 }

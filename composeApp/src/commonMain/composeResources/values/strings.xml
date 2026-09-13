@@ -217,6 +217,9 @@
     <string name="per_day_cell_description">%1$s %2$s, %3$s</string>
     <string name="per_day_cell_untracked">no time tracked</string>
 
+    <!-- Daily overview -->
+    <string name="daily_overview_title">Daily Overview</string>
+
     <!-- Daily overview calendar -->
     <string name="calendar_select_date_title">Select date</string>
     <string name="calendar_jump_to_today">Jump to today</string>
@@ -225,6 +228,9 @@
     <string name="calendar_previous_month">Previous month</string>
     <string name="calendar_next_month">Next month</string>
     <string name="calendar_select_year">Select year</string>
+    <string name="calendar_busiest_day_label">Busiest day</string>
+    <string name="calendar_month_total_label">This month</string>
+    <string name="calendar_no_value">—</string>
     <string name="calendar_day_description">%1$s, %2$s</string>
     <string name="calendar_day_untracked">no time tracked</string>
 
