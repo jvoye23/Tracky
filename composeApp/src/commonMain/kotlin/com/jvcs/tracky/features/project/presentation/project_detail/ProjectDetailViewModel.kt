@@ -157,6 +157,7 @@ class ProjectDetailViewModel(
                     if (subTaskTimerState != null && subTaskTimerState.isRunning) {
                         subTask.copy(
                             formattedDuration = subTaskTimerState.formattedTime,
+                            durationMillis = subTaskTimerState.totalDuration.inWholeMilliseconds,
                             isTimerRunning = true
                         )
                     } else {
@@ -176,6 +177,7 @@ class ProjectDetailViewModel(
                     // CASE: Running - Use the live value
                     task.copy(
                         formattedDuration = timerState.formattedTime,
+                        durationMillis = timerState.totalDuration.inWholeMilliseconds,
                         isTimerRunning = timerState.isRunning,
                         subTasks = updatedSubTasks
                     )

@@ -7,7 +7,6 @@ import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
 import com.jvcs.tracky.features.project.presentation.models.ProjectUi
 import com.jvcs.tracky.design_system.util.formatDuration
-import com.jvcs.tracky.design_system.util.parseDuration
 import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import com.jvcs.tracky.features.project.presentation.models.ProjectSubTaskUi
 import kotlinx.datetime.LocalDate
@@ -44,6 +43,7 @@ fun Project.toProjectUi(): ProjectUi {
         description = description,
         color = if (colorArgb != null) Color(colorArgb) else null,
         totalDuration = formatDuration(totalDurationMillis?.milliseconds ?: Duration.ZERO),
+        totalDurationMillis = totalDurationMillis ?: 0L,
         startDateTimeUtc = startDateTimeInLocalDateTime.date.format(dateTimeFormat),
         isFinished = isFinished,
         useLightTextColor = useLightTextColor,
@@ -60,7 +60,7 @@ fun ProjectUi.toProject(): Project {
         title = title,
         description = description,
         colorArgb = color?.toArgb(),
-        totalDurationMillis = parseDuration(totalDuration).inWholeMilliseconds,
+        totalDurationMillis = totalDurationMillis,
         startDateTimeUtc = LocalDate.parse(startDateTimeUtc, dateTimeFormat).atStartOfDayIn(TimeZone.currentSystemDefault()),
         isFinished = isFinished,
         useLightTextColor = useLightTextColor,
@@ -79,6 +79,7 @@ fun ProjectTask.toProjectTaskUi(): ProjectTaskUi {
         title = title,
         description = description,
         formattedDuration = formatDuration(durationMillis?.milliseconds ?: Duration.ZERO),
+        durationMillis = durationMillis ?: 0L,
         formattedStateDateTime = startDateTimeUtc.toLocalDateTime(TimeZone.currentSystemDefault()).date.format(dateTimeFormat),
         formattedEndDateTimeUtc = endDateTimeUtc?.toLocalDateTime(TimeZone.currentSystemDefault())?.date?.format(dateTimeFormat) ?: "",
         isTimerRunning = isTimerRunning,
@@ -92,7 +93,7 @@ fun ProjectTaskUi.toProjectTask(parentProjectId: String): ProjectTask {
     return ProjectTask(
         projectTaskId = projectTaskId,
         title = title,
-        durationMillis = parseDuration(formattedDuration).inWholeMilliseconds,
+        durationMillis = durationMillis,
         startDateTimeUtc = LocalDate.parse(formattedStateDateTime, dateTimeFormat)
             .atStartOfDayIn(TimeZone.currentSystemDefault()),
         endDateTimeUtc = if (formattedEndDateTimeUtc.isNotEmpty()) {
@@ -114,7 +115,7 @@ fun ProjectSubTaskUi.toProjectSubTask(parentProjectId: String, parentTaskId: Str
         parentProjectId = parentProjectId,
         title = title,
         description = description,
-        durationMillis = parseDuration(formattedDuration).inWholeMilliseconds,
+        durationMillis = durationMillis,
         isTimerRunning = isTimerRunning,
         startDateTimeUtc = LocalDate.parse(formattedStartDateTime, dateTimeFormat)
             .atStartOfDayIn(TimeZone.currentSystemDefault()),
@@ -132,6 +133,7 @@ fun ProjectSubTask.toProjectSubTaskUi(): ProjectSubTaskUi {
         title = title,
         description = description,
         formattedDuration = formatDuration(durationMillis?.milliseconds ?: Duration.ZERO),
+        durationMillis = durationMillis ?: 0L,
         formattedStartDateTime = startDateTimeUtc.toLocalDateTime(TimeZone.currentSystemDefault()).date.format(dateTimeFormat),
         formattedEndDateTimeUtc = endDateTimeUtc?.toLocalDateTime(TimeZone.currentSystemDefault())?.date?.format(dateTimeFormat),
         isTimerRunning = isTimerRunning,
