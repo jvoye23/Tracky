@@ -23,9 +23,9 @@
         android:layout_height="wrap_content"
         android:maxLines="1"
         android:ellipsize="end"
-        android:textSize="16sp"
+        android:textSize="20sp"
         android:textStyle="bold"
-        android:textColor="?android:attr/textColorPrimary"
+        android:textColor="@color/timer_notification_text_primary"
         tools:text="Tracky App Redesign" />
 
     <TextView
@@ -35,9 +35,9 @@
         android:layout_marginTop="8dp"
         android:maxLines="1"
         android:ellipsize="end"
-        android:textSize="20sp"
+        android:textSize="16sp"
         android:textStyle="bold"
-        android:textColor="?android:attr/textColorPrimary"
+        android:textColor="@color/timer_notification_text_primary"
         tools:text="Token refresh" />
 
     <TextView
@@ -48,7 +48,7 @@
         android:maxLines="1"
         android:ellipsize="end"
         android:textSize="16sp"
-        android:textColor="?android:attr/textColorSecondary"
+        android:textColor="@color/timer_notification_text_secondary"
         tools:text="Auth endpoints" />
 
     <LinearLayout

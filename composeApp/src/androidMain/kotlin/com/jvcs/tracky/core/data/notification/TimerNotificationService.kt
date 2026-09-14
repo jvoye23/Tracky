@@ -113,7 +113,11 @@ class TimerNotificationService : Service(), KoinComponent {
             screenOn.collectLatest { on ->
                 if (!on) return@collectLatest
                 while (isActive) {
-                    delay(TICK_MILLIS)
+                    val elapsed = session.elapsedAt(timeProvider.nowInstant)
+                    // Sleep to the next whole second of elapsed, not a flat second from an
+                    // arbitrary moment: a fixed delay leaves the notification showing a second
+                    // the in-app clock has already left behind, and the two must agree.
+                    delay(TICK_MILLIS - elapsed.inWholeMilliseconds % TICK_MILLIS)
                     NotificationManagerCompat.from(this@TimerNotificationService).notify(
                         TimerNotificationFactory.NOTIFICATION_ID,
                         factory.build(session, session.elapsedAt(timeProvider.nowInstant))
