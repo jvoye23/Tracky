@@ -120,7 +120,7 @@ class TaskDetailViewModel(
                 // Four segments: parseDuration reads formatDuration's HH:mm:ss:cc and returns
                 // ZERO for anything else, so a three-segment fallback would silently reset the
                 // accumulated total to nothing on the first start after a failed load.
-                val currentDurationString = _state.value.task?.formattedDuration ?: "00:00:00:00"
+                val currentDurationString = _state.value.task?.formattedDuration ?: "00:00:00"
                 val currentDuration = parseDuration(currentDurationString)
                 timeManager.toggleTimer(taskId, currentDuration)
             }

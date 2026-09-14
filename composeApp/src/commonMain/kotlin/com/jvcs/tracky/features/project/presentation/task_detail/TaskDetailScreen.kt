@@ -120,7 +120,7 @@ fun TaskDetailScreen(
 
             DurationHeroCard(
                 label = stringResource(Res.string.task_duration),
-                totalDuration = state.task?.formattedDuration ?: "00:00:00:00",
+                totalDuration = state.task?.formattedDuration ?: "00:00:00",
                 projectColor = Color.Blue, //TODO Get project color
                 useLightTextColor = true, // TODO Get project text color
                 onStartStopClick = {}

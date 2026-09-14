@@ -22,7 +22,7 @@ import kotlin.time.toDuration
 data class TimerState(
     val isRunning: Boolean = false,
     val totalDuration: Duration = Duration.ZERO,
-    val formattedTime: String = "00:00:00:00"
+    val formattedTime: String = "00:00:00"
 )
 
 

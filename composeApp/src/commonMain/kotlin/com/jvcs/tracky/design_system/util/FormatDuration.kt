@@ -6,35 +6,39 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
+/**
+ * "HH:mm:ss", e.g. `02:16:09`. Hours are not wrapped at a day - a timer left running over a
+ * weekend has to read as the 75 hours it was.
+ *
+ * Seconds are truncated, not rounded: rounding 00:59:59.9 up would claim a second that was never
+ * tracked. Whole seconds rather than centiseconds because the notification cannot redraw a hundred
+ * times a second, and the two clocks must show the same characters.
+ */
 fun formatDuration(duration: Duration): String {
-    return duration.toComponents { hours, minutes, seconds, nanoseconds ->
-        val centiseconds = nanoseconds / 10_000_000
+    return duration.toComponents { hours, minutes, seconds, _ ->
         "${hours.toString().padStart(2, '0')}:" +
                 "${minutes.toString().padStart(2, '0')}:" +
-                "${seconds.toString().padStart(2, '0')}:" +
-                "${centiseconds.toString().padStart(2, '0')}"
+                seconds.toString().padStart(2, '0')
     }
 }
 
+/**
+ * The inverse of [formatDuration]. Accepts the four-segment "HH:mm:ss:cc" form too, so strings
+ * rendered by an earlier build still read back at the precision they were written with.
+ *
+ * Anything else is [Duration.ZERO] rather than an exception - this parses display text, and a
+ * malformed string should not take a screen down.
+ */
 fun parseDuration(timeString: String): Duration {
-    // 1. Split the string by ":"
-    // Format is "HH:mm:ss:cc" (centiseconds)
     val parts = timeString.split(":")
+    if (parts.size != 3 && parts.size != 4) return Duration.ZERO
 
-    // Safety check for format
-    if (parts.size != 4) return Duration.ZERO
+    val hours = parts[0].toLongOrNull() ?: return Duration.ZERO
+    val minutes = parts[1].toLongOrNull() ?: return Duration.ZERO
+    val seconds = parts[2].toLongOrNull() ?: return Duration.ZERO
+    val centiseconds = if (parts.size == 4) parts[3].toLongOrNull() ?: 0L else 0L
 
-    val hours = parts[0].toLongOrNull() ?: 0L
-    val minutes = parts[1].toLongOrNull() ?: 0L
-    val seconds = parts[2].toLongOrNull() ?: 0L
-    val centiseconds = parts[3].toLongOrNull() ?: 0L
-
-    // 2. Sum up the components
-    // Note: 1 centisecond = 10 milliseconds
-    return hours.hours +
-            minutes.minutes +
-            seconds.seconds +
-            (centiseconds * 10).milliseconds
+    return hours.hours + minutes.minutes + seconds.seconds + (centiseconds * 10).milliseconds
 }
 
 /**

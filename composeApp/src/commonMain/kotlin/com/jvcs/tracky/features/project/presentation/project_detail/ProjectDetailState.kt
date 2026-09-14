@@ -11,7 +11,7 @@ data class ProjectDetailState(
     val isEditMode: Boolean = false,
     val titleText: String? = null,
     val descriptionText: String? = null,
-    val formattedTimerString: String = "00:00:00:00",
+    val formattedTimerString: String = "00:00:00",
     val timerDuration: Duration? = null,
     //val isTimerRunning: Boolean = false,
     val isFabExtended: Boolean = true,
