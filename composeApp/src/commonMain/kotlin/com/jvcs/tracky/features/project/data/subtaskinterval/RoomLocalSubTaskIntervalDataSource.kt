@@ -4,13 +4,12 @@ import com.jvcs.tracky.core.database.dao.ProjectDao
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
+import com.jvcs.tracky.core.domain.util.platformIoDispatcher
 import com.jvcs.tracky.features.project.data.mappers.toSubTaskInterval
 import com.jvcs.tracky.features.project.data.mappers.toSubTaskIntervalEntity
 import com.jvcs.tracky.features.project.domain.models.SubTaskInterval
 import com.jvcs.tracky.features.project.domain.subtaskinterval.LocalSubTaskIntervalDataSource
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 
 class RoomLocalSubTaskIntervalDataSource(
@@ -18,7 +17,7 @@ class RoomLocalSubTaskIntervalDataSource(
 ) : LocalSubTaskIntervalDataSource {
 
     // Same single-writer funnel as the other Room data sources — see RoomLocalProjectDataSource.
-    private val dbWriteDispatcher = Dispatchers.IO.limitedParallelism(1)
+    private val dbWriteDispatcher = platformIoDispatcher.limitedParallelism(1)
 
     override suspend fun upsertSubTaskInterval(interval: SubTaskInterval): EmptyResult<DataError.Local> = write {
         projectDao.upsertSubTaskInterval(interval.toSubTaskIntervalEntity())

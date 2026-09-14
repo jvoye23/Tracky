@@ -5,6 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jvcs.tracky.core.domain.util.TimeProvider
+import com.jvcs.tracky.core.domain.util.platformIoDispatcher
 import com.jvcs.tracky.design_system.util.UiText
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
@@ -12,7 +13,6 @@ import com.jvcs.tracky.features.project.presentation.mappers.toCalendarMonthsUi
 import com.jvcs.tracky.features.project.presentation.models.CalendarMonthUi
 import com.jvcs.tracky.features.project.presentation.mappers.toDayDetailUi
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -50,7 +50,7 @@ class DailyOverviewViewModel(
     private val timeProvider: TimeProvider,
     private val savedStateHandle: SavedStateHandle,
     // Injectable so tests can drive the initial load on their own scheduler; production keeps IO.
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val ioDispatcher: CoroutineDispatcher = platformIoDispatcher
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(DailyOverviewState())

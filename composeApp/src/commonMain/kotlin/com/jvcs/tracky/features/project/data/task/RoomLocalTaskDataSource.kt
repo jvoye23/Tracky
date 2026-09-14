@@ -6,6 +6,7 @@ import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeProvider
+import com.jvcs.tracky.core.domain.util.platformIoDispatcher
 import com.jvcs.tracky.features.project.data.mappers.toProjectTaskEntity
 import com.jvcs.tracky.features.project.data.mappers.toProjectTask
 import com.jvcs.tracky.features.project.data.mappers.toTaskInterval
@@ -16,8 +17,6 @@ import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import com.jvcs.tracky.features.project.domain.task.LocalTaskDataSource
 import com.jvcs.tracky.features.project.domain.task.TaskTimerStart
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -31,7 +30,7 @@ class RoomLocalTaskDataSource(
 ) : LocalTaskDataSource {
 
     // Same single-writer funnel as the other Room data sources — see RoomLocalProjectDataSource.
-    private val dbWriteDispatcher = Dispatchers.IO.limitedParallelism(1)
+    private val dbWriteDispatcher = platformIoDispatcher.limitedParallelism(1)
 
     override fun getTaskWithIntervalsById(taskId: String): Flow<ProjectTask?> {
         return projectDao.getTaskWithIntervalsById(taskId)
