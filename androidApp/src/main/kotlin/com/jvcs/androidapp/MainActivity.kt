@@ -1,5 +1,6 @@
 package com.jvcs.androidapp
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -8,8 +9,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.jvcs.tracky.App
+import com.jvcs.tracky.core.data.notification.TimerNotificationIntents
+import com.jvcs.tracky.navigation.DeepLinkRouter
+import com.jvcs.tracky.navigation.Route
+import org.koin.android.ext.android.inject
 
 class MainActivity : ComponentActivity() {
+
+    private val deepLinkRouter: DeepLinkRouter by inject()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         var shouldShowSplashScreen = true
 
@@ -20,6 +28,7 @@ class MainActivity : ComponentActivity() {
         }
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        routeDeepLink(intent)
         setContent {
             App(
                 onAuthenticationChecked = {
@@ -27,6 +36,23 @@ class MainActivity : ComponentActivity() {
                 }
             )
         }
+    }
+
+    // launchMode is singleTop, so a tap while Tracky is already open lands here rather than
+    // rebuilding the activity.
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        routeDeepLink(intent)
+    }
+
+    private fun routeDeepLink(intent: Intent?) {
+        val projectId = intent
+            ?.getStringExtra(TimerNotificationIntents.EXTRA_PROJECT_ID)
+            ?: return
+        deepLinkRouter.request(
+            Route.ProjectRoute.ProjectDetail(isEditMode = false, projectId = projectId)
+        )
     }
 }
 
