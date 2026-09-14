@@ -1,133 +1,95 @@
 package com.jvcs.tracky.core.domain.util
 
 import com.jvcs.tracky.design_system.util.formatDuration
+import com.jvcs.tracky.features.project.domain.timer.RunningTimer
+import com.jvcs.tracky.features.project.domain.timer.RunningTimerRepository
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
-import kotlin.time.Clock
+import kotlinx.coroutines.flow.stateIn
 import kotlin.time.Duration
-import kotlin.time.DurationUnit
-import kotlin.time.TimeSource
-import kotlin.time.toDuration
 
-// Data class representing the UI state of a SINGLE session
+/** What one screen needs to draw a timer: is it running, how long, and how that reads. */
 data class TimerState(
     val isRunning: Boolean = false,
     val totalDuration: Duration = Duration.ZERO,
     val formattedTime: String = "00:00:00"
 )
 
-
-class TimeManager(
-    private val scope: CoroutineScope
+/** The running timer together with its live elapsed value. */
+data class RunningTimerTick(
+    val timer: RunningTimer,
+    val elapsed: Duration
 ) {
-    // Holds the public state for ALL tasks, keyed by ID
-    private val _taskStates = MutableStateFlow<Map<String, TimerState>>(emptyMap())
-    val taskStates = _taskStates.asStateFlow()
+    val formatted: String get() = formatDuration(elapsed)
+}
 
-    // Internal tracking for active jobs and start times
-    private val jobs = mutableMapOf<String, Job>()
-    private val startMarks = mutableMapOf<String, TimeSource.Monotonic.ValueTimeMark>()
-    private val accumulatedDurations = mutableMapOf<String, Duration>()
-
-    /**
-     * Toggles the timer for a specific project/task ID.
-     * Requires a CoroutineScope (usually viewModelScope) to launch the ticker.
-     */
-    fun toggleTimer(taskId: String, initialDuration: Duration = Duration.ZERO) {
-        val currentState = _taskStates.value[taskId] ?: TimerState()
-
-        if (currentState.isRunning) {
-            pauseTimer(taskId)
-        } else {
-            startTimer(taskId, initialDuration)
-        }
-    }
-
-    /**
-     * Returns a flow that emits ONLY when the state for [taskId] changes.
-     * If the session doesn't exist, it emits a default (empty) TimerState.
-     */
-    fun getTaskState(taskId: String): Flow<TimerState> {
-        return taskStates
-            .map { map -> map[taskId] ?: TimerState() }
-            .distinctUntilChanged() // CRITICAL: Only emit if THIS specific timer updates
-    }
-
-    private fun startTimer(taskId: String, initialDuration: Duration) {
-        // Prevent double-start
-        if (jobs[taskId]?.isActive == true) return
-
-        // 1. Set the mark
-        startMarks[taskId] = TimeSource.Monotonic.markNow()
-
-        accumulatedDurations[taskId] = initialDuration
-
-        // Update state immediately to "Running"
-        updateState(taskId) { it.copy(isRunning = true) }
-
-        // 2. Launch the ticker job
-        jobs[taskId] = scope.launch {
-
-            while (isActive) {
-                delay(10) // 10ms for UI updates
-                val currentAccumulated = accumulatedDurations[taskId] ?: Duration.ZERO
-                val timeSinceStart = startMarks[taskId]?.elapsedNow() ?: Duration.ZERO
-                val total = currentAccumulated + timeSinceStart
-
-                updateState(taskId) {
-                    it.copy(
-                        totalDuration = total,
-                        formattedTime = formatDuration(total)
-                    )
+/**
+ * Renders the running timer. It does not own one.
+ *
+ * The open interval in the database is the only thing that says a timer is running, and
+ * [RunningTimer.elapsedAt] is the only place elapsed time is computed - the same call the
+ * notification makes. So the two surfaces cannot disagree, and a Pause pressed in the
+ * notification reaches every screen without anyone having to tell them.
+ *
+ * This used to be the opposite: an in-memory map keyed by task id, ticking off a monotonic mark
+ * taken when the user tapped and seeded by re-parsing the string already on screen. Nothing
+ * outside the app could stop it, and it drifted from the database by whatever the seeding lost.
+ *
+ * At most one timer runs at a time, so [taskStates] holds at most one entry - kept as a map
+ * because that is the shape the screens already read.
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+class TimeManager(
+    private val runningTimerRepository: RunningTimerRepository,
+    private val timeProvider: TimeProvider,
+    scope: CoroutineScope
+) {
+    val tick: StateFlow<RunningTimerTick?> = runningTimerRepository
+        .observeRunningTimer()
+        .flatMapLatest { timer ->
+            if (timer == null) {
+                flowOf<RunningTimerTick?>(null)
+            } else {
+                flow {
+                    while (true) {
+                        val elapsed = timer.elapsedAt(timeProvider.nowInstant)
+                        emit(RunningTimerTick(timer, elapsed))
+                        // Sleep to the next whole second of elapsed rather than a flat second from
+                        // an arbitrary moment, so the digits turn over at the same instant the
+                        // notification's do.
+                        delay(TICK_MILLIS - elapsed.inWholeMilliseconds % TICK_MILLIS)
+                    }
                 }
-
             }
-
         }
-    }
-    private fun pauseTimer(taskId: String) {
-        // 1. Cancel the job
-        jobs[taskId]?.cancel()
-        jobs.remove(taskId)
+        // Eagerly, on the app scope: the clock has to be right the moment a screen composes, not a
+        // second later, and it is one coroutine for the whole app.
+        .stateIn(scope, SharingStarted.Eagerly, null)
 
-        // 2. Bank the elapsed time
-        val startMark = startMarks[taskId]
-        val currentAccumulated = accumulatedDurations[taskId] ?: Duration.ZERO
-
-        if (startMark != null) {
-            accumulatedDurations[taskId] = currentAccumulated + startMark.elapsedNow()
+    val taskStates: StateFlow<Map<String, TimerState>> = tick
+        .map { tick ->
+            if (tick == null) {
+                emptyMap()
+            } else {
+                mapOf(
+                    tick.timer.timedEntityId to TimerState(
+                        isRunning = true,
+                        totalDuration = tick.elapsed,
+                        formattedTime = tick.formatted
+                    )
+                )
+            }
         }
+        .stateIn(scope, SharingStarted.Eagerly, emptyMap())
 
-        // 3. Clear the mark and update state
-        startMarks.remove(taskId)
-        updateState(taskId) { it.copy(isRunning = false) }
-    }
-
-    fun stopAndResetTimer(taskId: String) {
-        jobs[taskId]?.cancel()
-        jobs.remove(taskId)
-        startMarks.remove(taskId)
-        accumulatedDurations.remove(taskId)
-
-        // Reset state to default or remove it entirely
-        updateState(taskId) { TimerState() }
-    }
-
-    // Helper to safely update the StateFlow Map
-    private fun updateState(taskId: String, update: (TimerState) -> TimerState) {
-        _taskStates.update { currentMap ->
-            val oldState = currentMap[taskId] ?: TimerState()
-            val newState = update(oldState)
-            currentMap + (taskId to newState)
-        }
+    private companion object {
+        const val TICK_MILLIS = 1_000L
     }
 }

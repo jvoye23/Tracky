@@ -7,7 +7,6 @@ import com.jvcs.tracky.core.domain.util.TimeManager
 import com.jvcs.tracky.features.project.presentation.mappers.countedDayIntervals
 import com.jvcs.tracky.features.project.presentation.mappers.toProjectTaskUi
 import com.jvcs.tracky.design_system.util.formatDurationHoursMinutesSeconds
-import com.jvcs.tracky.design_system.util.parseDuration
 import com.jvcs.tracky.features.project.domain.task.ProjectTaskRepository
 import com.jvcs.tracky.features.project.presentation.task_detail.model.DailyStatistic
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -111,18 +110,12 @@ class TaskDetailViewModel(
 
     private fun toggleTimer() {
         viewModelScope.launch {
-            val isRunning = _state.value.isTimerRunning
-            if (isRunning) {
+            // isTimerRunning comes from the row this screen observes, and so does the clock, so
+            // there is nothing to seed and nothing to stop beyond closing the interval.
+            if (_state.value.isTimerRunning) {
                 projectTaskRepository.stopProjectTask(taskId)
-                timeManager.stopAndResetTimer(taskId)
             } else {
                 projectTaskRepository.startProjectTask(taskId)
-                // Four segments: parseDuration reads formatDuration's HH:mm:ss:cc and returns
-                // ZERO for anything else, so a three-segment fallback would silently reset the
-                // accumulated total to nothing on the first start after a failed load.
-                val currentDurationString = _state.value.task?.formattedDuration ?: "00:00:00"
-                val currentDuration = parseDuration(currentDurationString)
-                timeManager.toggleTimer(taskId, currentDuration)
             }
         }
     }

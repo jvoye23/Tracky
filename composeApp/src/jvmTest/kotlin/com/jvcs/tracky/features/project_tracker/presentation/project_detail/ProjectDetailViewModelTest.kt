@@ -8,7 +8,9 @@ import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
 import com.jvcs.tracky.core.domain.util.Result
-import com.jvcs.tracky.core.domain.util.TimeManager
+import com.jvcs.tracky.core.domain.util.FakeRunningTimerRepository
+import com.jvcs.tracky.core.domain.util.runningTimer
+import com.jvcs.tracky.core.domain.util.testTimeManager
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
@@ -107,17 +109,20 @@ class ProjectDetailViewModelTest {
         // writing, so a repository that answers null would make every finish silently no-op.
         taskRepository: FakeProjectTaskRepository =
             FakeProjectTaskRepository(project.projectTasks?.firstOrNull()),
-        projectRepository: FakeDetailProjectRepository = FakeDetailProjectRepository(project)
+        projectRepository: FakeDetailProjectRepository = FakeDetailProjectRepository(project),
+        // The open interval is what says a timer is running, so the fakes that open one publish it
+        // here and TimeManager renders it - the same path production takes.
+        running: FakeRunningTimerRepository = FakeRunningTimerRepository()
     ): Pair<ProjectDetailViewModel, FakeSubTaskRepository> {
+        subTaskRepository.running = running
+        taskRepository.running = running
         val vm = ProjectDetailViewModel(
             isEdit = false,
             projectId = PROJECT_ID,
             projectRepository = projectRepository,
             projectTaskRepository = taskRepository,
             subTaskRepository = subTaskRepository,
-            // backgroundScope, not the test scope: the ticker is an endless loop, and a live job
-            // on the test scope would keep runTest from ever completing.
-            timeManager = TimeManager(backgroundScope),
+            timeManager = testTimeManager(repository = running),
             timeProvider = FakeTimeProvider(),
             ioDispatcher = dispatcher
         )
@@ -719,6 +724,7 @@ private class FakeDetailProjectRepository(project: Project) : ProjectRepository 
 private class FakeProjectTaskRepository(
     initial: ProjectTask? = null
 ) : ProjectTaskRepository {
+    var running = FakeRunningTimerRepository()
     val started = mutableListOf<String>()
     val stopped = mutableListOf<String>()
     val upserted = mutableListOf<ProjectTask>()
@@ -727,11 +733,13 @@ private class FakeProjectTaskRepository(
 
     override suspend fun startProjectTask(taskId: String): EmptyResult<DataError> {
         started += taskId
+        running.running.value = runningTimer(taskId = taskId)
         return Result.Success(Unit)
     }
 
     override suspend fun stopProjectTask(taskId: String): EmptyResult<DataError> {
         stopped += taskId
+        running.running.value = null
         return Result.Success(Unit)
     }
 
@@ -754,6 +762,7 @@ private const val BANKED_MILLIS = 5_000L
 private class FakeSubTaskRepository(
     initial: List<ProjectSubTask> = emptyList()
 ) : SubTaskRepository {
+    var running = FakeRunningTimerRepository()
     val started = mutableListOf<String>()
     val stopped = mutableListOf<String>()
     val upserted = mutableListOf<ProjectSubTask>()
@@ -783,11 +792,14 @@ private class FakeSubTaskRepository(
     override suspend fun startSubTask(subTaskId: String): EmptyResult<DataError> {
         started += subTaskId
         setTimerRunning(subTaskId, true)
+        // Only one timer runs, so publishing this one is also what stops a running sibling.
+        running.running.value = runningTimer(taskId = TASK_ID, subTaskId = subTaskId)
         return Result.Success(Unit)
     }
 
     override suspend fun stopSubTask(subTaskId: String): EmptyResult<DataError> {
         stopped += subTaskId
+        running.running.value = null
         // Production banks the elapsed interval into durationMillis here. Callers that copy a
         // snapshot taken before the stop would silently write that back to zero, so the fake has
         // to reproduce the write for a test to be able to catch it.
