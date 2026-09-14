@@ -278,6 +278,26 @@ interface ProjectDao {
     @Query("SELECT * FROM stranded_intervals ORDER BY detectedAtEpochMs ASC")
     fun observeStrandedIntervals(): Flow<List<StrandedIntervalEntity>>
 
+    // The running timer's two inputs, mirroring the reconciler's pair below but filtered the other
+    // way: parked rows are open and timing nothing, so they must never look like a running timer.
+    // Global rather than per-task - only one timer runs at a time - and newest-first for the same
+    // reason getOpenIntervalBySessionId is, so a device carrying stale open rows from an older
+    // build reports the one the user just started.
+
+    @Query(
+        "SELECT * FROM task_intervals WHERE endDateTimeEpochMs IS NULL " +
+            "AND intervalId NOT IN (SELECT intervalId FROM stranded_intervals) " +
+            "ORDER BY startDateTimeEpochMs DESC LIMIT 1"
+    )
+    fun observeOpenTaskInterval(): Flow<TaskIntervalEntity?>
+
+    @Query(
+        "SELECT * FROM sub_task_intervals WHERE endDateTimeEpochMs IS NULL " +
+            "AND subTaskIntervalId NOT IN (SELECT intervalId FROM stranded_intervals) " +
+            "ORDER BY startDateTimeEpochMs DESC LIMIT 1"
+    )
+    fun observeOpenSubTaskInterval(): Flow<SubTaskIntervalEntity?>
+
     // The reconciler's two inputs. Unfiltered on purpose: it is the thing that decides what counts
     // as stranded, so it has to see rows it has already flagged to stay idempotent.
     @Query("SELECT * FROM task_intervals WHERE endDateTimeEpochMs IS NULL")
