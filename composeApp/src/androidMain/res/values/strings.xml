@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="timer_notification_channel_name">Running timer</string>
+    <string name="timer_notification_channel_description">Shows the timer that is currently running, with a control to pause or resume it.</string>
+    <string name="timer_notification_pause">Pause</string>
+    <string name="timer_notification_resume">Play</string>
+    <string name="timer_notification_fgs_justification">Keeps the user\'s running time-tracking timer alive and visible while the app is in the background, so elapsed work time is recorded accurately and can be paused without reopening the app.</string>
+</resources>
