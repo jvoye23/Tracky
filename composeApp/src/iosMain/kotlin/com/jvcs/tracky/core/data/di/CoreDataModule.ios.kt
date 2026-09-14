@@ -8,6 +8,8 @@ import com.jvcs.tracky.core.data.sync.IosTrashCleanupScheduler
 import com.jvcs.tracky.core.database.DatabaseFactory
 import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
 import com.jvcs.tracky.core.domain.lifecycle.AppLifecycleObserver
+import com.jvcs.tracky.core.domain.notification.NoOpTimerNotificationController
+import com.jvcs.tracky.core.domain.notification.TimerNotificationController
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
 import com.jvcs.tracky.core.domain.sync.TrashCleanupScheduler
 import io.ktor.client.engine.HttpClientEngine
@@ -27,6 +29,7 @@ actual val platformCoreDataModule = module {
     single { AppLifecycleObserver() }
     single { IosSyncScheduler() } bind SyncScheduler::class
     single { IosTrashCleanupScheduler() } bind TrashCleanupScheduler::class
+    single { NoOpTimerNotificationController() } bind TimerNotificationController::class
     single<HttpClientEngine> { Darwin.create() }
     single<DataStore<Preferences>> {
         PreferenceDataStoreFactory.createWithPath(
