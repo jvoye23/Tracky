@@ -2,8 +2,7 @@ package com.jvcs.tracky.features.project.presentation.models
 
 import androidx.compose.ui.graphics.Color
 import com.jvcs.tracky.design_system.util.formatDuration
-import com.jvcs.tracky.design_system.util.parseDuration
-import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 
 data class ProjectUi(
     val projectId: String,
@@ -11,6 +10,12 @@ data class ProjectUi(
     val description: String?,
     val color: Color?,
     val totalDuration: String,
+    /**
+     * The number behind [totalDuration]. Durations must never round-trip through their own display
+     * string: the string is truncated for reading, and mapping the tree back to the domain on an
+     * unrelated edit would write that truncation into the database.
+     */
+    val totalDurationMillis: Long = 0L,
     val startDateTimeUtc: String,
     val isFinished: Boolean,
     val useLightTextColor: Boolean = false,
@@ -18,19 +23,15 @@ data class ProjectUi(
     val projectTasks: List<ProjectTaskUi>? = null,
     val isPinned: Boolean = false
 ) {
-    val totalProjectDuration: String
-        get() {
-            // 2. Sum up the durations.
-            // We use 'fold' starting at ZERO to safely handle the list iteration.
-            // displayDuration, not formattedDuration: a task with subtasks shows their sum, and the
-            // project total has to agree with the numbers on the task rows.
-            val total = projectTasks?.fold(Duration.ZERO) { acc, session ->
-                acc + parseDuration(session.displayDuration)
-            } ?: Duration.ZERO
+    /**
+     * displayDurationMillis, not durationMillis: a task with subtasks shows their sum, and the
+     * project total has to agree with the numbers on the task rows.
+     */
+    val totalProjectDurationMillis: Long
+        get() = projectTasks?.sumOf { it.displayDurationMillis } ?: 0L
 
-            // 3. Format the total Duration back to String
-            return formatDuration(total)
-        }
+    val totalProjectDuration: String
+        get() = formatDuration(totalProjectDurationMillis.milliseconds)
 
     val anyTimerRunning: Boolean
         get() = projectTasks?.any { it.isTimerRunning || it.isAnySubTaskRunning } ?: false
@@ -52,6 +53,8 @@ data class ProjectTaskUi(
     val title: String,
     val description: String?,
     val formattedDuration: String,
+    /** The number behind [formattedDuration]. See [ProjectUi.totalDurationMillis]. */
+    val durationMillis: Long = 0L,
     val formattedStateDateTime: String,
     val formattedEndDateTimeUtc: String,
     val isTimerRunning: Boolean,
@@ -65,12 +68,11 @@ data class ProjectTaskUi(
     val subTaskProgress: Float
         get() = if (subTasks.isEmpty()) 0f else doneSubTaskCount.toFloat() / subTasks.size
 
+    val totalSubTaskDurationMillis: Long
+        get() = subTasks.sumOf { it.durationMillis }
+
     val totalSubTaskDuration: String
-        get() = formatDuration(
-            subTasks.fold(Duration.ZERO) { acc, subTask ->
-                acc + parseDuration(subTask.formattedDuration)
-            }
-        )
+        get() = formatDuration(totalSubTaskDurationMillis.milliseconds)
 
     /**
      * What the UI shows for this task: once it has subtasks its time is theirs, summed.
@@ -82,6 +84,9 @@ data class ProjectTaskUi(
      * This ticks live for free: the ViewModel rewrites a running subtask's formattedDuration from
      * TimeManager each frame, so the fold yields banked siblings + the live one.
      */
+    val displayDurationMillis: Long
+        get() = if (subTasks.isEmpty()) durationMillis else totalSubTaskDurationMillis
+
     val displayDuration: String
         get() = if (subTasks.isEmpty()) formattedDuration else totalSubTaskDuration
 
@@ -94,6 +99,8 @@ data class ProjectSubTaskUi(
     val title: String,
     val description: String?,
     val formattedDuration: String,
+    /** The number behind [formattedDuration]. See [ProjectUi.totalDurationMillis]. */
+    val durationMillis: Long = 0L,
     val formattedStartDateTime: String,
     val formattedEndDateTimeUtc: String?,
     val isTimerRunning: Boolean,
