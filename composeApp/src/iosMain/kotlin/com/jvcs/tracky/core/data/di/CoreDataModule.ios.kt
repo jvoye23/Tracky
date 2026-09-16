@@ -3,12 +3,12 @@ package com.jvcs.tracky.core.data.di
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import com.jvcs.tracky.core.data.notification.IosTimerNotificationController
 import com.jvcs.tracky.core.data.sync.IosSyncScheduler
 import com.jvcs.tracky.core.data.sync.IosTrashCleanupScheduler
 import com.jvcs.tracky.core.database.DatabaseFactory
 import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
 import com.jvcs.tracky.core.domain.lifecycle.AppLifecycleObserver
-import com.jvcs.tracky.core.domain.notification.NoOpTimerNotificationController
 import com.jvcs.tracky.core.domain.notification.NoOpTimerNotificationPermissionRequester
 import com.jvcs.tracky.core.domain.notification.TimerNotificationController
 import com.jvcs.tracky.core.domain.notification.TimerNotificationPermissionRequester
@@ -31,9 +31,9 @@ actual val platformCoreDataModule = module {
     single { AppLifecycleObserver() }
     single { IosSyncScheduler() } bind SyncScheduler::class
     single { IosTrashCleanupScheduler() } bind TrashCleanupScheduler::class
-    single { NoOpTimerNotificationController() } bind TimerNotificationController::class
-    // Live Activities are governed by a Settings toggle, not a runtime prompt. This becomes a real
-    // implementation the day the Live Activity lands.
+    single { IosTimerNotificationController() } bind TimerNotificationController::class
+    // Live Activities are governed by a Settings toggle, not a runtime prompt, so there is still
+    // nothing to ask for even now that the Live Activity has landed.
     single { NoOpTimerNotificationPermissionRequester() } bind TimerNotificationPermissionRequester::class
     single<HttpClientEngine> { Darwin.create() }
     single<DataStore<Preferences>> {

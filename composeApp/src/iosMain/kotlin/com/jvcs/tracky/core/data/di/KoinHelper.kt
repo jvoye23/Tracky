@@ -10,8 +10,11 @@ import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.di.initKoin
 import com.jvcs.tracky.features.project.data.timer.StrandedTimerReconciler
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
+import com.jvcs.tracky.navigation.DeepLinkRouter
+import com.jvcs.tracky.navigation.Route
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.core.qualifier.named
 import org.koin.mp.KoinPlatform
@@ -27,6 +30,54 @@ fun startKoinIos() {
     koin.get<CoroutineScope>(named("AppScope")).launch {
         koin.get<SyncScheduler>().schedulePeriodicSyncOnStart()
         koin.get<TrashCleanupScheduler>().scheduleCleanup()
+    }
+}
+
+/**
+ * Entry point for the Live Activity's Pause button.
+ *
+ * Goes through [TimerNotificationCoordinator] rather than the repositories, because the coordinator
+ * owns the in-memory paused state that keeps the frozen card up once stopping the task makes the
+ * running-timer flow emit null. The Android foreground service reaches the same two methods.
+ *
+ * [onComplete] fires once the write has settled, so the App Intent can await it before returning
+ * and iOS does not redraw the card from stale state.
+ */
+fun onTimerNotificationPause(onComplete: () -> Unit) {
+    val koin = KoinPlatform.getKoin()
+    koin.get<CoroutineScope>(named("AppScope")).launch {
+        try {
+            koin.get<TimerNotificationCoordinator>().onPause()
+        } finally {
+            onComplete()
+        }
+    }
+}
+
+/** Entry point for the Live Activity's Play button. See [onTimerNotificationPause]. */
+fun onTimerNotificationResume(onComplete: () -> Unit) {
+    val koin = KoinPlatform.getKoin()
+    koin.get<CoroutineScope>(named("AppScope")).launch {
+        try {
+            koin.get<TimerNotificationCoordinator>().onResume()
+        } finally {
+            onComplete()
+        }
+    }
+}
+
+/**
+ * Entry point for a tap on the Live Activity, which opens the project being timed.
+ *
+ * [DeepLinkRouter] is main-thread only, and holds the route until the navigation graph attaches a
+ * listener, so a tap that cold-starts the app still lands.
+ */
+fun openProjectFromTimerNotification(projectId: String) {
+    val koin = KoinPlatform.getKoin()
+    koin.get<CoroutineScope>(named("AppScope")).launch(Dispatchers.Main) {
+        koin.get<DeepLinkRouter>().request(
+            Route.ProjectRoute.ProjectDetail(isEditMode = false, projectId = projectId)
+        )
     }
 }
 
