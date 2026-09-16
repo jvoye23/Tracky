@@ -35,6 +35,8 @@ adaptive = "1.2.0"
 work = "2.11.2"
 lifecycleProcess = "2.11.0"
 turbine = "1.2.1"
+# Android + iOS only - there is no jvm artifact, so these stay out of commonMain.
+mokoPermissions = "0.20.1"
 
 # For Compose Multiplatform
 cmpNavigation3 = "1.1.1"
@@ -86,6 +88,8 @@ kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 material-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "materialIconsExtended" }
 androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "coreSplashscreen" }
 koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
+moko-permissions = { module = "dev.icerock.moko:permissions", version.ref = "mokoPermissions" }
+moko-permissions-notifications = { module = "dev.icerock.moko:permissions-notifications", version.ref = "mokoPermissions" }
 ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "uiToolingPreview" }
 uuid = {module = "com.benasher44:uuid", version.ref = "uuid"}
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }

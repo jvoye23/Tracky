@@ -36,6 +36,22 @@ class AndroidTimerNotificationController(
         }
     }
 
+    /**
+     * Puts the current notification back up.
+     *
+     * Android 13 withholds a foreground-service notification posted without POST_NOTIFICATIONS, and
+     * granting the permission afterwards does not bring it back on its own - the service only
+     * re-posts when the session changes, which for a steadily running timer may be not at all. The
+     * permission requester calls this the moment a grant comes in.
+     */
+    fun repost() {
+        if (_session.value == null) return
+        ContextCompat.startForegroundService(
+            context,
+            Intent(context, TimerNotificationService::class.java)
+        )
+    }
+
     override suspend fun dismiss() {
         // The service is watching; a null value is what tells it to take itself down.
         _session.value = null

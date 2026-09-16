@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.jvcs.tracky.App
+import com.jvcs.tracky.core.data.notification.AndroidTimerNotificationPermissionRequester
 import com.jvcs.tracky.core.data.notification.TimerNotificationIntents
 import com.jvcs.tracky.navigation.DeepLinkRouter
 import com.jvcs.tracky.navigation.Route
@@ -17,6 +18,12 @@ import org.koin.android.ext.android.inject
 class MainActivity : ComponentActivity() {
 
     private val deepLinkRouter: DeepLinkRouter by inject()
+
+    // Bound here rather than through moko's BindEffect: the notification coordinator starts at
+    // Application.onCreate, long before anything composes, so binding in composition would be too
+    // late for a timer that is already running when the app opens.
+    private val timerNotificationPermissionRequester:
+            AndroidTimerNotificationPermissionRequester by inject()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         var shouldShowSplashScreen = true
@@ -27,6 +34,7 @@ class MainActivity : ComponentActivity() {
             }
         }
         super.onCreate(savedInstanceState)
+        timerNotificationPermissionRequester.bind(this)
         enableEdgeToEdge()
         routeDeepLink(intent)
         setContent {

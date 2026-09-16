@@ -88,7 +88,7 @@
     <string name="username_hint">3-20 characters</string>
     <string name="password_hint">Min 8 chars, uppercase, lowercase, digit, special char</string>
     <string name="forgot_password">Forgot password?</string>
-    <string name="forgot_password_desc">Enter your email address and we\'ll send you a link to reset your password.</string>
+    <string name="forgot_password_desc">Enter your email address and we'll send you a link to reset your password.</string>
     <string name="forgot_password_email_sent">A password reset link has been sent to your email address.</string>
     <string name="login">Log in</string>
     <string name="register">Register</string>
@@ -113,13 +113,13 @@
 
     <!-- Auth errors -->
     <string name="error_invalid_credentials">The email or password is incorrect.</string>
-    <string name="error_email_not_verified">Unable to login because your email isn\'t verified.</string>
+    <string name="error_email_not_verified">Unable to login because your email isn't verified.</string>
     <string name="error_invalid_email">Please enter a valid email address.</string>
     <string name="error_invalid_username">Username must be between 3 and 20 characters.</string>
     <string name="error_invalid_password">Password must be at least 8 characters with uppercase, lowercase, digit, and special character.</string>
     <string name="error_account_exists">An account with that email or username already exists.</string>
     <string name="error_reset_password_token_invalid">The reset password link is not valid or has expired.</string>
-    <string name="error_same_password">The new password can\'t be the same as the old one.</string>
+    <string name="error_same_password">The new password can't be the same as the old one.</string>
 
     <!-- Auth — design alignment -->
     <string name="login_subtitle">Log in to your account to continue</string>
@@ -132,7 +132,7 @@
     <string name="or_continue_with_email">or continue with email</string>
     <string name="or_sign_up_with_email">or sign up with email</string>
     <string name="or_continue_with">or continue with</string>
-    <string name="dont_have_account">Don\'t have an account? </string>
+    <string name="dont_have_account">Don't have an account? </string>
     <string name="sign_up">Sign up</string>
     <string name="full_name">Full name</string>
     <string name="full_name_hint">At least 2 characters</string>
@@ -243,7 +243,7 @@
 
     <!-- Stranded timer review -->
     <string name="stranded_timer_title">Timer left running</string>
-    <string name="stranded_timer_message">“%1$s” in %2$s has been running since %3$s — that\'s %4$s. The app closed before the timer was stopped, so how long you actually worked isn\'t known.</string>
+    <string name="stranded_timer_message">“%1$s” in %2$s has been running since %3$s — that's %4$s. The app closed before the timer was stopped, so how long you actually worked isn't known.</string>
     <string name="stranded_timer_subtask_line">Subtask: %1$s</string>
     <string name="stranded_timer_not_counted">This task is timed through its subtasks, so keeping this time would add it to the totals without it appearing on any day. Discarding is usually right.</string>
     <string name="stranded_timer_keep">Keep %1$s</string>
@@ -251,5 +251,10 @@
     <string name="stranded_timer_discard">Discard</string>
     <string name="stranded_timer_duration_label">Time worked (h:mm)</string>
     <string name="stranded_timer_remaining">%1$d more to review</string>
+
+    <!-- Timer notification permission -->
+    <string name="timer_notification_permission_title">Notifications are off</string>
+    <string name="timer_notification_permission_message">Without this permission you will not be able to see your timer when the app is in the background.</string>
+    <string name="timer_notification_permission_open_settings">Open App Settings</string>
 
 </resources>
