@@ -13,7 +13,7 @@ import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.design_system.util.ObserveAsEvents
 import com.jvcs.tracky.features.project.domain.timer.RunningTimerRepository
 import com.jvcs.tracky.features.project.presentation.stranded_timer.StrandedTimerDialogHost
-import com.jvcs.tracky.navigation.DeepLinkRouter
+import com.jvcs.tracky.navigation.DeepLinkListener
 import com.jvcs.tracky.navigation.NavigationRoot
 import com.jvcs.tracky.navigation.Route
 import com.jvcs.tracky.navigation.routeSavedStateConfiguration
@@ -94,17 +94,7 @@ private fun AppNavHost(
         }
     }
 
-    // Navigation 3 has no deep-link matcher: linking in means seeding the back stack ourselves.
-    // ProjectOverview goes underneath so Back from a cold-start tap lands on the overview rather
-    // than dropping the user out of the app.
-    val deepLinkRouter = koinInject<DeepLinkRouter>()
-    ObserveAsEvents(deepLinkRouter.requests, key1 = isLoggedIn) { route ->
-        if (!isLoggedIn) return@ObserveAsEvents
-        backStack.removeAll { true }
-        backStack.add(Route.ProjectRoute.ProjectOverview)
-        backStack.add(route)
-        deepLinkRouter.consume()
-    }
+    DeepLinkListener(backStack = backStack, isLoggedIn = isLoggedIn)
 
     NavigationRoot(
         backStack = backStack

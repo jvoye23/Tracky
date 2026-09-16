@@ -1,9 +1,5 @@
 package com.jvcs.tracky.navigation
 
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -14,29 +10,49 @@ class DeepLinkRouterTest {
     private fun detail(id: String) = Route.ProjectRoute.ProjectDetail(isEditMode = false, projectId = id)
 
     @Test
-    fun aRequestMadeBeforeAnythingIsListeningIsStillDelivered() = runTest {
+    fun aRequestMadeBeforeAnythingIsListeningIsDeliveredOnceAListenerArrives() {
         // The nav host is not composed while the session read is still in flight, so a tap on the
-        // notification from a cold start always beats its own collector.
+        // notification from a cold start always beats its own listener.
         router.request(detail("p1"))
 
-        assertEquals(detail("p1"), router.requests.first())
+        var received: Route? = null
+        router.listener = { received = it }
+
+        assertEquals(detail("p1"), received)
     }
 
     @Test
-    fun theNewestRequestWins() = runTest {
+    fun aRequestMadeWhileListeningIsDeliveredImmediately() {
+        var received: Route? = null
+        router.listener = { received = it }
+
+        router.request(detail("p1"))
+
+        assertEquals(detail("p1"), received)
+    }
+
+    @Test
+    fun theNewestRequestWins() {
         router.request(detail("p1"))
         router.request(detail("p2"))
 
-        assertEquals(detail("p2"), router.requests.first())
+        var received: Route? = null
+        router.listener = { received = it }
+
+        assertEquals(detail("p2"), received)
     }
 
     @Test
-    fun aConsumedRequestIsNotReplayedToTheNextCollector() = runTest {
+    fun aDeliveredRequestIsNotHandedToTheNextListener() {
+        // Otherwise a rotation, which disposes the listener and attaches a fresh one, would
+        // navigate the user back out of wherever they had gone.
+        router.listener = { }
         router.request(detail("p1"))
-        router.requests.first()
-        router.consume()
+        router.listener = null
 
-        // Otherwise a rotation would navigate the user back out of wherever they had gone.
-        assertNull(withTimeoutOrNull(50) { router.requests.firstOrNull() })
+        var received: Route? = null
+        router.listener = { received = it }
+
+        assertNull(received)
     }
 }

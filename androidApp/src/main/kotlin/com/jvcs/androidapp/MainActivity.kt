@@ -50,6 +50,10 @@ class MainActivity : ComponentActivity() {
         val projectId = intent
             ?.getStringExtra(TimerNotificationIntents.EXTRA_PROJECT_ID)
             ?: return
+        // Taken off as it is read. The activity keeps this intent for its whole life and there is
+        // no configChanges, so a rotation runs onCreate against it again - without this the deep
+        // link fires a second time and throws the user back out of wherever they had got to.
+        intent.removeExtra(TimerNotificationIntents.EXTRA_PROJECT_ID)
         deepLinkRouter.request(
             Route.ProjectRoute.ProjectDetail(isEditMode = false, projectId = projectId)
         )
