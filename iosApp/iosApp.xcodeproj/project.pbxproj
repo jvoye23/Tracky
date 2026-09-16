@@ -6,8 +6,41 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		DFAC5061305AEE8400D3AF8E /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DFAC5060305AEE8400D3AF8E /* WidgetKit.framework */; };
+		DFAC5063305AEE8400D3AF8E /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DFAC5062305AEE8400D3AF8E /* SwiftUI.framework */; };
+		DFAC5072305AEE8600D3AF8E /* TrackyTimerWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = DFAC505E305AEE8400D3AF8E /* TrackyTimerWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		DFAC5070305AEE8600D3AF8E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F6558EF46136B537D1A6297E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DFAC505D305AEE8400D3AF8E;
+			remoteInfo = TrackyTimerWidgetExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		DFAC5073305AEE8600D3AF8E /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				DFAC5072305AEE8600D3AF8E /* TrackyTimerWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		277B9CAB0DFCECF3897DDD1D /* Tracky.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tracky.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		DFAC505E305AEE8400D3AF8E /* TrackyTimerWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TrackyTimerWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		DFAC5060305AEE8400D3AF8E /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		DFAC5062305AEE8400D3AF8E /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -17,6 +50,13 @@
 				Info.plist,
 			);
 			target = 48FB4B5BD57A857B548254DD /* iosApp */;
+		};
+		DFAC5077305AEE8600D3AF8E /* Exceptions for "TrackyTimerWidget" folder in "TrackyTimerWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = DFAC505D305AEE8400D3AF8E /* TrackyTimerWidgetExtension */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -34,6 +74,19 @@
 			path = Configuration;
 			sourceTree = "<group>";
 		};
+		DFAC5064305AEE8400D3AF8E /* TrackyTimerWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				DFAC5077305AEE8600D3AF8E /* Exceptions for "TrackyTimerWidget" folder in "TrackyTimerWidgetExtension" target */,
+			);
+			path = TrackyTimerWidget;
+			sourceTree = "<group>";
+		};
+		DFAC507C305AEFB400D3AF8E /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Shared;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -41,6 +94,15 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DFAC505B305AEE8400D3AF8E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DFAC5063305AEE8400D3AF8E /* SwiftUI.framework in Frameworks */,
+				DFAC5061305AEE8400D3AF8E /* WidgetKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -52,7 +114,10 @@
 			children = (
 				A787F0181288E5701B66EE2F /* Configuration */,
 				58D8432FC77B60FB23B6E4A2 /* iosApp */,
+				DFAC5064305AEE8400D3AF8E /* TrackyTimerWidget */,
+				DFAC505F305AEE8400D3AF8E /* Frameworks */,
 				91E54CF3FB4DCC2020D51A86 /* Products */,
+				DFAC507C305AEFB400D3AF8E /* Shared */,
 			);
 			sourceTree = "<group>";
 		};
@@ -60,8 +125,18 @@
 			isa = PBXGroup;
 			children = (
 				277B9CAB0DFCECF3897DDD1D /* Tracky.app */,
+				DFAC505E305AEE8400D3AF8E /* TrackyTimerWidget.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		DFAC505F305AEE8400D3AF8E /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				DFAC5060305AEE8400D3AF8E /* WidgetKit.framework */,
+				DFAC5062305AEE8400D3AF8E /* SwiftUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -75,13 +150,16 @@
 				4FB8BF250352860FEF8F53D9 /* Sources */,
 				1DA9FC0FBCBB68DE3B1B1D69 /* Frameworks */,
 				7DA9F065EF5A02238E7C3E2B /* Resources */,
+				DFAC5073305AEE8600D3AF8E /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				DFAC5071305AEE8600D3AF8E /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				58D8432FC77B60FB23B6E4A2 /* iosApp */,
+				DFAC507C305AEFB400D3AF8E /* Shared */,
 			);
 			name = iosApp;
 			packageProductDependencies = (
@@ -90,6 +168,29 @@
 			productReference = 277B9CAB0DFCECF3897DDD1D /* Tracky.app */;
 			productType = "com.apple.product-type.application";
 		};
+		DFAC505D305AEE8400D3AF8E /* TrackyTimerWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DFAC5076305AEE8600D3AF8E /* Build configuration list for PBXNativeTarget "TrackyTimerWidgetExtension" */;
+			buildPhases = (
+				DFAC505A305AEE8400D3AF8E /* Sources */,
+				DFAC505B305AEE8400D3AF8E /* Frameworks */,
+				DFAC505C305AEE8400D3AF8E /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				DFAC5064305AEE8400D3AF8E /* TrackyTimerWidget */,
+				DFAC507C305AEFB400D3AF8E /* Shared */,
+			);
+			name = TrackyTimerWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = TrackyTimerWidgetExtension;
+			productReference = DFAC505E305AEE8400D3AF8E /* TrackyTimerWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -97,11 +198,14 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1620;
+				LastSwiftUpdateCheck = 2610;
 				LastUpgradeCheck = 1620;
 				TargetAttributes = {
 					48FB4B5BD57A857B548254DD = {
 						CreatedOnToolsVersion = 16.2;
+					};
+					DFAC505D305AEE8400D3AF8E = {
+						CreatedOnToolsVersion = 26.1.1;
 					};
 				};
 			};
@@ -120,12 +224,20 @@
 			projectRoot = "";
 			targets = (
 				48FB4B5BD57A857B548254DD /* iosApp */,
+				DFAC505D305AEE8400D3AF8E /* TrackyTimerWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		7DA9F065EF5A02238E7C3E2B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DFAC505C305AEE8400D3AF8E /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -164,7 +276,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		DFAC505A305AEE8400D3AF8E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		DFAC5071305AEE8600D3AF8E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DFAC505D305AEE8400D3AF8E /* TrackyTimerWidgetExtension */;
+			targetProxy = DFAC5070305AEE8600D3AF8E /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		045A38CC9858594627BB3C73 /* Debug */ = {
@@ -348,6 +475,72 @@
 			};
 			name = Debug;
 		};
+		DFAC5074305AEE8600D3AF8E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "${TEAM_ID}";
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TrackyTimerWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = TrackyTimerWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.jvcs.tracky.Tracky$(TEAM_ID).TrackyTimerWidget";
+				PRODUCT_NAME = TrackyTimerWidget;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		DFAC5075305AEE8600D3AF8E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "${TEAM_ID}";
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TrackyTimerWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = TrackyTimerWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.jvcs.tracky.Tracky$(TEAM_ID).TrackyTimerWidget";
+				PRODUCT_NAME = TrackyTimerWidget;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -365,6 +558,15 @@
 			buildConfigurations = (
 				045A38CC9858594627BB3C73 /* Debug */,
 				6DF386B965C0BACDCE53AD13 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DFAC5076305AEE8600D3AF8E /* Build configuration list for PBXNativeTarget "TrackyTimerWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DFAC5074305AEE8600D3AF8E /* Debug */,
+				DFAC5075305AEE8600D3AF8E /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
