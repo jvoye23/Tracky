@@ -9,8 +9,10 @@ import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.features.project.domain.subtask.SubTaskRepository
 import com.jvcs.tracky.features.project.domain.task.ProjectTaskRepository
+import com.jvcs.tracky.features.project.domain.timer.ProjectRef
 import com.jvcs.tracky.features.project.domain.timer.RunningTimer
 import com.jvcs.tracky.features.project.domain.timer.RunningTimerRepository
+import com.jvcs.tracky.features.project.domain.timer.TaskRef
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,18 +47,14 @@ internal class TimerNotificationCoordinatorTest {
     private val stoppedSubTaskIds = mutableListOf<String>()
 
     private val taskTimer = RunningTimer(
-        projectId = "p1",
-        projectTitle = "Tracky App Redesign",
-        projectColorArgb = 0xFF7DA0B7.toInt(),
+        project = ProjectRef(id = "p1", title = "Tracky App Redesign", colorArgb = 0xFF7DA0B7.toInt()),
         useLightTextColor = true,
-        taskId = "t1",
-        taskTitle = "Token refresh",
-        subTaskId = null,
-        subTaskTitle = null,
+        task = TaskRef(id = "t1", title = "Token refresh"),
+        subTask = null,
         startedAt = Instant.fromEpochMilliseconds(0),
         bankedDuration = 2.minutes
     )
-    private val subTaskTimer = taskTimer.copy(subTaskId = "s1", subTaskTitle = "Auth endpoints")
+    private val subTaskTimer = taskTimer.copy(subTask = TaskRef(id = "s1", title = "Auth endpoints"))
 
     private fun TestScope.coordinator(): TimerNotificationCoordinator {
         val coordinator = TimerNotificationCoordinator(
@@ -111,10 +109,10 @@ internal class TimerNotificationCoordinatorTest {
         settle()
 
         val session = controller.shown.last()
-        assertEquals("Tracky App Redesign", session.projectTitle)
-        assertEquals("Token refresh", session.taskTitle)
-        assertEquals("Auth endpoints", session.subTaskTitle)
-        assertEquals(0xFF7DA0B7.toInt(), session.projectColorArgb)
+        assertEquals("Tracky App Redesign", session.project.title)
+        assertEquals(TaskRef(id = "t1", title = "Token refresh"), session.task)
+        assertEquals(TaskRef(id = "s1", title = "Auth endpoints"), session.subTask)
+        assertEquals(0xFF7DA0B7.toInt(), session.project.colorArgb)
         assertTrue(session.isRunning)
     }
 

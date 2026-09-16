@@ -38,7 +38,7 @@ class TimerNotificationFactory(private val context: Context) {
     }
 
     fun build(session: TimerNotificationSession, elapsed: Duration): Notification {
-        val accent = session.projectColorArgb ?: DEFAULT_PROJECT_COLOR
+        val accent = session.project.colorArgb ?: DEFAULT_PROJECT_COLOR
         // The project supplies the accent, and the project already knows whether its own colour
         // needs light text on top - the same flag the task cards read.
         val onAccent = if (session.useLightTextColor) ON_ACCENT_LIGHT else ON_ACCENT_DARK
@@ -52,7 +52,7 @@ class TimerNotificationFactory(private val context: Context) {
         )
 
         val collapsed = RemoteViews(context.packageName, R.layout.notification_timer_collapsed).apply {
-            setTextViewText(R.id.timer_collapsed_title, session.subTaskTitle ?: session.taskTitle)
+            setTextViewText(R.id.timer_collapsed_title, (session.subTask ?: session.task).title)
             setTextViewText(R.id.timer_collapsed_clock, clock)
             setTextColor(R.id.timer_collapsed_clock, accent)
             setImageViewResource(R.id.timer_collapsed_button, icon)
@@ -63,13 +63,13 @@ class TimerNotificationFactory(private val context: Context) {
         }
 
         val expanded = RemoteViews(context.packageName, R.layout.notification_timer_expanded).apply {
-            setTextViewText(R.id.timer_project, session.projectTitle)
-            setTextViewText(R.id.timer_task, session.taskTitle)
-            setTextViewText(R.id.timer_subtask, session.subTaskTitle.orEmpty())
+            setTextViewText(R.id.timer_project, session.project.title)
+            setTextViewText(R.id.timer_task, session.task.title)
+            setTextViewText(R.id.timer_subtask, session.subTask?.title.orEmpty())
             // Two lines when a task is timed directly, three when a subtask is.
             setViewVisibility(
                 R.id.timer_subtask,
-                if (session.subTaskTitle == null) View.GONE else View.VISIBLE
+                if (session.subTask == null) View.GONE else View.VISIBLE
             )
             setTextViewText(R.id.timer_clock, clock)
             setTextColor(R.id.timer_clock, accent)
@@ -87,8 +87,8 @@ class TimerNotificationFactory(private val context: Context) {
             .setCustomContentView(collapsed)
             .setCustomBigContentView(expanded)
             // What the system header and any fallback renderer show.
-            .setContentTitle(session.taskTitle)
-            .setContentText(session.subTaskTitle ?: session.projectTitle)
+            .setContentTitle(session.task.title)
+            .setContentText(session.subTask?.title ?: session.project.title)
             .setOngoing(session.isRunning)
             .setSilent(true)
             .setShowWhen(false)
@@ -96,7 +96,7 @@ class TimerNotificationFactory(private val context: Context) {
             // The point of the feature: the timer has to be readable without unlocking.
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setColor(accent)
-            .setContentIntent(contentPendingIntent(session.projectId))
+            .setContentIntent(contentPendingIntent(session.project.id))
             .build()
     }
 

@@ -9,6 +9,7 @@ import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
 import com.jvcs.tracky.core.database.entity.StrandedIntervalEntity
 import com.jvcs.tracky.core.database.entity.SubTaskIntervalEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
+import com.jvcs.tracky.features.project.domain.timer.TaskRef
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -110,11 +111,9 @@ internal class OfflineFirstRunningTimerRepositoryTest {
 
         val running = repository.observeRunningTimer().first()!!
 
-        assertEquals("Tracky App Redesign", running.projectTitle)
-        assertEquals("Token refresh", running.taskTitle)
-        assertEquals("t1", running.taskId)
-        assertNull(running.subTaskId)
-        assertNull(running.subTaskTitle)
+        assertEquals("Tracky App Redesign", running.project.title)
+        assertEquals(TaskRef(id = "t1", title = "Token refresh"), running.task)
+        assertNull(running.subTask)
         assertEquals(taskStartedAt, running.startedAt.toEpochMilliseconds())
     }
 
@@ -134,10 +133,9 @@ internal class OfflineFirstRunningTimerRepositoryTest {
 
         val running = repository.observeRunningTimer().first()!!
 
-        assertEquals("s1", running.subTaskId)
-        assertEquals("Auth endpoints", running.subTaskTitle)
+        assertEquals(TaskRef(id = "s1", title = "Auth endpoints"), running.subTask)
         // Still names the task it sits under - the notification shows all three lines.
-        assertEquals("Token refresh", running.taskTitle)
+        assertEquals("Token refresh", running.task.title)
         // Dated and banked from the subtask, which is the timer the user actually started.
         assertEquals(subTaskStartedAt, running.startedAt.toEpochMilliseconds())
         assertEquals(9.minutes, running.bankedDuration)
@@ -162,7 +160,7 @@ internal class OfflineFirstRunningTimerRepositoryTest {
 
         val running = repository.observeRunningTimer().first()!!
 
-        assertEquals(0xFF7DA0B7.toInt(), running.projectColorArgb)
+        assertEquals(0xFF7DA0B7.toInt(), running.project.colorArgb)
         assertEquals(true, running.useLightTextColor)
     }
 
@@ -188,8 +186,8 @@ internal class OfflineFirstRunningTimerRepositoryTest {
 
         val running = repository.observeRunningTimer().first()!!
 
-        assertNull(running.subTaskId)
-        assertEquals("t1", running.taskId)
+        assertNull(running.subTask)
+        assertEquals("t1", running.task.id)
     }
 
     @Test
