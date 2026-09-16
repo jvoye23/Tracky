@@ -36,7 +36,9 @@ fun parseDuration(timeString: String): Duration {
     val hours = parts[0].toLongOrNull() ?: return Duration.ZERO
     val minutes = parts[1].toLongOrNull() ?: return Duration.ZERO
     val seconds = parts[2].toLongOrNull() ?: return Duration.ZERO
-    val centiseconds = if (parts.size == 4) parts[3].toLongOrNull() ?: 0L else 0L
+    val centiseconds = if (parts.size == 4) {
+        parts[3].toLongOrNull() ?: return Duration.ZERO
+    } else 0L
 
     return hours.hours + minutes.minutes + seconds.seconds + (centiseconds * 10).milliseconds
 }

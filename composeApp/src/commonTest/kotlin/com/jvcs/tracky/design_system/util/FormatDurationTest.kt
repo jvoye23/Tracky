@@ -47,4 +47,15 @@ class FormatDurationTest {
         assertEquals(Duration.ZERO, parseDuration("not a duration"))
         assertEquals(Duration.ZERO, parseDuration(""))
     }
+
+    @Test
+    fun aMalformedSegmentIsRejectedRatherThanTreatedAsZero() {
+        // Unlike the strings above, these survive the segment count check and reach the parsing,
+        // so they pin the guards themselves. The same damage has to give the same answer
+        // wherever it sits - the fourth segment included.
+        assertEquals(Duration.ZERO, parseDuration("aa:16:09"))
+        assertEquals(Duration.ZERO, parseDuration("02:bb:09"))
+        assertEquals(Duration.ZERO, parseDuration("02:16:cc"))
+        assertEquals(Duration.ZERO, parseDuration("02:16:09:dd"))
+    }
 }
