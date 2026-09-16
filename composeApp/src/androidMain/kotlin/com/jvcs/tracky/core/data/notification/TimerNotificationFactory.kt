@@ -7,12 +7,13 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
+import android.os.SystemClock
+import android.text.format.DateUtils
 import android.view.View
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import com.jvcs.tracky.composeapp.R
 import com.jvcs.tracky.core.domain.notification.TimerNotificationSession
-import com.jvcs.tracky.design_system.util.formatDurationHoursMinutesSeconds
 import kotlin.time.Duration
 
 /**
@@ -42,7 +43,6 @@ class TimerNotificationFactory(private val context: Context) {
         // The project supplies the accent, and the project already knows whether its own colour
         // needs light text on top - the same flag the task cards read.
         val onAccent = if (session.useLightTextColor) ON_ACCENT_LIGHT else ON_ACCENT_DARK
-        val clock = formatDurationHoursMinutesSeconds(elapsed)
         val action = if (session.isRunning) TimerNotificationService.ACTION_PAUSE
         else TimerNotificationService.ACTION_RESUME
         val icon = if (session.isRunning) R.drawable.ic_pause else R.drawable.ic_play
@@ -53,8 +53,13 @@ class TimerNotificationFactory(private val context: Context) {
 
         val collapsed = RemoteViews(context.packageName, R.layout.notification_timer_collapsed).apply {
             setTextViewText(R.id.timer_collapsed_title, (session.subTask ?: session.task).title)
-            setTextViewText(R.id.timer_collapsed_clock, clock)
-            setTextColor(R.id.timer_collapsed_clock, accent)
+            clock(
+                R.id.timer_collapsed_chronometer,
+                R.id.timer_collapsed_clock,
+                session.isRunning,
+                elapsed,
+                accent
+            )
             setImageViewResource(R.id.timer_collapsed_button, icon)
             tint(R.id.timer_collapsed_button, accent)
             setInt(R.id.timer_collapsed_button, "setColorFilter", onAccent)
@@ -71,8 +76,7 @@ class TimerNotificationFactory(private val context: Context) {
                 R.id.timer_subtask,
                 if (session.subTask == null) View.GONE else View.VISIBLE
             )
-            setTextViewText(R.id.timer_clock, clock)
-            setTextColor(R.id.timer_clock, accent)
+            clock(R.id.timer_chronometer, R.id.timer_clock, session.isRunning, elapsed, accent)
             setImageViewResource(R.id.timer_button_icon, icon)
             setInt(R.id.timer_button_icon, "setColorFilter", onAccent)
             setTextViewText(R.id.timer_button_label, label)
@@ -98,6 +102,33 @@ class TimerNotificationFactory(private val context: Context) {
             .setColor(accent)
             .setContentIntent(contentPendingIntent(session.project.id))
             .build()
+    }
+
+    /**
+     * Shows one of a layout's two clocks. While running, SystemUI ticks the Chronometer from a base
+     * on elapsedRealtime, so nothing re-posts the notification every second. Paused shows the
+     * TextView instead: a stopped Chronometer recounts from its base whenever the shade re-inflates
+     * it, and would appear to keep running. Both use DateUtils' MM:SS / H:MM:SS, the only format a
+     * Chronometer can show, so Pause does not change the format.
+     */
+    private fun RemoteViews.clock(
+        chronometerId: Int,
+        textId: Int,
+        isRunning: Boolean,
+        elapsed: Duration,
+        color: Int
+    ) {
+        if (isRunning) {
+            val base = SystemClock.elapsedRealtime() - elapsed.inWholeMilliseconds
+            setChronometer(chronometerId, base, null, true)
+        } else {
+            setChronometer(chronometerId, 0L, null, false)
+            setTextViewText(textId, DateUtils.formatElapsedTime(elapsed.inWholeSeconds))
+        }
+        setTextColor(chronometerId, color)
+        setTextColor(textId, color)
+        setViewVisibility(chronometerId, if (isRunning) View.VISIBLE else View.GONE)
+        setViewVisibility(textId, if (isRunning) View.GONE else View.VISIBLE)
     }
 
     /** The pill is a white shape drawable, so the project's colour arrives as a tint. */

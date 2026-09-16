@@ -58,6 +58,17 @@
         android:orientation="horizontal"
         android:gravity="center_vertical">
 
+        <!-- Running and paused clocks, one at a time; see notification_timer_collapsed. -->
+        <Chronometer
+            android:id="@+id/timer_chronometer"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:fontFamily="@font/roboto_mono"
+            android:textSize="34sp"
+            android:textStyle="bold"
+            tools:text="2:16:09" />
+
         <TextView
             android:id="@+id/timer_clock"
             android:layout_width="0dp"
@@ -66,7 +77,8 @@
             android:fontFamily="@font/roboto_mono"
             android:textSize="34sp"
             android:textStyle="bold"
-            tools:text="02:16:09" />
+            android:visibility="gone"
+            tools:text="2:16:09" />
 
         <LinearLayout
             android:id="@+id/timer_button"
