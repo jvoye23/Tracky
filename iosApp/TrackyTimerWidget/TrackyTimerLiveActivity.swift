@@ -14,6 +14,7 @@ struct TrackyTimerLiveActivity: Widget {
         ActivityConfiguration(for: TrackyTimerAttributes.self) { context in
             LockScreenView(attributes: context.attributes, state: context.state)
                 .activityBackgroundTint(nil)
+                .widgetURL(TimerDeepLink.url(projectId: context.attributes.projectId))
         } dynamicIsland: { context in
             let accent = ProjectAccent.color(argb: context.attributes.accentArgb)
 
@@ -54,6 +55,7 @@ struct TrackyTimerLiveActivity: Widget {
                 Image(systemName: context.state.isRunning ? "stopwatch" : "pause.circle")
                     .foregroundStyle(accent)
             }
+            .widgetURL(TimerDeepLink.url(projectId: context.attributes.projectId))
         }
     }
 }
