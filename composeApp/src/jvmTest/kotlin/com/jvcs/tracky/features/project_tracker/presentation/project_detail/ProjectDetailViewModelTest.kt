@@ -733,13 +733,13 @@ private class FakeProjectTaskRepository(
 
     override suspend fun startProjectTask(taskId: String): EmptyResult<DataError> {
         started += taskId
-        running.running.value = runningTimer(taskId = taskId)
+        running.startTimer(runningTimer(taskId = taskId))
         return Result.Success(Unit)
     }
 
     override suspend fun stopProjectTask(taskId: String): EmptyResult<DataError> {
         stopped += taskId
-        running.running.value = null
+        running.stopTimer()
         return Result.Success(Unit)
     }
 
@@ -793,13 +793,13 @@ private class FakeSubTaskRepository(
         started += subTaskId
         setTimerRunning(subTaskId, true)
         // Only one timer runs, so publishing this one is also what stops a running sibling.
-        running.running.value = runningTimer(taskId = TASK_ID, subTaskId = subTaskId)
+        running.startTimer(runningTimer(taskId = TASK_ID, subTaskId = subTaskId))
         return Result.Success(Unit)
     }
 
     override suspend fun stopSubTask(subTaskId: String): EmptyResult<DataError> {
         stopped += subTaskId
-        running.running.value = null
+        running.stopTimer()
         // Production banks the elapsed interval into durationMillis here. Callers that copy a
         // snapshot taken before the stop would silently write that back to zero, so the fake has
         // to reproduce the write for a test to be able to catch it.

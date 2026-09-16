@@ -60,7 +60,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Devices
@@ -614,7 +613,7 @@ private fun ProjectDetailScreenPreview() {
                     title = "Project One",
                     description = "Description 1",
                     color = Color.Red,
-                    totalDuration = "10:00:00",
+                    totalDurationMillis = 36_000_000L,
                     startDateTimeUtc = "2023-01-01T00:00:00Z",
                     isFinished = false,
                     endDateTimeUtc = null,
@@ -639,7 +638,7 @@ private fun ProjectDetailScreenEditModePreview() {
                     title = "Project One",
                     description = "Description 1",
                     color = Color.Yellow,
-                    totalDuration = "10:00:00",
+                    totalDurationMillis = 36_000_000L,
                     startDateTimeUtc = "2023-01-01T00:00:00Z",
                     isFinished = false,
                     endDateTimeUtc = null,
@@ -657,7 +656,7 @@ private val projectSessionsPreview = listOf(
         projectTaskId = "1",
         title = "This is session One",
         description = "Description 1",
-        formattedDuration = "10:00:00",
+        durationMillis = 36_000_000L,
         formattedStateDateTime = "2023-01-01T00:00:00Z",
         formattedEndDateTimeUtc = "2023-01-01T00:00:00Z",
         isTimerRunning = false,
@@ -668,7 +667,7 @@ private val projectSessionsPreview = listOf(
         projectTaskId = "2",
         title = "This is session Two",
         description = "Description 2",
-        formattedDuration = "10:00:00",
+        durationMillis = 36_000_000L,
         formattedStateDateTime = "2023-01-01T00:00:00Z",
         formattedEndDateTimeUtc = "2023-01-01T00:00:00Z",
         isTimerRunning = false,
@@ -677,7 +676,7 @@ private val projectSessionsPreview = listOf(
                 projectSubTaskId = "1",
                 title = "SubTask 1",
                 description = "Description SubTask 1",
-                formattedDuration = "05:35:53",
+                durationMillis = 20_153_000L,
                 formattedStartDateTime = "23.08.2026, 10:15",
                 formattedEndDateTimeUtc = null,
                 isTimerRunning = false,
@@ -687,7 +686,7 @@ private val projectSessionsPreview = listOf(
                 projectSubTaskId = "2",
                 title = "SubTask 2",
                 description = "Description SubTask 2",
-                formattedDuration = "05:35:53",
+                durationMillis = 20_153_000L,
                 formattedStartDateTime = "23.08.2026, 13:15",
                 formattedEndDateTimeUtc = null,
                 isTimerRunning = true,
@@ -697,7 +696,7 @@ private val projectSessionsPreview = listOf(
                 projectSubTaskId = "3",
                 title = "SubTask 3",
                 description = "Description SubTask 3",
-                formattedDuration = "05:35:53",
+                durationMillis = 20_153_000L,
                 formattedStartDateTime = "23.08.2026, 16:30",
                 formattedEndDateTimeUtc = "23.08.2026, 17:00",
                 isTimerRunning = false,
@@ -710,7 +709,7 @@ private val projectSessionsPreview = listOf(
         projectTaskId = "3",
         title = "This is session Three",
         description = null,
-        formattedDuration = "10:00:00",
+        durationMillis = 36_000_000L,
         formattedStateDateTime = "2023-01-01T00:00:00Z",
         formattedEndDateTimeUtc = "2023-01-01T00:00:00Z",
         isTimerRunning = false,

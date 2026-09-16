@@ -113,7 +113,7 @@ fun ProjectSessionCardPreview() {
                 projectTaskId = "1",
                 title = "This is session One",
                 description = "Description One",
-                formattedDuration = "00:30:59",
+                durationMillis = 1_859_000L,
                 formattedStateDateTime = "2023-01-01",
                 formattedEndDateTimeUtc = "2023-01-01",
                 isTimerRunning = false,

@@ -438,7 +438,6 @@ class ProjectOverviewViewModel(
         val updatedTasks = projectTasks?.map { task ->
             if (task.projectTaskId == runningTaskId) {
                 task.copy(
-                    formattedDuration = timerState.formattedTime,
                     durationMillis = timerState.totalDuration.inWholeMilliseconds,
                     isTimerRunning = true
                 )

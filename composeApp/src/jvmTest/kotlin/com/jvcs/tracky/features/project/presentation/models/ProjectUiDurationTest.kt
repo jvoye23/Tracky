@@ -5,6 +5,7 @@ import com.jvcs.tracky.features.project.presentation.fakes.subTask
 import com.jvcs.tracky.features.project.presentation.fakes.task
 import com.jvcs.tracky.features.project.presentation.mappers.toProject
 import com.jvcs.tracky.features.project.presentation.mappers.toProjectTask
+import com.jvcs.tracky.features.project.presentation.mappers.toProjectSubTaskUi
 import com.jvcs.tracky.features.project.presentation.mappers.toProjectTaskUi
 import com.jvcs.tracky.features.project.presentation.mappers.toProjectUi
 import kotlin.test.Test
@@ -71,5 +72,31 @@ class ProjectUiDurationTest {
         ).toProjectUi()
 
         assertEquals(3_999L, ui.totalProjectDurationMillis)
+    }
+
+    /**
+     * The display string used to be stored beside the number and written by hand at four call
+     * sites. A copy that set one half and forgot the other put a number and a string on screen that
+     * disagreed, with nothing to catch it. These pin the string to the number instead.
+     */
+    @Test
+    fun aTasksFormattedDurationFollowsACopyThatSetsOnlyTheMilliseconds() {
+        val ui = task(id = "t1").toProjectTaskUi().copy(durationMillis = 3_661_000L)
+
+        assertEquals("01:01:01", ui.formattedDuration)
+    }
+
+    @Test
+    fun aSubTasksFormattedDurationFollowsACopyThatSetsOnlyTheMilliseconds() {
+        val ui = subTask(id = "s1").toProjectSubTaskUi().copy(durationMillis = 3_661_000L)
+
+        assertEquals("01:01:01", ui.formattedDuration)
+    }
+
+    @Test
+    fun aProjectsTotalDurationFollowsACopyThatSetsOnlyTheMilliseconds() {
+        val ui = project().toProjectUi().copy(totalDurationMillis = 3_661_000L)
+
+        assertEquals("01:01:01", ui.totalDuration)
     }
 }

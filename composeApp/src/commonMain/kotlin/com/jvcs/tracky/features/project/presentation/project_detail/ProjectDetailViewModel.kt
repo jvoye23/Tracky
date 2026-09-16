@@ -158,7 +158,6 @@ class ProjectDetailViewModel(
                     val subTaskTimerState = activeTimersMap[subTask.projectSubTaskId]
                     if (subTaskTimerState != null && subTaskTimerState.isRunning) {
                         subTask.copy(
-                            formattedDuration = subTaskTimerState.formattedTime,
                             durationMillis = subTaskTimerState.totalDuration.inWholeMilliseconds,
                             isTimerRunning = true
                         )
@@ -178,7 +177,6 @@ class ProjectDetailViewModel(
                 } else if (timerState != null && timerState.isRunning) {
                     // CASE: Running - Use the live value
                     task.copy(
-                        formattedDuration = timerState.formattedTime,
                         durationMillis = timerState.totalDuration.inWholeMilliseconds,
                         isTimerRunning = timerState.isRunning,
                         subTasks = updatedSubTasks
