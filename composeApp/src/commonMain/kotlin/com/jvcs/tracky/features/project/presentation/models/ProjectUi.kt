@@ -9,13 +9,16 @@ data class ProjectUi(
     val title: String,
     val description: String?,
     val color: Color?,
-    val totalDuration: String,
     /**
-     * The number behind [totalDuration]. Durations must never round-trip through their own display
-     * string: the string is truncated for reading, and mapping the tree back to the domain on an
-     * unrelated edit would write that truncation into the database.
+     * The only duration this project stores. Durations must never round-trip through their own
+     * display string: the string is truncated for reading, and mapping the tree back to the domain
+     * on an unrelated edit would write that truncation into the database. The string is derived
+     * from this number rather than stored beside it, so the two cannot disagree.
+     *
+     * Deliberately not defaulted: a zero here is a real duration, not "unset", so a call site that
+     * forgets it should fail to compile rather than silently store one.
      */
-    val totalDurationMillis: Long = 0L,
+    val totalDurationMillis: Long,
     val startDateTimeUtc: String,
     val isFinished: Boolean,
     val useLightTextColor: Boolean = false,
@@ -23,6 +26,9 @@ data class ProjectUi(
     val projectTasks: List<ProjectTaskUi>? = null,
     val isPinned: Boolean = false
 ) {
+    val totalDuration: String
+        get() = formatDuration(totalDurationMillis.milliseconds)
+
     /**
      * displayDurationMillis, not durationMillis: a task with subtasks shows their sum, and the
      * project total has to agree with the numbers on the task rows.
@@ -52,15 +58,17 @@ data class ProjectTaskUi(
     val projectTaskId: String,
     val title: String,
     val description: String?,
-    val formattedDuration: String,
-    /** The number behind [formattedDuration]. See [ProjectUi.totalDurationMillis]. */
-    val durationMillis: Long = 0L,
+    /** This task's own tracked time. Required, and for the reason in [ProjectUi.totalDurationMillis]. */
+    val durationMillis: Long,
     val formattedStateDateTime: String,
     val formattedEndDateTimeUtc: String,
     val isTimerRunning: Boolean,
     val subTasks: List<ProjectSubTaskUi>,
     val isFinished: Boolean
 ) {
+    val formattedDuration: String
+        get() = formatDuration(durationMillis.milliseconds)
+
     val doneSubTaskCount: Int
         get() = subTasks.count { it.isFinished }
 
@@ -81,14 +89,14 @@ data class ProjectTaskUi(
      * task interval, and closing it banks the elapsed time — but that number is no longer what the
      * user sees, because timing a task with subtasks always goes through one of them.
      *
-     * This ticks live for free: the ViewModel rewrites a running subtask's formattedDuration from
+     * This ticks live for free: the ViewModel rewrites a running subtask's durationMillis from
      * TimeManager each frame, so the fold yields banked siblings + the live one.
      */
     val displayDurationMillis: Long
         get() = if (subTasks.isEmpty()) durationMillis else totalSubTaskDurationMillis
 
     val displayDuration: String
-        get() = if (subTasks.isEmpty()) formattedDuration else totalSubTaskDuration
+        get() = formatDuration(displayDurationMillis.milliseconds)
 
     val isAnySubTaskRunning: Boolean
         get() = subTasks.any { it.isTimerRunning }
@@ -98,11 +106,13 @@ data class ProjectSubTaskUi(
     val projectSubTaskId: String,
     val title: String,
     val description: String?,
-    val formattedDuration: String,
-    /** The number behind [formattedDuration]. See [ProjectUi.totalDurationMillis]. */
-    val durationMillis: Long = 0L,
+    /** This subtask's tracked time. Required, and for the reason in [ProjectUi.totalDurationMillis]. */
+    val durationMillis: Long,
     val formattedStartDateTime: String,
     val formattedEndDateTimeUtc: String?,
     val isTimerRunning: Boolean,
     val isFinished: Boolean
-)
+) {
+    val formattedDuration: String
+        get() = formatDuration(durationMillis.milliseconds)
+}

@@ -9,7 +9,9 @@ import com.jvcs.tracky.core.database.DatabaseFactory
 import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
 import com.jvcs.tracky.core.domain.lifecycle.AppLifecycleObserver
 import com.jvcs.tracky.core.domain.notification.NoOpTimerNotificationController
+import com.jvcs.tracky.core.domain.notification.NoOpTimerNotificationPermissionRequester
 import com.jvcs.tracky.core.domain.notification.TimerNotificationController
+import com.jvcs.tracky.core.domain.notification.TimerNotificationPermissionRequester
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
 import com.jvcs.tracky.core.domain.sync.TrashCleanupScheduler
 import io.ktor.client.engine.HttpClientEngine
@@ -25,6 +27,7 @@ actual val platformCoreDataModule = module {
     single { JvmSyncScheduler() } bind SyncScheduler::class
     single { JvmTrashCleanupScheduler() } bind TrashCleanupScheduler::class
     single { NoOpTimerNotificationController() } bind TimerNotificationController::class
+    single { NoOpTimerNotificationPermissionRequester() } bind TimerNotificationPermissionRequester::class
     single<HttpClientEngine> { OkHttp.create() }
     single<DataStore<Preferences>> {
         PreferenceDataStoreFactory.createWithPath(

@@ -14,14 +14,10 @@ class RunningTimerTest {
         startedAt: Instant = Instant.fromEpochMilliseconds(0),
         bankedDuration: Duration = Duration.ZERO
     ) = RunningTimer(
-        projectId = "p1",
-        projectTitle = "Tracky App Redesign",
-        projectColorArgb = null,
+        project = ProjectRef(id = "p1", title = "Tracky App Redesign", colorArgb = null),
         useLightTextColor = false,
-        taskId = "t1",
-        taskTitle = "Token refresh",
-        subTaskId = null,
-        subTaskTitle = null,
+        task = TaskRef(id = "t1", title = "Token refresh"),
+        subTask = null,
         startedAt = startedAt,
         bankedDuration = bankedDuration
     )
@@ -48,6 +44,6 @@ class RunningTimerTest {
     @Test
     fun theTimedEntityIsTheSubTaskWhenOneIsRunning() {
         assertEquals("t1", timer().timedEntityId)
-        assertEquals("s1", timer().copy(subTaskId = "s1").timedEntityId)
+        assertEquals("s1", timer().copy(subTask = TaskRef(id = "s1", title = "Auth endpoints")).timedEntityId)
     }
 }

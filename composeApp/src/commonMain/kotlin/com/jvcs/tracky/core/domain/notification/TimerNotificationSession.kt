@@ -1,5 +1,7 @@
 package com.jvcs.tracky.core.domain.notification
 
+import com.jvcs.tracky.features.project.domain.timer.ProjectRef
+import com.jvcs.tracky.features.project.domain.timer.TaskRef
 import kotlin.time.Duration
 import kotlin.time.Instant
 
@@ -12,15 +14,16 @@ import kotlin.time.Instant
  * know which instant the number was true at to derive one. A renderer that cannot tick can format
  * [elapsed] directly and take the small drift.
  *
+ * @param task the task line, or the parent of [subTask] when there is one.
+ * @param subTask the third line, or null when the task itself is timed. A whole ref or nothing,
+ *   so a renderer never has to decide what a subtask with no title looks like.
  * @param isRunning false after Pause: the clock is frozen at [elapsed] and the button offers Play.
  */
 data class TimerNotificationSession(
-    val projectId: String,
-    val projectTitle: String,
-    val projectColorArgb: Int?,
+    val project: ProjectRef,
     val useLightTextColor: Boolean,
-    val taskTitle: String,
-    val subTaskTitle: String?,
+    val task: TaskRef,
+    val subTask: TaskRef?,
     val elapsed: Duration,
     val asOf: Instant,
     val isRunning: Boolean

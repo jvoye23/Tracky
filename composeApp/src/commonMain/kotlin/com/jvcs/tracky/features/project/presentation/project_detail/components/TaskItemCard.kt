@@ -593,14 +593,14 @@ private val PreviewProjectColor = Color(0xFF475D92)
 private fun previewTask(
     title: String = "Wireframe the settings screen",
     description: String = "Task Description",
-    formattedDuration: String = "01:24:07",
+    durationMillis: Long = 5_047_000L,
     isTimerRunning: Boolean = false,
     isCompleted: Boolean = false
 ) = ProjectTaskUi(
     projectTaskId = "task-1",
     title = title,
     description = description,
-    formattedDuration = formattedDuration,
+    durationMillis = durationMillis,
     formattedStateDateTime = "23.08.2026, 09:15",
     formattedEndDateTimeUtc = if (isCompleted) "23.08.2026, 10:39" else "",
     isTimerRunning = isTimerRunning,
@@ -609,7 +609,7 @@ private fun previewTask(
             projectSubTaskId = "1",
             title = "SubTask Title loasdfasdf very long, ver y",
             description = "Description SubTask 1",
-            formattedDuration = formattedDuration,
+            durationMillis = durationMillis,
             formattedStartDateTime = "23.08.2026, 10:15",
             formattedEndDateTimeUtc = null,
             isTimerRunning = false,
@@ -619,7 +619,7 @@ private fun previewTask(
             projectSubTaskId = "2",
             title = "SubTask 2",
             description = "Description SubTask 2",
-            formattedDuration = formattedDuration,
+            durationMillis = durationMillis,
             formattedStartDateTime = "23.08.2026, 13:15",
             formattedEndDateTimeUtc = null,
             isTimerRunning = true,
@@ -629,7 +629,7 @@ private fun previewTask(
             projectSubTaskId = "3",
             title = "SubTask 3",
             description = "Description SubTask 3",
-            formattedDuration = formattedDuration,
+            durationMillis = durationMillis,
             formattedStartDateTime = "23.08.2026, 16:30",
             formattedEndDateTimeUtc = "23.08.2026, 17:00",
             isTimerRunning = false,
@@ -678,7 +678,7 @@ private fun TaskItemCardRunningPreview() {
             index = 2,
             task = previewTask(
                 title = "Implement the subtask timer",
-                formattedDuration = "00:12:44",
+                durationMillis = 764_000L,
                 isTimerRunning = true
             ),
             projectColor = PreviewProjectColor,
@@ -745,7 +745,7 @@ private fun TaskItemCardCompletedPreview() {
             index = 3,
             task = previewTask(
                 title = "Ship the color picker",
-                formattedDuration = "02:05:31",
+                durationMillis = 7_531_000L,
                 isCompleted = true
             ),
             projectColor = PreviewProjectColor,
@@ -789,7 +789,7 @@ private fun TaskItemCardEditModeRunningPreview() {
             index = 5,
             task = previewTask(
                 title = "Implement the subtask timer",
-                formattedDuration = "00:12:44",
+                durationMillis = 764_000L,
                 isTimerRunning = true
             ),
             projectColor = PreviewProjectColor,

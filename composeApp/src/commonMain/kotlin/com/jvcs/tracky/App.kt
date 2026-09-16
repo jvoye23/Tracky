@@ -3,23 +3,19 @@ package com.jvcs.tracky
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.rememberNavBackStack
-import com.jvcs.tracky.core.domain.notification.RequestTimerNotificationPermission
 import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.design_system.util.ObserveAsEvents
-import com.jvcs.tracky.features.project.domain.timer.RunningTimerRepository
 import com.jvcs.tracky.features.project.presentation.stranded_timer.StrandedTimerDialogHost
-import com.jvcs.tracky.navigation.DeepLinkRouter
+import com.jvcs.tracky.features.project.presentation.timer_permission.TimerNotificationPermissionDialogHost
+import com.jvcs.tracky.navigation.DeepLinkListener
 import com.jvcs.tracky.navigation.NavigationRoot
 import com.jvcs.tracky.navigation.Route
 import com.jvcs.tracky.navigation.routeSavedStateConfiguration
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
-import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -59,11 +55,7 @@ fun App(
 
                 // Asked on the first timer, not at launch: a permission dialog makes sense to a
                 // user who has just pressed play, and none at all to one who has just signed in.
-                val runningTimerRepository = koinInject<RunningTimerRepository>()
-                val hasRunningTimer by remember(runningTimerRepository) {
-                    runningTimerRepository.observeRunningTimer().map { it != null }
-                }.collectAsStateWithLifecycle(false)
-                RequestTimerNotificationPermission(request = hasRunningTimer)
+                TimerNotificationPermissionDialogHost()
             }
         }
     }
@@ -94,17 +86,7 @@ private fun AppNavHost(
         }
     }
 
-    // Navigation 3 has no deep-link matcher: linking in means seeding the back stack ourselves.
-    // ProjectOverview goes underneath so Back from a cold-start tap lands on the overview rather
-    // than dropping the user out of the app.
-    val deepLinkRouter = koinInject<DeepLinkRouter>()
-    ObserveAsEvents(deepLinkRouter.requests, key1 = isLoggedIn) { route ->
-        if (!isLoggedIn) return@ObserveAsEvents
-        backStack.removeAll { true }
-        backStack.add(Route.ProjectRoute.ProjectOverview)
-        backStack.add(route)
-        deepLinkRouter.consume()
-    }
+    DeepLinkListener(backStack = backStack, isLoggedIn = isLoggedIn)
 
     NavigationRoot(
         backStack = backStack

@@ -43,7 +43,6 @@ class TaskDetailViewModel(
                     _state.update { currentState ->
                         currentState.copy(
                             task = currentState.task?.copy(
-                                formattedDuration = timerState.formattedTime,
                                 durationMillis = timerState.totalDuration.inWholeMilliseconds
                             )
                         )

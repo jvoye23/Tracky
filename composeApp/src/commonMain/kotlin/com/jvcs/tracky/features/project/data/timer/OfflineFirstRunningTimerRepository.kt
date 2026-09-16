@@ -3,8 +3,10 @@ package com.jvcs.tracky.features.project.data.timer
 import com.jvcs.tracky.core.database.dao.ProjectDao
 import com.jvcs.tracky.core.database.entity.SubTaskIntervalEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
+import com.jvcs.tracky.features.project.domain.timer.ProjectRef
 import com.jvcs.tracky.features.project.domain.timer.RunningTimer
 import com.jvcs.tracky.features.project.domain.timer.RunningTimerRepository
+import com.jvcs.tracky.features.project.domain.timer.TaskRef
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -48,14 +50,10 @@ class OfflineFirstRunningTimerRepository(
         val project = projectDao.getProjectById(task.parentProjectId) ?: return null
 
         return RunningTimer(
-            projectId = project.projectId,
-            projectTitle = project.title,
-            projectColorArgb = project.color,
+            project = ProjectRef(id = project.projectId, title = project.title, colorArgb = project.color),
             useLightTextColor = project.useLightTextColor,
-            taskId = task.projectTaskId,
-            taskTitle = task.title,
-            subTaskId = subTask.projectSubTaskId,
-            subTaskTitle = subTask.title,
+            task = TaskRef(id = task.projectTaskId, title = task.title),
+            subTask = TaskRef(id = subTask.projectSubTaskId, title = subTask.title),
             startedAt = Instant.fromEpochMilliseconds(interval.startDateTimeEpochMs),
             // A subtask that has never been stopped has a null duration, not a zero one.
             bankedDuration = subTask.durationMillis?.milliseconds ?: Duration.ZERO
@@ -67,14 +65,10 @@ class OfflineFirstRunningTimerRepository(
         val project = projectDao.getProjectById(task.parentProjectId) ?: return null
 
         return RunningTimer(
-            projectId = project.projectId,
-            projectTitle = project.title,
-            projectColorArgb = project.color,
+            project = ProjectRef(id = project.projectId, title = project.title, colorArgb = project.color),
             useLightTextColor = project.useLightTextColor,
-            taskId = task.projectTaskId,
-            taskTitle = task.title,
-            subTaskId = null,
-            subTaskTitle = null,
+            task = TaskRef(id = task.projectTaskId, title = task.title),
+            subTask = null,
             startedAt = Instant.fromEpochMilliseconds(interval.startDateTimeEpochMs),
             bankedDuration = task.durationMillis.milliseconds
         )

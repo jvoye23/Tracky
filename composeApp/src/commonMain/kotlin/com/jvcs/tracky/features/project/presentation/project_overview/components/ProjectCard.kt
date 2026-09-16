@@ -48,7 +48,6 @@ import tracky.composeapp.generated.resources.done
 import tracky.composeapp.generated.resources.duration
 import tracky.composeapp.generated.resources.in_progress
 import tracky.composeapp.generated.resources.start_date
-import kotlin.time.DurationUnit
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -281,7 +280,7 @@ fun ProjectCardPreview() {
                         title = "Running Project",
                         description = "Description of the project",
                         color = Color.Cyan,
-                        totalDuration = DurationUnit.HOURS.toString(),
+                        totalDurationMillis = 3_600_000L,
                         startDateTimeUtc = LocalDateTime(2025, 12, 1, 10, 0,0).toString(),
                         isFinished = false,
                         endDateTimeUtc = null,
@@ -290,7 +289,7 @@ fun ProjectCardPreview() {
                                 projectTaskId = "t1",
                                 title = "Task 1",
                                 description = null,
-                                formattedDuration = "1h 0m",
+                                durationMillis = 3_600_000L,
                                 formattedStateDateTime = "10:00",
                                 formattedEndDateTimeUtc = "",
                                 isTimerRunning = true,
@@ -307,7 +306,7 @@ fun ProjectCardPreview() {
                         title = "Completed Project",
                         description = "Description of the project",
                         color = Color.Blue,
-                        totalDuration = DurationUnit.HOURS.toString(),
+                        totalDurationMillis = 3_600_000L,
                         startDateTimeUtc = LocalDateTime(2025, 12, 1, 10, 0,0).toString(),
                         isFinished = true,
                         endDateTimeUtc = null,
@@ -316,7 +315,7 @@ fun ProjectCardPreview() {
                                 projectTaskId = "t1",
                                 title = "Task 1",
                                 description = null,
-                                formattedDuration = "1h 0m",
+                                durationMillis = 3_600_000L,
                                 formattedStateDateTime = "10:00",
                                 formattedEndDateTimeUtc = "11:00",
                                 isTimerRunning = false,
@@ -333,7 +332,7 @@ fun ProjectCardPreview() {
                         title = "Idle Project",
                         description = "Description of the project",
                         color = Color.Yellow,
-                        totalDuration = DurationUnit.HOURS.toString(),
+                        totalDurationMillis = 3_600_000L,
                         startDateTimeUtc = LocalDateTime(2025, 12, 1, 10, 0,0).toString(),
                         isFinished = false,
                         endDateTimeUtc = null,
@@ -342,7 +341,7 @@ fun ProjectCardPreview() {
                                 projectTaskId = "t1",
                                 title = "Task 1",
                                 description = null,
-                                formattedDuration = "1h 0m",
+                                durationMillis = 3_600_000L,
                                 formattedStateDateTime = "10:00",
                                 formattedEndDateTimeUtc = "",
                                 isTimerRunning = false,
@@ -362,7 +361,7 @@ fun ProjectCardPreview() {
                         title = "Empty Project",
                         description = "Description of the project",
                         color = Color.Magenta,
-                        totalDuration = DurationUnit.HOURS.toString(),
+                        totalDurationMillis = 3_600_000L,
                         startDateTimeUtc = LocalDateTime(2025, 12, 1, 10, 0,0).toString(),
                         isFinished = false,
                         endDateTimeUtc = null,

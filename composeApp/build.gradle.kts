@@ -77,6 +77,11 @@ kotlin {
             implementation(libs.androidx.work.runtime)
             implementation(libs.androidx.lifecycle.process)
         implementation(libs.androidx.core.ktx)
+            // Android-only on purpose: moko-permissions publishes no jvm artifact, and
+            // PermissionsController is an `expect interface`, so it cannot be named in a
+            // commonMain that is shared with the jvm() target.
+            implementation(libs.moko.permissions)
+            implementation(libs.moko.permissions.notifications)
 
         }
         commonMain.dependencies {

@@ -1,5 +1,7 @@
 package com.jvcs.tracky.core.domain.notification
 
+import com.jvcs.tracky.features.project.domain.timer.ProjectRef
+import com.jvcs.tracky.features.project.domain.timer.TaskRef
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.time.Duration.Companion.minutes
@@ -9,12 +11,10 @@ import kotlin.time.Instant
 class TimerNotificationSessionTest {
 
     private fun session(isRunning: Boolean) = TimerNotificationSession(
-        projectId = "p1",
-        projectTitle = "Tracky App Redesign",
-        projectColorArgb = null,
+        project = ProjectRef(id = "p1", title = "Tracky App Redesign", colorArgb = null),
         useLightTextColor = false,
-        taskTitle = "Token refresh",
-        subTaskTitle = null,
+        task = TaskRef(id = "t1", title = "Token refresh"),
+        subTask = null,
         elapsed = 2.minutes,
         asOf = Instant.fromEpochMilliseconds(0),
         isRunning = isRunning

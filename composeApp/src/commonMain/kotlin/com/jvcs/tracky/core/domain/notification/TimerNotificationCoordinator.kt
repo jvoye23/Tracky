@@ -76,10 +76,11 @@ class TimerNotificationCoordinator(
         paused = frozen
         controller.show(frozen.session)
 
-        if (timer.subTaskId != null) {
-            subTaskRepository.stopSubTask(timer.subTaskId)
+        val subTask = timer.subTask
+        if (subTask != null) {
+            subTaskRepository.stopSubTask(subTask.id)
         } else {
-            projectTaskRepository.stopProjectTask(timer.taskId)
+            projectTaskRepository.stopProjectTask(timer.task.id)
         }
     }
 
@@ -87,20 +88,19 @@ class TimerNotificationCoordinator(
         val timer = paused?.timer ?: return
         // No state cleared here on purpose: the write opens an interval, the flow emits it, and the
         // collector clears `paused`. A failed start therefore leaves the frozen card up.
-        if (timer.subTaskId != null) {
-            subTaskRepository.startSubTask(timer.subTaskId)
+        val subTask = timer.subTask
+        if (subTask != null) {
+            subTaskRepository.startSubTask(subTask.id)
         } else {
-            projectTaskRepository.startProjectTask(timer.taskId)
+            projectTaskRepository.startProjectTask(timer.task.id)
         }
     }
 
     private fun RunningTimer.toSession(now: Instant) = TimerNotificationSession(
-        projectId = projectId,
-        projectTitle = projectTitle,
-        projectColorArgb = projectColorArgb,
+        project = project,
         useLightTextColor = useLightTextColor,
-        taskTitle = taskTitle,
-        subTaskTitle = subTaskTitle,
+        task = task,
+        subTask = subTask,
         elapsed = elapsedAt(now),
         asOf = now,
         isRunning = true

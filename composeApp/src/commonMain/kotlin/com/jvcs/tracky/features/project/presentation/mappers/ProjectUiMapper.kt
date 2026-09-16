@@ -6,7 +6,6 @@ import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
 import com.jvcs.tracky.features.project.presentation.models.ProjectUi
-import com.jvcs.tracky.design_system.util.formatDuration
 import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import com.jvcs.tracky.features.project.presentation.models.ProjectSubTaskUi
 import kotlinx.datetime.LocalDate
@@ -15,8 +14,6 @@ import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.format
 import kotlinx.datetime.format.MonthNames
 import kotlinx.datetime.toLocalDateTime
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.ExperimentalTime
 
 private val dateTimeFormat = LocalDate.Format {
@@ -42,7 +39,6 @@ fun Project.toProjectUi(): ProjectUi {
         title = title,
         description = description,
         color = if (colorArgb != null) Color(colorArgb) else null,
-        totalDuration = formatDuration(totalDurationMillis?.milliseconds ?: Duration.ZERO),
         totalDurationMillis = totalDurationMillis ?: 0L,
         startDateTimeUtc = startDateTimeInLocalDateTime.date.format(dateTimeFormat),
         isFinished = isFinished,
@@ -78,9 +74,8 @@ fun ProjectTask.toProjectTaskUi(): ProjectTaskUi {
         projectTaskId = projectTaskId,
         title = title,
         description = description,
-        formattedDuration = formatDuration(durationMillis?.milliseconds ?: Duration.ZERO),
         durationMillis = durationMillis ?: 0L,
-        formattedStateDateTime = startDateTimeUtc.toLocalDateTime(TimeZone.currentSystemDefault()).date.format(dateTimeFormat),
+        formattedStateDateTime =startDateTimeUtc.toLocalDateTime(TimeZone.currentSystemDefault()).date.format(dateTimeFormat),
         formattedEndDateTimeUtc = endDateTimeUtc?.toLocalDateTime(TimeZone.currentSystemDefault())?.date?.format(dateTimeFormat) ?: "",
         isTimerRunning = isTimerRunning,
         subTasks = subTasks?.map { it.toProjectSubTaskUi() } ?: emptyList(),
@@ -132,9 +127,8 @@ fun ProjectSubTask.toProjectSubTaskUi(): ProjectSubTaskUi {
         projectSubTaskId = projectSubTaskId,
         title = title,
         description = description,
-        formattedDuration = formatDuration(durationMillis?.milliseconds ?: Duration.ZERO),
         durationMillis = durationMillis ?: 0L,
-        formattedStartDateTime = startDateTimeUtc.toLocalDateTime(TimeZone.currentSystemDefault()).date.format(dateTimeFormat),
+        formattedStartDateTime =startDateTimeUtc.toLocalDateTime(TimeZone.currentSystemDefault()).date.format(dateTimeFormat),
         formattedEndDateTimeUtc = endDateTimeUtc?.toLocalDateTime(TimeZone.currentSystemDefault())?.date?.format(dateTimeFormat),
         isTimerRunning = isTimerRunning,
         isFinished = isFinished

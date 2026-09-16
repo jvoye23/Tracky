@@ -26,6 +26,21 @@
         android:textColor="@color/timer_notification_text_primary"
         tools:text="Token refresh" />
 
+    <!--
+      Two clocks, one shown at a time: SystemUI ticks the Chronometer while the timer runs, and the
+      TextView holds a paused value, since a stopped Chronometer recounts from its base whenever the
+      shade re-inflates it.
+    -->
+    <Chronometer
+        android:id="@+id/timer_collapsed_chronometer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:fontFamily="@font/roboto_mono"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        tools:text="2:16:09" />
+
     <TextView
         android:id="@+id/timer_collapsed_clock"
         android:layout_width="wrap_content"
@@ -34,7 +49,8 @@
         android:fontFamily="@font/roboto_mono"
         android:textSize="16sp"
         android:textStyle="bold"
-        tools:text="02:16:09" />
+        android:visibility="gone"
+        tools:text="2:16:09" />
 
     <ImageView
         android:id="@+id/timer_collapsed_button"

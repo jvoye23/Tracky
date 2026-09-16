@@ -5,6 +5,7 @@ import com.jvcs.tracky.features.project.presentation.projectEditTextScreen.Proje
 import com.jvcs.tracky.features.project.presentation.project_detail.ProjectDetailViewModel
 import com.jvcs.tracky.features.project.presentation.project_overview.ProjectOverviewViewModel
 import com.jvcs.tracky.features.project.presentation.stranded_timer.StrandedTimerViewModel
+import com.jvcs.tracky.features.project.presentation.timer_permission.TimerNotificationPermissionViewModel
 import com.jvcs.tracky.features.project.presentation.task_detail.TaskDetailViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,6 +22,14 @@ val projectModule = module {
 
     viewModel {
         StrandedTimerViewModel(strandedTimerRepository = get())
+    }
+
+    viewModel {
+        TimerNotificationPermissionViewModel(
+            permissionRequester = get(),
+            runningTimerRepository = get(),
+            savedStateHandle = get()
+        )
     }
 
     viewModel {
