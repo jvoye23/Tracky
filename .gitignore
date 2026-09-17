@@ -20,3 +20,6 @@ node_modules/
 androidApp/src/androidTest/java/com/jvcs/androidapp/ForgotPasswordE2ETest.kt
 secrets.properties
 /tracky-db-export-20260604-094236.json
+
+# Personal Apple signing team, kept out of the project file
+iosApp/Configuration/Local.xcconfig
