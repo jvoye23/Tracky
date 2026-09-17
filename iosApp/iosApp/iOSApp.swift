@@ -42,12 +42,35 @@ enum BackgroundTaskSetup {
     }
 }
 
+/// Hands the Live Activity's two Swift halves to Kotlin.
+///
+/// Like the BGTask handlers above, this has to happen before `startKoinIos()`: that starts the
+/// notification coordinator, and a timer left running by a previous launch reaches the controller
+/// immediately — before the app has a window, let alone a screen.
+enum LiveActivitySetup {
+
+    static func register() {
+        LiveActivityRegistry.shared.register(bridge: LiveActivityBridgeImpl())
+
+        TimerIntentBridge.shared.handler = { pause in
+            await withCheckedContinuation { continuation in
+                if pause {
+                    KoinHelperKt.onTimerNotificationPause { continuation.resume() }
+                } else {
+                    KoinHelperKt.onTimerNotificationResume { continuation.resume() }
+                }
+            }
+        }
+    }
+}
+
 @main
 struct iOSApp: App {
 
     init() {
         // Order matters: handlers first, then Koin — see BackgroundTaskSetup above.
         BackgroundTaskSetup.registerHandlers()
+        LiveActivitySetup.register()
         KoinHelperKt.startKoinIos()
     }
 
