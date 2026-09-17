@@ -5,3 +5,13 @@ PRODUCT_BUNDLE_IDENTIFIER=com.jvcs.tracky.Tracky$(TEAM_ID)
 
 CURRENT_PROJECT_VERSION=1
 MARKETING_VERSION=1.0
+
+// The signing team is personal rather than project-wide, so it lives in Local.xcconfig, which is
+// untracked - it stays on the machine that has it. `#include?` is the optional form: a checkout
+// without the file builds and runs on the simulator exactly as before, it just cannot sign for a
+// device until someone drops their own copy in.
+//
+// This deliberately does not reuse TEAM_ID above. That one is interpolated into
+// PRODUCT_BUNDLE_IDENTIFIER, so giving it a value would rename the app and the widget extension.
+// Setting DEVELOPMENT_TEAM directly is what keeps signing and identity independent.
+#include? "Local.xcconfig"
