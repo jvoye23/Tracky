@@ -46,6 +46,16 @@ sealed interface ProjectDetailAction {
     /** Fired when the gesture is aborted without a drop: discard the preview order. */
     data object OnTaskReorderCancel: ProjectDetailAction
 
+    // Drag-to-reorder of one task's subtasks. A subtask only ever moves among its siblings, so
+    // every one of these names the task whose list is being reordered.
+    data class OnSubTaskReorderMove(
+        val taskId: String,
+        val fromSubTaskId: String,
+        val toSubTaskId: String
+    ): ProjectDetailAction
+    data class OnSubTaskReorderCommit(val taskId: String): ProjectDetailAction
+    data object OnSubTaskReorderCancel: ProjectDetailAction
+
     data class OnAddSubTaskClick(val taskId: String): ProjectDetailAction
     data class OnSubTaskTitleClick(val subTaskId: String, val currentTitle: String): ProjectDetailAction
     data object OnCommitSubTaskTitle: ProjectDetailAction

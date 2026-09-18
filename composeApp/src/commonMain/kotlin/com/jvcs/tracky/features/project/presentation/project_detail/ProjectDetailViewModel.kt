@@ -138,6 +138,13 @@ class ProjectDetailViewModel(
             }
             ProjectDetailAction.OnTaskReorderCommit -> {commitTaskReorder()}
             ProjectDetailAction.OnTaskReorderCancel -> {reloadTasksFromDatabase()}
+            is ProjectDetailAction.OnSubTaskReorderMove -> {
+                _state.update {
+                    it.withSubTaskMoved(action.taskId, action.fromSubTaskId, action.toSubTaskId)
+                }
+            }
+            is ProjectDetailAction.OnSubTaskReorderCommit -> {commitSubTaskReorder(action.taskId)}
+            ProjectDetailAction.OnSubTaskReorderCancel -> {reloadTasksFromDatabase()}
             is ProjectDetailAction.OnAddSubTaskClick -> {beginAddSubTask(action.taskId)}
             is ProjectDetailAction.OnSubTaskTitleClick -> {beginSubTaskRename(action.subTaskId, action.currentTitle)}
             ProjectDetailAction.OnCommitSubTaskTitle -> {commitSubTaskRename()}
@@ -771,6 +778,19 @@ class ProjectDetailViewModel(
         }
     }
 
+    /** The subtask twin of [commitTaskReorder], scoped to the card the drag happened in. */
+    private fun commitSubTaskReorder(taskId: String) {
+        val task = _state.value.project?.projectTasks?.find { it.projectTaskId == taskId } ?: return
+        val ordered = task.subTasks.map { it.projectSubTaskId }
+        viewModelScope.launch {
+            subTaskRepository.reorderSubTasks(taskId, ordered)
+                .onFailure { error ->
+                    reloadTasksFromDatabase()
+                    eventChannel.send(ProjectDetailEvent.ReorderError(error.toUiText()))
+                }
+        }
+    }
+
     /** Re-reads the task tree, discarding any preview order the screen is still showing. */
     private fun reloadTasksFromDatabase() {
         val projectId = projectId ?: return
@@ -851,6 +871,23 @@ private fun ProjectDetailState.withTaskMoved(fromTaskId: String, toTaskId: Strin
     if (from == -1 || to == -1 || from == to) return this
     val moved = tasks.toMutableList().apply { add(to, removeAt(from)) }
     return copy(project = project.copy(projectTasks = moved))
+}
+
+/**
+ * Moves one subtask into a sibling's slot inside [taskId], leaving every other task alone.
+ *
+ * Reuses [mapTask], so a drag can only ever rewrite the card it started in — a subtask is never
+ * re-parented, and an id belonging to another task simply finds no match here.
+ */
+private fun ProjectDetailState.withSubTaskMoved(
+    taskId: String,
+    fromSubTaskId: String,
+    toSubTaskId: String
+): ProjectDetailState = mapTask(taskId) { task ->
+    val from = task.subTasks.indexOfFirst { it.projectSubTaskId == fromSubTaskId }
+    val to = task.subTasks.indexOfFirst { it.projectSubTaskId == toSubTaskId }
+    if (from == -1 || to == -1 || from == to) return@mapTask task
+    task.copy(subTasks = task.subTasks.toMutableList().apply { add(to, removeAt(from)) })
 }
 
 /** Rewrites every subtask of one task. */

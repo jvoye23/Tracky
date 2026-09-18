@@ -171,6 +171,9 @@ class ProjectDetailViewModelTest {
     private fun ProjectDetailViewModel.taskIds() =
         state.value.project?.projectTasks?.map { it.projectTaskId }
 
+    private fun ProjectDetailViewModel.subTaskIds() =
+        state.value.project?.projectTasks?.first()?.subTasks?.map { it.projectSubTaskId }
+
     // --- tests ---------------------------------------------------------------------------------
 
     @Test
@@ -832,6 +835,105 @@ class ProjectDetailViewModelTest {
         }
     }
 
+
+    @Test
+    fun `a subtask move reorders that card without persisting anything`() = runTest {
+        val (vm, subTaskRepository) = viewModel(project(subTask("s1"), subTask("s2"), subTask("s3")))
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+
+            vm.onAction(
+                ProjectDetailAction.OnSubTaskReorderMove(
+                    taskId = TASK_ID,
+                    fromSubTaskId = "s3",
+                    toSubTaskId = "s1"
+                )
+            )
+            settle()
+
+            assertEquals(listOf("s3", "s1", "s2"), vm.subTaskIds())
+            assertTrue(subTaskRepository.reorderCalls.isEmpty(), "a move must not reach the repository")
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `committing a subtask reorder persists the settled order once, under its own task`() = runTest {
+        val (vm, subTaskRepository) = viewModel(project(subTask("s1"), subTask("s2")))
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+
+            vm.onAction(
+                ProjectDetailAction.OnSubTaskReorderMove(
+                    taskId = TASK_ID,
+                    fromSubTaskId = "s2",
+                    toSubTaskId = "s1"
+                )
+            )
+            vm.onAction(ProjectDetailAction.OnSubTaskReorderCommit(TASK_ID))
+            settle()
+
+            assertEquals(listOf(TASK_ID to listOf("s2", "s1")), subTaskRepository.reorderCalls)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `a subtask move aimed at another task is ignored`() = runTest {
+        // A subtask never leaves its parent, so a move naming a task this card does not own must
+        // not rewrite anything.
+        val (vm, _) = viewModel(project(subTask("s1"), subTask("s2")))
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+
+            vm.onAction(
+                ProjectDetailAction.OnSubTaskReorderMove(
+                    taskId = "some-other-task",
+                    fromSubTaskId = "s2",
+                    toSubTaskId = "s1"
+                )
+            )
+            settle()
+
+            assertEquals(listOf("s1", "s2"), vm.subTaskIds())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `a failed subtask commit rolls the card back and reports it`() = runTest {
+        val subTaskRepository = FakeSubTaskRepository()
+        subTaskRepository.reorderFailWith = DataError.Local.DISK_FULL
+        val (vm, _) = viewModel(
+            project(subTask("s1"), subTask("s2")),
+            subTaskRepository = subTaskRepository
+        )
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+
+            vm.events.test {
+                vm.onAction(
+                    ProjectDetailAction.OnSubTaskReorderMove(
+                        taskId = TASK_ID,
+                        fromSubTaskId = "s2",
+                        toSubTaskId = "s1"
+                    )
+                )
+                vm.onAction(ProjectDetailAction.OnSubTaskReorderCommit(TASK_ID))
+                settle()
+
+                assertTrue(awaitItem() is ProjectDetailEvent.ReorderError)
+                cancelAndIgnoreRemainingEvents()
+            }
+            assertEquals(listOf("s1", "s2"), vm.subTaskIds())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
 }
 
 // --- fakes -------------------------------------------------------------------------------------
@@ -972,10 +1074,17 @@ private class FakeSubTaskRepository(
 
     override suspend fun lastStartedSubTaskId(taskId: String): String? = lastStarted
 
+    /** The settled order handed to each reorder call, so a test can assert it ran exactly once. */
+    val reorderCalls = mutableListOf<Pair<String, List<String>>>()
+    var reorderFailWith: DataError? = null
+
     override suspend fun reorderSubTasks(
         taskId: String,
         orderedSubTaskIds: List<String>
-    ): EmptyResult<DataError> = Result.Success(Unit)
+    ): EmptyResult<DataError> {
+        reorderCalls += taskId to orderedSubTaskIds
+        return reorderFailWith?.let { Result.Error(it) } ?: Result.Success(Unit)
+    }
 
     override suspend fun syncPendingSubTasks() = Unit
 }

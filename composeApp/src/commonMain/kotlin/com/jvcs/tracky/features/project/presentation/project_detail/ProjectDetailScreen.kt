@@ -432,6 +432,21 @@ fun ProjectDetailScreen(
                         onReorderDragCancel = {
                             onAction(ProjectDetailAction.OnTaskReorderCancel)
                             dragDropState.onDragCancel()
+                        },
+                        onSubTaskReorderMove = { fromSubTaskId, toSubTaskId ->
+                            onAction(
+                                ProjectDetailAction.OnSubTaskReorderMove(
+                                    taskId = session.projectTaskId,
+                                    fromSubTaskId = fromSubTaskId,
+                                    toSubTaskId = toSubTaskId
+                                )
+                            )
+                        },
+                        onSubTaskReorderCommit = {
+                            onAction(ProjectDetailAction.OnSubTaskReorderCommit(session.projectTaskId))
+                        },
+                        onSubTaskReorderCancel = {
+                            onAction(ProjectDetailAction.OnSubTaskReorderCancel)
                         }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
