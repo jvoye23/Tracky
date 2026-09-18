@@ -25,6 +25,8 @@ import com.jvcs.tracky.core.database.relation.TaskWithSubTasks
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
+import com.jvcs.tracky.features.project.domain.task.sortedBySubTaskOrder
+import com.jvcs.tracky.features.project.domain.task.sortedByTaskOrder
 import com.jvcs.tracky.features.project.domain.models.SubTaskInterval
 import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import kotlin.time.ExperimentalTime
@@ -79,7 +81,7 @@ fun ProjectWithTasksEntity.toProject(): Project {
         isFinished = project.isFinished,
         useLightTextColor = project.useLightTextColor,
         endDateTimeUtc = project.endDateTimeEpochMs?.let(Instant::fromEpochMilliseconds),
-        projectTasks = projectTasks.map { it.toProjectTask() },
+        projectTasks = projectTasks.map { it.toProjectTask() }.sortedByTaskOrder(),
         isArchived = project.isArchived,
         trashedAt = project.trashedAtEpochMs?.let(Instant::fromEpochMilliseconds),
         isPinned = project.isPinned,
@@ -103,7 +105,7 @@ fun ProjectWithTaskTreeEntity.toProject(): Project {
         isFinished = project.isFinished,
         useLightTextColor = project.useLightTextColor,
         endDateTimeUtc = project.endDateTimeEpochMs?.let(Instant::fromEpochMilliseconds),
-        projectTasks = projectTasks.map { it.toProjectTask() },
+        projectTasks = projectTasks.map { it.toProjectTask() }.sortedByTaskOrder(),
         isArchived = project.isArchived,
         trashedAt = project.trashedAtEpochMs?.let(Instant::fromEpochMilliseconds),
         isPinned = project.isPinned,
@@ -123,8 +125,8 @@ fun ProjectTaskEntity.toProjectTask(): ProjectTask {
         isFinished = isFinished,
         parentProjectId = parentProjectId,
         isTimerRunning = isTimerRunning,
-        ownUpdatedAt = updatedAtEpochMs?.let(Instant::fromEpochMilliseconds)
-
+        ownUpdatedAt = updatedAtEpochMs?.let(Instant::fromEpochMilliseconds),
+        sortIndex = sortIndex,
     )
 }
 
@@ -141,6 +143,7 @@ fun TaskWithIntervals.toProjectTask(): ProjectTask {
         isTimerRunning = task.isTimerRunning,
         intervals = intervals.map { it.toTaskInterval() },
         ownUpdatedAt = task.updatedAtEpochMs?.let(Instant::fromEpochMilliseconds),
+        sortIndex = task.sortIndex,
     )
 }
 
@@ -156,6 +159,7 @@ fun ProjectTask.toProjectTaskEntity(): ProjectTaskEntity {
         isFinished = isFinished,
         isTimerRunning = isTimerRunning,
         updatedAtEpochMs = ownUpdatedAt?.toEpochMilliseconds(),
+        sortIndex = sortIndex,
     )
 }
 
@@ -267,6 +271,7 @@ fun ProjectSubTaskEntity.toProjectSubTask(): ProjectSubTask {
         endDateTimeUtc = endDateTimeEpochMs?.let(Instant::fromEpochMilliseconds),
         isFinished = isFinished,
         ownUpdatedAt = updatedAtEpochMs?.let(Instant::fromEpochMilliseconds),
+        sortIndex = sortIndex,
     )
 }
 
@@ -286,6 +291,7 @@ fun ProjectSubTask.toProjectSubTaskEntity(): ProjectSubTaskEntity {
         endDateTimeEpochMs = endDateTimeUtc?.toEpochMilliseconds(),
         isFinished = isFinished,
         updatedAtEpochMs = ownUpdatedAt?.toEpochMilliseconds(),
+        sortIndex = sortIndex,
     )
 }
 
@@ -329,7 +335,8 @@ fun TaskWithSubTasks.toProjectTask(): ProjectTask {
         isTimerRunning = task.isTimerRunning,
         intervals = intervals.map { it.toTaskInterval() },
         ownUpdatedAt = task.updatedAtEpochMs?.let(Instant::fromEpochMilliseconds),
-        subTasks = subTasks.map { it.toProjectSubTask() }
+        subTasks = subTasks.map { it.toProjectSubTask() }.sortedBySubTaskOrder(),
+        sortIndex = task.sortIndex,
     )
 }
 

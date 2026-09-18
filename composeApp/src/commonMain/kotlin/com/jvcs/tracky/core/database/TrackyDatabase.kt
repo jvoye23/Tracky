@@ -26,7 +26,7 @@ import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
         PendingSyncEntity::class,
         StrandedIntervalEntity::class
     ],
-    version = 17,
+    version = 18,
 )
 @ConstructedBy(TrackyDatabaseConstructor::class)
 abstract class TrackyDatabase: RoomDatabase() {
@@ -638,6 +638,19 @@ abstract class TrackyDatabase: RoomDatabase() {
                     )
                     """.trimIndent()
                 )
+            }
+        }
+
+        val MIGRATION_17_18 = object : Migration(17, 18) {
+            override fun migrate(connection: SQLiteConnection) {
+                // sortIndex: persisted manual order for drag-to-reorder, one column per level.
+                // Nullable and deliberately not backfilled — sortedByTaskOrder sorts nulls last and
+                // falls back to startDateTimeEpochMs, so existing rows get a deterministic creation
+                // order without this migration having to invent indices for them. That fallback is
+                // also the fix for the order being undefined until now: the task and subtask
+                // @Relations carry no ORDER BY, so SQLite's row order was all that held them.
+                connection.execSQL("ALTER TABLE project_tasks ADD COLUMN sortIndex INTEGER")
+                connection.execSQL("ALTER TABLE project_sub_tasks ADD COLUMN sortIndex INTEGER")
             }
         }
     }
