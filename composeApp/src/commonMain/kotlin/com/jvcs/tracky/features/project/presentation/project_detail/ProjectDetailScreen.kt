@@ -57,9 +57,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Devices
@@ -79,6 +81,7 @@ import com.jvcs.tracky.features.project.presentation.project_detail.components.A
 import com.jvcs.tracky.features.project.presentation.project_detail.components.ColorInfoCard
 import com.jvcs.tracky.features.project.presentation.project_detail.components.PerDayCard
 import com.jvcs.tracky.features.project.presentation.project_detail.components.TaskItemCard
+import com.jvcs.tracky.features.project.presentation.util.rememberReorderableListState
 import com.jvcs.tracky.features.project.presentation.project_detail.components.TrackyColorPicker
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -118,6 +121,14 @@ fun ProjectDetailScreenRoot(
     ObserveAsEvents(viewModel.events) { event ->
         when(event) {
             is ProjectDetailEvent.Error -> {
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar(
+                        message = event.error.toString(),
+                        duration = SnackbarDuration.Short
+                    )
+                }
+            }
+            is ProjectDetailEvent.ReorderError -> {
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar(
                         message = event.error.toString(),
@@ -165,6 +176,14 @@ fun ProjectDetailScreen(
 ) {
 
     val listState = rememberLazyListState()
+    // Reordering is an edit-mode affordance: outside it the cards show timer buttons, not grips.
+    val reorderEnabled = state.isEditMode
+    val dragDropState = rememberReorderableListState(
+        lazyListState = listState,
+        onMove = { fromKey, toKey ->
+            onAction(ProjectDetailAction.OnTaskReorderMove(fromTaskId = fromKey, toTaskId = toKey))
+        }
+    )
     // One instance, shared by the app bar and the nested-scroll connection below. Calling the
     // helper again at either site would orphan a behavior and freeze the list.
     val scrollBehavior = rememberCollapsibleScrollBehavior(
@@ -334,9 +353,32 @@ fun ProjectDetailScreen(
                 }
 
                 // 5. Session Items
-                itemsIndexed(state.project.projectTasks ?: emptyList()) { index, session ->
+                itemsIndexed(
+                    items = state.project.projectTasks ?: emptyList(),
+                    // Stable String keys: the reorder state hit-tests on them, and every item above
+                    // this one is keyed by position, which is what keeps a drag inside the task list.
+                    key = { _, task -> task.projectTaskId }
+                ) { index, session ->
+                    // The dragged card (and the one settling back after release) drives its own
+                    // translation and rides above the rest; every other card animates to its new
+                    // slot via animateItem().
+                    val isActive = session.projectTaskId == dragDropState.draggingItemKey ||
+                        session.projectTaskId == dragDropState.settlingItemKey
+                    val cardModifier = if (isActive) {
+                        Modifier
+                            .zIndex(1f)
+                            .graphicsLayer {
+                                translationY = if (session.projectTaskId == dragDropState.draggingItemKey) {
+                                    dragDropState.draggingItemOffset
+                                } else {
+                                    dragDropState.settlingItemOffset
+                                }
+                            }
+                    } else {
+                        Modifier.animateItem()
+                    }
                     TaskItemCard(
-                        modifier = Modifier
+                        modifier = cardModifier
                             .padding(horizontal = 16.dp),
                         index = index + 1,
                         task = session,
@@ -378,6 +420,18 @@ fun ProjectDetailScreen(
                         },
                         onCommitSubTaskTitle = {
                             onAction(ProjectDetailAction.OnCommitSubTaskTitle)
+                        },
+                        isReorderable = reorderEnabled,
+                        onReorderDragStart = { dragDropState.onDragStart(session.projectTaskId) },
+                        onReorderDrag = { dragAmountY -> dragDropState.onDrag(dragAmountY) },
+                        onReorderDragEnd = {
+                            // Only a gesture that actually moved something is worth persisting.
+                            if (dragDropState.hasMoved) onAction(ProjectDetailAction.OnTaskReorderCommit)
+                            dragDropState.onDragEnd()
+                        },
+                        onReorderDragCancel = {
+                            onAction(ProjectDetailAction.OnTaskReorderCancel)
+                            dragDropState.onDragCancel()
                         }
                     )
                     Spacer(modifier = Modifier.height(8.dp))

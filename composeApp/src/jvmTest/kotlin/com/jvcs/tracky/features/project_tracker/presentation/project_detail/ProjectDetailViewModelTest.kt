@@ -18,6 +18,7 @@ import com.jvcs.tracky.features.project.domain.project.ProjectRepository
 import com.jvcs.tracky.features.project.domain.subtask.SubTaskRepository
 import com.jvcs.tracky.features.project.domain.task.ProjectTaskRepository
 import com.jvcs.tracky.features.project.presentation.project_detail.ProjectDetailAction
+import com.jvcs.tracky.features.project.presentation.project_detail.ProjectDetailEvent
 import com.jvcs.tracky.features.project.presentation.project_detail.ProjectDetailViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -142,6 +143,33 @@ class ProjectDetailViewModelTest {
         advanceTimeBy(1_000)
         runCurrent()
     }
+
+    /** A project whose task list is what a reorder acts on, one task per id. */
+    private fun projectWithTasks(vararg taskIds: String) = Project(
+        projectId = PROJECT_ID,
+        title = "project",
+        description = null,
+        colorArgb = null,
+        totalDurationMillis = null,
+        startDateTimeUtc = Instant.fromEpochMilliseconds(0),
+        isFinished = false,
+        endDateTimeUtc = null,
+        projectTasks = taskIds.map { id ->
+            ProjectTask(
+                projectTaskId = id,
+                title = "task-$id",
+                description = null,
+                durationMillis = 0L,
+                startDateTimeUtc = Instant.fromEpochMilliseconds(0),
+                parentProjectId = PROJECT_ID,
+                isTimerRunning = false,
+                subTasks = emptyList()
+            )
+        }
+    )
+
+    private fun ProjectDetailViewModel.taskIds() =
+        state.value.project?.projectTasks?.map { it.projectTaskId }
 
     // --- tests ---------------------------------------------------------------------------------
 
@@ -691,6 +719,119 @@ class ProjectDetailViewModelTest {
             cancelAndIgnoreRemainingEvents()
         }
     }
+
+    // --- reorder -------------------------------------------------------------------------------
+
+    @Test
+    fun `a move reorders the shown tasks without persisting anything`() = runTest {
+        // Crossing a neighbour fires repeatedly during a drag, so it must stay in memory — the
+        // write happens once, on drop.
+        val taskRepository = FakeProjectTaskRepository()
+        val (vm, _) = viewModel(projectWithTasks("a", "b", "c"), taskRepository = taskRepository)
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+
+            vm.onAction(ProjectDetailAction.OnTaskReorderMove(fromTaskId = "c", toTaskId = "a"))
+            settle()
+
+            assertEquals(listOf("c", "a", "b"), vm.taskIds())
+            assertTrue(taskRepository.reorderCalls.isEmpty(), "a move must not reach the repository")
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `several moves during one drag leave only the settled order`() = runTest {
+        val (vm, _) = viewModel(projectWithTasks("a", "b", "c"))
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+
+            vm.onAction(ProjectDetailAction.OnTaskReorderMove(fromTaskId = "a", toTaskId = "b"))
+            vm.onAction(ProjectDetailAction.OnTaskReorderMove(fromTaskId = "a", toTaskId = "c"))
+            settle()
+
+            assertEquals(listOf("b", "c", "a"), vm.taskIds())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `a move naming a task that is not in the list is ignored`() = runTest {
+        // The drag state hit-tests against what is on screen, which can lag a delete.
+        val (vm, _) = viewModel(projectWithTasks("a", "b"))
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+
+            vm.onAction(ProjectDetailAction.OnTaskReorderMove(fromTaskId = "ghost", toTaskId = "a"))
+            settle()
+
+            assertEquals(listOf("a", "b"), vm.taskIds())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `commit persists the settled order exactly once`() = runTest {
+        val taskRepository = FakeProjectTaskRepository()
+        val (vm, _) = viewModel(projectWithTasks("a", "b", "c"), taskRepository = taskRepository)
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+
+            vm.onAction(ProjectDetailAction.OnTaskReorderMove(fromTaskId = "c", toTaskId = "a"))
+            vm.onAction(ProjectDetailAction.OnTaskReorderCommit)
+            settle()
+
+            assertEquals(listOf(listOf("c", "a", "b")), taskRepository.reorderCalls)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `a failed commit rolls the list back and reports it`() = runTest {
+        val taskRepository = FakeProjectTaskRepository()
+        taskRepository.reorderFailWith = DataError.Local.DISK_FULL
+        val (vm, _) = viewModel(projectWithTasks("a", "b", "c"), taskRepository = taskRepository)
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+
+            vm.events.test {
+                vm.onAction(ProjectDetailAction.OnTaskReorderMove(fromTaskId = "c", toTaskId = "a"))
+                vm.onAction(ProjectDetailAction.OnTaskReorderCommit)
+                settle()
+
+                assertTrue(awaitItem() is ProjectDetailEvent.ReorderError)
+                cancelAndIgnoreRemainingEvents()
+            }
+            // Don't leave the user looking at an order that says it saved while the snackbar says
+            // it did not: the list goes back to what is actually persisted.
+            assertEquals(listOf("a", "b", "c"), vm.taskIds())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `cancelling a drag discards the preview order`() = runTest {
+        val taskRepository = FakeProjectTaskRepository()
+        val (vm, _) = viewModel(projectWithTasks("a", "b", "c"), taskRepository = taskRepository)
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+
+            vm.onAction(ProjectDetailAction.OnTaskReorderMove(fromTaskId = "c", toTaskId = "a"))
+            vm.onAction(ProjectDetailAction.OnTaskReorderCancel)
+            settle()
+
+            assertEquals(listOf("a", "b", "c"), vm.taskIds())
+            assertTrue(taskRepository.reorderCalls.isEmpty(), "an aborted drag saves nothing")
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
 }
 
 // --- fakes -------------------------------------------------------------------------------------
@@ -743,10 +884,17 @@ private class FakeProjectTaskRepository(
         return Result.Success(Unit)
     }
 
+    /** The settled order handed to each reorder call, so a test can assert it ran exactly once. */
+    val reorderCalls = mutableListOf<List<String>>()
+    var reorderFailWith: DataError? = null
+
     override suspend fun reorderTasks(
         projectId: String,
         orderedTaskIds: List<String>
-    ): EmptyResult<DataError> = Result.Success(Unit)
+    ): EmptyResult<DataError> {
+        reorderCalls += orderedTaskIds
+        return reorderFailWith?.let { Result.Error(it) } ?: Result.Success(Unit)
+    }
 
     override suspend fun upsertProjectTask(projectTask: ProjectTask): EmptyResult<DataError> {
         upserted += projectTask

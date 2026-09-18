@@ -12,6 +12,7 @@ import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.core.domain.util.Result
+import com.jvcs.tracky.core.domain.util.onFailure
 import com.jvcs.tracky.core.domain.util.TimeManager
 import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.core.domain.util.TimerState
@@ -132,6 +133,11 @@ class ProjectDetailViewModel(
             is ProjectDetailAction.OnDeleteSubTaskClick -> {deleteSubTask(action.subTaskId)}
             is ProjectDetailAction.OnSubTaskCheckedChange -> {onSubTaskCheckedChange(action.subTaskId)}
             is ProjectDetailAction.OnToggleTaskExpanded -> {toggleTaskExpanded(action.taskId)}
+            is ProjectDetailAction.OnTaskReorderMove -> {
+                _state.update { it.withTaskMoved(action.fromTaskId, action.toTaskId) }
+            }
+            ProjectDetailAction.OnTaskReorderCommit -> {commitTaskReorder()}
+            ProjectDetailAction.OnTaskReorderCancel -> {reloadTasksFromDatabase()}
             is ProjectDetailAction.OnAddSubTaskClick -> {beginAddSubTask(action.taskId)}
             is ProjectDetailAction.OnSubTaskTitleClick -> {beginSubTaskRename(action.subTaskId, action.currentTitle)}
             ProjectDetailAction.OnCommitSubTaskTitle -> {commitSubTaskRename()}
@@ -744,6 +750,33 @@ class ProjectDetailViewModel(
     }
 
 
+    /**
+     * Writes the order the drag settled on.
+     *
+     * Unlike the project overview this needs no in-flight guard: [withProjectRow] never rewrites
+     * project.projectTasks, so nothing can arrive mid-drag and replay the move. The displayed order
+     * simply is the order, until a failed write sends us back to the database for it.
+     */
+    private fun commitTaskReorder() {
+        val projectId = projectId ?: return
+        val ordered = _state.value.project?.projectTasks?.map { it.projectTaskId } ?: return
+        viewModelScope.launch {
+            projectTaskRepository.reorderTasks(projectId, ordered)
+                .onFailure { error ->
+                    // Don't leave the user looking at an order that says it saved while the
+                    // snackbar says it didn't: fall back to what is actually persisted.
+                    reloadTasksFromDatabase()
+                    eventChannel.send(ProjectDetailEvent.ReorderError(error.toUiText()))
+                }
+        }
+    }
+
+    /** Re-reads the task tree, discarding any preview order the screen is still showing. */
+    private fun reloadTasksFromDatabase() {
+        val projectId = projectId ?: return
+        getProject(projectId)
+    }
+
     private fun toggleEditMode() {
         _state.update { it.copy(
             isEditMode = !it.isEditMode
@@ -802,6 +835,22 @@ private fun ProjectDetailState.mapTask(
             }
         )
     )
+}
+
+/**
+ * Moves one task into another's slot, leaving every other field alone.
+ *
+ * A move that names an id the list does not hold is a no-op rather than an error: the drag state
+ * hit-tests against what is on screen, which can lag a delete arriving from a sync pull.
+ */
+private fun ProjectDetailState.withTaskMoved(fromTaskId: String, toTaskId: String): ProjectDetailState {
+    val project = this.project ?: return this
+    val tasks = project.projectTasks ?: return this
+    val from = tasks.indexOfFirst { it.projectTaskId == fromTaskId }
+    val to = tasks.indexOfFirst { it.projectTaskId == toTaskId }
+    if (from == -1 || to == -1 || from == to) return this
+    val moved = tasks.toMutableList().apply { add(to, removeAt(from)) }
+    return copy(project = project.copy(projectTasks = moved))
 }
 
 /** Rewrites every subtask of one task. */

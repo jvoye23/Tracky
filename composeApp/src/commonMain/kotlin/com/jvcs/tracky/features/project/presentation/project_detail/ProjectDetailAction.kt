@@ -38,6 +38,14 @@ sealed interface ProjectDetailAction {
 
     data class OnToggleTaskExpanded(val taskId: String): ProjectDetailAction
 
+    // Drag-to-reorder of the task list, from the grip shown on each card in edit mode.
+    /** Fired while dragging, each time the dragged card crosses a neighbour. Nothing is persisted. */
+    data class OnTaskReorderMove(val fromTaskId: String, val toTaskId: String): ProjectDetailAction
+    /** Fired on drop: the order the drag settled on is written and pushed as one gesture. */
+    data object OnTaskReorderCommit: ProjectDetailAction
+    /** Fired when the gesture is aborted without a drop: discard the preview order. */
+    data object OnTaskReorderCancel: ProjectDetailAction
+
     data class OnAddSubTaskClick(val taskId: String): ProjectDetailAction
     data class OnSubTaskTitleClick(val subTaskId: String, val currentTitle: String): ProjectDetailAction
     data object OnCommitSubTaskTitle: ProjectDetailAction

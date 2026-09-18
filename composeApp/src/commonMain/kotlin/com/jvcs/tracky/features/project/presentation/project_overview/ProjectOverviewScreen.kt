@@ -78,8 +78,8 @@ import com.jvcs.tracky.design_system.util.rememberCollapsibleScrollBehavior
 import com.jvcs.tracky.features.project.presentation.project_overview.components.AddNewProjectBottomSheet
 import com.jvcs.tracky.features.project.presentation.project_overview.components.EmptySection
 import com.jvcs.tracky.features.project.presentation.project_overview.components.ProjectCard
-import com.jvcs.tracky.features.project.presentation.project_overview.components.ProjectDragDropState
-import com.jvcs.tracky.features.project.presentation.project_overview.components.rememberProjectDragDropState
+import com.jvcs.tracky.features.project.presentation.util.ReorderableListState
+import com.jvcs.tracky.features.project.presentation.util.rememberReorderableListState
 import com.jvcs.tracky.features.project.presentation.project_overview.components.ProjectOverviewSearchTopAppBar
 import com.jvcs.tracky.features.project.presentation.project_overview.components.ProjectOverviewSelectionTopAppBar
 import com.jvcs.tracky.features.project.presentation.project_overview.components.SortBottomSheet
@@ -252,7 +252,7 @@ fun ProjectOverviewScreen(
     // re-derives it from what was actually persisted.
     val pinnedItems = state.pinnedProjects
     val otherItems = state.otherProjects
-    val dragDropState = rememberProjectDragDropState(
+    val dragDropState = rememberReorderableListState(
         lazyListState = listState,
         onMove = { fromKey, toKey ->
             onAction(ProjectOverviewAction.OnReorderMove(fromId = fromKey, toId = toKey))
@@ -563,7 +563,7 @@ private fun LazyItemScope.ProjectListCard(
     state: ProjectOverviewState,
     onAction: (ProjectOverviewAction) -> Unit,
     reorderEnabled: Boolean,
-    dragDropState: ProjectDragDropState
+    dragDropState: ReorderableListState
 ) {
     // The dragged card (and the one settling back after release) drives its own translation and rides
     // above the rest; every other card animates to its new slot via animateItem().
