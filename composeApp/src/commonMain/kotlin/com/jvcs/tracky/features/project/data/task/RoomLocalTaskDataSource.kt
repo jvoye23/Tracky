@@ -56,6 +56,19 @@ class RoomLocalTaskDataSource(
         projectDao.updateTaskDuration(taskId, newDurationMillis)
     }
 
+    override suspend fun getTaskSortIndices(
+        projectId: String
+    ): Result<Map<String, Long?>, DataError.Local> = read {
+        projectDao.getTaskSortIndices(projectId).associate { it.projectTaskId to it.sortIndex }
+    }
+
+    override suspend fun updateTaskSortIndices(
+        indices: Map<String, Long>,
+        updatedAt: Instant
+    ): EmptyResult<DataError.Local> = write {
+        projectDao.updateTaskSortIndices(indices, updatedAt.toEpochMilliseconds())
+    }
+
     override suspend fun updateTaskTitle(taskId: String, title: String): EmptyResult<DataError.Local> = write {
         projectDao.updateTaskTitle(taskId, title)
     }

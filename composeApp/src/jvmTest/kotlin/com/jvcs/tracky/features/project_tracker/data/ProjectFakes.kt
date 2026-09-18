@@ -312,6 +312,30 @@ class FakeLocalTaskDataSource(private val db: FakeDb = FakeDb()) : LocalTaskData
     var nextIntervalId = "i1"
     var clock: Instant = Instant.fromEpochMilliseconds(10_000)
 
+    /** Every sortIndex write the reorder made, in call order. */
+    val sortIndexWrites = mutableListOf<Map<String, Long>>()
+    var sortIndexWriteFailWith: DataError.Local? = null
+
+    override suspend fun getTaskSortIndices(
+        projectId: String
+    ): Result<Map<String, Long?>, DataError.Local> = Result.Success(
+        db.tasks.values
+            .filter { it.parentProjectId == projectId }
+            .associate { it.projectTaskId to it.sortIndex }
+    )
+
+    override suspend fun updateTaskSortIndices(
+        indices: Map<String, Long>,
+        updatedAt: Instant
+    ): EmptyResult<DataError.Local> {
+        sortIndexWriteFailWith?.let { return Result.Error(it) }
+        sortIndexWrites += indices
+        indices.forEach { (id, index) ->
+            db.tasks[id]?.let { db.tasks[id] = it.copy(sortIndex = index) }
+        }
+        return Result.Success(Unit)
+    }
+
     // `intervals` on the receiver shadows the db map, so the lookup has to name it explicitly.
     private fun ProjectTask.withIntervals() =
         copy(intervals = db.intervals.values.filter { it.parentTaskId == projectTaskId })
@@ -494,6 +518,21 @@ class FakeRemoteTaskDataSource : RemoteTaskDataSource {
         deletedTaskIds += taskId
         return Result.Success(Unit)
     }
+
+    var reorderFailWith: DataError.Remote? = null
+    /** One entry per reorder request, so a test can assert the gesture cost exactly one call. */
+    val reorderCalls = mutableListOf<Map<String, Long>>()
+
+    override suspend fun reorderTasks(
+        projectId: String,
+        indices: Map<String, Long>,
+        updatedAt: Instant
+    ): EmptyResult<DataError.Remote> {
+        taskRoutes += "$projectId/sort"
+        (reorderFailWith ?: failWith)?.let { return Result.Error(it) }
+        reorderCalls += indices
+        return Result.Success(Unit)
+    }
 }
 
 class FakeRemoteIntervalDataSource : RemoteIntervalDataSource {
@@ -578,6 +617,33 @@ class FakeLocalSubTaskDataSource(private val db: FakeDb = FakeDb()) : LocalSubTa
         failReadWith?.let { return Result.Error(it) }
         return Result.Success(lastStarted)
     }
+
+    /** Every sortIndex write the reorder made, in call order. */
+    val sortIndexWrites = mutableListOf<Map<String, Long>>()
+    var sortIndexWriteFailWith: DataError.Local? = null
+
+    override suspend fun getSubTaskSortIndices(
+        taskId: String
+    ): Result<Map<String, Long?>, DataError.Local> {
+        failReadWith?.let { return Result.Error(it) }
+        return Result.Success(
+            db.subTasks.values
+                .filter { it.parentProjectTaskId == taskId }
+                .associate { it.projectSubTaskId to it.sortIndex }
+        )
+    }
+
+    override suspend fun updateSubTaskSortIndices(
+        indices: Map<String, Long>,
+        updatedAt: Instant
+    ): EmptyResult<DataError.Local> {
+        sortIndexWriteFailWith?.let { return Result.Error(it) }
+        sortIndexWrites += indices
+        indices.forEach { (id, index) ->
+            db.subTasks[id]?.let { db.subTasks[id] = it.copy(sortIndex = index) }
+        }
+        return Result.Success(Unit)
+    }
 }
 
 class FakeRemoteSubTaskDataSource : RemoteSubTaskDataSource {
@@ -628,6 +694,22 @@ class FakeRemoteSubTaskDataSource : RemoteSubTaskDataSource {
         subTaskRoutes += "$projectId/$taskId"
         deleteFailWith?.let { return Result.Error(it) }
         deletedSubTaskIds += subTaskId
+        return Result.Success(Unit)
+    }
+
+    var reorderFailWith: DataError.Remote? = null
+    /** One entry per reorder request, so a test can assert the gesture cost exactly one call. */
+    val reorderCalls = mutableListOf<Map<String, Long>>()
+
+    override suspend fun reorderSubTasks(
+        projectId: String,
+        taskId: String,
+        indices: Map<String, Long>,
+        updatedAt: Instant
+    ): EmptyResult<DataError.Remote> {
+        subTaskRoutes += "$projectId/$taskId/sort"
+        reorderFailWith?.let { return Result.Error(it) }
+        reorderCalls += indices
         return Result.Success(Unit)
     }
 }

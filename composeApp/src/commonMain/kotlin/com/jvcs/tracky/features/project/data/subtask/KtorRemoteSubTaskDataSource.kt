@@ -1,6 +1,8 @@
 package com.jvcs.tracky.features.project.data.subtask
 
 import com.jvcs.tracky.core.data.networking.CreateSubTaskRequest
+import com.jvcs.tracky.core.data.networking.ReorderTasksRequest
+import com.jvcs.tracky.core.data.networking.TaskSortOrderDto
 import com.jvcs.tracky.core.data.networking.UpdateSubTaskRequest
 import com.jvcs.tracky.core.data.networking.delete
 import com.jvcs.tracky.core.data.networking.dto.ProjectSubTaskDto
@@ -17,6 +19,7 @@ import com.jvcs.tracky.features.project.data.mappers.toUpdateSubTaskRequest
 import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import com.jvcs.tracky.features.project.domain.subtask.RemoteSubTaskDataSource
 import io.ktor.client.HttpClient
+import kotlin.time.Instant
 
 /**
  * The project id never appears in a subtask payload — the server derives it from the parent task —
@@ -64,6 +67,24 @@ class KtorRemoteSubTaskDataSource(
     ): EmptyResult<DataError.Remote> {
         return httpClient.delete(
             route = "/api/projects/$projectId/tasks/$taskId/subtasks/$subTaskId"
+        )
+    }
+
+    // The task-level reorder one level down; same 204-and-nothing-back contract.
+    override suspend fun reorderSubTasks(
+        projectId: String,
+        taskId: String,
+        indices: Map<String, Long>,
+        updatedAt: Instant
+    ): EmptyResult<DataError.Remote> {
+        return httpClient.put<ReorderTasksRequest, Unit>(
+            route = "/api/projects/$projectId/tasks/$taskId/subtasks/sort",
+            body = ReorderTasksRequest(
+                updatedAtUtc = updatedAt.toString(),
+                items = indices.map { (subTaskId, sortIndex) ->
+                    TaskSortOrderDto(id = subTaskId, sortIndex = sortIndex)
+                }
+            )
         )
     }
 }

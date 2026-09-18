@@ -5,6 +5,7 @@ import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import kotlinx.coroutines.flow.Flow
+import kotlin.time.Instant
 
 interface LocalSubTaskDataSource {
     /** The stream the task detail screen observes, each subtask carrying its intervals. */
@@ -40,4 +41,13 @@ interface LocalSubTaskDataSource {
 
     /** Id of the subtask under [taskId] whose timer ran most recently, or null if none ever has. */
     suspend fun lastStartedSubTaskId(taskId: String): Result<String?, DataError.Local>
+
+    /** The subtasks of one task and their current indices, for diffing a reorder. */
+    suspend fun getSubTaskSortIndices(taskId: String): Result<Map<String, Long?>, DataError.Local>
+
+    /** Writes a whole reorder in one transaction — see LocalTaskDataSource.updateTaskSortIndices. */
+    suspend fun updateSubTaskSortIndices(
+        indices: Map<String, Long>,
+        updatedAt: Instant
+    ): EmptyResult<DataError.Local>
 }
