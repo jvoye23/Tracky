@@ -237,5 +237,6 @@ private class RecordingTaskRepository : ProjectTaskRepository {
     override fun getProjectTaskWithIntervalsById(taskId: String): Flow<ProjectTask?> = flowOf(null)
     override suspend fun startProjectTask(taskId: String) = Result.Success(Unit)
     override suspend fun stopProjectTask(taskId: String) = Result.Success(Unit)
+    override suspend fun reorderTasks(projectId: String, orderedTaskIds: List<String>) = Result.Success(Unit)
     override suspend fun syncPendingTasks() = Unit
 }
