@@ -43,7 +43,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -58,6 +60,8 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.font.FontWeight
@@ -68,6 +72,7 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import com.jvcs.tracky.design_system.Icon_ChevronDown
 import com.jvcs.tracky.design_system.Icon_ChevronUp
 import com.jvcs.tracky.design_system.Icon_Plus
@@ -77,6 +82,7 @@ import com.jvcs.tracky.design_system.components.TrackyCheckbox
 import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.features.project.presentation.models.ProjectSubTaskUi
 import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
+import com.jvcs.tracky.features.project.presentation.util.rememberSubTaskDragDropState
 import org.jetbrains.compose.resources.stringResource
 import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.add_subtask
@@ -320,8 +326,19 @@ fun TaskItemCard(
     onReorderDragStart: () -> Unit = {},
     onReorderDrag: (dragAmountY: Float) -> Unit = {},
     onReorderDragEnd: () -> Unit = {},
-    onReorderDragCancel: () -> Unit = {}
+    onReorderDragCancel: () -> Unit = {},
+    // Reorder of this card's subtasks among themselves, driven from the grip on each subtask row.
+    onSubTaskReorderMove: (fromSubTaskId: String, toSubTaskId: String) -> Unit = { _, _ -> },
+    onSubTaskReorderCommit: () -> Unit = {},
+    onSubTaskReorderCancel: () -> Unit = {}
 ) {
+
+    // One drag state per card. Rows report their measured bounds into it, because a plain Column
+    // has no layoutInfo for a reorder to hit-test against.
+    val subTaskDragState = rememberSubTaskDragDropState(
+        taskId = task.projectTaskId,
+        onMove = onSubTaskReorderMove
+    )
 
     val isPulsing = task.isTimerRunning || task.subTasks.any { it.isTimerRunning }
     val pulseAlpha by rememberPulseAlpha(enabled = isPulsing)
@@ -500,12 +517,41 @@ fun TaskItemCard(
                         .padding(start = 40.dp)
                 ) {
                     task.subTasks.forEachIndexed { subTaskIndex, projectSubTaskUi ->
-                        val isRenaming =
-                            isEditMode && editingSubTaskId == projectSubTaskUi.projectSubTaskId
+                        val subTaskId = projectSubTaskUi.projectSubTaskId
+                        val isRenaming = isEditMode && editingSubTaskId == subTaskId
 
+                        // Keyed so a row's identity follows the subtask rather than the position,
+                        // which is what lets the bounds it reports survive a reorder.
+                        key(subTaskId) {
+                        DisposableEffect(subTaskId) {
+                            onDispose { subTaskDragState.onRowDisposed(subTaskId) }
+                        }
+                        val isDragActive = subTaskId == subTaskDragState.draggingItemKey ||
+                            subTaskId == subTaskDragState.settlingItemKey
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .onGloballyPositioned { coordinates ->
+                                    subTaskDragState.onRowPlaced(
+                                        key = subTaskId,
+                                        top = coordinates.positionInParent().y,
+                                        height = coordinates.size.height.toFloat()
+                                    )
+                                }
+                                .then(
+                                    if (isDragActive) {
+                                        Modifier
+                                            .zIndex(1f)
+                                            .graphicsLayer {
+                                                translationY =
+                                                    if (subTaskId == subTaskDragState.draggingItemKey) {
+                                                        subTaskDragState.draggingItemOffset
+                                                    } else {
+                                                        subTaskDragState.settlingItemOffset
+                                                    }
+                                            }
+                                    } else Modifier
+                                )
                                 .then(
                                     if (isRenaming) {
                                         Modifier.border(
@@ -524,7 +570,19 @@ fun TaskItemCard(
                             val contentAlpha = if (projectSubTaskUi.isFinished) 0.4f else 1f
 
                             if (isEditMode) {
-                                DragHandle()
+                                DragHandle(
+                                    isReorderable = isReorderable,
+                                    onDragStart = { subTaskDragState.onDragStart(subTaskId) },
+                                    onDrag = { dragAmountY -> subTaskDragState.onDrag(dragAmountY) },
+                                    onDragEnd = {
+                                        if (subTaskDragState.hasMoved) onSubTaskReorderCommit()
+                                        subTaskDragState.onDragEnd()
+                                    },
+                                    onDragCancel = {
+                                        onSubTaskReorderCancel()
+                                        subTaskDragState.onDragCancel()
+                                    }
+                                )
                             } else {
                                 TimerToggleButton(
                                     isTimerRunning = projectSubTaskUi.isTimerRunning,
@@ -601,6 +659,7 @@ fun TaskItemCard(
                                     }
                                 )
                             }
+                        }
                         }
                     }
 
