@@ -39,7 +39,10 @@ data class ProjectTaskDto(
     // The server always sends `[]` rather than null for an empty collection, so the default only
     // covers a deployment that predates subtasks entirely.
     val subTasks: List<ProjectSubTaskDto> = emptyList(),
-    @SerialName("updatedAtUtc") val updatedAt: String? = null
+    @SerialName("updatedAtUtc") val updatedAt: String? = null,
+    // Nullable manual order. The server stores and echoes it verbatim without ordering by it,
+    // exactly as it does for a project's — the client applies the order itself.
+    val sortIndex: Long? = null,
 )
 
 /**
@@ -65,7 +68,10 @@ data class ProjectSubTaskDto(
     val intervals: List<SubTaskIntervalDto> = emptyList(),
     // A real stamp, unlike an interval's: subtasks are edited by hand, so last-write-wins has
     // something to compare. See ProjectSubTask.ownUpdatedAt.
-    @SerialName("updatedAtUtc") val updatedAt: String? = null
+    @SerialName("updatedAtUtc") val updatedAt: String? = null,
+    // Nullable manual order. The server stores and echoes it verbatim without ordering by it,
+    // exactly as it does for a project's — the client applies the order itself.
+    val sortIndex: Long? = null,
 )
 
 /**

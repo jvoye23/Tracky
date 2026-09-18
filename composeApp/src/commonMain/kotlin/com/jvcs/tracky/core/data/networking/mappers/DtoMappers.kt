@@ -54,7 +54,8 @@ fun ProjectTaskDto.toProjectTask(parentProjectId: String): ProjectTask {
         isTimerRunning = isTimerRunning,
         intervals = intervals.map { it.toTaskInterval(parentProjectId) },
         ownUpdatedAt = updatedAt?.let(Instant::parse),
-        subTasks = subTasks.map { it.toProjectSubTask(parentProjectId) }
+        subTasks = subTasks.map { it.toProjectSubTask(parentProjectId) },
+        sortIndex = sortIndex,
     )
 }
 
@@ -76,6 +77,7 @@ fun ProjectSubTaskDto.toProjectSubTask(parentProjectId: String): ProjectSubTask 
         // local row already had, and false is safe for a row this device has never seen.
         subTaskIntervals = intervals.map { it.toSubTaskInterval(parentProjectId, startedParentTimer = false) },
         ownUpdatedAt = updatedAt?.let(Instant::parse),
+        sortIndex = sortIndex,
     )
 }
 

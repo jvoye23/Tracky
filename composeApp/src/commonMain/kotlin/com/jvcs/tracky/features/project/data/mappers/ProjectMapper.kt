@@ -226,6 +226,7 @@ fun ProjectTask.toCreateProjectTaskRequest(): CreateProjectTaskRequest {
         endDateTimeUtc = endDateTimeUtc?.toString(),
         isFinished = isFinished,
         isTimerRunning = isTimerRunning,
+        sortIndex = sortIndex,
     )
 }
 
@@ -238,6 +239,7 @@ fun ProjectTask.toUpdateProjectTaskRequest(): UpdateProjectTaskRequest {
         endDateTimeUtc = endDateTimeUtc?.toString(),
         isFinished = isFinished,
         isTimerRunning = isTimerRunning,
+        sortIndex = sortIndex,
     )
 }
 
@@ -353,6 +355,7 @@ fun ProjectSubTask.toCreateSubTaskRequest(): CreateSubTaskRequest {
         endDateTimeUtc = endDateTimeUtc?.toString(),
         isFinished = isFinished,
         isTimerRunning = isTimerRunning,
+        sortIndex = sortIndex,
     )
 }
 
@@ -365,6 +368,7 @@ fun ProjectSubTask.toUpdateSubTaskRequest(): UpdateSubTaskRequest {
         endDateTimeUtc = endDateTimeUtc?.toString(),
         isFinished = isFinished,
         isTimerRunning = isTimerRunning,
+        sortIndex = sortIndex,
     )
 }
 

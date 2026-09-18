@@ -4,6 +4,7 @@ import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
+import kotlin.time.Instant
 
 /**
  * Subtasks are written through their own endpoints nested under the task — the task create and
@@ -36,5 +37,13 @@ interface RemoteSubTaskDataSource {
         projectId: String,
         taskId: String,
         subTaskId: String
+    ): EmptyResult<DataError.Remote>
+
+    /** One request for a whole reorder gesture — see RemoteTaskDataSource.reorderTasks. */
+    suspend fun reorderSubTasks(
+        projectId: String,
+        taskId: String,
+        indices: Map<String, Long>,
+        updatedAt: Instant
     ): EmptyResult<DataError.Remote>
 }

@@ -20,4 +20,7 @@ data class CreateProjectTaskRequest(
     // See UpdateProjectTaskRequest: the server's names, not Kotlin's property names.
     val isFinished: Boolean,
     val isTimerRunning: Boolean,
+    // Nullable manual order. The server stores and echoes it verbatim without ordering by it,
+    // exactly as it does for a project's — the client applies the order itself.
+    val sortIndex: Long? = null,
 )

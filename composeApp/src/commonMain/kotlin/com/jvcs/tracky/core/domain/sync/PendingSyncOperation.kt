@@ -48,6 +48,17 @@ data class PendingSyncOperation(
         const val ENTITY_PROJECT_ORDER = "project_order"
         const val PROJECT_ORDER_ENTITY_ID = "project_order"
 
+        // Task and subtask order are per parent rather than global, so unlike the project one these
+        // cannot use a single fixed id. They are prefixed instead: enqueueDeduped keys on entityId
+        // ALONE, so an order op carrying a bare parent UUID would be deduped against that parent's
+        // own CREATE/UPDATE row and silently dropped. A prefix cannot collide with a UUID, and it
+        // still collapses repeat reorders of the same parent into one row.
+        const val ENTITY_TASK_ORDER = "task_order"
+        const val ENTITY_SUBTASK_ORDER = "sub_task_order"
+
+        fun taskOrderEntityId(projectId: String) = "$ENTITY_TASK_ORDER:$projectId"
+        fun subTaskOrderEntityId(taskId: String) = "$ENTITY_SUBTASK_ORDER:$taskId"
+
         const val OP_CREATE = "CREATE"
         const val OP_UPDATE = "UPDATE"
         const val OP_DELETE = "DELETE"

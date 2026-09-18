@@ -15,4 +15,7 @@ data class UpdateProjectTaskRequest(
     // made the server ignore both, default them to false, and return that over the local row.
     val isFinished: Boolean,
     val isTimerRunning: Boolean,
+    // Nullable manual order. The server stores and echoes it verbatim without ordering by it,
+    // exactly as it does for a project's — the client applies the order itself.
+    val sortIndex: Long? = null,
 )

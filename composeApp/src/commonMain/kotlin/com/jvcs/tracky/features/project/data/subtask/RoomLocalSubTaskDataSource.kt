@@ -21,6 +21,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
 class RoomLocalSubTaskDataSource(
@@ -44,6 +45,19 @@ class RoomLocalSubTaskDataSource(
         taskId: String
     ): Result<String?, DataError.Local> = read {
         projectDao.getLastStartedSubTaskId(taskId)
+    }
+
+    override suspend fun getSubTaskSortIndices(
+        taskId: String
+    ): Result<Map<String, Long?>, DataError.Local> = read {
+        projectDao.getSubTaskSortIndices(taskId).associate { it.projectSubTaskId to it.sortIndex }
+    }
+
+    override suspend fun updateSubTaskSortIndices(
+        indices: Map<String, Long>,
+        updatedAt: Instant
+    ): EmptyResult<DataError.Local> = write {
+        projectDao.updateSubTaskSortIndices(indices, updatedAt.toEpochMilliseconds())
     }
 
     override suspend fun upsertSubTask(subTask: ProjectSubTask): EmptyResult<DataError.Local> =
