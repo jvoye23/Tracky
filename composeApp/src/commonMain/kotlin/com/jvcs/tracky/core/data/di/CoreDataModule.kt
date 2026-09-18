@@ -237,6 +237,7 @@ val coreDataModule = module {
                 TrackyDatabase.MIGRATION_14_15,
                 TrackyDatabase.MIGRATION_15_16,
                 TrackyDatabase.MIGRATION_16_17,
+                TrackyDatabase.MIGRATION_17_18,
             )
             .setDriver(BundledSQLiteDriver())
             // Single connection (no WAL reader pool). The reactive sync (ProjectSyncManager) does

@@ -11,9 +11,11 @@ import com.jvcs.tracky.core.database.entity.StrandedIntervalEntity
 import com.jvcs.tracky.core.database.entity.SubTaskIntervalEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 import com.jvcs.tracky.core.database.relation.ProjectSortIndexEntity
+import com.jvcs.tracky.core.database.relation.SubTaskSortIndexEntity
 import com.jvcs.tracky.core.database.relation.ProjectWithTaskTreeEntity
 import com.jvcs.tracky.core.database.relation.ProjectWithTasksEntity
 import com.jvcs.tracky.core.database.relation.SubTaskWithIntervals
+import com.jvcs.tracky.core.database.relation.TaskSortIndexEntity
 import com.jvcs.tracky.core.database.relation.TaskWithIntervals
 import com.jvcs.tracky.core.database.relation.TaskWithSubTasks
 import com.jvcs.tracky.core.domain.sync.serverWinsOnPull
@@ -202,9 +204,21 @@ interface ProjectDao {
 
     @Query("UPDATE project_tasks SET title = :title WHERE projectTaskId = :taskId")
     suspend fun updateTaskTitle(taskId: String, title: String)
+
+    // Task order is per project, so unlike the project queries these are scoped to one parent.
+    @Query("SELECT projectTaskId, sortIndex FROM project_tasks WHERE parentProjectId = :projectId")
+    suspend fun getTaskSortIndices(projectId: String): List<TaskSortIndexEntity>
+
+    @Query("UPDATE project_tasks SET sortIndex = :sortIndex, updatedAtEpochMs = :updatedAt WHERE projectTaskId = :taskId")
+    suspend fun setTaskSortIndex(taskId: String, sortIndex: Long, updatedAt: Long)
+
+    // One gesture, one write — see updateSortIndices for why this has to be transactional.
+    @Transaction
+    suspend fun updateTaskSortIndices(indices: Map<String, Long>, updatedAt: Long) {
+        indices.forEach { (id, index) -> setTaskSortIndex(id, index, updatedAt) }
+    }
     // ---- Subtasks ---------------------------------------------------------------------------
-    // Local-only for now: the backend exposes no subtask routes, so nothing here feeds the pending
-    // sync queue. The reads mirror their task-level counterparts so the two levels stay swappable.
+    // The reads mirror their task-level counterparts so the two levels stay swappable.
 
     @Upsert
     suspend fun upsertProjectSubTask(subTask: ProjectSubTaskEntity)
@@ -228,6 +242,19 @@ interface ProjectDao {
 
     @Query("UPDATE project_sub_tasks SET durationMillis = COALESCE(durationMillis, 0) + :additionalDuration WHERE projectSubTaskId = :subTaskId")
     suspend fun addSubTaskDuration(subTaskId: String, additionalDuration: Long)
+
+    // Subtask order is per task, one level further down than the task queries above.
+    @Query("SELECT projectSubTaskId, sortIndex FROM project_sub_tasks WHERE parentProjectTaskId = :taskId")
+    suspend fun getSubTaskSortIndices(taskId: String): List<SubTaskSortIndexEntity>
+
+    @Query("UPDATE project_sub_tasks SET sortIndex = :sortIndex, updatedAtEpochMs = :updatedAt WHERE projectSubTaskId = :subTaskId")
+    suspend fun setSubTaskSortIndex(subTaskId: String, sortIndex: Long, updatedAt: Long)
+
+    // One gesture, one write — see updateSortIndices for why this has to be transactional.
+    @Transaction
+    suspend fun updateSubTaskSortIndices(indices: Map<String, Long>, updatedAt: Long) {
+        indices.forEach { (id, index) -> setSubTaskSortIndex(id, index, updatedAt) }
+    }
 
     @Upsert
     suspend fun upsertSubTaskInterval(interval: SubTaskIntervalEntity)

@@ -40,4 +40,7 @@ data class ProjectSubTaskEntity(
     val endDateTimeEpochMs: Long?,
     val isFinished: Boolean,
     val updatedAtEpochMs: Long? = null,
+    // Persisted manual order for drag-to-reorder. Nullable: a row that has never been dragged
+    // keeps NULL and falls back to creation order (see sortedBySubTaskOrder), so no backfill is needed.
+    val sortIndex: Long? = null,
 )

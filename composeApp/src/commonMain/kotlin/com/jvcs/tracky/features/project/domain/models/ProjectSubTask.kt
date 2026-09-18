@@ -26,6 +26,9 @@ data class ProjectSubTask(
     // something to compare. It rolls up into the parent task and on into the project, which is what
     // makes editing a subtask count as modifying its project for the modification-date sort.
     override val ownUpdatedAt: Instant? = null,
+    // Manual order within the parent task. Null until the subtask is first dragged; see
+    // sortedBySubTaskOrder, which sorts nulls last so a new subtask lands at the bottom.
+    val sortIndex: Long? = null,
 ) : Timestamped {
     override val children: List<Timestamped> get() = subTaskIntervals
 }

@@ -31,4 +31,7 @@ data class ProjectTaskEntity(
     val isFinished: Boolean,
     val isTimerRunning: Boolean,
     val updatedAtEpochMs: Long? = null,
+    // Persisted manual order for drag-to-reorder. Nullable: a row that has never been dragged
+    // keeps NULL and falls back to creation order (see sortedByTaskOrder), so no backfill is needed.
+    val sortIndex: Long? = null,
 )

@@ -17,7 +17,10 @@ data class ProjectTask(
     // null means "not loaded" (see TaskWithIntervals.toProjectTask), not "no subtasks" — the same
     // distinction Project.projectTasks draws. Intervals need no such marker: every query that
     // returns a task returns its intervals with it, so an empty list there really is empty.
-    val subTasks: List<ProjectSubTask>? = null
+    val subTasks: List<ProjectSubTask>? = null,
+    // Manual order within the parent project. Null until the task is first dragged; see
+    // sortedByTaskOrder, which sorts nulls last so a new task lands at the bottom of the list.
+    val sortIndex: Long? = null
 ) : Timestamped {
     override val children: List<Timestamped> get() = intervals + subTasks.orEmpty()
 }
