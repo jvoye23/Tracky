@@ -33,6 +33,12 @@ interface SubTaskRepository {
     suspend fun lastStartedSubTaskId(taskId: String): String?
 
     /**
+     * Persists the manual order of one task's subtasks. A subtask only ever reorders among its
+     * siblings — its parent task never changes, so the task id is fixed for the whole gesture.
+     */
+    suspend fun reorderSubTasks(taskId: String, orderedSubTaskIds: List<String>): EmptyResult<DataError>
+
+    /**
      * Drains the queued subtask writes. Runs after the task drain: a subtask has no route until its
      * task exists on the server, so ops whose task is still pending stay queued.
      */

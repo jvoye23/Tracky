@@ -218,7 +218,9 @@ class OfflineFirstSubTaskRepository(
 
         return when (remoteResult) {
             // Server is canonical on the happy path, exactly like projects and tasks.
-            is Result.Success -> localSubTaskDataSource.upsertSubTask(remoteResult.data).asEmptyDataResult()
+            is Result.Success -> localSubTaskDataSource
+                .upsertSubTask(remoteResult.data.withLocalSortIndexFallback(subTask))
+                .asEmptyDataResult()
             is Result.Error -> when {
                 remoteResult.error == DataError.Remote.CONFLICT -> resolveSubTaskConflict(subTask)
                 remoteResult.error.isMissingOrForbidden() || remoteResult.error.isTransient() ->
@@ -252,14 +254,67 @@ class OfflineFirstSubTaskRepository(
         return if (local.ownUpdatedAt != null && (server.ownUpdatedAt == null || local.ownUpdatedAt > server.ownUpdatedAt)) {
             when (val pushed = remoteSubTaskDataSource.updateSubTask(projectId, taskId, local)) {
                 is Result.Success -> {
-                    applicationScope.async { localSubTaskDataSource.upsertSubTask(pushed.data) }.await()
+                    val merged = pushed.data.withLocalSortIndexFallback(local)
+                    applicationScope.async { localSubTaskDataSource.upsertSubTask(merged) }.await()
                     Result.Success(Unit)
                 }
                 is Result.Error -> pushed.asEmptyDataResult()
             }
         } else {
-            applicationScope.async { localSubTaskDataSource.upsertSubTask(server) }.await()
+            // Server wins on freshness, but keep the local sortIndex when the server has none.
+            val merged = server.withLocalSortIndexFallback(local)
+            applicationScope.async { localSubTaskDataSource.upsertSubTask(merged) }.await()
             Result.Success(Unit)
+        }
+    }
+
+    /** See OfflineFirstTaskRepository.withLocalSortIndexFallback — the same guard one level down. */
+    private fun ProjectSubTask.withLocalSortIndexFallback(local: ProjectSubTask): ProjectSubTask =
+        if (sortIndex != null) this else copy(sortIndex = local.sortIndex)
+
+    // REORDER: persist the manual order of one task's subtasks. Same shape as the task-level
+    // reorder — one read of the current indices, one transactional local write, one network call —
+    // scoped to a single parent task, because a subtask only ever moves among its siblings.
+    override suspend fun reorderSubTasks(
+        taskId: String,
+        orderedSubTaskIds: List<String>
+    ): EmptyResult<DataError> {
+        val current = when (val existing = localSubTaskDataSource.getSubTaskSortIndices(taskId)) {
+            is Result.Success -> existing.data
+            is Result.Error -> return existing.asEmptyDataResult()
+        }
+        val changed = buildMap {
+            orderedSubTaskIds.forEachIndexed { index, subTaskId ->
+                val newIndex = index.toLong()
+                if (current.containsKey(subTaskId) && current[subTaskId] != newIndex) {
+                    put(subTaskId, newIndex)
+                }
+            }
+        }
+        if (changed.isEmpty()) return Result.Success(Unit)
+
+        // One timestamp for both writes, for the same reason the task level takes one.
+        val updatedAt = timeProvider.nowInstant
+        val localResult = localSubTaskDataSource.updateSubTaskSortIndices(changed, updatedAt)
+        if (localResult !is Result.Success) {
+            return localResult.asEmptyDataResult()
+        }
+
+        // No route until the parent task exists server-side; the drain runs tasks first.
+        if (pendingSyncDataSource.hasPendingCreate(taskId).getOrDefault(false)) {
+            return enqueueSubTaskOrderOperation(taskId)
+        }
+        val projectId = parentProjectIdOf(taskId) ?: return enqueueSubTaskOrderOperation(taskId)
+
+        return when (
+            val remoteResult = remoteSubTaskDataSource.reorderSubTasks(projectId, taskId, changed, updatedAt)
+        ) {
+            is Result.Success -> Result.Success(Unit)
+            is Result.Error -> when {
+                remoteResult.error.isMissingOrForbidden() || remoteResult.error.isTransient() ->
+                    enqueueSubTaskOrderOperation(taskId)
+                else -> remoteResult.asEmptyDataResult()
+            }
         }
     }
 
@@ -271,7 +326,10 @@ class OfflineFirstSubTaskRepository(
         val operations = pendingSyncDataSource.getPendingOperations().getOrDefault(emptyList())
         // Drain FIFO so a CREATE is always pushed before a later UPDATE on the same subtask.
         operations
-            .filter { it.entityType == PendingSyncOperation.ENTITY_SUBTASK }
+            .filter {
+                it.entityType == PendingSyncOperation.ENTITY_SUBTASK ||
+                    it.entityType == PendingSyncOperation.ENTITY_SUBTASK_ORDER
+            }
             .forEach { op ->
                 when (runSubTaskOperation(op)) {
                     SyncOutcome.SUCCESS, SyncOutcome.DROP -> pendingSyncDataSource.deleteOperation(op.operationId)
@@ -281,6 +339,9 @@ class OfflineFirstSubTaskRepository(
     }
 
     private suspend fun runSubTaskOperation(op: PendingSyncOperation): SyncOutcome {
+        if (op.entityType == PendingSyncOperation.ENTITY_SUBTASK_ORDER) {
+            return runSubTaskOrderOperation(op)
+        }
         return when (op.operationType) {
             PendingSyncOperation.OP_CREATE, PendingSyncOperation.OP_UPDATE -> {
                 val subTask = when (val r = localSubTaskDataSource.getSubTaskById(op.entityId)) {
@@ -300,7 +361,7 @@ class OfflineFirstSubTaskRepository(
                     remoteSubTaskDataSource.updateSubTask(projectId, taskId, subTask)
                 }
                 result.toSyncOutcome(
-                    onSuccess = { localSubTaskDataSource.upsertSubTask(it) },
+                    onSuccess = { localSubTaskDataSource.upsertSubTask(it.withLocalSortIndexFallback(subTask)) },
                     onConflict = { resolveSubTaskConflict(subTask) }
                 )
             }
@@ -346,6 +407,43 @@ class OfflineFirstSubTaskRepository(
             entityType = PendingSyncOperation.ENTITY_SUBTASK,
             operationType = operationType,
             parentEntityId = parent,
+            createdAt = timeProvider.nowInstant
+        )
+        if (queued is Result.Success) scheduleSync()
+        return queued
+    }
+
+    /**
+     * The queued row is just a marker — see OfflineFirstTaskRepository.runTaskOrderOperation. The
+     * order is rebuilt from current local state, so subtasks deleted meanwhile drop out.
+     */
+    private suspend fun runSubTaskOrderOperation(op: PendingSyncOperation): SyncOutcome {
+        val taskId = op.parentEntityId ?: return SyncOutcome.DROP
+        if (pendingSyncDataSource.hasPendingCreate(taskId).getOrDefault(false)) {
+            return SyncOutcome.RETRY
+        }
+        // A missing task row means the task was deleted and the server cascaded that to its
+        // subtasks, so there is no order left to push.
+        val projectId = parentProjectIdOf(taskId) ?: return SyncOutcome.DROP
+        val indices = when (val r = localSubTaskDataSource.getSubTaskSortIndices(taskId)) {
+            is Result.Success -> r.data.mapNotNull { (id, index) -> index?.let { id to it } }.toMap()
+            is Result.Error -> return SyncOutcome.RETRY
+        }
+        if (indices.isEmpty()) return SyncOutcome.DROP
+        return remoteSubTaskDataSource
+            .reorderSubTasks(projectId, taskId, indices, timeProvider.nowInstant)
+            .toSyncOutcome()
+    }
+
+    /** One queue row per task, so repeat reorders within the same card collapse. */
+    private suspend fun enqueueSubTaskOrderOperation(taskId: String): EmptyResult<DataError> {
+        val queued = pendingSyncDataSource.enqueue(
+            entityId = PendingSyncOperation.subTaskOrderEntityId(taskId),
+            entityType = PendingSyncOperation.ENTITY_SUBTASK_ORDER,
+            operationType = PendingSyncOperation.OP_UPDATE,
+            // No row to re-read the task from at drain time, so the parent is stored even though
+            // this is not a DELETE.
+            parentEntityId = taskId,
             createdAt = timeProvider.nowInstant
         )
         if (queued is Result.Success) scheduleSync()
