@@ -9,6 +9,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -54,6 +55,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontFamily
@@ -80,6 +82,7 @@ import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.add_subtask
 import tracky.composeapp.generated.resources.delete
 import tracky.composeapp.generated.resources.hide_subtasks
+import tracky.composeapp.generated.resources.reorder
 import tracky.composeapp.generated.resources.show_subtasks
 import tracky.composeapp.generated.resources.subtask_progress
 import tracky.composeapp.generated.resources.start_timer
@@ -152,20 +155,59 @@ private fun TimerToggleButton(
 /**
  * The reorder grip shown in place of the timer button in edit mode.
  *
- * Currently decorative — dragging does nothing yet, because subtasks have no persisted order to
- * write back to (ProjectSubTaskEntity has no sortIndex column, unlike ProjectEntity). The
- * description is therefore null: announcing "Reorder" would promise an affordance that is not
- * there. Give it one when the gesture is wired.
+ * The drag starts on the grip itself rather than on a long-press of the row, which is what the grip
+ * affordance promises and what keeps the rest of the card tappable while edit mode is on — a
+ * subtask title still renames, the trash button still deletes.
+ *
+ * [isReorderable] gates both the gesture and the accessibility label: the draft "+ Subtask" row
+ * draws a handle too, and that subtask does not exist yet, so announcing "Reorder" there would
+ * promise an affordance that is not (and cannot be) wired.
+ *
+ * The drawn icon stays 20.dp per the design while the touch target is padded out to [TouchTarget],
+ * because a bare 20.dp Icon is well under the minimum a finger can reliably hit.
  */
 @Composable
-private fun DragHandle(modifier: Modifier = Modifier) {
-    Icon(
-        imageVector = Icons.Default.DragHandle,
-        contentDescription = null,
-        tint = MaterialTheme.colorScheme.outline,
-        modifier = modifier.size(20.dp)
-    )
+private fun DragHandle(
+    modifier: Modifier = Modifier,
+    isReorderable: Boolean = false,
+    onDragStart: () -> Unit = {},
+    onDrag: (dragAmountY: Float) -> Unit = {},
+    onDragEnd: () -> Unit = {},
+    onDragCancel: () -> Unit = {}
+) {
+    Box(
+        modifier = modifier
+            .size(TouchTarget)
+            .then(
+                if (isReorderable) {
+                    Modifier.pointerInput(Unit) {
+                        detectDragGestures(
+                            onDragStart = { onDragStart() },
+                            onDrag = { change, dragAmount ->
+                                // Consumed so the LazyColumn underneath does not scroll with the
+                                // finger while a row is being dragged.
+                                change.consume()
+                                onDrag(dragAmount.y)
+                            },
+                            onDragEnd = { onDragEnd() },
+                            onDragCancel = { onDragCancel() }
+                        )
+                    }
+                } else Modifier
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.DragHandle,
+            contentDescription = if (isReorderable) stringResource(Res.string.reorder) else null,
+            tint = MaterialTheme.colorScheme.outline,
+            modifier = Modifier.size(20.dp)
+        )
+    }
 }
+
+/** Minimum comfortable touch target; the grip is drawn smaller but must be grabbable. */
+private val TouchTarget = 48.dp
 
 /**
  * Inline rename field. Deliberately a [BasicTextField] rather than TrackyTextField: the design
@@ -271,7 +313,14 @@ fun TaskItemCard(
     isAddingSubTask: Boolean = false,
     onAddSubTaskClick: () -> Unit = {},
     onSubTaskTitleClick: (subTaskId: String, currentTitle: String) -> Unit = { _, _ -> },
-    onCommitSubTaskTitle: () -> Unit = {}
+    onCommitSubTaskTitle: () -> Unit = {},
+    // Reorder of this whole card among its siblings, driven from the grip on the task row. Off by
+    // default so every preview and any other caller keeps a purely decorative handle.
+    isReorderable: Boolean = false,
+    onReorderDragStart: () -> Unit = {},
+    onReorderDrag: (dragAmountY: Float) -> Unit = {},
+    onReorderDragEnd: () -> Unit = {},
+    onReorderDragCancel: () -> Unit = {}
 ) {
 
     val isPulsing = task.isTimerRunning || task.subTasks.any { it.isTimerRunning }
@@ -303,7 +352,13 @@ fun TaskItemCard(
                 val contentAlpha = if (task.isFinished) 0.4f else 1f
 
                 if (isEditMode) {
-                    DragHandle()
+                    DragHandle(
+                        isReorderable = isReorderable,
+                        onDragStart = onReorderDragStart,
+                        onDrag = onReorderDrag,
+                        onDragEnd = onReorderDragEnd,
+                        onDragCancel = onReorderDragCancel
+                    )
                 } else {
                     TimerToggleButton(
                         isTimerRunning = task.isTimerRunning,

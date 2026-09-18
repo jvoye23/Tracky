@@ -1,4 +1,4 @@
-package com.jvcs.tracky.features.project.presentation.project_overview.components
+package com.jvcs.tracky.features.project.presentation.util
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -18,15 +18,23 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 
 /**
- * Hand-rolled reorder state for the project [LazyListState]. It tracks the card being dragged, keeps
- * it under the finger via [draggingItemOffset], and asks [onMove] to swap two cards as the dragged
- * one crosses a neighbour. On release the dragged card glides into its final slot via
- * [settlingItemOffset] while every other card animates through `Modifier.animateItem()`.
+ * Hand-rolled reorder state for a [LazyListState]. It tracks the row being dragged, keeps it under
+ * the finger via [draggingItemOffset], and asks [onMove] to swap two rows as the dragged one crosses
+ * a neighbour. On release the dragged row glides into its final slot via [settlingItemOffset] while
+ * every other row animates through `Modifier.animateItem()`.
  *
- * Item keys in the list are project ids ([String]); section headers use non-String keys and are
- * ignored as drag targets. Cross-section moves are rejected by [onMove] (see the screen wiring).
+ * Shared by the project overview (whole-card long-press drags) and the project detail screen (drags
+ * from the edit-mode grip), so it deliberately knows nothing about either list's contents.
+ *
+ * Drag targets are identified by their item key, which must be a [String] — anything keyed
+ * otherwise (the overview's section headers, the detail screen's header and info items) is ignored,
+ * which is what keeps a drag inside the list it started in. Any further restriction, such as the
+ * overview rejecting cross-section moves, belongs in [onMove].
+ *
+ * This only works inside a lazy layout, where `layoutInfo` reports every row's position. Subtask
+ * rows live in a plain Column and use SubTaskDragDropState instead.
  */
-class ProjectDragDropState internal constructor(
+class ReorderableListState internal constructor(
     private val lazyListState: LazyListState,
     private val scope: CoroutineScope,
     private val onMove: (fromKey: String, toKey: String) -> Unit
@@ -34,7 +42,7 @@ class ProjectDragDropState internal constructor(
     var draggingItemKey by mutableStateOf<String?>(null)
         private set
 
-    /** The card animating back into its slot right after release (null when nothing is settling). */
+    /** The row animating back into its slot right after release (null when nothing is settling). */
     var settlingItemKey by mutableStateOf<String?>(null)
         private set
 
@@ -61,13 +69,13 @@ class ProjectDragDropState internal constructor(
         get() = lazyListState.layoutInfo.visibleItemsInfo
             .firstOrNull { it.key == draggingItemKey }
 
-    /** Vertical translation that keeps the dragged card pinned under the finger. */
+    /** Vertical translation that keeps the dragged row pinned under the finger. */
     val draggingItemOffset: Float
         get() = draggingItemLayoutInfo?.let { item ->
             (draggingItemInitialOffset + draggingItemDraggedDelta) - item.offset
         } ?: 0f
 
-    /** Vertical translation of the card gliding into place after release. */
+    /** Vertical translation of the row gliding into place after release. */
     val settlingItemOffset: Float
         get() = settleOffset.value
 
@@ -99,7 +107,7 @@ class ProjectDragDropState internal constructor(
             onMove(draggingKey, target.key as String)
         }
 
-        // Auto-scroll when the dragged card is pushed past a viewport edge.
+        // Auto-scroll when the dragged row is pushed past a viewport edge.
         val viewport = lazyListState.layoutInfo
         val overscroll = when {
             draggingItemDraggedDelta > 0 -> (endOffset - viewport.viewportEndOffset).coerceAtLeast(0f)
@@ -139,15 +147,15 @@ class ProjectDragDropState internal constructor(
 }
 
 @Composable
-fun rememberProjectDragDropState(
+fun rememberReorderableListState(
     lazyListState: LazyListState,
     onMove: (fromKey: String, toKey: String) -> Unit
-): ProjectDragDropState {
+): ReorderableListState {
     val scope = rememberCoroutineScope()
     // The state outlives the lambda: onMove is recreated on every recomposition (it closes over the
     // screen's onAction), so route through the latest one instead of capturing the first.
     val currentOnMove by rememberUpdatedState(onMove)
     return remember(lazyListState) {
-        ProjectDragDropState(lazyListState, scope) { fromKey, toKey -> currentOnMove(fromKey, toKey) }
+        ReorderableListState(lazyListState, scope) { fromKey, toKey -> currentOnMove(fromKey, toKey) }
     }
 }

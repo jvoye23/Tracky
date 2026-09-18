@@ -179,6 +179,8 @@
     <string name="error_pinning_projects">Failed to pin all selected projects.</string>
     <string name="error_add_to_trash">Failed to add all selected projects to trash bin.</string>
     <string name="error_reordering_projects">Failed to save the new project order.</string>
+    <string name="error_reordering_tasks">Failed to save the new order.</string>
+    <string name="reorder">Reorder</string>
 
     <!-- Color Picker -->
     <string name="select_color">Select Color</string>
