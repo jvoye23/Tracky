@@ -3,6 +3,8 @@
 package com.jvcs.tracky.features.project_tracker.presentation.project_detail
 
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import app.cash.turbine.test
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
@@ -794,6 +796,57 @@ class ProjectDetailViewModelTest {
     }
 
     @Test
+    fun `saving after a task reorder leaves the project row alone`() = runTest {
+        // Edit mode is where tasks are dragged, so Save follows every reorder. Rewriting the project
+        // then used to null its sortIndex and move it to the top of the overview's Custom order.
+        val projectRepository = FakeDetailProjectRepository(projectWithTasks("a", "b").copy(sortIndex = 3))
+        val (vm, _) = viewModel(projectWithTasks("a", "b"), projectRepository = projectRepository)
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+
+            vm.onAction(ProjectDetailAction.OnEditModeClick)
+            vm.onAction(ProjectDetailAction.OnTaskReorderMove(fromTaskId = "b", toTaskId = "a"))
+            vm.onAction(ProjectDetailAction.OnTaskReorderCommit)
+            settle()
+            vm.onAction(ProjectDetailAction.OnSaveClick)
+            settle()
+
+            assertTrue(projectRepository.upserted.isEmpty(), "nothing on the project changed")
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `saving a colour change keeps the project's place in the manual order`() = runTest {
+        val stored = projectWithTasks("a").copy(
+            sortIndex = 3,
+            isPinned = true,
+            startDateTimeUtc = Instant.parse("2026-09-18T10:12:03.145Z")
+        )
+        val projectRepository = FakeDetailProjectRepository(stored)
+        val (vm, _) = viewModel(stored, projectRepository = projectRepository)
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+
+            vm.onAction(ProjectDetailAction.OnEditModeClick)
+            vm.onAction(ProjectDetailAction.OnColorChanged(Color.Red))
+            // Save reads the combined state, which a tap only reaches once it has been folded in.
+            settle()
+            vm.onAction(ProjectDetailAction.OnSaveClick)
+            settle()
+
+            val saved = projectRepository.upserted.single()
+            assertEquals(Color.Red.toArgb(), saved.colorArgb)
+            assertEquals(3L, saved.sortIndex)
+            assertTrue(saved.isPinned)
+            assertEquals(stored.startDateTimeUtc, saved.startDateTimeUtc, "not truncated to the day")
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
     fun `a failed commit rolls the list back and reports it`() = runTest {
         val taskRepository = FakeProjectTaskRepository()
         taskRepository.reorderFailWith = DataError.Local.DISK_FULL
@@ -955,7 +1008,11 @@ private class FakeDetailProjectRepository(project: Project) : ProjectRepository 
     override suspend fun fetchProjects(): EmptyResult<DataError> = Result.Success(Unit)
     override suspend fun reorderProjects(orderedProjectIds: List<String>): EmptyResult<DataError> = Result.Success(Unit)
     override suspend fun setProjectsPinned(projectIds: List<String>, isPinned: Boolean): EmptyResult<DataError> = Result.Success(Unit)
-    override suspend fun upsertProject(project: Project): EmptyResult<DataError> = Result.Success(Unit)
+    val upserted = mutableListOf<Project>()
+    override suspend fun upsertProject(project: Project): EmptyResult<DataError> {
+        upserted += project
+        return Result.Success(Unit)
+    }
     override suspend fun setProjectArchived(projectId: String, isArchived: Boolean): EmptyResult<DataError> = Result.Success(Unit)
     override suspend fun setProjectTrashed(projectId: String, trashedAt: Instant?): EmptyResult<DataError> = Result.Success(Unit)
     override suspend fun purgeExpiredTrashedProjects(cutoff: Instant): EmptyResult<DataError> = Result.Success(Unit)

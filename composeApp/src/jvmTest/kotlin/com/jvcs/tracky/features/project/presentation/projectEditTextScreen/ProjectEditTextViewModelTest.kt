@@ -102,6 +102,25 @@ class ProjectEditTextViewModelTest {
         assertEquals(false, handle.get<Boolean>(ProjectEditTextViewModel.KEY_IS_EDIT_MODE))
     }
 
+    @Test
+    fun `saving a rename keeps the project's place in the manual order`() = runTest {
+        // Rebuilding the project from its UI model dropped sortIndex, and a null index sorts first
+        // under Custom: a rename moved the project to the top of the overview.
+        val stored = project().copy(sortIndex = 3, isPinned = true)
+        val repository = FakeEditTextProjectRepository(stored)
+        val vm = viewModel(projectRepository = repository)
+
+        vm.onAction(ProjectEditTextAction.OnEditClick)
+        vm.state.value.titleState.setTextAndPlaceCursorAtEnd("Renamed")
+        vm.onAction(ProjectEditTextAction.OnSaveClick)
+        advanceUntilIdle()
+
+        val saved = repository.upserted.single()
+        assertEquals("Renamed", saved.title)
+        assertEquals(3L, saved.sortIndex)
+        assertTrue(saved.isPinned)
+    }
+
     // --- helpers -------------------------------------------------------------------------------
 
     /**
@@ -112,12 +131,13 @@ class ProjectEditTextViewModelTest {
     private fun TestScope.viewModel(
         savedStateHandle: SavedStateHandle = SavedStateHandle(),
         project: Project = project(),
-        isEditMode: Boolean = false
+        isEditMode: Boolean = false,
+        projectRepository: FakeEditTextProjectRepository = FakeEditTextProjectRepository(project)
     ): ProjectEditTextViewModel {
         val vm = ProjectEditTextViewModel(
             isEditMode = isEditMode,
             projectId = PROJECT_ID,
-            projectRepository = FakeEditTextProjectRepository(project),
+            projectRepository = projectRepository,
             savedStateHandle = savedStateHandle
         )
         backgroundScope.launch { vm.state.collect { } }

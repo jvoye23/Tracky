@@ -10,7 +10,6 @@ import androidx.lifecycle.viewModelScope
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.design_system.util.UiText
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
-import com.jvcs.tracky.features.project.presentation.mappers.toProject
 import com.jvcs.tracky.features.project.presentation.mappers.toProjectUi
 import com.jvcs.tracky.features.project.presentation.util.toUiText
 import kotlinx.coroutines.channels.Channel
@@ -151,12 +150,14 @@ class ProjectEditTextViewModel(
                 eventChannel.send(ProjectEditTextEvent.Error(UiText.Resource(Res.string.project_title_cannot_be_blank)))
                 return@launch
             }
-            val editedProject = _state.value.project?.copy(
+            // Start from the stored row, not the UI model: the UI model carries no sortIndex, and
+            // saving it back would move the project to the top of the Custom order.
+            val editedProject = projectRepository.getProjectById(projectId)?.copy(
                 title = title,
                 description = description,
             ) ?: return@launch
 
-            when (val result = projectRepository.upsertProject(editedProject.toProject())) {
+            when (val result = projectRepository.upsertProject(editedProject)) {
                 is Result.Error -> eventChannel.send(ProjectEditTextEvent.Error(result.error.toUiText()))
                 is Result.Success -> {
                     // Only leave edit mode once the save actually landed, so a blank title or a
