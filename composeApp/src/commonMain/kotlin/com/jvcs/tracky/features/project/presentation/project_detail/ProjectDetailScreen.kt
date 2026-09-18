@@ -52,6 +52,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -68,6 +69,7 @@ import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.jvcs.tracky.features.project.presentation.edit_text.EditTextTarget
 import com.jvcs.tracky.features.project.presentation.models.PerDayStripUi
 import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
 import com.jvcs.tracky.features.project.presentation.models.ProjectUi
@@ -108,7 +110,13 @@ private const val OPEN_ON_TODAY = -1L
 @Composable
 fun ProjectDetailScreenRoot(
     navigateBack: () -> Unit,
-    onEditTextClick: (isEditMode: Boolean, projectId: String) -> Unit,
+    onEditTextClick: (
+        isEditMode: Boolean,
+        projectId: String,
+        target: EditTextTarget,
+        taskId: String?,
+        subTaskId: String?
+    ) -> Unit,
     onProjectTaskClick: (String) -> Unit,
     onDailyOverviewClick: (epochDay: Long) -> Unit,
     viewModel: ProjectDetailViewModel = koinViewModel ()
@@ -117,6 +125,12 @@ fun ProjectDetailScreenRoot(
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+
+    // Runs on every (re-)entry into composition. Nav3 drops this entry from composition while
+    // another screen sits on top of it, so coming back from the edit-text screen lands here again.
+    LaunchedEffect(Unit) {
+        viewModel.onAction(ProjectDetailAction.OnReturnedToScreen)
+    }
 
     ObserveAsEvents(viewModel.events) { event ->
         when(event) {
@@ -156,8 +170,28 @@ fun ProjectDetailScreenRoot(
                 is ProjectDetailAction.OnProjectEditTextClick ->
                     onEditTextClick(
                         action.isEditMode,
-                        action.projectId
+                        action.projectId,
+                        EditTextTarget.PROJECT,
+                        null,
+                        null
                     )
+                // The three task-level taps below only exist in edit mode, so the editor opens
+                // straight into editing.
+                is ProjectDetailAction.OnTaskTitleClick -> state.project?.let {
+                    onEditTextClick(true, it.projectId, EditTextTarget.TASK, action.taskId, null)
+                }
+                is ProjectDetailAction.OnSubTaskClick -> state.project?.let {
+                    onEditTextClick(
+                        true,
+                        it.projectId,
+                        EditTextTarget.SUBTASK,
+                        action.taskId,
+                        action.subTaskId
+                    )
+                }
+                is ProjectDetailAction.OnAddSubTaskClick -> state.project?.let {
+                    onEditTextClick(true, it.projectId, EditTextTarget.NEW_SUBTASK, action.taskId, null)
+                }
                 is ProjectDetailAction.OnProjectSessionCardClick -> onProjectTaskClick(action.projectSessionId)
                 else -> Unit
             }
@@ -409,17 +443,14 @@ fun ProjectDetailScreen(
                         onToggleExpanded = {
                             onAction(ProjectDetailAction.OnToggleTaskExpanded(session.projectTaskId))
                         },
-                        editingSubTaskId = state.editingSubTaskId,
-                        editSubTaskTextFieldState = state.editSubTaskTextFieldState,
-                        isAddingSubTask = state.pendingSubTaskParentTaskId == session.projectTaskId,
+                        onTaskTitleClick = {
+                            onAction(ProjectDetailAction.OnTaskTitleClick(session.projectTaskId))
+                        },
                         onAddSubTaskClick = {
                             onAction(ProjectDetailAction.OnAddSubTaskClick(session.projectTaskId))
                         },
-                        onSubTaskTitleClick = { subTaskId, currentTitle ->
-                            onAction(ProjectDetailAction.OnSubTaskTitleClick(subTaskId, currentTitle))
-                        },
-                        onCommitSubTaskTitle = {
-                            onAction(ProjectDetailAction.OnCommitSubTaskTitle)
+                        onSubTaskClick = { subTaskId ->
+                            onAction(ProjectDetailAction.OnSubTaskClick(session.projectTaskId, subTaskId))
                         },
                         isReorderable = reorderEnabled,
                         onReorderDragStart = { dragDropState.onDragStart(session.projectTaskId) },

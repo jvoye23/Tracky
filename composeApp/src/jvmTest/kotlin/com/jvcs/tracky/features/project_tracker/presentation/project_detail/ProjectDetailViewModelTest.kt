@@ -2,7 +2,6 @@
 
 package com.jvcs.tracky.features.project_tracker.presentation.project_detail
 
-import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import app.cash.turbine.test
@@ -340,46 +339,6 @@ class ProjectDetailViewModelTest {
     }
 
     @Test
-    fun `adding a subtask writes nothing until a title is committed`() = runTest {
-        val (vm, repo) = viewModel(project())
-        vm.state.test {
-            awaitItem()
-            advanceUntilIdle()
-
-            vm.onAction(ProjectDetailAction.OnAddSubTaskClick(TASK_ID))
-            advanceUntilIdle()
-            // The server rejects a blank title, so the draft must not reach the repository.
-            assertTrue(repo.upserted.isEmpty())
-            assertEquals(TASK_ID, vm.state.value.pendingSubTaskParentTaskId)
-
-            vm.state.value.editSubTaskTextFieldState.edit { replace(0, length, "Written down") }
-            vm.onAction(ProjectDetailAction.OnCommitSubTaskTitle)
-            advanceUntilIdle()
-
-            assertEquals(listOf("Written down"), repo.upserted.map { it.title })
-            assertNull(vm.state.value.pendingSubTaskParentTaskId)
-            cancelAndIgnoreRemainingEvents()
-        }
-    }
-
-    @Test
-    fun `abandoning an empty draft writes nothing`() = runTest {
-        val (vm, repo) = viewModel(project())
-        vm.state.test {
-            awaitItem()
-            advanceUntilIdle()
-
-            vm.onAction(ProjectDetailAction.OnAddSubTaskClick(TASK_ID))
-            vm.onAction(ProjectDetailAction.OnCommitSubTaskTitle)
-            advanceUntilIdle()
-
-            assertTrue(repo.upserted.isEmpty())
-            assertNull(vm.state.value.pendingSubTaskParentTaskId)
-            cancelAndIgnoreRemainingEvents()
-        }
-    }
-
-    @Test
     fun `checking a subtask marks it finished in state without a reload`() = runTest {
         // The screen loads its project once, so the flip has to land in state itself or the card
         // keeps rendering the stale row until the user leaves and comes back.
@@ -668,31 +627,78 @@ class ProjectDetailViewModelTest {
     }
 
     @Test
-    fun `adding a subtask un-finishes a finished parent task`() = runTest {
-        // The other escape route named by the dialog.
+    fun `a subtask created elsewhere un-finishes a finished parent on return`() = runTest {
+        // The other escape route named by the dialog, now taken on the edit-text screen.
         val done = subTask("s1", isFinished = true)
         val proj = project(done, taskFinished = true)
         val taskRepo = FakeProjectTaskRepository(proj.projectTasks!!.first())
+        val projectRepo = FakeDetailProjectRepository(proj)
         val (vm, _) = viewModel(
             proj,
             FakeSubTaskRepository(listOf(done)),
-            taskRepository = taskRepo
+            taskRepository = taskRepo,
+            projectRepository = projectRepo
         )
         vm.state.test {
             awaitItem()
             advanceUntilIdle()
-
-            vm.onAction(ProjectDetailAction.OnAddSubTaskClick(TASK_ID))
-            // beginAddSubTask swaps in a fresh TextFieldState, and state only republishes it once
-            // the scheduler runs — typing before this would fill the discarded buffer.
+            vm.onAction(ProjectDetailAction.OnReturnedToScreen) // initial composition
             advanceUntilIdle()
-            vm.state.value.editSubTaskTextFieldState.setTextAndPlaceCursorAtEnd("Follow-up")
-            vm.onAction(ProjectDetailAction.OnCommitSubTaskTitle)
+
+            projectRepo.emit(project(done, subTask("s2"), taskFinished = true))
+            vm.onAction(ProjectDetailAction.OnReturnedToScreen)
             advanceUntilIdle()
 
             assertEquals(2, vm.task()!!.subTasks.size)
             assertFalse(vm.task()!!.isFinished, "a new open subtask re-opens its parent")
             assertFalse(taskRepo.upserted.last().isFinished)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `returning to the screen picks up edited tasks but keeps an unsaved colour`() = runTest {
+        val proj = project(subTask("s1"))
+        val projectRepo = FakeDetailProjectRepository(proj)
+        val (vm, _) = viewModel(proj, projectRepository = projectRepo)
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+            vm.onAction(ProjectDetailAction.OnReturnedToScreen) // initial composition
+            advanceUntilIdle()
+
+            vm.onAction(ProjectDetailAction.OnEditModeClick)
+            vm.onAction(ProjectDetailAction.OnColorChanged(Color.Red))
+            advanceUntilIdle()
+
+            val edited = project(subTask("s1").copy(title = "renamed subtask"))
+            projectRepo.emit(
+                edited.copy(projectTasks = edited.projectTasks!!.map { it.copy(title = "renamed task") })
+            )
+            vm.onAction(ProjectDetailAction.OnReturnedToScreen)
+            advanceUntilIdle()
+
+            assertEquals("renamed task", vm.task()!!.title)
+            assertEquals("renamed subtask", vm.task()!!.subTasks.single().title)
+            assertEquals(Color.Red, vm.state.value.projectColor, "an unsaved colour pick survives")
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `the first return is the initial composition and reads nothing again`() = runTest {
+        val proj = project(subTask("s1"))
+        val projectRepo = FakeDetailProjectRepository(proj)
+        val (vm, _) = viewModel(proj, projectRepository = projectRepo)
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+
+            projectRepo.emit(project(subTask("s1"), subTask("s2")))
+            vm.onAction(ProjectDetailAction.OnReturnedToScreen)
+            advanceUntilIdle()
+
+            assertEquals(listOf("s1"), vm.subTaskIds())
             cancelAndIgnoreRemainingEvents()
         }
     }

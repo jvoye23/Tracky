@@ -56,9 +56,16 @@ sealed interface ProjectDetailAction {
     data class OnSubTaskReorderCommit(val taskId: String): ProjectDetailAction
     data object OnSubTaskReorderCancel: ProjectDetailAction
 
+    // Edit-mode taps that open the edit-text screen; handled in the Root, which owns navigation.
+    data class OnTaskTitleClick(val taskId: String): ProjectDetailAction
+    data class OnSubTaskClick(val taskId: String, val subTaskId: String): ProjectDetailAction
     data class OnAddSubTaskClick(val taskId: String): ProjectDetailAction
-    data class OnSubTaskTitleClick(val subTaskId: String, val currentTitle: String): ProjectDetailAction
-    data object OnCommitSubTaskTitle: ProjectDetailAction
+
+    /**
+     * The screen is showing again, after the edit-text screen (or any other) was popped off it.
+     * That screen writes straight to the database, so the task tree is re-read.
+     */
+    data object OnReturnedToScreen: ProjectDetailAction
     data object OnToggleColorPicker: ProjectDetailAction
     data class OnColorChanged(val color: Color): ProjectDetailAction
     data class OnUseLightTextColorToggled(val useLightTextColor: Boolean): ProjectDetailAction
