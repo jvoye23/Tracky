@@ -217,6 +217,7 @@ internal class TimerNotificationCoordinatorTest {
             Result.Success(Unit).also { startedTaskIds += taskId }
         override suspend fun stopProjectTask(taskId: String): EmptyResult<DataError> =
             Result.Success(Unit).also { stoppedTaskIds += taskId }
+        override suspend fun reorderTasks(projectId: String, orderedTaskIds: List<String>) = Result.Success(Unit)
         override suspend fun upsertProjectTask(projectTask: ProjectTask) = Result.Success(Unit)
         override suspend fun deleteProjectTask(projectId: String, taskId: String) = Result.Success(Unit)
         override suspend fun updateProjectTaskDuration(taskId: String, newDurationMillis: Long) = Result.Success(Unit)

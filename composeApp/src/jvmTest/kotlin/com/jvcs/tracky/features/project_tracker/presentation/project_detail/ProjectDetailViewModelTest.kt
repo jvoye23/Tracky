@@ -743,6 +743,11 @@ private class FakeProjectTaskRepository(
         return Result.Success(Unit)
     }
 
+    override suspend fun reorderTasks(
+        projectId: String,
+        orderedTaskIds: List<String>
+    ): EmptyResult<DataError> = Result.Success(Unit)
+
     override suspend fun upsertProjectTask(projectTask: ProjectTask): EmptyResult<DataError> {
         upserted += projectTask
         task.value = projectTask

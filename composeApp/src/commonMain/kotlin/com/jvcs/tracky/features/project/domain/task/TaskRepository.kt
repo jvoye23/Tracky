@@ -16,6 +16,13 @@ interface ProjectTaskRepository {
     suspend fun stopProjectTask(taskId: String): EmptyResult<DataError>
 
     /**
+     * Persists the manual order of one project's tasks. [orderedTaskIds] is the settled order of
+     * the whole list; each task's sortIndex becomes its position in it. One local transaction and
+     * one request per gesture, never one write per moved task.
+     */
+    suspend fun reorderTasks(projectId: String, orderedTaskIds: List<String>): EmptyResult<DataError>
+
+    /**
      * Drains the queued task writes. Runs after the project drain: a task has no route until its
      * project exists on the server, so ops whose project is still pending stay queued.
      */
