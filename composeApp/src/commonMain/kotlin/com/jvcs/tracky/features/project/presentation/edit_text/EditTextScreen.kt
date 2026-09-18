@@ -38,13 +38,21 @@ import com.jvcs.tracky.design_system.util.UiText
 import com.jvcs.tracky.features.project.presentation.project_detail.components.ProjectSubDetailTopAppBar
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.description
 import tracky.composeapp.generated.resources.edit_project_uppercase
+import tracky.composeapp.generated.resources.edit_subtask_uppercase
+import tracky.composeapp.generated.resources.edit_task_uppercase
+import tracky.composeapp.generated.resources.new_subtask_uppercase
 import tracky.composeapp.generated.resources.project_details_uppercase
 import tracky.composeapp.generated.resources.project_info_saved
+import tracky.composeapp.generated.resources.subtask_details_uppercase
+import tracky.composeapp.generated.resources.subtask_info_saved
+import tracky.composeapp.generated.resources.task_details_uppercase
+import tracky.composeapp.generated.resources.task_info_saved
 import tracky.composeapp.generated.resources.title
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -72,11 +80,12 @@ fun EditTextScreenRoot(
             is EditTextEvent.OnSavedSuccess -> {
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar(
-                        message = UiText.Resource(Res.string.project_info_saved).asStringAsync(),
+                        message = UiText.Resource(state.target.savedMessage()).asStringAsync(),
                         duration = SnackbarDuration.Short
                     )
                 }
             }
+            is EditTextEvent.NavigateBack -> onNavigateBack()
         }
     }
 
@@ -116,8 +125,7 @@ private fun EditTextScreen(
                 onNavigateBack = onNavigateBack,
                 onEditClick = { onAction(EditTextAction.OnEditClick) },
                 onSaveClick = { onAction(EditTextAction.OnSaveClick) },
-                title = if (state.isEditMode) stringResource(Res.string.edit_project_uppercase)
-                else stringResource(Res.string.project_details_uppercase),
+                title = stringResource(state.target.topBarTitle(state.isEditMode)),
                 // A project without a colour of its own falls back to the theme accent.
                 projectColor = state.projectColor ?: MaterialTheme.colorScheme.primary
             )
@@ -173,6 +181,23 @@ private fun EditTextScreen(
     }
 }
 
+private fun EditTextTarget.topBarTitle(isEditMode: Boolean): StringResource = when (this) {
+    EditTextTarget.PROJECT ->
+        if (isEditMode) Res.string.edit_project_uppercase else Res.string.project_details_uppercase
+    EditTextTarget.TASK ->
+        if (isEditMode) Res.string.edit_task_uppercase else Res.string.task_details_uppercase
+    EditTextTarget.SUBTASK ->
+        if (isEditMode) Res.string.edit_subtask_uppercase else Res.string.subtask_details_uppercase
+    EditTextTarget.NEW_SUBTASK -> Res.string.new_subtask_uppercase
+}
+
+private fun EditTextTarget.savedMessage(): StringResource = when (this) {
+    EditTextTarget.PROJECT -> Res.string.project_info_saved
+    EditTextTarget.TASK -> Res.string.task_info_saved
+    EditTextTarget.SUBTASK,
+    EditTextTarget.NEW_SUBTASK -> Res.string.subtask_info_saved
+}
+
 private const val PREVIEW_TITLE = "Tracky Redesign"
 private const val PREVIEW_DESCRIPTION =
     "Rework the project detail screen so title and description share one continuous document. " +
@@ -185,8 +210,10 @@ private fun previewState(
     title: String = PREVIEW_TITLE,
     description: String = PREVIEW_DESCRIPTION,
     isEditMode: Boolean = false,
-    projectColor: Color? = previewProjectColor
+    projectColor: Color? = previewProjectColor,
+    target: EditTextTarget = EditTextTarget.PROJECT
 ) = EditTextState(
+    target = target,
     titleState = rememberTextFieldState(title),
     descriptionState = rememberTextFieldState(description),
     isEditMode = isEditMode,
@@ -283,6 +310,27 @@ private fun EditTextScreenDefaultColorPreview() {
 private fun EditTextScreenLargeFontPreview() {
     EditTextScreenPreviewContainer(
         state = previewState(isEditMode = false)
+    )
+}
+
+@Preview(name = "Task · Edit mode", device = Devices.PIXEL_9_PRO)
+@Composable
+private fun EditTextScreenTaskPreview() {
+    EditTextScreenPreviewContainer(
+        state = previewState(isEditMode = true, target = EditTextTarget.TASK)
+    )
+}
+
+@Preview(name = "New subtask", device = Devices.PIXEL_9_PRO)
+@Composable
+private fun EditTextScreenNewSubTaskPreview() {
+    EditTextScreenPreviewContainer(
+        state = previewState(
+            title = "",
+            description = "",
+            isEditMode = true,
+            target = EditTextTarget.NEW_SUBTASK
+        )
     )
 }
 

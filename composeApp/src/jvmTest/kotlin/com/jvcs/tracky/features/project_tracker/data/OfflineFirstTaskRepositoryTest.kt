@@ -271,6 +271,22 @@ internal class OfflineFirstTaskRepositoryTest {
     }
 
     @Test
+    fun updateProjectTaskText_keepsTheStoredRowAndReachesTheServer() = runBlocking<Unit> {
+        val f = fixture()
+        f.taskRepository.upsertProjectTask(task("t1").copy(sortIndex = 4))
+        f.remoteTask.updatedTaskIds.clear()
+
+        f.taskRepository.updateProjectTaskText("t1", "renamed", "described")
+
+        val stored = f.db.tasks.getValue("t1")
+        assertEquals("renamed", stored.title)
+        assertEquals("described", stored.description)
+        // Started from the stored row, so the task keeps its place in the manual order.
+        assertEquals(4L, stored.sortIndex)
+        assertEquals(listOf("t1"), f.remoteTask.updatedTaskIds)
+    }
+
+    @Test
     fun stopProjectTask_pushesTheIntervalAndTheTask() = runBlocking<Unit> {
         val f = fixture()
         f.taskRepository.upsertProjectTask(task("t1"))

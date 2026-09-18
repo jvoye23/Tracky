@@ -1,6 +1,7 @@
 package com.jvcs.tracky.navigation
 
 import androidx.navigation3.runtime.NavKey
+import com.jvcs.tracky.features.project.presentation.edit_text.EditTextTarget
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -73,7 +74,14 @@ sealed interface Route : NavKey {
         @SerialName("edit_text")
         data class EditTextNavKey(
             val isEditMode: Boolean,
-            val projectId: String? = null
+            val projectId: String? = null,
+            // Every field below defaults, so a back stack saved before they existed still decodes
+            // - as the project editor it was.
+            val target: EditTextTarget = EditTextTarget.PROJECT,
+            // The task being edited for TASK; the parent task for SUBTASK and NEW_SUBTASK.
+            val taskId: String? = null,
+            // Only for SUBTASK.
+            val subTaskId: String? = null
         ) : Route, NavKey
 
         @Serializable

@@ -230,7 +230,7 @@ fun NavigationRoot(
             }
             entry<Route.ProjectRoute.EditTextNavKey> { key ->
                 val editTextVm: EditTextViewModel = koinViewModel {
-                    parametersOf(key.isEditMode, key.projectId)
+                    parametersOf(key.isEditMode, key.projectId, key.target, key.taskId, key.subTaskId)
                 }
                 EditTextScreenRoot(
                     onNavigateBack = {
