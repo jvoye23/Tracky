@@ -6,8 +6,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.MaterialTheme
@@ -134,7 +138,10 @@ private fun EditTextScreen(
         Column(
             modifier = Modifier
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp)
+                // The Scaffold only insets the status bar. The description stretches to the bottom,
+                // so keep it clear of the navigation bar and, while typing, of the keyboard.
+                .windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars))
+                .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.surface),
             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -158,8 +165,12 @@ private fun EditTextScreen(
             TrackyTextField(
                 state = state.descriptionState,
                 label = stringResource(Res.string.description),
+                // Fills everything below the title, even when empty, so the whole area is the
+                // writing surface.
                 modifier = Modifier
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .weight(1f),
+                fillHeight = true,
                 labelStyle = MaterialTheme.typography.projectLabelStyle,
                 elevatedLabelStyle = MaterialTheme.typography.projectElevatedLabelStyle,
                 textStyle = MaterialTheme.typography.bodyMedium,

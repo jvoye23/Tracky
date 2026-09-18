@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -89,6 +91,9 @@ fun TrackyTextField(
     elevatedLabelStyle: TextStyle = TextStyle.Default,
     textStyle: TextStyle = TextStyle.Default,
     lineLimits: TextFieldLineLimits = TextFieldLineLimits.SingleLine,
+    // Stretches the field to the height the caller gives it (e.g. Modifier.weight(1f)), with the
+    // text starting at the top. The whole area is then the tap target, and long text scrolls inside.
+    fillHeight: Boolean = false,
     enabled: Boolean = true,
     showLabel: Boolean = true,
     borderDefaultColor: Color = MaterialTheme.colorScheme.outlineVariant,
@@ -158,6 +163,7 @@ fun TrackyTextField(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .then(if (fillHeight) Modifier.weight(1f) else Modifier)
                 .heightIn(min = 56.dp)
                 .clip(RoundedCornerShape(12.dp))
                 .background(backgroundColor)
@@ -169,8 +175,10 @@ fun TrackyTextField(
                 .padding(horizontal = 16.dp),
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(if (fillHeight) Modifier.fillMaxHeight() else Modifier),
+                verticalAlignment = if (fillHeight) Alignment.Top else Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 if (leadingIcon != null) {
@@ -185,6 +193,7 @@ fun TrackyTextField(
                 Column(
                     modifier = Modifier
                         .weight(1f)
+                        .then(if (fillHeight) Modifier.fillMaxHeight() else Modifier)
                         .padding(vertical = 8.dp),
                 ) {
                     if (elevated && showLabel) {
@@ -196,7 +205,10 @@ fun TrackyTextField(
                         Spacer(Modifier.height(LabelToTextSpacing))
                     }
 
-                    Box(contentAlignment = Alignment.CenterStart) {
+                    Box(
+                        modifier = if (fillHeight) Modifier.weight(1f) else Modifier,
+                        contentAlignment = if (fillHeight) Alignment.TopStart else Alignment.CenterStart
+                    ) {
                         if (!elevated && showLabel) {
                             Text(
                                 text = label,
@@ -206,7 +218,8 @@ fun TrackyTextField(
                         }
 
                         CompositionLocalProvider(LocalTextSelectionColors provides selectionColors) {
-                            val fieldModifier = Modifier.fillMaxWidth()
+                            val fieldModifier =
+                                if (fillHeight) Modifier.fillMaxSize() else Modifier.fillMaxWidth()
                             if (isPassword) {
                                 BasicSecureTextField(
                                     state = state,
@@ -610,5 +623,29 @@ private fun TrackyTextFieldCompactPreview() {
             textStyle = MaterialTheme.typography.headlineLarge,
             modifier = Modifier.fillMaxWidth(),
         )
+    }
+}
+
+// fillHeight inside a fixed-height column: the empty field stretches to the bottom, label at the top.
+@Preview(name = "Fill height · Empty", widthDp = 360, heightDp = 320)
+@Composable
+private fun TrackyTextFieldFillHeightPreview() {
+    TrackyTheme {
+        Surface(color = MaterialTheme.colorScheme.surface) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                TrackyTextField(
+                    state = rememberTextFieldState(),
+                    label = "Description",
+                    labelStyle = MaterialTheme.typography.projectLabelStyle,
+                    elevatedLabelStyle = MaterialTheme.typography.projectElevatedLabelStyle,
+                    textStyle = MaterialTheme.typography.bodyMedium,
+                    lineLimits = TextFieldLineLimits.Default,
+                    fillHeight = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                )
+            }
+        }
     }
 }
