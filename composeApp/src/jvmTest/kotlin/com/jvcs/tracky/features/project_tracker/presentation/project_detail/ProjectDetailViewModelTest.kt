@@ -824,5 +824,10 @@ private class FakeSubTaskRepository(
 
     override suspend fun lastStartedSubTaskId(taskId: String): String? = lastStarted
 
+    override suspend fun reorderSubTasks(
+        taskId: String,
+        orderedSubTaskIds: List<String>
+    ): EmptyResult<DataError> = Result.Success(Unit)
+
     override suspend fun syncPendingSubTasks() = Unit
 }
