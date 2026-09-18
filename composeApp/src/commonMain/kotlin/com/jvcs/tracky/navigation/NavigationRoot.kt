@@ -20,8 +20,8 @@ import com.jvcs.tracky.features.auth.presentation.register_success.RegisterSucce
 import com.jvcs.tracky.features.auth.presentation.register_success.RegisterSuccessViewModel
 import com.jvcs.tracky.features.auth.presentation.reset_password.ResetPasswordScreenRoot
 import com.jvcs.tracky.features.auth.presentation.reset_password.ResetPasswordViewModel
-import com.jvcs.tracky.features.project.presentation.projectEditTextScreen.EditTextScreenRoot
-import com.jvcs.tracky.features.project.presentation.projectEditTextScreen.ProjectEditTextViewModel
+import com.jvcs.tracky.features.project.presentation.edit_text.EditTextScreenRoot
+import com.jvcs.tracky.features.project.presentation.edit_text.EditTextViewModel
 import com.jvcs.tracky.features.project.presentation.project_archive.ProjectArchiveScreenRoot
 import com.jvcs.tracky.features.project.presentation.project_archive_detail.ProjectArchiveDetailScreen
 import com.jvcs.tracky.features.project.presentation.project_trash.ProjectTrashScreenRoot
@@ -229,7 +229,7 @@ fun NavigationRoot(
                 )
             }
             entry<Route.ProjectRoute.EditTextNavKey> { key ->
-                val editTextVm: ProjectEditTextViewModel = koinViewModel {
+                val editTextVm: EditTextViewModel = koinViewModel {
                     parametersOf(key.isEditMode, key.projectId)
                 }
                 EditTextScreenRoot(

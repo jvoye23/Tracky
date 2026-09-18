@@ -1,7 +1,7 @@
 package com.jvcs.tracky.features.project.di
 
 import com.jvcs.tracky.features.project.presentation.daily_overview.DailyOverviewViewModel
-import com.jvcs.tracky.features.project.presentation.projectEditTextScreen.ProjectEditTextViewModel
+import com.jvcs.tracky.features.project.presentation.edit_text.EditTextViewModel
 import com.jvcs.tracky.features.project.presentation.project_detail.ProjectDetailViewModel
 import com.jvcs.tracky.features.project.presentation.project_overview.ProjectOverviewViewModel
 import com.jvcs.tracky.features.project.presentation.stranded_timer.StrandedTimerViewModel
@@ -57,7 +57,7 @@ val projectModule = module {
     }
 
     viewModel { (isEditMode: Boolean, projectId: String) ->
-        ProjectEditTextViewModel(
+        EditTextViewModel(
             isEditMode = isEditMode,
             projectId = projectId,
             projectRepository = get(),

@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalTime::class, ExperimentalCoroutinesApi::class)
 
-package com.jvcs.tracky.features.project.presentation.projectEditTextScreen
+package com.jvcs.tracky.features.project.presentation.edit_text
 
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.snapshots.Snapshot
@@ -39,7 +39,7 @@ private const val STORED_DESCRIPTION = "Stored description"
  * Covers the process-death contract: an unsaved draft in the [SavedStateHandle] outranks the stored
  * project, and every keystroke is mirrored back into the handle.
  */
-class ProjectEditTextViewModelTest {
+class EditTextViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
 
@@ -53,8 +53,8 @@ class ProjectEditTextViewModelTest {
     fun `restored draft wins over the stored project`() = runTest {
         val handle = SavedStateHandle(
             mapOf(
-                ProjectEditTextViewModel.KEY_TITLE to "Draft title",
-                ProjectEditTextViewModel.KEY_DESCRIPTION to "Draft description"
+                EditTextViewModel.KEY_TITLE to "Draft title",
+                EditTextViewModel.KEY_DESCRIPTION to "Draft description"
             )
         )
         val vm = viewModel(savedStateHandle = handle)
@@ -83,8 +83,8 @@ class ProjectEditTextViewModelTest {
         Snapshot.sendApplyNotifications()
         advanceUntilIdle()
 
-        assertEquals("Edited title", handle.get<String>(ProjectEditTextViewModel.KEY_TITLE))
-        assertEquals("Edited description", handle.get<String>(ProjectEditTextViewModel.KEY_DESCRIPTION))
+        assertEquals("Edited title", handle.get<String>(EditTextViewModel.KEY_TITLE))
+        assertEquals("Edited description", handle.get<String>(EditTextViewModel.KEY_DESCRIPTION))
     }
 
     @Test
@@ -92,14 +92,14 @@ class ProjectEditTextViewModelTest {
         val handle = SavedStateHandle()
         val vm = viewModel(savedStateHandle = handle)
 
-        vm.onAction(ProjectEditTextAction.OnEditClick)
+        vm.onAction(EditTextAction.OnEditClick)
         advanceUntilIdle()
-        assertEquals(true, handle.get<Boolean>(ProjectEditTextViewModel.KEY_IS_EDIT_MODE))
+        assertEquals(true, handle.get<Boolean>(EditTextViewModel.KEY_IS_EDIT_MODE))
         assertTrue(vm.state.value.isEditMode)
 
-        vm.onAction(ProjectEditTextAction.OnSaveClick)
+        vm.onAction(EditTextAction.OnSaveClick)
         advanceUntilIdle()
-        assertEquals(false, handle.get<Boolean>(ProjectEditTextViewModel.KEY_IS_EDIT_MODE))
+        assertEquals(false, handle.get<Boolean>(EditTextViewModel.KEY_IS_EDIT_MODE))
     }
 
     @Test
@@ -110,9 +110,9 @@ class ProjectEditTextViewModelTest {
         val repository = FakeEditTextProjectRepository(stored)
         val vm = viewModel(projectRepository = repository)
 
-        vm.onAction(ProjectEditTextAction.OnEditClick)
+        vm.onAction(EditTextAction.OnEditClick)
         vm.state.value.titleState.setTextAndPlaceCursorAtEnd("Renamed")
-        vm.onAction(ProjectEditTextAction.OnSaveClick)
+        vm.onAction(EditTextAction.OnSaveClick)
         advanceUntilIdle()
 
         val saved = repository.upserted.single()
@@ -125,7 +125,7 @@ class ProjectEditTextViewModelTest {
 
     /**
      * Builds the ViewModel and drains its initial load. The state flow is collected on the
-     * background scope because [ProjectEditTextViewModel.getProject] runs from `onStart`, so
+     * background scope because [EditTextViewModel.getProject] runs from `onStart`, so
      * nothing loads until something subscribes.
      */
     private fun TestScope.viewModel(
@@ -133,8 +133,8 @@ class ProjectEditTextViewModelTest {
         project: Project = project(),
         isEditMode: Boolean = false,
         projectRepository: FakeEditTextProjectRepository = FakeEditTextProjectRepository(project)
-    ): ProjectEditTextViewModel {
-        val vm = ProjectEditTextViewModel(
+    ): EditTextViewModel {
+        val vm = EditTextViewModel(
             isEditMode = isEditMode,
             projectId = PROJECT_ID,
             projectRepository = projectRepository,
