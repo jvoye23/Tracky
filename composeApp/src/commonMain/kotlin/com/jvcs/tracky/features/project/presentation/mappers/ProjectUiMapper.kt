@@ -1,7 +1,6 @@
 package com.jvcs.tracky.features.project.presentation.mappers
 
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
@@ -45,25 +44,6 @@ fun Project.toProjectUi(): ProjectUi {
         useLightTextColor = useLightTextColor,
         endDateTimeUtc = endDateTimeInLocalDateTime?.date?.format(dateTimeFormat),
         projectTasks = projectTasks?.map { it.toProjectTaskUi() },
-        isPinned = isPinned
-    )
-}
-
-@OptIn(ExperimentalTime::class)
-fun ProjectUi.toProject(): Project {
-    return Project(
-        projectId = projectId ?: "",
-        title = title,
-        description = description,
-        colorArgb = color?.toArgb(),
-        totalDurationMillis = totalDurationMillis,
-        startDateTimeUtc = LocalDate.parse(startDateTimeUtc, dateTimeFormat).atStartOfDayIn(TimeZone.currentSystemDefault()),
-        isFinished = isFinished,
-        useLightTextColor = useLightTextColor,
-        endDateTimeUtc = endDateTimeUtc?.let { LocalDate.parse(it, dateTimeFormat).atStartOfDayIn(TimeZone.currentSystemDefault()) },
-        projectTasks = projectTasks?.map { it.toProjectTask(projectId ?: "") },
-        isArchived = false,
-        trashedAt = null,
         isPinned = isPinned
     )
 }

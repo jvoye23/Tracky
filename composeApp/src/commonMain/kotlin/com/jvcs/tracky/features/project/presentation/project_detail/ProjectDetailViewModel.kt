@@ -4,6 +4,7 @@ package com.jvcs.tracky.features.project.presentation.project_detail
 
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jvcs.tracky.core.domain.util.platformIoDispatcher
@@ -18,7 +19,6 @@ import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.core.domain.util.TimerState
 import com.jvcs.tracky.design_system.util.UiText
 import com.jvcs.tracky.features.project.presentation.mappers.toPerDayStripUi
-import com.jvcs.tracky.features.project.presentation.mappers.toProject
 import com.jvcs.tracky.features.project.presentation.models.PerDayStripUi
 import com.jvcs.tracky.features.project.presentation.models.ProjectSubTaskUi
 import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
@@ -340,24 +340,25 @@ class ProjectDetailViewModel(
         toPerDayStripUi(timeZone = TimeZone.currentSystemDefault())
 
     private fun saveProjectDetails(){
-        // Reads the merged state, not _state: the title and description live in the project row
-        // stream, so the pre-merge copy still holds whatever was loaded on entry and would write a
-        // stale title back over an edit made on the edit-text screen.
+        // Only the colour and text contrast are edited here; title and description belong to the
+        // edit-text screen and are left as the stored row has them.
         val current = state.value
-        val newTitle = current.titleText.toString()
-        val newDescription = current.descriptionText.toString()
-        val newColor = current.projectColor
+        val newColorArgb = current.projectColor?.toArgb()
         val useLightTextColor = current.useLightTextColor
-
-        val newProject = current.project?.copy(
-            title = newTitle,
-            description = newDescription,
-            color = newColor,
-            useLightTextColor = useLightTextColor
-        )!!.toProject()
+        val projectId = projectId ?: return
 
         viewModelScope.launch {
-            projectRepository.upsertProject(newProject)
+            // Start from the stored row, not the UI model. Rebuilding the project from ProjectUi used
+            // to drop what the UI does not carry, above all sortIndex: a null index sorts first under
+            // Custom, so leaving edit mode after a task reorder moved the project on the overview.
+            val stored = projectRepository.getProjectById(projectId) ?: return@launch
+            val edited = stored.copy(
+                colorArgb = newColorArgb,
+                useLightTextColor = useLightTextColor
+            )
+            // A session that only reordered tasks changed nothing here; writing anyway would stamp
+            // the project as modified and push it for no reason.
+            if (edited != stored) projectRepository.upsertProject(edited)
         }
         _state.update { it.copy(
             isEditMode = false

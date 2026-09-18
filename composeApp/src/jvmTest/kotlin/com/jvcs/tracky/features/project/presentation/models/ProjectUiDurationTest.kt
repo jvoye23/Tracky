@@ -3,7 +3,6 @@ package com.jvcs.tracky.features.project.presentation.models
 import com.jvcs.tracky.features.project.presentation.fakes.project
 import com.jvcs.tracky.features.project.presentation.fakes.subTask
 import com.jvcs.tracky.features.project.presentation.fakes.task
-import com.jvcs.tracky.features.project.presentation.mappers.toProject
 import com.jvcs.tracky.features.project.presentation.mappers.toProjectTask
 import com.jvcs.tracky.features.project.presentation.mappers.toProjectSubTaskUi
 import com.jvcs.tracky.features.project.presentation.mappers.toProjectTaskUi
@@ -39,13 +38,6 @@ class ProjectUiDurationTest {
         val back = domain.toProjectTaskUi().toProjectTask(parentProjectId = "project")
 
         assertEquals(oddDuration, back.subTasks!!.single().durationMillis)
-    }
-
-    @Test
-    fun aProjectTotalKeepsItsMillisecondsAcrossTheUiRoundTrip() {
-        val domain = project().copy(totalDurationMillis = oddDuration)
-
-        assertEquals(oddDuration, domain.toProjectUi().toProject().totalDurationMillis)
     }
 
     @Test
