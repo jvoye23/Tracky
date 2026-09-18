@@ -262,6 +262,27 @@ private fun DeleteTaskButton(
     }
 }
 
+private val TaskCardShape = RoundedCornerShape(12.dp)
+
+/**
+ * The card's outline, shared with the rows edit mode outlines inside it so they cannot drift apart:
+ * a hairline normally, and a project-tinted 1dp stroke while that item's timer runs.
+ */
+@Composable
+private fun taskBorder(isTimerRunning: Boolean, projectColor: Color): BorderStroke = BorderStroke(
+    if (isTimerRunning) 1.dp else 0.dp,
+    if (isTimerRunning) projectColor.copy(0.2f) else MaterialTheme.colorScheme.outlineVariant
+)
+
+/** Edit mode outlines each tappable row - the task and every subtask - the way the card is. */
+@Composable
+private fun Modifier.editModeRowBorder(
+    isEditMode: Boolean,
+    isTimerRunning: Boolean,
+    projectColor: Color
+): Modifier =
+    if (isEditMode) border(taskBorder(isTimerRunning, projectColor), TaskCardShape) else this
+
 @Composable
 fun TaskItemCard(
     modifier: Modifier = Modifier,
@@ -311,12 +332,9 @@ fun TaskItemCard(
             // Edit mode rearranges and renames the card's contents; opening the task's detail
             // screen from there would be a surprise, so only the view-mode card is a link.
             .then(if (isEditMode) Modifier else Modifier.clickable { onCardClick() }),
-        shape = RoundedCornerShape(12.dp),
+        shape = TaskCardShape,
         color = MaterialTheme.colorScheme.surfaceContainerLow,
-        border = BorderStroke(
-            if (task.isTimerRunning) 1.dp else 0.dp,
-            if (task.isTimerRunning) projectColor.copy(0.2f) else MaterialTheme.colorScheme.outlineVariant
-        ),
+        border = taskBorder(task.isTimerRunning, projectColor),
         shadowElevation = if (task.isTimerRunning) 4.dp else 2.dp
     ) {
         Column(
@@ -326,6 +344,9 @@ fun TaskItemCard(
         ) {
             // Main Task
             Row(
+                modifier = Modifier
+                    .editModeRowBorder(isEditMode, task.isTimerRunning, projectColor)
+                    .then(if (isEditMode) Modifier.padding(8.dp) else Modifier),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -483,7 +504,9 @@ fun TaskItemCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(MaterialTheme.colorScheme.surfaceContainerLow)
-                        .padding(start = 40.dp)
+                        .padding(start = 40.dp),
+                    // Keeps the edit-mode outlines of neighbouring subtasks from touching.
+                    verticalArrangement = if (isEditMode) Arrangement.spacedBy(8.dp) else Arrangement.Top
                 ) {
                     task.subTasks.forEachIndexed { subTaskIndex, projectSubTaskUi ->
                         val subTaskId = projectSubTaskUi.projectSubTaskId
@@ -520,7 +543,10 @@ fun TaskItemCard(
                                             }
                                     } else Modifier
                                 )
-                                .padding(vertical = 6.dp),
+                                // After the drag layer, so the outline travels with a dragged row.
+                                .editModeRowBorder(isEditMode, projectSubTaskUi.isTimerRunning, projectColor)
+                                .padding(vertical = 6.dp)
+                                .then(if (isEditMode) Modifier.padding(horizontal = 8.dp) else Modifier),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
