@@ -9,7 +9,9 @@ import com.jvcs.tracky.features.project.presentation.mappers.END_OF_DAY
 import com.jvcs.tracky.features.project.presentation.mappers.clockFormat
 import com.jvcs.tracky.features.project.presentation.mappers.countedDayIntervals
 import com.jvcs.tracky.features.project.presentation.mappers.toProjectTaskUi
+import com.jvcs.tracky.features.project.presentation.mappers.toProjectUi
 import com.jvcs.tracky.design_system.util.formatDurationHoursMinutesSeconds
+import com.jvcs.tracky.features.project.domain.project.ProjectRepository
 import com.jvcs.tracky.features.project.domain.task.ProjectTaskRepository
 import com.jvcs.tracky.features.project.presentation.task_detail.model.DailyStatistic
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,8 +27,11 @@ import kotlin.time.Duration.Companion.milliseconds
 class TaskDetailViewModel(
     private val taskId: String,
     private val projectTaskRepository: ProjectTaskRepository,
+    private val projectRepository: ProjectRepository,
     private val timeManager: TimeManager
 ) : ViewModel() {
+
+    private var loadedProjectId: String? = null
 
     private val _state = MutableStateFlow(TaskDetailState())
     val state = _state
@@ -63,13 +68,31 @@ class TaskDetailViewModel(
                     _state.update { currentState ->
                         currentState.copy(
                             task = it.toProjectTaskUi(),
-                            titleText = it.title,
+                            projectId = it.parentProjectId,
                             dailyStatistics = it.toDailyStatistics(),
                             isTimerRunning = it.isTimerRunning
                         )
                     }
+                    loadProjectColors(it.parentProjectId)
                 }
             }
+        }
+    }
+
+    /**
+     * The parent project's colours, for the header tint and the duration card. Read once per
+     * project: the task flow re-emits on every timer tick and title edit, the colours do not change
+     * from this screen.
+     */
+    private suspend fun loadProjectColors(projectId: String) {
+        if (loadedProjectId == projectId) return
+        loadedProjectId = projectId
+        val project = projectRepository.getProjectById(projectId)?.toProjectUi() ?: return
+        _state.update {
+            it.copy(
+                projectColor = project.color,
+                useLightTextColor = project.useLightTextColor
+            )
         }
     }
 
@@ -106,10 +129,10 @@ class TaskDetailViewModel(
     fun onAction(action: TaskDetailAction) {
         when (action) {
             TaskDetailAction.OnToggleTimer -> toggleTimer()
-            is TaskDetailAction.OnTitleChanged -> {
-                _state.update { it.copy(titleText = action.newTitle) }
-            }
-            TaskDetailAction.OnSaveTitle -> saveTitle()
+            // Nothing to save or revert here: the text is edited and saved on the edit-text screen,
+            // so leaving edit mode either way only drops the outline.
+            TaskDetailAction.OnEditModeClick -> _state.update { it.copy(isEditMode = true) }
+            TaskDetailAction.OnCloseEditModeClick -> _state.update { it.copy(isEditMode = false) }
             else -> Unit
         }
     }
@@ -123,12 +146,6 @@ class TaskDetailViewModel(
             } else {
                 projectTaskRepository.startProjectTask(taskId)
             }
-        }
-    }
-
-    private fun saveTitle() {
-        viewModelScope.launch {
-            projectTaskRepository.updateProjectTaskTitle(taskId, _state.value.titleText)
         }
     }
 }

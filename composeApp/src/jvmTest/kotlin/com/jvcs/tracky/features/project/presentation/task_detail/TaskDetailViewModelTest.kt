@@ -1,12 +1,16 @@
 package com.jvcs.tracky.features.project.presentation.task_detail
 
+import androidx.compose.ui.graphics.toArgb
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.testTimeManager
+import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.features.project.domain.task.ProjectTaskRepository
+import com.jvcs.tracky.features.project.presentation.fakes.FakeProjectRepository
 import com.jvcs.tracky.features.project.presentation.fakes.interval
+import com.jvcs.tracky.features.project.presentation.fakes.project
 import com.jvcs.tracky.features.project.presentation.fakes.subInterval
 import com.jvcs.tracky.features.project.presentation.fakes.subTask
 import com.jvcs.tracky.features.project.presentation.fakes.task
@@ -25,6 +29,8 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
@@ -49,11 +55,12 @@ internal class TaskDetailViewModelTest {
     @AfterTest
     fun tearDown() = Dispatchers.resetMain()
 
-    private fun TestScope.viewModelFor(task: ProjectTask): TaskDetailViewModel {
+    private fun TestScope.viewModelFor(task: ProjectTask, project: Project? = null): TaskDetailViewModel {
         stored.value = task
         val viewModel = TaskDetailViewModel(
             taskId = task.projectTaskId,
             projectTaskRepository = FakeProjectTaskRepository(),
+            projectRepository = FakeProjectRepository(project),
             timeManager = testTimeManager()
         )
         // state is a WhileSubscribed stateIn, so loadSession does not run until something collects.
@@ -153,6 +160,33 @@ internal class TaskDetailViewModelTest {
         // 24:00 rather than the next day's 00:00.
         assertEquals("24:00", stats[1].formattedEndTime)
         assertEquals("00:00", stats[0].formattedStartTime)
+    }
+
+    @Test
+    fun editModeTogglesOnAndOff() = runTest(UnconfinedTestDispatcher()) {
+        val viewModel = viewModelFor(task())
+
+        viewModel.onAction(TaskDetailAction.OnEditModeClick)
+        assertTrue(viewModel.state.value.isEditMode)
+
+        // Closing and confirming both only drop the outline: the text itself is saved on the
+        // edit-text screen, so there is nothing here to revert.
+        viewModel.onAction(TaskDetailAction.OnCloseEditModeClick)
+        assertFalse(viewModel.state.value.isEditMode)
+    }
+
+    @Test
+    fun theParentProjectsColoursAreLoaded() = runTest(UnconfinedTestDispatcher()) {
+        val viewModel = viewModelFor(
+            task(),
+            project = project().copy(colorArgb = 0xFF3F51B5.toInt(), useLightTextColor = true)
+        )
+
+        val state = viewModel.state.value
+        // The header tint and the duration card need both, and the edit-text screen needs the id.
+        assertEquals("project", state.projectId)
+        assertEquals(0xFF3F51B5.toInt(), state.projectColor?.toArgb())
+        assertTrue(state.useLightTextColor)
     }
 
     @OptIn(ExperimentalTime::class)
