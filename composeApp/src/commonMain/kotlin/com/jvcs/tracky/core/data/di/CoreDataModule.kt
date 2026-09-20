@@ -5,6 +5,7 @@ import com.jvcs.tracky.core.data.auth.DataStoreSessionStorage
 import com.jvcs.tracky.core.data.auth.KtorAuthService
 import com.jvcs.tracky.core.data.device.DataStoreDeviceIdProvider
 import com.jvcs.tracky.core.data.networking.HttpClientFactory
+import com.jvcs.tracky.core.data.sync.DataStoreSyncCursorStore
 import com.jvcs.tracky.core.data.sync.RoomPendingSyncDataSource
 import com.jvcs.tracky.core.data.sync.SyncCoordinator
 import com.jvcs.tracky.core.database.DatabaseFactory
@@ -22,6 +23,7 @@ import com.jvcs.tracky.features.project.data.timer.OfflineFirstStrandedTimerRepo
 import com.jvcs.tracky.features.project.data.timer.StrandedTimerReconciler
 import com.jvcs.tracky.features.project.domain.timer.RunningTimerRepository
 import com.jvcs.tracky.features.project.domain.timer.StrandedTimerRepository
+import com.jvcs.tracky.core.domain.sync.SyncCursorStore
 import com.jvcs.tracky.core.domain.sync.SyncRepository
 import com.jvcs.tracky.core.domain.util.SystemTimeProvider
 import com.jvcs.tracky.core.domain.util.TimeProvider
@@ -257,6 +259,9 @@ val coreDataModule = module {
     // Device identity. Not createdAtStart: it is read from coroutines that already exist, and
     // minting it eagerly would touch DataStore on the startup path for no benefit.
     singleOf(::DataStoreDeviceIdProvider) bind DeviceIdProvider::class
+
+    // How far this device has read the server's change feed. Cleared on logout.
+    singleOf(::DataStoreSyncCursorStore) bind SyncCursorStore::class
 
     // Auth
     singleOf(::DataStoreSessionStorage) bind SessionStorage::class
