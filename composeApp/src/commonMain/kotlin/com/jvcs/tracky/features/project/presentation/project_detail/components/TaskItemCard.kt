@@ -214,14 +214,14 @@ private fun AddSubTaskPill(
 ) {
     Row(
         modifier = modifier
-            .clip(CircleShape)
+            .clip(RoundedCornerShape(16.dp))
             .border(
                 width = 1.dp,
                 color = MaterialTheme.colorScheme.outline,
-                shape = CircleShape
+                shape = RoundedCornerShape(16.dp)
             )
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .padding(horizontal = 12.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
@@ -343,16 +343,15 @@ fun TaskItemCard(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Main Task
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                val textDecoration = if (task.isFinished) TextDecoration.LineThrough else null
-                val contentAlpha = if (task.isFinished) 0.4f else 1f
+            if(isEditMode) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
 
-                // In edit mode the grip moves the whole card, so it sits outside the outline that
-                // wraps the title - unlike a subtask's grip, which moves only its own row.
-                if (isEditMode) {
+                ) {
+                    // In edit mode the grip moves the whole card, so it sits outside the outline that
+                    // wraps the title - unlike a subtask's grip, which moves only its own row.
                     DragHandle(
                         isReorderable = isReorderable,
                         onDragStart = onReorderDragStart,
@@ -360,7 +359,21 @@ fun TaskItemCard(
                         onDragEnd = onReorderDragEnd,
                         onDragCancel = onReorderDragCancel
                     )
-                } else {
+                    DeleteTaskButton(onClick = onDeleteClick)
+
+                }
+
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                val textDecoration = if (task.isFinished) TextDecoration.LineThrough else null
+                val contentAlpha = if (task.isFinished) 0.4f else 1f
+
+
+                if (!isEditMode) {
+
                     TimerToggleButton(
                         isTimerRunning = task.isTimerRunning,
                         isFinished = task.isFinished,
@@ -401,7 +414,9 @@ fun TaskItemCard(
                                 modifier = Modifier
                                     .weight(1f)
                                     .then(
-                                        if (isEditMode) Modifier.clickable { onTaskTitleClick() }
+                                        if (isEditMode) Modifier
+                                            .padding(12.dp)
+                                            .clickable { onTaskTitleClick() }
                                         else Modifier
                                     ),
                                 text = task.title,
@@ -426,9 +441,7 @@ fun TaskItemCard(
                             )
                         }
                     }
-                    if (isEditMode) {
-                        DeleteTaskButton(onClick = onDeleteClick)
-                    } else {
+                    if (!isEditMode) {
                         TrackyCheckbox(
                             checked = task.isFinished,
                             onCheckedChange = { onCheckedChange() }
@@ -642,16 +655,13 @@ fun TaskItemCard(
                         }
                         }
                     }
-
                 }
-            }
-
-            // The design ends the edit-mode card with the add affordance, below the subtasks.
-            if (isEditMode) {
-                AddSubTaskPill(
-                    onClick = onAddSubTaskClick,
-                    modifier = Modifier.padding(start = 16.dp, bottom = 16.dp)
-                )
+                if (isEditMode) {
+                    AddSubTaskPill(
+                        onClick = onAddSubTaskClick,
+                        modifier = Modifier.padding(start = 40.dp, top = 16.dp, bottom = 16.dp)
+                    )
+                }
             }
         }
     }
