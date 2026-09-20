@@ -2,6 +2,7 @@ package com.jvcs.tracky.core.data.di
 
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.jvcs.tracky.core.data.auth.DataStoreSessionStorage
+import com.jvcs.tracky.core.data.device.DataStoreDeviceIdProvider
 import com.jvcs.tracky.core.data.auth.KtorAuthService
 import com.jvcs.tracky.core.data.networking.HttpClientFactory
 import com.jvcs.tracky.core.data.sync.RoomPendingSyncDataSource
@@ -10,6 +11,7 @@ import com.jvcs.tracky.core.database.DatabaseFactory
 import com.jvcs.tracky.core.database.TrackyDatabase
 import com.jvcs.tracky.core.domain.auth.AuthService
 import com.jvcs.tracky.core.domain.auth.SessionStorage
+import com.jvcs.tracky.core.domain.device.DeviceIdProvider
 import com.jvcs.tracky.core.domain.auth.SocialAuthProvider
 import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource
 import com.jvcs.tracky.core.domain.notification.TimerNotificationCoordinator
@@ -249,6 +251,10 @@ val coreDataModule = module {
 
             .build()
     }
+
+    // Device identity. Not createdAtStart: it is read from coroutines that already exist, and
+    // minting it eagerly would touch DataStore on the startup path for no benefit.
+    singleOf(::DataStoreDeviceIdProvider) bind DeviceIdProvider::class
 
     // Auth
     singleOf(::DataStoreSessionStorage) bind SessionStorage::class
