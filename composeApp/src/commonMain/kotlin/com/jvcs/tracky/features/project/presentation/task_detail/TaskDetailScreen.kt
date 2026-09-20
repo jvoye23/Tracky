@@ -174,7 +174,7 @@ fun TaskDetailScreen(
                         .padding(horizontal = 16.dp)
                         .padding(bottom = 16.dp),
                     label = stringResource(Res.string.task_duration),
-                    totalDuration = state.task?.formattedDuration ?: "00:00:00",
+                    totalDuration = state.task?.displayDuration ?: "00:00:00",
                     projectColor = state.projectColor ?: MaterialTheme.colorScheme.primary,
                     useLightTextColor = state.useLightTextColor,
                     onStartStopClick = { onAction(TaskDetailAction.OnToggleTimer) }
