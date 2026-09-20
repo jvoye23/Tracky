@@ -35,7 +35,7 @@ private val headlineFormat = LocalDate.Format {
 }
 
 /** "09:30" — the ends of a time range. */
-private val clockFormat = LocalTime.Format {
+internal val clockFormat = LocalTime.Format {
     hour()
     chars(":")
     minute()
@@ -50,7 +50,7 @@ private const val RANGE_SEPARATOR = " – "
  * `00:00` is the *next* day's midnight, so rendering it literally gives "23:40 – 00:00", which
  * reads like a session that ran backwards. `24:00` is the same instant named from this day's side.
  */
-private const val END_OF_DAY = "24:00"
+internal const val END_OF_DAY = "24:00"
 
 /**
  * The interval list for one day, in the order it happened.
