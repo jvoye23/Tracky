@@ -125,6 +125,57 @@ interface ProjectDao {
         }
     }
 
+    /**
+     * Applies one page of the change feed: the upserts, then the deletions, in one transaction.
+     *
+     * Deletions are the reason this exists rather than a second call to [upsertServerTree].
+     * That method promises never to delete, because in a full-tree pull an absent row is
+     * ambiguous — it may have been created here and not pushed yet. A tombstone is not ambiguous,
+     * it is the server stating a fact, so the promise can be kept in one place and broken in
+     * another, deliberately.
+     *
+     * But only for rows this device does not still owe the server. A row recreated or edited
+     * offline must outlive a tombstone the server emitted before it heard about the edit —
+     * otherwise the pull destroys work the outbox is still carrying. The guard is the same set
+     * [upsertServerTree] uses.
+     *
+     * Deleting a project cascades to its whole subtree locally, so a tombstone for a child that
+     * arrives in the same page as its parent's is a no-op by the time it runs. That is fine and
+     * is why the levels are deleted parents-first.
+     */
+    @Transaction
+    suspend fun applyDelta(
+        projects: List<ProjectEntity>,
+        tasks: List<ProjectTaskEntity>,
+        intervals: List<TaskIntervalEntity>,
+        subTasks: List<ProjectSubTaskEntity>,
+        subTaskIntervals: List<SubTaskIntervalEntity>,
+        deletedProjectIds: List<String>,
+        deletedTaskIds: List<String>,
+        deletedIntervalIds: List<String>,
+        deletedSubTaskIds: List<String>,
+        deletedSubTaskIntervalIds: List<String>
+    ) {
+        upsertServerTree(projects, tasks, intervals, subTasks, subTaskIntervals)
+
+        val pending = getAllPendingEntityIds().toSet()
+        deletedProjectIds.forEach { if (it !in pending) deleteProject(it) }
+        deletedTaskIds.forEach { if (it !in pending) deleteProjectTask(it) }
+        deletedIntervalIds.forEach { if (it !in pending) deleteTaskInterval(it) }
+        deletedSubTaskIds.forEach { if (it !in pending) deleteProjectSubTask(it) }
+        deletedSubTaskIntervalIds.forEach { if (it !in pending) deleteSubTaskInterval(it) }
+    }
+
+    /**
+     * Every id the outbox is still carrying, at any level.
+     *
+     * Broader than [getPendingIntervalIds] because a tombstone can name any kind of row. Reached
+     * into directly for the same reason: the decision has to happen inside the transaction that
+     * does the deleting.
+     */
+    @Query("SELECT entityId FROM pending_sync_operations")
+    suspend fun getAllPendingEntityIds(): List<String>
+
     @Query("SELECT * FROM projects ORDER BY projectId ASC")
     fun getProjects(): Flow<List<ProjectEntity>>
 

@@ -1,6 +1,8 @@
 package com.jvcs.tracky.features.project.data.project
 
 import com.jvcs.tracky.core.database.dao.ProjectDao
+import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
+import com.jvcs.tracky.core.domain.sync.SyncChanges
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
@@ -100,6 +102,26 @@ class RoomLocalProjectDataSource (
             subTaskIntervals = subTasks.flatMap { it.subTaskIntervals }
                 .map { it.toSubTaskIntervalEntity() },
         )
+    }
+
+    override suspend fun applyDelta(changes: SyncChanges): EmptyResult<DataError.Local> = write {
+        // The feed is flat, unlike GET /api/projects, so there is nothing to walk down — but the
+        // tombstones have to be split by level, because each one names a different table.
+        val deletions = changes.tombstones.groupBy({ it.entityType }, { it.entityId })
+        projectDao.applyDelta(
+            projects = changes.projects.map { it.toProjectEntity() },
+            tasks = changes.tasks.map { it.toProjectTaskEntity() },
+            intervals = changes.taskIntervals.map { it.toTaskIntervalEntity() },
+            subTasks = changes.subTasks.map { it.toProjectSubTaskEntity() },
+            subTaskIntervals = changes.subTaskIntervals.map { it.toSubTaskIntervalEntity() },
+            deletedProjectIds = deletions[PendingSyncOperation.ENTITY_PROJECT].orEmpty(),
+            deletedTaskIds = deletions[PendingSyncOperation.ENTITY_TASK].orEmpty(),
+            deletedIntervalIds = deletions[PendingSyncOperation.ENTITY_INTERVAL].orEmpty(),
+            deletedSubTaskIds = deletions[PendingSyncOperation.ENTITY_SUBTASK].orEmpty(),
+            deletedSubTaskIntervalIds = deletions[PendingSyncOperation.ENTITY_SUBTASK_INTERVAL].orEmpty()
+        )
+        // An entityType this build does not recognise is simply absent from the map above. A
+        // newer server knowing about a kind of row this one does not is not a reason to fail.
     }
 
     override suspend fun deleteProject(projectId: String): EmptyResult<DataError.Local> = write {
