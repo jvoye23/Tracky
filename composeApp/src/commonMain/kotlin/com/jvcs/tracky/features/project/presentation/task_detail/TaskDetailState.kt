@@ -1,12 +1,16 @@
 package com.jvcs.tracky.features.project.presentation.task_detail
 
+import androidx.compose.ui.graphics.Color
 import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
 import com.jvcs.tracky.features.project.presentation.task_detail.model.DailyStatistic
 
 data class TaskDetailState(
     val task: ProjectTaskUi? = null,
     val isLoading: Boolean = false,
-    val titleText: String = "",
+    val isEditMode: Boolean = false,
+    val projectId: String? = null,
+    val projectColor: Color? = null,
+    val useLightTextColor: Boolean = false,
     val dailyStatistics: List<DailyStatistic> = emptyList(),
     val isTimerRunning: Boolean = false
 )

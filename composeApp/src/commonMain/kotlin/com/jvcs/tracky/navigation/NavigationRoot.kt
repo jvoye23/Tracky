@@ -19,6 +19,7 @@ import com.jvcs.tracky.features.auth.presentation.register_success.RegisterSucce
 import com.jvcs.tracky.features.auth.presentation.reset_password.ResetPasswordScreenRoot
 import com.jvcs.tracky.features.auth.presentation.reset_password.ResetPasswordViewModel
 import com.jvcs.tracky.features.project.presentation.edit_text.EditTextScreenRoot
+import com.jvcs.tracky.features.project.presentation.edit_text.EditTextTarget
 import com.jvcs.tracky.features.project.presentation.edit_text.EditTextViewModel
 import com.jvcs.tracky.features.project.presentation.project_archive.ProjectArchiveScreenRoot
 import com.jvcs.tracky.features.project.presentation.project_archive_detail.ProjectArchiveDetailScreen
@@ -224,6 +225,17 @@ fun NavigationRoot(
                     taskId = key.taskId,
                     navigateBack = {
                         backStack.remove(key)
+                    },
+                    onEditTextClick = { isEditMode, projectId, taskId ->
+                        backStack.add(
+                            Route.ProjectRoute.EditTextNavKey(
+                                isEditMode = isEditMode,
+                                projectId = projectId,
+                                target = EditTextTarget.TASK,
+                                taskId = taskId,
+                                subTaskId = null
+                            )
+                        )
                     }
                 )
             }
