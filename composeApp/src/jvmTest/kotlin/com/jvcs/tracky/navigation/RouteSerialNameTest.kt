@@ -1,6 +1,7 @@
 package com.jvcs.tracky.navigation
 
 import androidx.navigation3.runtime.NavKey
+import com.jvcs.tracky.features.project.presentation.edit_text.EditTextTarget
 import androidx.savedstate.serialization.decodeFromSavedState
 import androidx.savedstate.serialization.encodeToSavedState
 import kotlinx.serialization.PolymorphicSerializer
@@ -81,11 +82,19 @@ class RouteSerialNameTest {
                 isEditMode = true,
                 projectId = "id"
             ),
+            Route.ProjectRoute.EditTextNavKey(
+                isEditMode = true,
+                projectId = "id",
+                target = EditTextTarget.SUBTASK,
+                taskId = "task",
+                subTaskId = "sub"
+            ),
             Route.ProjectRoute.TaskDetail(taskId = "id"),
             Route.ProjectRoute.DailyOverview(projectId = "id", preselectedDateEpochDay = 20_700L),
         )
 
-        assertEquals(expectedSerialNames.size, routes.size)
+        // One extra entry: the edit-text route is round-tripped once per shape it is opened with.
+        assertEquals(expectedSerialNames.size + 1, routes.size)
 
         routes.forEach { route ->
             val encoded = encodeToSavedState(

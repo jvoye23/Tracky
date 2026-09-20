@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.Color
 import com.jvcs.tracky.features.project.presentation.models.ProjectUi
 
 data class EditTextState(
+    val target: EditTextTarget = EditTextTarget.PROJECT,
     val project: ProjectUi? = null,
     val titleState: TextFieldState = TextFieldState(),
     val descriptionState: TextFieldState = TextFieldState(),

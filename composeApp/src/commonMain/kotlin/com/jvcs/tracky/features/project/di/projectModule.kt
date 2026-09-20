@@ -1,6 +1,7 @@
 package com.jvcs.tracky.features.project.di
 
 import com.jvcs.tracky.features.project.presentation.daily_overview.DailyOverviewViewModel
+import com.jvcs.tracky.features.project.presentation.edit_text.EditTextTarget
 import com.jvcs.tracky.features.project.presentation.edit_text.EditTextViewModel
 import com.jvcs.tracky.features.project.presentation.project_detail.ProjectDetailViewModel
 import com.jvcs.tracky.features.project.presentation.project_overview.ProjectOverviewViewModel
@@ -56,11 +57,18 @@ val projectModule = module {
         )
     }
 
-    viewModel { (isEditMode: Boolean, projectId: String) ->
+    // Same rule as below: this list must match parametersOf(...) at the edit-text nav entry.
+    viewModel { (isEditMode: Boolean, projectId: String, target: EditTextTarget, taskId: String?, subTaskId: String?) ->
         EditTextViewModel(
             isEditMode = isEditMode,
             projectId = projectId,
+            target = target,
+            taskId = taskId,
+            subTaskId = subTaskId,
             projectRepository = get(),
+            projectTaskRepository = get(),
+            subTaskRepository = get(),
+            timeProvider = get(),
             savedStateHandle = get(),
         )
     }

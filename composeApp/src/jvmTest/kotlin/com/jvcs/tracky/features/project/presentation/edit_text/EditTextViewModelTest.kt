@@ -8,8 +8,14 @@ import androidx.lifecycle.SavedStateHandle
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
+import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.features.project.domain.models.Project
+import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
+import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
+import com.jvcs.tracky.features.project.domain.subtask.SubTaskRepository
+import com.jvcs.tracky.features.project.domain.task.ProjectTaskRepository
+import kotlinx.datetime.LocalDateTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -19,6 +25,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -27,6 +34,8 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
@@ -34,10 +43,12 @@ import kotlin.time.Instant
 private const val PROJECT_ID = "p1"
 private const val STORED_TITLE = "Stored title"
 private const val STORED_DESCRIPTION = "Stored description"
+private const val TASK_ID = "t1"
+private const val SUB_TASK_ID = "s1"
 
 /**
- * Covers the process-death contract: an unsaved draft in the [SavedStateHandle] outranks the stored
- * project, and every keystroke is mirrored back into the handle.
+ * Covers the process-death contract - an unsaved draft in the [SavedStateHandle] outranks the stored
+ * project, and every keystroke is mirrored back into the handle - and the task and subtask targets.
  */
 class EditTextViewModelTest {
 
@@ -121,6 +132,119 @@ class EditTextViewModelTest {
         assertTrue(saved.isPinned)
     }
 
+    @Test
+    fun `a task loads its own text and saves both fields`() = runTest {
+        val tasks = FakeEditTextTaskRepository(task())
+        val vm = viewModel(
+            target = EditTextTarget.TASK,
+            taskId = TASK_ID,
+            isEditMode = true,
+            taskRepository = tasks
+        )
+        assertEquals("Stored task", vm.state.value.titleState.text.toString())
+        assertEquals("Stored task description", vm.state.value.descriptionState.text.toString())
+
+        vm.state.value.titleState.setTextAndPlaceCursorAtEnd("Renamed task")
+        vm.state.value.descriptionState.setTextAndPlaceCursorAtEnd("New description")
+        vm.onAction(EditTextAction.OnSaveClick)
+        advanceUntilIdle()
+
+        assertEquals(listOf(Triple<String, String, String?>(TASK_ID, "Renamed task", "New description")), tasks.textUpdates)
+        assertFalse(vm.state.value.isEditMode)
+    }
+
+    @Test
+    fun `a subtask loads its own text and saves from the stored row`() = runTest {
+        val subTasks = FakeEditTextSubTaskRepository(listOf(subTask()))
+        val vm = viewModel(
+            target = EditTextTarget.SUBTASK,
+            taskId = TASK_ID,
+            subTaskId = SUB_TASK_ID,
+            isEditMode = true,
+            subTaskRepository = subTasks
+        )
+        assertEquals("Stored subtask", vm.state.value.titleState.text.toString())
+        assertEquals("Stored subtask description", vm.state.value.descriptionState.text.toString())
+
+        vm.state.value.titleState.setTextAndPlaceCursorAtEnd("Renamed subtask")
+        vm.state.value.descriptionState.setTextAndPlaceCursorAtEnd("")
+        vm.onAction(EditTextAction.OnSaveClick)
+        advanceUntilIdle()
+
+        val saved = subTasks.upserted.single()
+        assertEquals("Renamed subtask", saved.title)
+        assertNull(saved.description, "a cleared description is stored as none")
+        // Everything else comes from the stored row.
+        assertEquals(1_000L, saved.durationMillis)
+        assertEquals(2L, saved.sortIndex)
+    }
+
+    @Test
+    fun `a new subtask starts empty and writes nothing for a blank title`() = runTest {
+        val subTasks = FakeEditTextSubTaskRepository(emptyList())
+        val events = mutableListOf<EditTextEvent>()
+        val vm = viewModel(
+            target = EditTextTarget.NEW_SUBTASK,
+            taskId = TASK_ID,
+            isEditMode = true,
+            subTaskRepository = subTasks,
+            events = events
+        )
+        assertEquals("", vm.state.value.titleState.text.toString())
+
+        vm.onAction(EditTextAction.OnSaveClick)
+        advanceUntilIdle()
+
+        assertTrue(subTasks.upserted.isEmpty())
+        assertTrue(events.single() is EditTextEvent.Error)
+        assertTrue(vm.state.value.isEditMode, "a refused save keeps the user in the field")
+    }
+
+    @Test
+    fun `saving a new subtask creates it under its task and navigates back`() = runTest {
+        val subTasks = FakeEditTextSubTaskRepository(emptyList())
+        val events = mutableListOf<EditTextEvent>()
+        val vm = viewModel(
+            target = EditTextTarget.NEW_SUBTASK,
+            taskId = TASK_ID,
+            isEditMode = true,
+            subTaskRepository = subTasks,
+            events = events
+        )
+
+        vm.state.value.titleState.setTextAndPlaceCursorAtEnd("Fresh subtask")
+        vm.state.value.descriptionState.setTextAndPlaceCursorAtEnd("With a description")
+        vm.onAction(EditTextAction.OnSaveClick)
+        advanceUntilIdle()
+
+        val created = subTasks.upserted.single()
+        assertEquals("Fresh subtask", created.title)
+        assertEquals("With a description", created.description)
+        assertEquals(TASK_ID, created.parentProjectTaskId)
+        assertEquals(PROJECT_ID, created.parentProjectId)
+        assertEquals(listOf<EditTextEvent>(EditTextEvent.NavigateBack), events)
+    }
+
+    @Test
+    fun `a blank title is refused for a task`() = runTest {
+        val tasks = FakeEditTextTaskRepository(task())
+        val events = mutableListOf<EditTextEvent>()
+        val vm = viewModel(
+            target = EditTextTarget.TASK,
+            taskId = TASK_ID,
+            isEditMode = true,
+            taskRepository = tasks,
+            events = events
+        )
+
+        vm.state.value.titleState.setTextAndPlaceCursorAtEnd("   ")
+        vm.onAction(EditTextAction.OnSaveClick)
+        advanceUntilIdle()
+
+        assertTrue(tasks.textUpdates.isEmpty())
+        assertTrue(events.single() is EditTextEvent.Error)
+    }
+
     // --- helpers -------------------------------------------------------------------------------
 
     /**
@@ -132,18 +256,55 @@ class EditTextViewModelTest {
         savedStateHandle: SavedStateHandle = SavedStateHandle(),
         project: Project = project(),
         isEditMode: Boolean = false,
-        projectRepository: FakeEditTextProjectRepository = FakeEditTextProjectRepository(project)
+        target: EditTextTarget = EditTextTarget.PROJECT,
+        taskId: String? = null,
+        subTaskId: String? = null,
+        projectRepository: FakeEditTextProjectRepository = FakeEditTextProjectRepository(project),
+        taskRepository: FakeEditTextTaskRepository = FakeEditTextTaskRepository(task()),
+        subTaskRepository: FakeEditTextSubTaskRepository = FakeEditTextSubTaskRepository(listOf(subTask())),
+        events: MutableList<EditTextEvent> = mutableListOf()
     ): EditTextViewModel {
         val vm = EditTextViewModel(
             isEditMode = isEditMode,
             projectId = PROJECT_ID,
+            target = target,
+            taskId = taskId,
+            subTaskId = subTaskId,
             projectRepository = projectRepository,
+            projectTaskRepository = taskRepository,
+            subTaskRepository = subTaskRepository,
+            timeProvider = FixedTimeProvider,
             savedStateHandle = savedStateHandle
         )
         backgroundScope.launch { vm.state.collect { } }
+        // Unconfined: advanceUntilIdle does not wait for background work, so a collector on the
+        // standard dispatcher would still be holding an event when the test asserts.
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.events.collect { events += it } }
         advanceUntilIdle()
         return vm
     }
+
+    private fun task() = ProjectTask(
+        projectTaskId = TASK_ID,
+        title = "Stored task",
+        description = "Stored task description",
+        durationMillis = 0L,
+        startDateTimeUtc = Instant.fromEpochMilliseconds(0),
+        parentProjectId = PROJECT_ID,
+        isTimerRunning = false
+    )
+
+    private fun subTask() = ProjectSubTask(
+        projectSubTaskId = SUB_TASK_ID,
+        parentProjectTaskId = TASK_ID,
+        parentProjectId = PROJECT_ID,
+        title = "Stored subtask",
+        description = "Stored subtask description",
+        durationMillis = 1_000L,
+        isTimerRunning = false,
+        startDateTimeUtc = Instant.fromEpochMilliseconds(0),
+        sortIndex = 2
+    )
 
     private fun project() = Project(
         projectId = PROJECT_ID,
@@ -187,4 +348,48 @@ private class FakeEditTextProjectRepository(project: Project) : ProjectRepositor
     override suspend fun deleteProject(projectId: String): EmptyResult<DataError> = Result.Success(Unit)
     override suspend fun deleteAllProjects() = Unit
     override suspend fun syncPendingProjects() = Unit
+}
+
+private object FixedTimeProvider : TimeProvider {
+    override val nowZoneTimeInUtc: LocalDateTime = LocalDateTime(2026, 1, 1, 0, 0)
+    override val nowInstant: Instant = Instant.fromEpochMilliseconds(1_000_000)
+}
+
+private class FakeEditTextTaskRepository(private val task: ProjectTask) : ProjectTaskRepository {
+    val textUpdates = mutableListOf<Triple<String, String, String?>>()
+
+    override suspend fun updateProjectTaskText(taskId: String, title: String, description: String?): EmptyResult<DataError> {
+        textUpdates += Triple(taskId, title, description)
+        return Result.Success(Unit)
+    }
+    override fun getProjectTaskWithIntervalsById(taskId: String): Flow<ProjectTask?> =
+        flowOf(task.takeIf { it.projectTaskId == taskId })
+
+    override suspend fun upsertProjectTask(projectTask: ProjectTask): EmptyResult<DataError> = Result.Success(Unit)
+    override suspend fun deleteProjectTask(projectId: String, taskId: String): EmptyResult<DataError> = Result.Success(Unit)
+    override suspend fun updateProjectTaskDuration(taskId: String, newDurationMillis: Long): EmptyResult<DataError> = Result.Success(Unit)
+    override suspend fun updateProjectTaskTitle(taskId: String, title: String): EmptyResult<DataError> = Result.Success(Unit)
+    override suspend fun startProjectTask(taskId: String): EmptyResult<DataError> = Result.Success(Unit)
+    override suspend fun stopProjectTask(taskId: String): EmptyResult<DataError> = Result.Success(Unit)
+    override suspend fun reorderTasks(projectId: String, orderedTaskIds: List<String>): EmptyResult<DataError> = Result.Success(Unit)
+    override suspend fun syncPendingTasks() = Unit
+}
+
+private class FakeEditTextSubTaskRepository(private val subTasks: List<ProjectSubTask>) : SubTaskRepository {
+    val upserted = mutableListOf<ProjectSubTask>()
+
+    override fun getSubTasksForTask(taskId: String): Flow<List<ProjectSubTask>> =
+        flowOf(subTasks.filter { it.parentProjectTaskId == taskId })
+
+    override suspend fun upsertSubTask(subTask: ProjectSubTask): EmptyResult<DataError> {
+        upserted += subTask
+        return Result.Success(Unit)
+    }
+
+    override suspend fun deleteSubTask(subTaskId: String): EmptyResult<DataError> = Result.Success(Unit)
+    override suspend fun startSubTask(subTaskId: String): EmptyResult<DataError> = Result.Success(Unit)
+    override suspend fun stopSubTask(subTaskId: String): EmptyResult<DataError> = Result.Success(Unit)
+    override suspend fun lastStartedSubTaskId(taskId: String): String? = null
+    override suspend fun reorderSubTasks(taskId: String, orderedSubTaskIds: List<String>): EmptyResult<DataError> = Result.Success(Unit)
+    override suspend fun syncPendingSubTasks() = Unit
 }

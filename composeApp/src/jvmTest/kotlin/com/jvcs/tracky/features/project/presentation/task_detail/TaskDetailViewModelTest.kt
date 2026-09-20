@@ -127,6 +127,7 @@ internal class TaskDetailViewModelTest {
             Result.Success(Unit)
         override suspend fun updateProjectTaskTitle(taskId: String, title: String): EmptyResult<DataError> =
             Result.Success(Unit)
+        override suspend fun updateProjectTaskText(taskId: String, title: String, description: String?) = Result.Success(Unit)
         override suspend fun startProjectTask(taskId: String): EmptyResult<DataError> = Result.Success(Unit)
         override suspend fun stopProjectTask(taskId: String): EmptyResult<DataError> = Result.Success(Unit)
         override suspend fun reorderTasks(projectId: String, orderedTaskIds: List<String>): EmptyResult<DataError> =

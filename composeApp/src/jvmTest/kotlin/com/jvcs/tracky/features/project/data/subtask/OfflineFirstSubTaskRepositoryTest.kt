@@ -234,6 +234,7 @@ private class RecordingTaskRepository : ProjectTaskRepository {
     override suspend fun updateProjectTaskDuration(taskId: String, newDurationMillis: Long) =
         Result.Success(Unit)
     override suspend fun updateProjectTaskTitle(taskId: String, title: String) = Result.Success(Unit)
+    override suspend fun updateProjectTaskText(taskId: String, title: String, description: String?) = Result.Success(Unit)
     override fun getProjectTaskWithIntervalsById(taskId: String): Flow<ProjectTask?> = flowOf(null)
     override suspend fun startProjectTask(taskId: String) = Result.Success(Unit)
     override suspend fun stopProjectTask(taskId: String) = Result.Success(Unit)

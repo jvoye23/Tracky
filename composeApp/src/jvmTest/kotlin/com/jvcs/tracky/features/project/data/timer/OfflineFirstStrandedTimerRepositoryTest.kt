@@ -288,6 +288,7 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
             Result.Success(Unit)
         override suspend fun updateProjectTaskTitle(taskId: String, title: String): EmptyResult<DataError> =
             Result.Success(Unit)
+        override suspend fun updateProjectTaskText(taskId: String, title: String, description: String?) = Result.Success(Unit)
         override fun getProjectTaskWithIntervalsById(taskId: String): Flow<ProjectTask?> = flowOf(null)
         override suspend fun startProjectTask(taskId: String): EmptyResult<DataError> = Result.Success(Unit)
         override suspend fun stopProjectTask(taskId: String): EmptyResult<DataError> = Result.Success(Unit)

@@ -27,6 +27,17 @@
     <string name="back">Back</string>
     <string name="project_details_uppercase">PROJECT DETAILS</string>
     <string name="edit_project_uppercase">EDIT PROJECT</string>
+    <string name="task_details_uppercase">TASK DETAILS</string>
+    <string name="edit_task_uppercase">EDIT TASK</string>
+    <string name="subtask_details_uppercase">SUBTASK DETAILS</string>
+    <string name="edit_subtask_uppercase">EDIT SUBTASK</string>
+    <string name="new_subtask_uppercase">NEW SUBTASK</string>
+    <string name="task_info_saved">Task info saved</string>
+    <string name="subtask_info_saved">Subtask info saved</string>
+    <string name="task_title_cannot_be_blank">The task title cannot be blank</string>
+    <string name="subtask_title_cannot_be_blank">The subtask title cannot be blank</string>
+    <string name="task_cannot_be_found">Task cannot be found</string>
+    <string name="subtask_cannot_be_found">Subtask cannot be found</string>
     <string name="project_overview">Project Overview</string>
     <string name="sessions">Sessions</string>
     <string name="tasks">Tasks</string>

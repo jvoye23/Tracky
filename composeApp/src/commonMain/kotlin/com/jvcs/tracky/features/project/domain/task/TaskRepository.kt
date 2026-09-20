@@ -11,6 +11,7 @@ interface ProjectTaskRepository {
     suspend fun deleteProjectTask(projectId: String, taskId: String): EmptyResult<DataError>
     suspend fun updateProjectTaskDuration(taskId: String, newDurationMillis: Long): EmptyResult<DataError>
     suspend fun updateProjectTaskTitle(taskId: String, title: String): EmptyResult<DataError>
+    suspend fun updateProjectTaskText(taskId: String, title: String, description: String?): EmptyResult<DataError>
     fun getProjectTaskWithIntervalsById(taskId: String): Flow<ProjectTask?>
     suspend fun startProjectTask(taskId: String): EmptyResult<DataError>
     suspend fun stopProjectTask(taskId: String): EmptyResult<DataError>

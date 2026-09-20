@@ -139,6 +139,19 @@ class OfflineFirstTaskRepository(
         return upsertProjectTask(task.copy(title = title))
     }
 
+    override suspend fun updateProjectTaskText(
+        taskId: String,
+        title: String,
+        description: String?
+    ): EmptyResult<DataError> {
+        // From the stored row, like updateProjectTaskTitle, so the task keeps its sortIndex.
+        val task = when (val existing = localTaskDataSource.getTaskById(taskId)) {
+            is Result.Success -> existing.data ?: return Result.Success(Unit) // nothing to edit
+            is Result.Error -> return existing.asEmptyDataResult()
+        }
+        return upsertProjectTask(task.copy(title = title, description = description))
+    }
+
     override fun getProjectTaskWithIntervalsById(taskId: String): Flow<ProjectTask?> {
         return localTaskDataSource.getTaskWithIntervalsById(taskId)
     }
