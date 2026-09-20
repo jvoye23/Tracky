@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.core.domain.util.TimeManager
+import com.jvcs.tracky.features.project.presentation.mappers.CountedInterval
+import com.jvcs.tracky.features.project.presentation.mappers.END_OF_DAY
+import com.jvcs.tracky.features.project.presentation.mappers.clockFormat
 import com.jvcs.tracky.features.project.presentation.mappers.countedDayIntervals
 import com.jvcs.tracky.features.project.presentation.mappers.toProjectTaskUi
 import com.jvcs.tracky.design_system.util.formatDurationHoursMinutesSeconds
@@ -16,6 +19,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.format
 import kotlin.time.Duration.Companion.milliseconds
 
 class TaskDetailViewModel(
@@ -70,7 +74,7 @@ class TaskDetailViewModel(
     }
 
     /**
-     * This task's tracked time, one row per local day.
+     * This task's tracked time, one row per counted interval slice, newest first.
      *
      * Goes through [countedDayIntervals] rather than folding `intervals` directly, which is what it
      * used to do and what made this screen disagree with the rest of the app:
@@ -78,23 +82,26 @@ class TaskDetailViewModel(
      * - It counted a task's own intervals even when the task owns subtasks, double-billing every
      *   stretch that a subtask had already claimed (rule 1).
      * - It billed a multi-day interval entirely to the day it started on, which is how one day came
-     *   to read 75 hours (rule 3).
+     *   to read 75 hours (rule 3). A slice cut at midnight ends at [END_OF_DAY], as in the daily
+     *   overview, so a stretch running into the next day does not read as one that ran backwards.
      *
      * The formatter changes for the same reason. [formatDuration]'s `HH:mm:ss:cc` is a stopwatch
-     * reading with an unbounded hours field — it is what let `75:21:06:12` render at all — while a
-     * day total is bounded and belongs in the same `HH:mm:ss` the daily overview uses.
+     * reading with an unbounded hours field - it is what let `75:21:06:12` render at all - while a
+     * slice is bounded by its day and belongs in the same `HH:mm:ss` the daily overview uses.
      */
     private fun ProjectTask.toDailyStatistics(): List<DailyStatistic> =
         countedDayIntervals(TimeZone.currentSystemDefault())
-            .groupingBy { it.date }
-            .fold(0L) { total, interval -> total + interval.durationMillis }
-            .map { (date, totalDurationMillis) ->
+            .sortedWith(compareByDescending<CountedInterval> { it.date }.thenByDescending { it.start })
+            .map { interval ->
                 DailyStatistic(
-                    formattedDate = date.toString(),
-                    formattedDuration = formatDurationHoursMinutesSeconds(totalDurationMillis.milliseconds)
+                    intervalId = interval.intervalId,
+                    formattedDate = interval.date.toString(),
+                    formattedStartTime = interval.start.format(clockFormat),
+                    formattedEndTime = if (interval.endsAtMidnight) END_OF_DAY
+                        else interval.end.format(clockFormat),
+                    formattedDuration = formatDurationHoursMinutesSeconds(interval.durationMillis.milliseconds)
                 )
             }
-            .sortedByDescending { it.formattedDate }
 
     fun onAction(action: TaskDetailAction) {
         when (action) {

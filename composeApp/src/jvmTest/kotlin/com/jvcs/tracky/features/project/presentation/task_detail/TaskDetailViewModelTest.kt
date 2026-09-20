@@ -19,13 +19,17 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
 
 /**
- * Task Detail's "Daily sessions" list.
+ * Task Detail's "Daily sessions" table, one row per counted interval slice.
  *
  * It used to fold the task's own intervals directly, which made it the one screen that ignored the
  * subtask-nesting rule and billed a multi-day interval entirely to its start day — the two reasons
@@ -116,6 +120,46 @@ internal class TaskDetailViewModelTest {
         // until it is reviewed.
         assertEquals(emptyList(), viewModel.state.value.dailyStatistics)
     }
+
+    @Test
+    fun everyIntervalGetsItsOwnRowWithItsOwnTimes() = runTest(UnconfinedTestDispatcher()) {
+        val viewModel = viewModelFor(
+            task(
+                intervals = listOf(
+                    interval("2026-09-09T12:00:00Z", minutes = 10, id = "early"),
+                    interval("2026-09-09T12:30:00Z", minutes = 20, id = "late"),
+                )
+            )
+        )
+
+        val stats = viewModel.state.value.dailyStatistics
+        // Newest first, one row each rather than one summed row for the day.
+        assertEquals(listOf("late", "early"), stats.map { it.intervalId })
+        assertEquals(listOf("00:20:00", "00:10:00"), stats.map { it.formattedDuration })
+        assertEquals(localClock("2026-09-09T12:30:00Z"), stats[0].formattedStartTime)
+        assertEquals(localClock("2026-09-09T12:50:00Z"), stats[0].formattedEndTime)
+        assertEquals(localClock("2026-09-09T12:00:00Z"), stats[1].formattedStartTime)
+        assertEquals(localClock("2026-09-09T12:10:00Z"), stats[1].formattedEndTime)
+    }
+
+    @Test
+    fun aSliceCutAtMidnightEndsAtTwentyFour() = runTest(UnconfinedTestDispatcher()) {
+        val viewModel = viewModelFor(
+            task(intervals = listOf(interval("2026-09-09T12:00:00Z", minutes = 24 * 60)))
+        )
+
+        val stats = viewModel.state.value.dailyStatistics
+        // The older slice is the second row; it runs up to its day's midnight, which reads as
+        // 24:00 rather than the next day's 00:00.
+        assertEquals("24:00", stats[1].formattedEndTime)
+        assertEquals("00:00", stats[0].formattedStartTime)
+    }
+
+    @OptIn(ExperimentalTime::class)
+    private fun localClock(instant: String): String =
+        Instant.parse(instant).toLocalDateTime(TimeZone.currentSystemDefault()).time.let {
+            it.hour.toString().padStart(2, '0') + ":" + it.minute.toString().padStart(2, '0')
+        }
 
     private inner class FakeProjectTaskRepository : ProjectTaskRepository {
         override fun getProjectTaskWithIntervalsById(taskId: String): Flow<ProjectTask?> = stored
