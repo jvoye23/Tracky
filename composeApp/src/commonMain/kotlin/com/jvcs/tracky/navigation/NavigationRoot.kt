@@ -2,8 +2,6 @@ package com.jvcs.tracky.navigation
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavBackStack
@@ -38,8 +36,6 @@ import org.koin.core.parameter.parametersOf
 fun NavigationRoot(
     backStack: NavBackStack<NavKey>
 ) {
-    val editTextCallback = remember { mutableStateOf<((String, String) -> Unit)?>(null) }
-
     NavDisplay(
         modifier = Modifier.fillMaxSize(),
         backStack = backStack,
@@ -186,11 +182,14 @@ fun NavigationRoot(
                         backStack.remove(key)
                     },
                     viewModel = detailVm,
-                    onEditTextClick = { isEditMode, projectId ->
+                    onEditTextClick = { isEditMode, projectId, target, taskId, subTaskId ->
                         backStack.add(
                             Route.ProjectRoute.EditTextNavKey(
                                 isEditMode = isEditMode,
-                                projectId = projectId
+                                projectId = projectId,
+                                target = target,
+                                taskId = taskId,
+                                subTaskId = subTaskId
                             )
                         )
                     },

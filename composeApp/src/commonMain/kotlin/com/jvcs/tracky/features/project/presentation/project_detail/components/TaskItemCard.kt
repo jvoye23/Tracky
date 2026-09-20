@@ -23,10 +23,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.input.TextFieldLineLimits
-import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Pause
@@ -44,7 +40,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.key
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
@@ -53,17 +48,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -215,33 +206,6 @@ private fun DragHandle(
 /** Minimum comfortable touch target; the grip is drawn smaller but must be grabbable. */
 private val TouchTarget = 48.dp
 
-/**
- * Inline rename field. Deliberately a [BasicTextField] rather than TrackyTextField: the design
- * outlines the whole row and shows a bare cursor, so the field itself must carry no label,
- * container or elevation of its own.
- */
-@Composable
-private fun SubTaskTitleField(
-    state: TextFieldState,
-    onCommit: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
-
-    BasicTextField(
-        state = state,
-        modifier = modifier.focusRequester(focusRequester),
-        textStyle = MaterialTheme.typography.bodyLarge.copy(
-            color = MaterialTheme.colorScheme.onSurface
-        ),
-        lineLimits = TextFieldLineLimits.SingleLine,
-        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-        onKeyboardAction = { onCommit() }
-    )
-}
-
 /** Dashed "+ Subtask" pill closing out the edit-mode card. */
 @Composable
 private fun AddSubTaskPill(
@@ -314,12 +278,10 @@ fun TaskItemCard(
     onSubTaskCheckedChange: (subTaskId: String) -> Unit,
     isExpanded: Boolean = true,
     onToggleExpanded: () -> Unit = {},
-    editingSubTaskId: String? = null,
-    editSubTaskTextFieldState: TextFieldState = TextFieldState(),
-    isAddingSubTask: Boolean = false,
+    // Edit-mode taps that open the edit-text screen for the task, one of its subtasks, or a new one.
+    onTaskTitleClick: () -> Unit = {},
+    onSubTaskClick: (subTaskId: String) -> Unit = {},
     onAddSubTaskClick: () -> Unit = {},
-    onSubTaskTitleClick: (subTaskId: String, currentTitle: String) -> Unit = { _, _ -> },
-    onCommitSubTaskTitle: () -> Unit = {},
     // Reorder of this whole card among its siblings, driven from the grip on the task row. Off by
     // default so every preview and any other caller keeps a purely decorative handle.
     isReorderable: Boolean = false,
@@ -346,7 +308,9 @@ fun TaskItemCard(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .clickable { onCardClick() },
+            // Edit mode rearranges and renames the card's contents; opening the task's detail
+            // screen from there would be a surprise, so only the view-mode card is a link.
+            .then(if (isEditMode) Modifier else Modifier.clickable { onCardClick() }),
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceContainerLow,
         border = BorderStroke(
@@ -406,7 +370,12 @@ fun TaskItemCard(
                         Spacer(modifier = Modifier.width(4.dp))
 
                         Text(
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .then(
+                                    if (isEditMode) Modifier.clickable { onTaskTitleClick() }
+                                    else Modifier
+                                ),
                             text = task.title,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
@@ -509,7 +478,7 @@ fun TaskItemCard(
             // optional SubTasks — the design groups them on a tinted band rather than
             // separating them from the main row with a divider.
             // Edit mode always shows them: there is no progress row there to expand them again.
-            if ((task.subTasks.isNotEmpty() || isAddingSubTask) && (isExpanded || isEditMode)) {
+            if (task.subTasks.isNotEmpty() && (isExpanded || isEditMode)) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -518,7 +487,6 @@ fun TaskItemCard(
                 ) {
                     task.subTasks.forEachIndexed { subTaskIndex, projectSubTaskUi ->
                         val subTaskId = projectSubTaskUi.projectSubTaskId
-                        val isRenaming = isEditMode && editingSubTaskId == subTaskId
 
                         // Keyed so a row's identity follows the subtask rather than the position,
                         // which is what lets the bounds it reports survive a reorder.
@@ -550,15 +518,6 @@ fun TaskItemCard(
                                                         subTaskDragState.settlingItemOffset
                                                     }
                                             }
-                                    } else Modifier
-                                )
-                                .then(
-                                    if (isRenaming) {
-                                        Modifier.border(
-                                            width = 2.dp,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            shape = RoundedCornerShape(10.dp)
-                                        )
                                     } else Modifier
                                 )
                                 .padding(vertical = 6.dp),
@@ -606,34 +565,21 @@ fun TaskItemCard(
                                         textDecoration = textDecoration
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
-                                    if (isRenaming) {
-                                        SubTaskTitleField(
-                                            state = editSubTaskTextFieldState,
-                                            onCommit = onCommitSubTaskTitle,
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                    } else {
-                                        Text(
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .then(
-                                                    if (isEditMode) {
-                                                        Modifier.clickable {
-                                                            onSubTaskTitleClick(
-                                                                projectSubTaskUi.projectSubTaskId,
-                                                                projectSubTaskUi.title
-                                                            )
-                                                        }
-                                                    } else Modifier
-                                                ),
-                                            text = projectSubTaskUi.title,
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
-                                            textDecoration = textDecoration,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
+                                    Text(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .then(
+                                                if (isEditMode) {
+                                                    Modifier.clickable { onSubTaskClick(subTaskId) }
+                                                } else Modifier
+                                            ),
+                                        text = projectSubTaskUi.title,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
+                                        textDecoration = textDecoration,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
                                 }
                                 if (!isEditMode) {
                                     Text(
@@ -663,30 +609,6 @@ fun TaskItemCard(
                         }
                     }
 
-                    // Draft row for a subtask that does not exist yet. Nothing is written until the
-                    // title is committed — the server rejects a blank one.
-                    if (isAddingSubTask) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                                .border(
-                                    width = 2.dp,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    shape = RoundedCornerShape(10.dp)
-                                )
-                                .padding(horizontal = 8.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            DragHandle()
-                            SubTaskTitleField(
-                                state = editSubTaskTextFieldState,
-                                onCommit = onCommitSubTaskTitle,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
                 }
             }
 
@@ -825,28 +747,6 @@ private fun TaskItemCardCollapsedPreview() {
             onDeleteSubTaskClick = {},
             onSubTaskCheckedChange = {},
             isExpanded = false
-        )
-    }
-}
-
-@PreviewLightDark
-@Composable
-private fun TaskItemCardEditModeRenamingPreview() {
-    TaskItemCardPreviewContainer {
-        TaskItemCard(
-            index = 1,
-            task = previewTask(title = "Testing Tasks"),
-            projectColor = PreviewProjectColor,
-            isEditMode = true,
-            onToggleTimer = {},
-            onDeleteClick = {},
-            onCardClick = {},
-            onCheckedChange = {},
-            onToggleSubTaskTimer = {},
-            onDeleteSubTaskClick = {},
-            onSubTaskCheckedChange = {},
-            editingSubTaskId = "2",
-            editSubTaskTextFieldState = TextFieldState(initialText = "Rate limits")
         )
     }
 }

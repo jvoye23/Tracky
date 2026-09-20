@@ -65,6 +65,7 @@ class ProjectDetailViewModel(
     val events = eventChannel.receiveAsFlow()
 
     private var hasLoadedInitialData = false
+    private var hasShownScreen = false
 
     /**
      * The locally held state folded over the live project row.
@@ -74,7 +75,8 @@ class ProjectDetailViewModel(
      * back stack with its state intact, so a snapshot taken on entry would still be on screen after
      * the user navigates back. The task tree is deliberately not part of the stream — it stays on
      * the one-shot [getProject] read, so the timer values [updateUiWithTimerValues] maintains are
-     * never overwritten by a row change.
+     * never overwritten by a row change. Edits made on the edit-text screen reach it through
+     * [refreshTaskTree] instead, when the screen is shown again.
      */
     val state = combine(
         _state,
@@ -145,9 +147,7 @@ class ProjectDetailViewModel(
             }
             is ProjectDetailAction.OnSubTaskReorderCommit -> {commitSubTaskReorder(action.taskId)}
             ProjectDetailAction.OnSubTaskReorderCancel -> {reloadTasksFromDatabase()}
-            is ProjectDetailAction.OnAddSubTaskClick -> {beginAddSubTask(action.taskId)}
-            is ProjectDetailAction.OnSubTaskTitleClick -> {beginSubTaskRename(action.subTaskId, action.currentTitle)}
-            ProjectDetailAction.OnCommitSubTaskTitle -> {commitSubTaskRename()}
+            ProjectDetailAction.OnReturnedToScreen -> {onReturnedToScreen()}
             ProjectDetailAction.OnToggleColorPicker -> {toggleColorPicker()}
             is ProjectDetailAction.OnColorChanged -> {onColorChanged(action.color)}
             is ProjectDetailAction.OnUseLightTextColorToggled -> {onUseLightTextColorToggled(action.useLightTextColor)}
@@ -643,122 +643,6 @@ class ProjectDetailViewModel(
     }
 
     /**
-     * Opens an inline draft row instead of writing anything. The server rejects a blank title
-     * (CreateProjectSubTaskRequest.title is @NotBlank), so a subtask must not reach the repository
-     * until the user has actually typed one — and abandoning the draft then leaves nothing behind.
-     */
-    private fun beginAddSubTask(taskId: String) {
-        _state.update { it.copy(
-            // The draft row lives at the end of the subtask list, so the list has to be showing.
-            collapsedTaskIds = it.collapsedTaskIds - taskId,
-            pendingSubTaskParentTaskId = taskId,
-            editingSubTaskId = null,
-            editSubTaskTextFieldState = TextFieldState()
-        ) }
-    }
-
-    private fun createSubTask(taskId: String, title: String) {
-        viewModelScope.launch {
-            val currentProject = state.value.project ?: return@launch
-
-            val newSubTask = ProjectSubTask(
-                projectSubTaskId = Uuid.random().toString(),
-                parentProjectTaskId = taskId,
-                parentProjectId = currentProject.projectId,
-                title = title,
-                description = null,
-                durationMillis = 0L,
-                isTimerRunning = false,
-                startDateTimeUtc = timeProvider.nowInstant,
-                ownUpdatedAt = timeProvider.nowInstant
-            )
-
-            when (val result = subTaskRepository.upsertSubTask(newSubTask)) {
-                is Result.Error -> eventChannel.send(ProjectDetailEvent.Error(result.error.toUiText()))
-                is Result.Success -> {
-                    _state.update { currentState ->
-                        val project = currentState.project ?: return@update currentState
-                        currentState.copy(
-                            project = project.copy(
-                                projectTasks = project.projectTasks?.map { task ->
-                                    if (task.projectTaskId == taskId) {
-                                        task.copy(subTasks = task.subTasks + newSubTask.toProjectSubTaskUi())
-                                    } else {
-                                        task
-                                    }
-                                }
-                            )
-                        )
-                    }
-
-                    // The new subtask is open, so a finished parent re-opens — the other escape
-                    // route out of the uncheck-blocked dialog.
-                    syncTaskFinishedFromSubTasks(taskId)
-                }
-            }
-        }
-    }
-
-    private fun beginSubTaskRename(subTaskId: String, currentTitle: String) {
-        _state.update { it.copy(
-            editingSubTaskId = subTaskId,
-            editSubTaskTextFieldState = TextFieldState(initialText = currentTitle)
-        ) }
-    }
-
-    private fun commitSubTaskRename() {
-        val current = _state.value
-        val newTitle = current.editSubTaskTextFieldState.text.toString().trim()
-        val pendingParentTaskId = current.pendingSubTaskParentTaskId
-        val subTaskId = current.editingSubTaskId
-
-        // Close the field first so the UI settles even if the write fails.
-        _state.update { it.copy(
-            pendingSubTaskParentTaskId = null,
-            editingSubTaskId = null,
-            editSubTaskTextFieldState = TextFieldState()
-        ) }
-
-        // An abandoned draft is simply dropped, and a rename to blank is refused: either way the
-        // server would reject it, so nothing is sent.
-        if (newTitle.isEmpty()) return
-
-        if (pendingParentTaskId != null) {
-            createSubTask(pendingParentTaskId, newTitle)
-            return
-        }
-        if (subTaskId == null) return
-
-        val parentTaskId = current.project
-            ?.projectTasks
-            ?.find { task -> task.subTasks.any { it.projectSubTaskId == subTaskId } }
-            ?.projectTaskId ?: return
-
-        viewModelScope.launch {
-            val subTask = subTaskRepository.getSubTasksForTask(parentTaskId).first()
-                .find { it.projectSubTaskId == subTaskId } ?: return@launch
-            if (subTask.title == newTitle) return@launch
-
-            subTaskRepository.upsertSubTask(
-                subTask.copy(title = newTitle, ownUpdatedAt = timeProvider.nowInstant)
-            )
-            _state.update { currentState ->
-                val project = currentState.project ?: return@update currentState
-                currentState.copy(
-                    project = project.copy(
-                        projectTasks = project.projectTasks?.map { task ->
-                            task.copy(subTasks = task.subTasks.map { ui ->
-                                if (ui.projectSubTaskId == subTaskId) ui.copy(title = newTitle) else ui
-                            })
-                        }
-                    )
-                )
-            }
-        }
-    }
-
-
-    /**
      * Writes the order the drag settled on.
      *
      * Unlike the project overview this needs no in-flight guard: [withProjectRow] never rewrites
@@ -789,6 +673,41 @@ class ProjectDetailViewModel(
                     reloadTasksFromDatabase()
                     eventChannel.send(ProjectDetailEvent.ReorderError(error.toUiText()))
                 }
+        }
+    }
+
+    private fun onReturnedToScreen() {
+        // The first call is the screen's initial composition, which getProject already covers.
+        if (!hasShownScreen) {
+            hasShownScreen = true
+            return
+        }
+        refreshTaskTree()
+    }
+
+    /**
+     * Re-reads the task tree after another screen may have written to it - a renamed task or
+     * subtask, or a subtask created on the edit-text screen.
+     *
+     * Unlike getProject this replaces only the tasks and the per-day strip: the colour, contrast
+     * and edit mode are left alone, so a colour pick the user has not saved yet survives. Running
+     * timers show their stored value until the next tick of timeManager repaints them.
+     */
+    private fun refreshTaskTree() {
+        val projectId = projectId ?: return
+        viewModelScope.launch(ioDispatcher) {
+            val fresh = projectRepository.getProjectWithTasksByProjectId(projectId) ?: return@launch
+            val freshTasks = fresh.toProjectUi().projectTasks
+            _state.update { current ->
+                val project = current.project ?: return@update current
+                current.copy(
+                    project = project.copy(projectTasks = freshTasks),
+                    perDayStrip = fresh.perDayStrip()
+                )
+            }
+            // A subtask created elsewhere is open, so a finished parent re-opens - the escape
+            // route out of the uncheck-blocked dialog that the inline draft row used to provide.
+            freshTasks?.forEach { syncTaskFinishedFromSubTasks(it.projectTaskId) }
         }
     }
 
