@@ -24,6 +24,7 @@ import com.jvcs.tracky.features.project.data.timer.OfflineFirstStrandedTimerRepo
 import com.jvcs.tracky.features.project.data.timer.StrandedTimerReconciler
 import com.jvcs.tracky.features.project.domain.timer.RunningTimerRepository
 import com.jvcs.tracky.features.project.domain.timer.StrandedTimerRepository
+import com.jvcs.tracky.core.domain.sync.DeltaSyncApplier
 import com.jvcs.tracky.core.domain.sync.RemoteSyncDataSource
 import com.jvcs.tracky.core.domain.sync.SyncCursorStore
 import com.jvcs.tracky.core.domain.sync.SyncRepository
@@ -199,7 +200,7 @@ val coreDataModule = module {
             connectivityObserver = get(),
             appLifecycleObserver = get(),
             syncRepository = get(),
-            projectRepository = get(),
+            deltaSyncApplier = get(),
             applicationScope = get(qualifier = named("AppScope")),
             timeProvider = get(),
         )
@@ -265,6 +266,7 @@ val coreDataModule = module {
     // How far this device has read the server's change feed. Cleared on logout.
     singleOf(::DataStoreSyncCursorStore) bind SyncCursorStore::class
     singleOf(::KtorRemoteSyncDataSource) bind RemoteSyncDataSource::class
+    singleOf(::DeltaSyncApplier)
 
     // Auth
     singleOf(::DataStoreSessionStorage) bind SessionStorage::class

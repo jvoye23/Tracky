@@ -5,7 +5,6 @@ package com.jvcs.tracky.core.domain.sync
 import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
 import com.jvcs.tracky.core.domain.lifecycle.AppLifecycleObserver
 import com.jvcs.tracky.core.domain.util.TimeProvider
-import com.jvcs.tracky.features.project.domain.project.ProjectRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.combine
@@ -27,7 +26,7 @@ class ProjectSyncManager(
     private val connectivityObserver: ConnectivityObserver,
     private val appLifecycleObserver: AppLifecycleObserver,
     private val syncRepository: SyncRepository,
-    private val projectRepository: ProjectRepository,
+    private val deltaSyncApplier: DeltaSyncApplier,
     private val applicationScope: CoroutineScope,
     private val timeProvider: TimeProvider
 ) {
@@ -47,11 +46,18 @@ class ProjectSyncManager(
             .onEach {
                 syncRepository.syncPendingOperations()
                 val now = timeProvider.nowInstant
-                if (now - lastPull > 5.minutes) {
-                    projectRepository.fetchProjects()
+                if (now - lastPull > PULL_INTERVAL) {
+                    // A delta, falling back to the full tree when the feed cannot be used. The
+                    // throttle stays: it bounds how often this device talks to the server at all,
+                    // and a delta on a quiet account is cheap but not free.
+                    deltaSyncApplier.pullChanges()
                     lastPull = now
                 }
             }
             .launchIn(applicationScope)
+    }
+
+    private companion object {
+        val PULL_INTERVAL = 5.minutes
     }
 }
