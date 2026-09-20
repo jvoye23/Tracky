@@ -52,7 +52,7 @@ fun ProjectTaskDto.toProjectTask(parentProjectId: String): ProjectTask {
         isFinished = isFinished,
         parentProjectId = parentProjectId,
         isTimerRunning = isTimerRunning,
-        intervals = intervals.map { it.toTaskInterval(parentProjectId) },
+        intervals = intervals.map { it.toTaskInterval(parentProjectId, startedByDeviceId = null) },
         ownUpdatedAt = updatedAt?.let(Instant::parse),
         subTasks = subTasks.map { it.toProjectSubTask(parentProjectId) },
         sortIndex = sortIndex,
@@ -75,7 +75,9 @@ fun ProjectSubTaskDto.toProjectSubTask(parentProjectId: String): ProjectSubTask 
         isFinished = isFinished,
         // startedParentTimer is unknowable from the wire; upsertServerTree keeps whatever the
         // local row already had, and false is safe for a row this device has never seen.
-        subTaskIntervals = intervals.map { it.toSubTaskInterval(parentProjectId, startedParentTimer = false) },
+        subTaskIntervals = intervals.map {
+            it.toSubTaskInterval(parentProjectId, startedParentTimer = false, startedByDeviceId = null)
+        },
         ownUpdatedAt = updatedAt?.let(Instant::parse),
         sortIndex = sortIndex,
     )
@@ -89,10 +91,15 @@ fun ProjectSubTaskDto.toProjectSubTask(parentProjectId: String): ProjectSubTask 
  * would quietly break "stopping this subtask also stops its parent task". A push passes the value
  * off the row it sent; a pull has no way to know it and passes `false`, which the merge in
  * ProjectDao.upsertServerTree then overrides with whatever the local row already held.
+ *
+ * [startedByDeviceId] is a parameter for the same reason and behaves the same way: which device
+ * opened an interval is not on the wire, so a push passes the value off the row it sent and a pull
+ * passes null for the merge to preserve.
  */
 fun SubTaskIntervalDto.toSubTaskInterval(
     parentProjectId: String,
-    startedParentTimer: Boolean
+    startedParentTimer: Boolean,
+    startedByDeviceId: String?
 ): SubTaskInterval {
     return SubTaskInterval(
         subTaskIntervalId = subTaskIntervalId,
@@ -102,20 +109,25 @@ fun SubTaskIntervalDto.toSubTaskInterval(
         startDateTimeUtc = Instant.parse(startDateTimeUtc),
         endDateTimeUtc = endDateTimeUtc?.let(Instant::parse),
         durationMillis = durationMillis,
-        startedParentTimer = startedParentTimer
+        startedParentTimer = startedParentTimer,
+        startedByDeviceId = startedByDeviceId
     )
 }
 
 // The wire payload nests intervals inside their task and never repeats the project id, so it is
 // handed down from the enclosing ProjectTaskDto rather than read off the interval itself.
-fun TaskIntervalDto.toTaskInterval(parentProjectId: String): TaskInterval {
+fun TaskIntervalDto.toTaskInterval(
+    parentProjectId: String,
+    startedByDeviceId: String?
+): TaskInterval {
     return TaskInterval(
         intervalId = intervalId,
         parentTaskId = parentSessionId,
         parentProjectId = parentProjectId,
         startDateTimeUtc = Instant.parse( startDateTimeUtc),
         endDateTimeUtc = endDateTimeUtc?.let(Instant::parse),
-        durationMillis = durationMillis
+        durationMillis = durationMillis,
+        startedByDeviceId = startedByDeviceId
     )
 }
 

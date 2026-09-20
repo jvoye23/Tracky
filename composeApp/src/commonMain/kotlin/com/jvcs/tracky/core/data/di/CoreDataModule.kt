@@ -2,8 +2,8 @@ package com.jvcs.tracky.core.data.di
 
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.jvcs.tracky.core.data.auth.DataStoreSessionStorage
-import com.jvcs.tracky.core.data.device.DataStoreDeviceIdProvider
 import com.jvcs.tracky.core.data.auth.KtorAuthService
+import com.jvcs.tracky.core.data.device.DataStoreDeviceIdProvider
 import com.jvcs.tracky.core.data.networking.HttpClientFactory
 import com.jvcs.tracky.core.data.sync.RoomPendingSyncDataSource
 import com.jvcs.tracky.core.data.sync.SyncCoordinator
@@ -240,6 +240,7 @@ val coreDataModule = module {
                 TrackyDatabase.MIGRATION_15_16,
                 TrackyDatabase.MIGRATION_16_17,
                 TrackyDatabase.MIGRATION_17_18,
+                TrackyDatabase.MIGRATION_18_19,
             )
             .setDriver(BundledSQLiteDriver())
             // Single connection (no WAL reader pool). The reactive sync (ProjectSyncManager) does

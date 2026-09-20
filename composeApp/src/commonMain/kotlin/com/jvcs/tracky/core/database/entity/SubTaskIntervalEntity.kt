@@ -54,5 +54,9 @@ data class SubTaskIntervalEntity(
     // one, and without it on the entity the two schemas would only agree because Room happens to
     // skip comparing defaults the entity does not declare.
     @ColumnInfo(defaultValue = "0")
-    val startedParentTimer: Boolean = false
+    val startedParentTimer: Boolean = false,
+    // See TaskIntervalEntity.startedByDeviceId. Carried here too rather than read through the
+    // enclosing task interval: the stranded-timer pass walks subtask intervals directly, children
+    // first, so a join would be four extra queries on the startup path.
+    val startedByDeviceId: String? = null
 )

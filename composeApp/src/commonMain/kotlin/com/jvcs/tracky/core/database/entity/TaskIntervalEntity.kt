@@ -34,5 +34,10 @@ data class TaskIntervalEntity(
     val parentProjectId: String, // The Foreign Key link to the owning project
     val startDateTimeEpochMs: Long,
     val endDateTimeEpochMs: Long?,
-    val durationMillis: Long
+    val durationMillis: Long,
+    // Which installation opened this interval. Null means unknown, which every row written before
+    // multi-device sync is, and which is read as "this device" — the behaviour those rows already
+    // had. See DeviceIdProvider: an open interval this device started is a crash to recover from,
+    // one another device started is a timer to display.
+    val startedByDeviceId: String? = null
 )

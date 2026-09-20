@@ -2,6 +2,7 @@ package com.jvcs.tracky.features.project.data.task
 
 import com.jvcs.tracky.core.database.dao.ProjectDao
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
+import com.jvcs.tracky.core.domain.device.DeviceIdProvider
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
@@ -26,7 +27,8 @@ import kotlin.uuid.Uuid
 
 class RoomLocalTaskDataSource(
     private val projectDao: ProjectDao,
-    private val timeProvider: TimeProvider
+    private val timeProvider: TimeProvider,
+    private val deviceIdProvider: DeviceIdProvider
 ) : LocalTaskDataSource {
 
     // Same single-writer funnel as the other Room data sources — see RoomLocalProjectDataSource.
@@ -75,6 +77,9 @@ class RoomLocalTaskDataSource(
 
     override suspend fun startTask(taskId: String): Result<TaskTimerStart, DataError.Local> {
         return try {
+            // Read outside the write dispatcher: minting the id on first launch writes to
+            // DataStore, and the single-writer funnel is for Room.
+            val deviceId = deviceIdProvider.deviceId()
             val start = withContext(dbWriteDispatcher) {
                 // The owning project has to be read before the interval can be written: it is part
                 // of the row now, and the cascading foreign key would reject an interval whose task
@@ -99,7 +104,8 @@ class RoomLocalTaskDataSource(
                     parentProjectId = task.parentProjectId,
                     startDateTimeEpochMs = now.toEpochMilliseconds(),
                     endDateTimeEpochMs = null,
-                    durationMillis = 0L
+                    durationMillis = 0L,
+                    startedByDeviceId = deviceId
                 )
                 projectDao.upsertTaskInterval(interval)
                 projectDao.updateSessionTimerStatus(taskId, true)
