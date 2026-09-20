@@ -461,9 +461,32 @@ class OfflineFirstProjectRepositoryTest {
     }
 
     @Test
-    fun fetchProjects_doesNotCloseAnIntervalThatIsStillRunningLocally() = runBlocking {
+    fun fetchProjects_closesAnIntervalStoppedOnAnotherDevice() = runBlocking {
         val f = Quad(FakeLocalProjectDataSource(), FakeRemoteProjectDataSource(), FakePendingSyncDataSource(), FakeSyncScheduler())
-        f.local.intervals["i1"] = serverInterval("i1", "t1", end = null) // timer running on this device
+        f.local.intervals["i1"] = serverInterval("i1", "t1", end = null) // still ticking here
+        f.remote.projectsToReturn = listOf(
+            project("p1").copy(
+                projectTasks = listOf(
+                    serverTask("t1", "p1", updatedAt = 100, intervals = listOf(serverInterval("i1", "t1", end = 60_000)))
+                )
+            )
+        )
+
+        f.repository().fetchProjects()
+
+        // Nothing queued for this row, so this device has no unsent change to defend: the stop
+        // the user made on their other device is what lands.
+        assertEquals(
+            Instant.fromEpochMilliseconds(60_000),
+            f.local.intervals.getValue("i1").endDateTimeUtc
+        )
+    }
+
+    @Test
+    fun fetchProjects_doesNotCloseAnIntervalWhoseOwnStopIsStillQueued() = runBlocking {
+        val f = Quad(FakeLocalProjectDataSource(), FakeRemoteProjectDataSource(), FakePendingSyncDataSource(), FakeSyncScheduler())
+        f.local.intervals["i1"] = serverInterval("i1", "t1", end = null)
+        f.local.pendingIntervalIds += "i1"
         f.remote.projectsToReturn = listOf(
             project("p1").copy(
                 projectTasks = listOf(

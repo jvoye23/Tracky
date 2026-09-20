@@ -59,6 +59,9 @@ class FakeDb {
     val subTasks = linkedMapOf<String, ProjectSubTask>()
     val subTaskIntervals = linkedMapOf<String, SubTaskInterval>()
 
+    /** Stands in for `pending_sync_operations`: interval ids this device still owes the server. */
+    val pendingIntervalIds = mutableSetOf<String>()
+
     val projectsFlow = MutableStateFlow<List<Project>>(emptyList())
 
     fun emit() { projectsFlow.value = projects.values.toList() }
@@ -179,6 +182,7 @@ class FakeLocalProjectDataSource(private val db: FakeDb = FakeDb()) : LocalProje
     val intervals get() = db.intervals
     val subTasks get() = db.subTasks
     val subTaskIntervals get() = db.subTaskIntervals
+    val pendingIntervalIds get() = db.pendingIntervalIds
 
     val upsertedProjectIds = mutableListOf<String>()
     /** One entry per updateSortIndices call, so tests can assert a reorder is a single write. */
@@ -258,9 +262,11 @@ class FakeLocalProjectDataSource(private val db: FakeDb = FakeDb()) : LocalProje
             val local = intervals[incoming.intervalId]
             if (local == null || serverWinsOnPullForInterval(
                     local.endDateTimeUtc?.toEpochMilliseconds(),
-                    incoming.endDateTimeUtc?.toEpochMilliseconds()
+                    incoming.endDateTimeUtc?.toEpochMilliseconds(),
+                    incoming.intervalId in db.pendingIntervalIds
                 )) {
-                intervals[incoming.intervalId] = incoming
+                intervals[incoming.intervalId] =
+                    incoming.copy(startedByDeviceId = incoming.startedByDeviceId ?: local?.startedByDeviceId)
             }
         }
         incomingTasks.flatMap { it.subTasks.orEmpty() }.forEach { incoming ->
@@ -280,11 +286,15 @@ class FakeLocalProjectDataSource(private val db: FakeDb = FakeDb()) : LocalProje
             val local = subTaskIntervals[incoming.subTaskIntervalId]
             if (local == null || serverWinsOnPullForInterval(
                     local.endDateTimeUtc?.toEpochMilliseconds(),
-                    incoming.endDateTimeUtc?.toEpochMilliseconds()
+                    incoming.endDateTimeUtc?.toEpochMilliseconds(),
+                    incoming.subTaskIntervalId in db.pendingIntervalIds
                 )) {
-                // The wire carries no startedParentTimer, so the local value is what survives.
-                subTaskIntervals[incoming.subTaskIntervalId] =
-                    incoming.copy(startedParentTimer = local?.startedParentTimer ?: false)
+                // The wire carries neither startedParentTimer nor startedByDeviceId, so the local
+                // values are what survive.
+                subTaskIntervals[incoming.subTaskIntervalId] = incoming.copy(
+                    startedParentTimer = local?.startedParentTimer ?: false,
+                    startedByDeviceId = incoming.startedByDeviceId ?: local?.startedByDeviceId
+                )
             }
         }
         db.emit()
