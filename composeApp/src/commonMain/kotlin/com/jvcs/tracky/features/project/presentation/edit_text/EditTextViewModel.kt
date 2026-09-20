@@ -1,4 +1,4 @@
-package com.jvcs.tracky.features.project.presentation.projectEditTextScreen
+package com.jvcs.tracky.features.project.presentation.edit_text
 
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
@@ -26,13 +26,13 @@ import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.project_cannot_be_found
 import tracky.composeapp.generated.resources.project_title_cannot_be_blank
 
-class ProjectEditTextViewModel(
+class EditTextViewModel(
     private val isEditMode: Boolean,
     private val projectId: String,
     private val projectRepository: ProjectRepository,
     private val savedStateHandle: SavedStateHandle
 ): ViewModel() {
-    private val eventChannel = Channel<ProjectEditTextEvent>()
+    private val eventChannel = Channel<EditTextEvent>()
     val events = eventChannel.receiveAsFlow()
 
     private var hasLoadedInitialData = false
@@ -59,7 +59,7 @@ class ProjectEditTextViewModel(
     private val editModeState  = restoredEditMode ?: isEditMode
 
     private val _state = MutableStateFlow(
-        ProjectEditTextState(
+        EditTextState(
             titleState = titleState,
             descriptionState = descriptionState,
             isEditMode = editModeState,
@@ -82,10 +82,10 @@ class ProjectEditTextViewModel(
             initialValue = _state.value
         )
 
-    fun onAction(action: ProjectEditTextAction) {
+    fun onAction(action: EditTextAction) {
         when (action) {
-            ProjectEditTextAction.OnEditClick -> toggleEditMode()
-            ProjectEditTextAction.OnSaveClick -> saveProject(
+            EditTextAction.OnEditClick -> toggleEditMode()
+            EditTextAction.OnSaveClick -> saveProject(
                 title = _state.value.titleState.text.toString(),
                 description = _state.value.descriptionState.text.toString(),
             )
@@ -125,7 +125,7 @@ class ProjectEditTextViewModel(
         viewModelScope.launch {
             val project = projectRepository.getProjectById(projectId)
             if (project == null) {
-                eventChannel.send(ProjectEditTextEvent.Error(UiText.Resource(Res.string.project_cannot_be_found)))
+                eventChannel.send(EditTextEvent.Error(UiText.Resource(Res.string.project_cannot_be_found)))
                 return@launch
             }
             val projectUi = project.toProjectUi()
@@ -147,7 +147,7 @@ class ProjectEditTextViewModel(
     private fun saveProject(title: String, description: String) {
         viewModelScope.launch {
             if (title.isBlank()) {
-                eventChannel.send(ProjectEditTextEvent.Error(UiText.Resource(Res.string.project_title_cannot_be_blank)))
+                eventChannel.send(EditTextEvent.Error(UiText.Resource(Res.string.project_title_cannot_be_blank)))
                 return@launch
             }
             // Start from the stored row, not the UI model: the UI model carries no sortIndex, and
@@ -158,12 +158,12 @@ class ProjectEditTextViewModel(
             ) ?: return@launch
 
             when (val result = projectRepository.upsertProject(editedProject)) {
-                is Result.Error -> eventChannel.send(ProjectEditTextEvent.Error(result.error.toUiText()))
+                is Result.Error -> eventChannel.send(EditTextEvent.Error(result.error.toUiText()))
                 is Result.Success -> {
                     // Only leave edit mode once the save actually landed, so a blank title or a
                     // failed upsert keeps the user in the field they still have to correct.
                     toggleEditMode()
-                    eventChannel.send(ProjectEditTextEvent.OnSavedSuccess)
+                    eventChannel.send(EditTextEvent.OnSavedSuccess)
                 }
             }
         }

@@ -1,4 +1,4 @@
-package com.jvcs.tracky.features.project.presentation.projectEditTextScreen
+package com.jvcs.tracky.features.project.presentation.edit_text
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -51,7 +51,7 @@ import kotlin.time.Duration.Companion.milliseconds
 @Composable
 fun EditTextScreenRoot(
     onNavigateBack: () -> Unit,
-    viewModel: ProjectEditTextViewModel = koinViewModel()
+    viewModel: EditTextViewModel = koinViewModel()
 ) {
 
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -61,7 +61,7 @@ fun EditTextScreenRoot(
 
     ObserveAsEvents(viewModel.events) { event ->
         when (event) {
-            is ProjectEditTextEvent.Error -> {
+            is EditTextEvent.Error -> {
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar(
                         message = event.error.asStringAsync(),
@@ -69,7 +69,7 @@ fun EditTextScreenRoot(
                     )
                 }
             }
-            is ProjectEditTextEvent.OnSavedSuccess -> {
+            is EditTextEvent.OnSavedSuccess -> {
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar(
                         message = UiText.Resource(Res.string.project_info_saved).asStringAsync(),
@@ -86,7 +86,7 @@ fun EditTextScreenRoot(
         snackbarHostState = snackbarHostState,
         onAction = { action ->
             when (action) {
-                ProjectEditTextAction.OnBackClick -> onNavigateBack()
+                EditTextAction.OnBackClick -> onNavigateBack()
                 else -> Unit
             }
             viewModel.onAction(action)
@@ -98,9 +98,9 @@ fun EditTextScreenRoot(
 @Composable
 private fun EditTextScreen(
     onNavigateBack: () -> Unit,
-    state: ProjectEditTextState,
+    state: EditTextState,
     snackbarHostState: SnackbarHostState,
-    onAction: (ProjectEditTextAction) -> Unit
+    onAction: (EditTextAction) -> Unit
 ) {
 
     val focusRequester = remember { FocusRequester() }
@@ -114,8 +114,8 @@ private fun EditTextScreen(
             ProjectSubDetailTopAppBar(
                 isEditMode = state.isEditMode,
                 onNavigateBack = onNavigateBack,
-                onEditClick = { onAction(ProjectEditTextAction.OnEditClick) },
-                onSaveClick = { onAction(ProjectEditTextAction.OnSaveClick) },
+                onEditClick = { onAction(EditTextAction.OnEditClick) },
+                onSaveClick = { onAction(EditTextAction.OnSaveClick) },
                 title = if (state.isEditMode) stringResource(Res.string.edit_project_uppercase)
                 else stringResource(Res.string.project_details_uppercase),
                 // A project without a colour of its own falls back to the theme accent.
@@ -186,7 +186,7 @@ private fun previewState(
     description: String = PREVIEW_DESCRIPTION,
     isEditMode: Boolean = false,
     projectColor: Color? = previewProjectColor
-) = ProjectEditTextState(
+) = EditTextState(
     titleState = rememberTextFieldState(title),
     descriptionState = rememberTextFieldState(description),
     isEditMode = isEditMode,
@@ -195,7 +195,7 @@ private fun previewState(
 
 @Composable
 private fun EditTextScreenPreviewContainer(
-    state: ProjectEditTextState,
+    state: EditTextState,
     darkTheme: Boolean = false
 ) {
     TrackyTheme(darkTheme = darkTheme) {
@@ -210,7 +210,7 @@ private fun EditTextScreenPreviewContainer(
 
 @Preview(name = "View mode · Light", device = Devices.PIXEL_9_PRO)
 @Composable
-private fun ProjectEditTextScreenViewModeLightPreview() {
+private fun EditTextScreenViewModeLightPreview() {
     EditTextScreenPreviewContainer(
         state = previewState(isEditMode = false)
     )
@@ -218,7 +218,7 @@ private fun ProjectEditTextScreenViewModeLightPreview() {
 
 @Preview(name = "View mode · Dark", device = Devices.PIXEL_9_PRO)
 @Composable
-private fun ProjectEditTextScreenViewModeDarkPreview() {
+private fun EditTextScreenViewModeDarkPreview() {
     EditTextScreenPreviewContainer(
         state = previewState(isEditMode = false),
         darkTheme = true
@@ -227,7 +227,7 @@ private fun ProjectEditTextScreenViewModeDarkPreview() {
 
 @Preview(name = "Edit mode · Light", device = Devices.PIXEL_9_PRO)
 @Composable
-private fun ProjectEditTextScreenEditModeLightPreview() {
+private fun EditTextScreenEditModeLightPreview() {
     EditTextScreenPreviewContainer(
         state = previewState(isEditMode = true)
     )
@@ -235,7 +235,7 @@ private fun ProjectEditTextScreenEditModeLightPreview() {
 
 @Preview(name = "Edit mode · Dark", device = Devices.PIXEL_9_PRO)
 @Composable
-private fun ProjectEditTextScreenEditModeDarkPreview() {
+private fun EditTextScreenEditModeDarkPreview() {
     EditTextScreenPreviewContainer(
         state = previewState(isEditMode = true),
         darkTheme = true
@@ -245,7 +245,7 @@ private fun ProjectEditTextScreenEditModeDarkPreview() {
 // Empty fields: both labels sit un-elevated and the hints are the only text on screen.
 @Preview(name = "Edit mode · Empty", device = Devices.PIXEL_9_PRO)
 @Composable
-private fun ProjectEditTextScreenEmptyPreview() {
+private fun EditTextScreenEmptyPreview() {
     EditTextScreenPreviewContainer(
         state = previewState(
             title = "",
@@ -257,7 +257,7 @@ private fun ProjectEditTextScreenEmptyPreview() {
 
 @Preview(name = "Long content", device = Devices.PIXEL_9_PRO)
 @Composable
-private fun ProjectEditTextScreenLongContentPreview() {
+private fun EditTextScreenLongContentPreview() {
     EditTextScreenPreviewContainer(
         state = previewState(
             title = "Rebuild the project detail and edit screens on the new design system",
@@ -272,7 +272,7 @@ private fun ProjectEditTextScreenLongContentPreview() {
 // projectColor = null falls back to the theme accent in the top bar.
 @Preview(name = "No project color", device = Devices.PIXEL_9_PRO)
 @Composable
-private fun ProjectEditTextScreenDefaultColorPreview() {
+private fun EditTextScreenDefaultColorPreview() {
     EditTextScreenPreviewContainer(
         state = previewState(projectColor = null)
     )
@@ -280,7 +280,7 @@ private fun ProjectEditTextScreenDefaultColorPreview() {
 
 @Preview(name = "Font scale 2x", device = Devices.PIXEL_9_PRO, fontScale = 2f)
 @Composable
-private fun ProjectEditTextScreenLargeFontPreview() {
+private fun EditTextScreenLargeFontPreview() {
     EditTextScreenPreviewContainer(
         state = previewState(isEditMode = false)
     )
@@ -288,7 +288,7 @@ private fun ProjectEditTextScreenLargeFontPreview() {
 
 @DevicePreviews
 @Composable
-private fun ProjectEditTextScreenDevicesPreview() {
+private fun EditTextScreenDevicesPreview() {
     EditTextScreenPreviewContainer(
         state = previewState(isEditMode = false)
     )
