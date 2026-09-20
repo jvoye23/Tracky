@@ -89,6 +89,7 @@ val projectModule = module {
         TaskDetailViewModel(
             taskId = sessionId,
             projectTaskRepository = get(),
+            subTaskRepository = get(),
             projectRepository = get(),
             timeManager = get()
         )
