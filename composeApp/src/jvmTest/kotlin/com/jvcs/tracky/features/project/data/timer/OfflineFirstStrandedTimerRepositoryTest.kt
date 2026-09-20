@@ -10,6 +10,7 @@ import com.jvcs.tracky.core.database.entity.SubTaskIntervalEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
+import com.jvcs.tracky.core.domain.device.FakeDeviceIdProvider
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.features.project.domain.interval.IntervalRepository
@@ -118,7 +119,9 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
             )
         }
         timeProvider.now = Instant.fromEpochMilliseconds(detectedAt)
-        StrandedTimerReconciler(db.projectDao, timeProvider, kotlinx.coroutines.test.TestScope())
+        StrandedTimerReconciler(
+            db.projectDao, timeProvider, FakeDeviceIdProvider(), kotlinx.coroutines.test.TestScope()
+        )
             .reconcile()
     }
 

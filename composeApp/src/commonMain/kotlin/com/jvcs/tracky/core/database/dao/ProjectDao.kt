@@ -325,13 +325,25 @@ interface ProjectDao {
     )
     fun observeOpenSubTaskInterval(): Flow<SubTaskIntervalEntity?>
 
-    // The reconciler's two inputs. Unfiltered on purpose: it is the thing that decides what counts
-    // as stranded, so it has to see rows it has already flagged to stay idempotent.
-    @Query("SELECT * FROM task_intervals WHERE endDateTimeEpochMs IS NULL")
-    suspend fun getAllOpenTaskIntervals(): List<TaskIntervalEntity>
+    // The reconciler's two inputs.
+    //
+    // Not filtered against stranded_intervals, on purpose: the reconciler is the thing that decides
+    // what counts as stranded, so it has to see rows it has already flagged to stay idempotent.
+    //
+    // Filtered by device, also on purpose: an open interval another device started is a timer the
+    // user is running right now, not wreckage from a crash here. A NULL id predates multi-device
+    // sync and means this device, which is what those rows have always meant.
+    @Query(
+        "SELECT * FROM task_intervals WHERE endDateTimeEpochMs IS NULL " +
+            "AND (startedByDeviceId IS NULL OR startedByDeviceId = :deviceId)"
+    )
+    suspend fun getAllOpenTaskIntervalsForDevice(deviceId: String): List<TaskIntervalEntity>
 
-    @Query("SELECT * FROM sub_task_intervals WHERE endDateTimeEpochMs IS NULL")
-    suspend fun getAllOpenSubTaskIntervals(): List<SubTaskIntervalEntity>
+    @Query(
+        "SELECT * FROM sub_task_intervals WHERE endDateTimeEpochMs IS NULL " +
+            "AND (startedByDeviceId IS NULL OR startedByDeviceId = :deviceId)"
+    )
+    suspend fun getAllOpenSubTaskIntervalsForDevice(deviceId: String): List<SubTaskIntervalEntity>
 
     // Whether a task-level parked interval is worth keeping at all: a task that owns subtasks is
     // counted through them, so time banked on the task itself renders nowhere. See StrandedTimer.

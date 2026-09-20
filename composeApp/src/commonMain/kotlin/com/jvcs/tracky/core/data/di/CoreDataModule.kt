@@ -185,6 +185,7 @@ val coreDataModule = module {
         StrandedTimerReconciler(
             projectDao = get(),
             timeProvider = get(),
+            deviceIdProvider = get(),
             applicationScope = get(qualifier = named("AppScope"))
         )
     } bind StartupReconciliation::class
