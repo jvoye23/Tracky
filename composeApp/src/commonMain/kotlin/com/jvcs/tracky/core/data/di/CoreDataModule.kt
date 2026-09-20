@@ -5,6 +5,7 @@ import com.jvcs.tracky.core.data.auth.DataStoreSessionStorage
 import com.jvcs.tracky.core.data.auth.KtorAuthService
 import com.jvcs.tracky.core.data.device.DataStoreDeviceIdProvider
 import com.jvcs.tracky.core.data.networking.HttpClientFactory
+import com.jvcs.tracky.core.data.sync.DataStoreServerClockOffsetStore
 import com.jvcs.tracky.core.data.sync.DataStoreSyncCursorStore
 import com.jvcs.tracky.core.data.sync.KtorRemoteSyncDataSource
 import com.jvcs.tracky.core.data.sync.RoomPendingSyncDataSource
@@ -28,6 +29,8 @@ import com.jvcs.tracky.core.domain.sync.DeltaSyncApplier
 import com.jvcs.tracky.core.domain.sync.RemoteSyncDataSource
 import com.jvcs.tracky.core.domain.sync.SyncCursorStore
 import com.jvcs.tracky.core.domain.sync.SyncRepository
+import com.jvcs.tracky.core.domain.util.ServerClock
+import com.jvcs.tracky.core.domain.util.ServerClockOffsetStore
 import com.jvcs.tracky.core.domain.util.SystemTimeProvider
 import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.features.project.data.interval.KtorRemoteIntervalDataSource
@@ -215,7 +218,7 @@ val coreDataModule = module {
             subTaskRepository = get(),
             controller = get(),
             startupReconciliation = get(),
-            timeProvider = get(),
+            serverClock = get(),
             applicationScope = get(qualifier = named("AppScope"))
         )
     }
@@ -266,7 +269,20 @@ val coreDataModule = module {
     // How far this device has read the server's change feed. Cleared on logout.
     singleOf(::DataStoreSyncCursorStore) bind SyncCursorStore::class
     singleOf(::KtorRemoteSyncDataSource) bind RemoteSyncDataSource::class
-    singleOf(::DeltaSyncApplier)
+    single {
+        DeltaSyncApplier(
+            remoteSyncDataSource = get(),
+            localProjectDataSource = get(),
+            projectRepository = get(),
+            syncCursorStore = get(),
+            serverClock = get(),
+            timeProvider = get()
+        )
+    }
+
+    // Only the timer reads this; everything else keeps using TimeProvider directly.
+    singleOf(::DataStoreServerClockOffsetStore) bind ServerClockOffsetStore::class
+    singleOf(::ServerClock)
 
     // Auth
     singleOf(::DataStoreSessionStorage) bind SessionStorage::class

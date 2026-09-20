@@ -1,7 +1,7 @@
 package com.jvcs.tracky.core.domain.notification
 
 import com.jvcs.tracky.core.domain.startup.StartupReconciliation
-import com.jvcs.tracky.core.domain.util.TimeProvider
+import com.jvcs.tracky.core.domain.util.ServerClock
 import com.jvcs.tracky.features.project.domain.subtask.SubTaskRepository
 import com.jvcs.tracky.features.project.domain.task.ProjectTaskRepository
 import com.jvcs.tracky.features.project.domain.timer.RunningTimer
@@ -26,7 +26,7 @@ class TimerNotificationCoordinator(
     private val subTaskRepository: SubTaskRepository,
     private val controller: TimerNotificationController,
     private val startupReconciliation: StartupReconciliation,
-    private val timeProvider: TimeProvider,
+    private val serverClock: ServerClock,
     private val applicationScope: CoroutineScope
 ) {
     private data class PausedTimer(val timer: RunningTimer, val elapsed: Duration, val asOf: Instant)
@@ -56,7 +56,7 @@ class TimerNotificationCoordinator(
             when {
                 timer != null -> {
                     paused = null
-                    controller.show(timer.toSession(timeProvider.nowInstant))
+                    controller.show(timer.toSession(serverClock.now()))
                 }
                 // Pause closed the interval itself. The card stays, frozen, or the user loses the
                 // only way to resume without reopening the app.
@@ -68,7 +68,7 @@ class TimerNotificationCoordinator(
 
     suspend fun onPause() {
         val timer = running ?: return
-        val now = timeProvider.nowInstant
+        val now = serverClock.now()
 
         // Freeze and show before writing: stopping makes the flow emit null, and the collector has
         // to already be able to tell a pause from a stop.

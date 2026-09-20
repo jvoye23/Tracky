@@ -6,7 +6,9 @@ import com.jvcs.tracky.features.project_tracker.data.FakeLocalProjectDataSource
 import com.jvcs.tracky.features.project_tracker.data.FakePendingSyncDataSource
 import com.jvcs.tracky.features.project_tracker.data.FakeRemoteProjectDataSource
 import com.jvcs.tracky.features.project_tracker.data.FakeSyncScheduler
+import com.jvcs.tracky.core.domain.util.FakeServerClockOffsetStore
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
+import com.jvcs.tracky.core.domain.util.ServerClock
 import com.jvcs.tracky.features.project.data.project.OfflineFirstProjectRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -15,6 +17,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 /** A scripted change feed: one queued response per call, and a record of the cursors asked for. */
 private class FakeRemoteSyncDataSource(
@@ -36,10 +40,11 @@ private fun changes(
     cursor: Long,
     hasMore: Boolean = false,
     fullResyncRequired: Boolean = false,
-    tombstones: List<Tombstone> = emptyList()
+    tombstones: List<Tombstone> = emptyList(),
+    serverNow: Instant? = null
 ) = SyncChanges(
     cursor = cursor,
-    serverNow = null,
+    serverNow = serverNow,
     fullResyncRequired = fullResyncRequired,
     hasMore = hasMore,
     projects = emptyList(),
@@ -55,6 +60,9 @@ internal class DeltaSyncApplierTest {
     private val local = FakeLocalProjectDataSource()
     private val remoteProjects = FakeRemoteProjectDataSource()
     private val cursorStore = FakeSyncCursorStore()
+    private val timeProvider = FakeTimeProvider()
+    private val offsetStore = FakeServerClockOffsetStore()
+    private val serverClock = ServerClock(timeProvider, offsetStore)
 
     private fun applier(remote: FakeRemoteSyncDataSource) = DeltaSyncApplier(
         remoteSyncDataSource = remote,
@@ -65,9 +73,11 @@ internal class DeltaSyncApplierTest {
             pendingSyncDataSource = FakePendingSyncDataSource(),
             syncScheduler = FakeSyncScheduler(),
             applicationScope = CoroutineScope(Dispatchers.Unconfined),
-            timeProvider = FakeTimeProvider()
+            timeProvider = timeProvider
         ),
-        syncCursorStore = cursorStore
+        syncCursorStore = cursorStore,
+        serverClock = serverClock,
+        timeProvider = timeProvider
     )
 
     @Test
@@ -184,5 +194,30 @@ internal class DeltaSyncApplierTest {
         // poll stays cheap.
         assertEquals(0, local.applyDeltaCalls)
         assertEquals(42L, cursorStore.cursor())
+    }
+
+    @Test
+    fun everyResponseIsAClockSample() = runTest {
+        val serverNow = timeProvider.nowInstant + 40.seconds
+        val remote = FakeRemoteSyncDataSource()
+            .enqueue(Result.Success(changes(cursor = 12, serverNow = serverNow)))
+
+        applier(remote).pullChanges()
+
+        // The timer derives elapsed as now - startedAt, and startedAt may have come from another
+        // device. Forty seconds of skew is forty seconds of tracked time that does not exist.
+        assertEquals(40_000L, offsetStore.offsetMillis())
+    }
+
+    @Test
+    fun aFullResyncResponseStillCarriesTheClock() = runTest {
+        val serverNow = timeProvider.nowInstant + 40.seconds
+        val remote = FakeRemoteSyncDataSource().enqueue(
+            Result.Success(changes(cursor = 5, fullResyncRequired = true, serverNow = serverNow))
+        )
+
+        applier(remote).pullChanges()
+
+        assertEquals(40_000L, offsetStore.offsetMillis())
     }
 }

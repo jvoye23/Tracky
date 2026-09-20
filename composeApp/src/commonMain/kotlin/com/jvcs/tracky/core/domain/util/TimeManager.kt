@@ -48,7 +48,7 @@ data class RunningTimerTick(
 @OptIn(ExperimentalCoroutinesApi::class)
 class TimeManager(
     private val runningTimerRepository: RunningTimerRepository,
-    private val timeProvider: TimeProvider,
+    private val serverClock: ServerClock,
     scope: CoroutineScope
 ) {
     val tick: StateFlow<RunningTimerTick?> = runningTimerRepository
@@ -59,7 +59,10 @@ class TimeManager(
             } else {
                 flow {
                     while (true) {
-                        val elapsed = timer.elapsedAt(timeProvider.nowInstant)
+                        // Corrected, not the raw device clock: startedAt may have come from the
+                        // user's other phone, and the two clocks disagreeing shows up directly as
+                        // a wrong duration.
+                        val elapsed = timer.elapsedAt(serverClock.now())
                         emit(RunningTimerTick(timer, elapsed))
                         // Sleep to the next whole second of elapsed rather than a flat second from
                         // an arbitrary moment, so the digits turn over at the same instant the
