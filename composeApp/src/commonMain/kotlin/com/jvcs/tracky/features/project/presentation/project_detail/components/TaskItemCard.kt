@@ -344,15 +344,14 @@ fun TaskItemCard(
         ) {
             // Main Task
             Row(
-                modifier = Modifier
-                    .editModeRowBorder(isEditMode, task.isTimerRunning, projectColor)
-                    .then(if (isEditMode) Modifier.padding(8.dp) else Modifier),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 val textDecoration = if (task.isFinished) TextDecoration.LineThrough else null
                 val contentAlpha = if (task.isFinished) 0.4f else 1f
 
+                // In edit mode the grip moves the whole card, so it sits outside the outline that
+                // wraps the title - unlike a subtask's grip, which moves only its own row.
                 if (isEditMode) {
                     DragHandle(
                         isReorderable = isReorderable,
@@ -372,60 +371,69 @@ fun TaskItemCard(
                     )
                 }
 
-                Column(
-                    modifier = Modifier.weight(1f)
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .editModeRowBorder(isEditMode, task.isTimerRunning, projectColor)
+                        .then(if (isEditMode) Modifier.padding(8.dp) else Modifier),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
+                    Column(
+                        modifier = Modifier.weight(1f)
                     ) {
-                        // The design drops the ordinal in edit mode, where the row is handle + title only.
-                        if (!isEditMode) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // The design drops the ordinal in edit mode, where the row is handle + title only.
+                            if (!isEditMode) {
+                                Text(
+                                    text = index.toString().padStart(2, '0'),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    textDecoration = textDecoration
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(4.dp))
+
                             Text(
-                                text = index.toString().padStart(2, '0'),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .then(
+                                        if (isEditMode) Modifier.clickable { onTaskTitleClick() }
+                                        else Modifier
+                                    ),
+                                text = task.title,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface,
-                                textDecoration = textDecoration
+                                textDecoration = textDecoration,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
-                        Spacer(modifier = Modifier.width(4.dp))
-
-                        Text(
-                            modifier = Modifier
-                                .weight(1f)
-                                .then(
-                                    if (isEditMode) Modifier.clickable { onTaskTitleClick() }
-                                    else Modifier
-                                ),
-                            text = task.title,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            textDecoration = textDecoration,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                        if (!isEditMode) {
+                            Text(
+                                // Subtask sum once there are subtasks; its own time otherwise.
+                                text = task.displayDuration,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold,
+                                color = if (task.isTimerRunning) projectColor
+                                else MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
+                                letterSpacing = (-0.5).sp
+                            )
+                        }
+                    }
+                    if (isEditMode) {
+                        DeleteTaskButton(onClick = onDeleteClick)
+                    } else {
+                        TrackyCheckbox(
+                            checked = task.isFinished,
+                            onCheckedChange = { onCheckedChange() }
                         )
                     }
-                    if (!isEditMode) {
-                        Text(
-                            // Subtask sum once there are subtasks; its own time otherwise.
-                            text = task.displayDuration,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold,
-                            color = if (task.isTimerRunning) projectColor
-                            else MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
-                            letterSpacing = (-0.5).sp
-                        )
-                    }
-                }
-                if (isEditMode) {
-                    DeleteTaskButton(onClick = onDeleteClick)
-                } else {
-                    TrackyCheckbox(
-                        checked = task.isFinished,
-                        onCheckedChange = { onCheckedChange() }
-                    )
                 }
             }
 
