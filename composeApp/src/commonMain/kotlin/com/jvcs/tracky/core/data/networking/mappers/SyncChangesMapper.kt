@@ -29,14 +29,14 @@ fun SyncChangesDto.toSyncChanges(): SyncChanges = SyncChanges(
         dto.parentProjectId?.let { dto.toProjectTask(it) }
     },
     taskIntervals = taskIntervals.mapNotNull { dto ->
-        dto.parentProjectId?.let { dto.toTaskInterval(it, startedByDeviceId = null) }
+        dto.parentProjectId?.let { dto.toTaskInterval(it, dto.startedByDeviceId) }
     },
     subTasks = subTasks.mapNotNull { dto ->
         dto.parentProjectId?.let { dto.toProjectSubTask(it) }
     },
     subTaskIntervals = subTaskIntervals.mapNotNull { dto ->
         dto.parentProjectId?.let {
-            dto.toSubTaskInterval(it, startedParentTimer = false, startedByDeviceId = null)
+            dto.toSubTaskInterval(it, startedParentTimer = false, dto.startedByDeviceId)
         }
     },
     tombstones = tombstones.map { it.toTombstone() }
