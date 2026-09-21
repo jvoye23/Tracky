@@ -356,7 +356,8 @@ closes it on their screen and banks a duration they did not ask to end.
 
 **The client cannot work around this.** `startedParentTimer` has no wire counterpart and never
 will: which timer opened which is a purely local fact, which is why the merge rules preserve it.
-The server needs its own record of it. Written up in `backend-active-timer-api.md` section 3.
+The server needs its own record of it. Written up in `backend-active-timer-api.md` section 3, and
+as a paste-ready prompt in `backend-subtask-stop-fix.md`.
 
 Until it is fixed, the flow "start task → start subtask → stop subtask" ends both timers.
 
