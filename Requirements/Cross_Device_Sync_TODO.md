@@ -54,9 +54,10 @@ implemented.
 
 **Phase 2 is underway.** The verification found one phase-1 bug, fixed as slice `9b`; the remote
 layer landed as `10`–`12`, the active-timer repository as `13`–`15`, and the task-side wiring as
-`16`–`18`. **622 jvm tests green**, all three targets compiling, still nothing pushed. Both task
-and subtask timers now start and stop through the server. One backend bug is open — see the table
-under "Next steps"; it must be fixed before the two-device pass is meaningful.
+`16`–`18` and the presentation as `19`–`21`. **Phase 2 is code-complete**: 632 jvm tests green,
+all three targets compiling, still nothing pushed. Two things stand between this and a usable
+feature — one backend bug (the subtask-stop table under "Next steps") and the two-device pass,
+which is only meaningful once that is fixed.
 
 ---
 
@@ -357,28 +358,35 @@ The server needs its own record of it. Written up in `backend-active-timer-api.m
 
 Until it is fixed, the flow "start task → start subtask → stop subtask" ends both timers.
 
-**`-18-foreign-timer-presentation` (~290)** — `RunningTimer.isForeign`;
-`OfflineFirstRunningTimerRepository` injects `DeviceIdProvider` and **switches `bankedDuration` to
-a `SUM` of closed intervals** (see below); `RunningTimerTick` carries `isForeign`;
-`TimerNotificationCoordinator` refuses pause/resume for a foreign timer; `ProjectDetailViewModel`
-stops branching on the denormalised `session.isTimerRunning` and reads `TimeManager.taskStates`
-instead — that flag is a second source of truth which will disagree once a pull sets it from
-another device.
+### The presentation slices — DONE
 
-> **`bankedDuration` is a real hole until slice 18 lands.** It currently reads
-> `project_tasks.durationMillis`, which a device that just adopted a foreign timer may not have
-> caught up on — so it shows the wrong number. Replace it with
-> `SELECT COALESCE(SUM(durationMillis),0) FROM task_intervals WHERE parentTaskId = :taskId AND
-> endDateTimeEpochMs IS NOT NULL` plus the subtask twin. The timer then cannot disagree with the
-> interval table, it converges the instant the closing interval arrives rather than waiting for the
-> task row's LWW to go the right way, and the double-count class disappears entirely
-> (`addTaskDuration` is only ever called from a local stop). Cost is one indexed aggregate per
-> emission; both foreign keys are already indexed.
+| Branch (prefix `45-Sync-across-devices`) | Commit | Lines | What |
+|---|---|---|---|
+| `-19-banked-duration-sum` | `f1df8e1` | 71 | bank from closed intervals, not the task row |
+| `-20-foreign-timer-presentation` | `5f76361` | 119 | `RunningTimer.isForeign`, Pause refused |
+| `-21-stale-foreign-timer-guard` | `638496f` | 166 | a foreign timer freezes once its news goes stale |
 
-**`-19-stale-foreign-timer-guard` (~200, recommended)** — `ProjectSyncManager` exposes
-`lastSuccessfulSync`; a foreign timer whose last sync is older than a threshold renders frozen as
-"running on another device · last synced …" instead of ticking, and Stop is disabled offline. This
-closes the "device offline for three days shows 72:00:00" hole.
+**632 jvm tests green**, all three targets compiling. **Phase 2 is code-complete.**
+
+Two things the plan got wrong, worth knowing:
+
+- **`onResume` needs no foreign check.** The plan said it must no-op and clear `paused`. It does
+  not: the collector clears `paused` the moment any timer starts running, so a non-null snapshot
+  already means nothing is running anywhere this device has heard about. A guard was written,
+  survived being mutated away, and was removed rather than left as unreachable code.
+- **`ProjectDetailViewModel` needed no change.** `updateUiWithTimerValues` already overwrites
+  `isTimerRunning` from `TimeManager.taskStates` for every task and subtask, so it was never
+  reading the denormalised flag the plan wanted it to stop reading.
+
+Still open at the presentation layer, and deliberately not done here:
+
+- **Nothing renders `RunningTimerTick.isStale` yet.** The number stops moving, which is the
+  correctness half, but no surface says *why*. "running on another device · last synced …" is
+  string resources and Compose in `ProjectDetailScreen` and the notification layouts.
+- **Pause is refused for a foreign timer but still offered.** `TimerNotificationCoordinator`
+  does nothing, which is honest but confusing. The Android notification layout and the iOS Live
+  Activity should hide the button; `onTimerNotificationPause` / `onTimerNotificationResume` keep
+  their signatures and become "may do nothing".
 
 ### DI and start-up
 
