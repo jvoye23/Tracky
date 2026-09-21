@@ -53,8 +53,9 @@ assertions pass. `backend-realtime-and-devices-api.md` and `backend-pro-entitlem
 implemented.
 
 **Phase 2 is underway.** The verification found one phase-1 bug, fixed as slice `9b`; the remote
-layer then landed as slices `10`–`12`. **599 jvm tests green**, all three targets compiling, still
-nothing pushed. Next up is slice `13`, the repository — see "Next steps".
+layer landed as slices `10`–`12` and the active-timer repository as `13`–`15`. **614 jvm tests
+green**, all three targets compiling, still nothing pushed. Nothing calls the repository yet —
+slice `17` is the wiring, and it is where the double-count guard has to be written.
 
 ---
 
@@ -83,12 +84,12 @@ The cost is clock skew, which is what `ServerClock` corrects (slice 9).
 
 | Situation | Behaviour |
 |---|---|
-| Adopting device B goes offline mid-timer | keeps ticking, and stays **correct** — it has `startedAt`. The risk is staleness, not drift: if A stops while B is offline, B keeps showing it running until reconnect. Slice 15 freezes the display past a threshold rather than lying with a live tick. |
+| Adopting device B goes offline mid-timer | keeps ticking, and stays **correct** — it has `startedAt`. The risk is staleness, not drift: if A stops while B is offline, B keeps showing it running until reconnect. Slice 19 freezes the display past a threshold rather than lying with a live tick. |
 | B tries to stop a foreign timer offline | **refused.** Stop is a compare-and-swap against the server; closing locally would be guessing about a timer that may still be running on A. |
 | Owner device A goes offline mid-timer | unchanged from today: counts locally, stop banks locally and queues. B still shows it running, which is truthful — that was the last known state. B converges when A's queue drains. |
 | Both offline, both start a timer | both hold a local open interval. On reconnect the server processes them in arrival order; the later start supersedes and closes the earlier **at the later start time**. One timer survives, no tracked time is lost, nothing double-counts. |
 | A device offline past the tombstone retention window | `fullResyncRequired` → full pull, then re-read `/api/timer/active` **last**. |
-| Owner device never comes back | the timer appears to run forever elsewhere. Any device can stop it — that is the feature — and slice 15 stops it ticking misleadingly. **No server-side auto-close, on purpose:** it would have to invent a duration to bank, the same question `StrandedTimerReconciler` refuses to guess at. |
+| Owner device never comes back | the timer appears to run forever elsewhere. Any device can stop it — that is the feature — and slice 19 stops it ticking misleadingly. **No server-side auto-close, on purpose:** it would have to invent a duration to bank, the same question `StrandedTimerReconciler` refuses to guess at. |
 
 ### The interval merge asks the outbox, not the row
 
@@ -294,22 +295,51 @@ Worth knowing before the next slice:
 - `safeCall` was split. `safeResponse` keeps the transport-failure handling and returns whatever
   the server sent; `httpStatusToRemoteError` holds the status mapping. Existing callers unchanged.
 - `ktor-client-mock` is now a `commonTest` dependency, so the next slices can script status codes.
-- Slice numbering shifted by three: what this document called S11–S13 is now **13–15**.
+- Slice numbering has shifted twice now. Do not trust a number in an older note; trust the table.
 
-**S13 `-13-active-timer-repository` (~360)** — `OfflineFirstActiveTimerRepository`. Start is an
-optimistic local open stamped with this device plus `PUT /api/timer/active`, then apply every
-returned row. Stop is the compare-and-swap `POST /api/timer/active/stop`, then apply the echo.
-On transient failure **reuse the existing interval queue** rather than adding a new `entityType`,
-so offline start/stop degrades to exactly today's behaviour and only takeover semantics are lost.
-`OfflineFirstTaskRepository.startProjectTask` / `stopProjectTask` and the subtask equivalents route
-through it when online. Tightest slice — split the task and subtask paths if it runs over.
+### The active-timer repository — mostly DONE
 
-Tests: takeover closes the previous interval from the echo; a CAS-rejected stop re-syncs instead of
-closing locally; offline start falls back to the local path; and **a foreign stop never calls
-`addTaskDuration`** — the sharpest double-count risk in the whole plan, because the server's task
-row already carries the banked total.
+`OfflineFirstActiveTimerRepository` landed 2026-09-21, as three slices rather than one. The ~360
+estimate was again written before the KDoc and fixtures this repo actually carries: the first cut
+measured 619.
 
-**S14 `-14-foreign-timer-presentation` (~290)** — `RunningTimer.isForeign`;
+| Branch (prefix `45-Sync-across-devices`) | Commit | Lines | What |
+|---|---|---|---|
+| `-13-timer-echo-application` | `0350229` | 231 | `LocalProjectDataSource.applyTimerEcho` |
+| `-14-active-timer-start` | `1607c66` | 400 | task start, queue fallback, refusal handling |
+| `-15-active-timer-stop` | `7856af1` | 105 | the compare-and-swap stop |
+
+**614 jvm tests green**, all three targets compiling, nothing pushed.
+
+Decisions worth knowing:
+
+- **The echo goes through `upsertServerTree`, not `applyDelta`.** An echo names rows the server
+  changed, never rows it removed, and `upsertServerTree` is the one that promises never to delete.
+  Reusing the pull merge means the refuse-to-reopen and keep-provenance rules exist once.
+- **A refusal triggers `DeltaSyncApplier.pullChanges()`**, not a local close. The 409 body names
+  what is running but not when the interval this device asked about ended, and inventing that is
+  the guess `StrandedTimerReconciler` refuses. That is why the repository depends on the applier.
+- **The repository never banks a duration** — pinned by a test. Banking stays with the caller,
+  which is the only place that knows whose timer it was.
+- **A queued stop carries its `ActiveTimerKind`**, so a subtask interval is queued as
+  `ENTITY_SUBTASK_INTERVAL`. Queuing it as a task interval would drain to the wrong endpoint.
+
+**Still to do, in order:**
+
+**`-16-active-timer-subtask-start` (~150)** — `start` currently takes a `TaskInterval` only. Add
+the subtask overload: timing a subtask opens two intervals, and the **inner** one is what the
+server arbitrates (`kind = sub_task`, `parentTaskIntervalId` = the enclosing task interval). The
+queue fallback already routes by kind, so only the start side is missing.
+
+**`-17-timer-start-stop-routing` (~300)** — nothing calls the repository yet. Route
+`OfflineFirstTaskRepository.startProjectTask` / `stopProjectTask`
+(`features/project/data/task/OfflineFirstTaskRepository.kt:159` and `:174`) and the subtask
+equivalents through it when online, keeping the `startupReconciliation.awaitReconciled()` gate.
+**This is where the double-count guard actually has to be written**: a stop of a *foreign* timer
+must not call `localTaskDataSource.stopTask`, because that is what banks the duration
+(`ProjectDao.addTaskDuration`, `ProjectDao.kt:282`) and the server's task row already carries it.
+
+**`-18-foreign-timer-presentation` (~290)** — `RunningTimer.isForeign`;
 `OfflineFirstRunningTimerRepository` injects `DeviceIdProvider` and **switches `bankedDuration` to
 a `SUM` of closed intervals** (see below); `RunningTimerTick` carries `isForeign`;
 `TimerNotificationCoordinator` refuses pause/resume for a foreign timer; `ProjectDetailViewModel`
@@ -317,7 +347,7 @@ stops branching on the denormalised `session.isTimerRunning` and reads `TimeMana
 instead — that flag is a second source of truth which will disagree once a pull sets it from
 another device.
 
-> **`bankedDuration` is a real hole until S14 lands.** It currently reads
+> **`bankedDuration` is a real hole until slice 18 lands.** It currently reads
 > `project_tasks.durationMillis`, which a device that just adopted a foreign timer may not have
 > caught up on — so it shows the wrong number. Replace it with
 > `SELECT COALESCE(SUM(durationMillis),0) FROM task_intervals WHERE parentTaskId = :taskId AND
@@ -327,7 +357,7 @@ another device.
 > (`addTaskDuration` is only ever called from a local stop). Cost is one indexed aggregate per
 > emission; both foreign keys are already indexed.
 
-**S15 `-15-stale-foreign-timer-guard` (~200, recommended)** — `ProjectSyncManager` exposes
+**`-19-stale-foreign-timer-guard` (~200, recommended)** — `ProjectSyncManager` exposes
 `lastSuccessfulSync`; a foreign timer whose last sync is older than a threshold renders frozen as
 "running on another device · last synced …" instead of ticking, and Stop is disabled offline. This
 closes the "device offline for three days shows 72:00:00" hole.
