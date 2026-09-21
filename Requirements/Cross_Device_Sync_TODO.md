@@ -54,8 +54,9 @@ implemented.
 
 **Phase 2 is underway.** The verification found one phase-1 bug, fixed as slice `9b`; the remote
 layer landed as `10`–`12`, the active-timer repository as `13`–`15`, and the task-side wiring as
-`16`–`17`. **620 jvm tests green**, all three targets compiling, still nothing pushed. A task
-timer now starts and stops through the server; subtasks are still on the old local-only path.
+`16`–`18`. **622 jvm tests green**, all three targets compiling, still nothing pushed. Both task
+and subtask timers now start and stop through the server. One backend bug is open — see the table
+under "Next steps"; it must be fixed before the two-device pass is meaningful.
 
 ---
 
@@ -331,13 +332,30 @@ Decisions worth knowing:
 **`-17-task-timer-routing`** — `bba8a27`, 226 lines. Done. The task paths now go through the
 server, and the double-count guard is written and mutation-checked.
 
-Still to do: **`-18-subtask-timer-routing` (~250)** — the same wiring for
-`OfflineFirstSubTaskRepository.startSubTask` / `stopSubTask`
-(`features/project/data/subtask/OfflineFirstSubTaskRepository.kt:121` and `:137`). Both go through
-`pushTimerChange`, which pushes up to four rows: the subtask interval, the enclosing task interval
-when this start opened it, the subtask row and the task row. The foreign guard has to skip
-`localSubTaskDataSource.stopSubTask` for the same reason the task one does, and the subtask stop
-must pass `ActiveTimerKind.SUB_TASK` so a queued stop lands on the right entity type.
+**`-18-subtask-timer-routing`** — `8e78086`, 173 lines. Done. Both timer paths now go through the
+server, and both double-count guards are mutation-checked.
+
+#### Backend bug found while wiring it — needs fixing before the two-device pass
+
+Verified against the deployed backend on 2026-09-21, by probing all four subtask cases:
+
+| Case | Server behaviour | Correct? |
+|---|---|---|
+| `sub_task` start naming a task interval the server does not have | creates it, same id, same instant, both rows in `touched` | yes |
+| `sub_task` start naming one that is already open | leaves it open, only the subtask row in `touched` | yes |
+| stop a subtask that *opened* its parent interval | closes both at the same instant | yes |
+| stop a subtask while the task timer was started **independently** | **closes both** | **no** |
+
+The last row is the bug. The client tracks which timer opened which —
+`SubTaskInterval.startedParentTimer` — so that a user who starts a task timer, drills into a
+subtask and then stops the subtask keeps the task running. The server stops it, so the next pull
+closes it on their screen and banks a duration they did not ask to end.
+
+**The client cannot work around this.** `startedParentTimer` has no wire counterpart and never
+will: which timer opened which is a purely local fact, which is why the merge rules preserve it.
+The server needs its own record of it. Written up in `backend-active-timer-api.md` section 3.
+
+Until it is fixed, the flow "start task → start subtask → stop subtask" ends both timers.
 
 **`-18-foreign-timer-presentation` (~290)** — `RunningTimer.isForeign`;
 `OfflineFirstRunningTimerRepository` injects `DeviceIdProvider` and **switches `bankedDuration` to

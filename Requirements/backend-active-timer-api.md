@@ -156,6 +156,19 @@ needs a body, and a body on `DELETE` is awkward for several client stacks includ
 
 - `intervalId` is the active interval → close it with `endedAtUtc`, compute `durationMillis` from
   its stored start, and close any subtask interval nested inside it at the same instant.
+- **Stopping a `sub_task` interval closes its enclosing task interval only when that interval was
+  opened by this subtask.** This is currently wrong in the deployed build, which closes the
+  enclosing task interval unconditionally — verified 2026-09-21. It matters because the client
+  tracks which timer opened which: `SubTaskInterval.startedParentTimer` is true when starting the
+  subtask is what opened the task's interval, and false when the user had already started the task
+  timer and then drilled into a subtask. In that second case the task must keep running when the
+  subtask stops, and today the server stops it, so the next pull closes it on the user's screen
+  and banks a duration they did not ask to end.
+
+  The client cannot fix this: `startedParentTimer` has no wire counterpart and never will — which
+  timer opened which is a purely local fact. So the server needs its own record. The simplest is
+  to store, on a subtask interval, whether it opened its parent, and close the parent on stop only
+  when it did.
 - `intervalId` is **not** the active interval → **`409`**, change nothing, and return the current
   active timer (or `null`) so the client can show the user what is actually running.
 - `intervalId` is already closed with the same `endedAtUtc` → **`200`**, idempotent replay.
