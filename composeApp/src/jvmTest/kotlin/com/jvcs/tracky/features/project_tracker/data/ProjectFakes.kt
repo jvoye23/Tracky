@@ -290,8 +290,8 @@ class FakeLocalProjectDataSource(private val db: FakeDb = FakeDb()) : LocalProje
                     incoming.endDateTimeUtc?.toEpochMilliseconds(),
                     incoming.subTaskIntervalId in db.pendingIntervalIds
                 )) {
-                // The wire carries neither startedParentTimer nor startedByDeviceId, so the local
-                // values are what survive.
+                // startedParentTimer has no wire counterpart, so the local value survives;
+                // startedByDeviceId does travel, so the incoming one wins when it is there.
                 subTaskIntervals[incoming.subTaskIntervalId] = incoming.copy(
                     startedParentTimer = local?.startedParentTimer ?: false,
                     startedByDeviceId = incoming.startedByDeviceId ?: local?.startedByDeviceId
@@ -307,6 +307,8 @@ class FakeLocalProjectDataSource(private val db: FakeDb = FakeDb()) : LocalProje
 
     /** Makes the transaction fail, so a test can assert the cursor does not move past it. */
     var failApplyDelta = false
+    var failApplyTimerEcho = false
+    var applyTimerEchoCalls = 0
 
     override suspend fun applyDelta(changes: SyncChanges): EmptyResult<DataError.Local> {
         if (failApplyDelta) return Result.Error(DataError.Local.DISK_FULL)
@@ -339,6 +341,41 @@ class FakeLocalProjectDataSource(private val db: FakeDb = FakeDb()) : LocalProje
             db.intervals.remove(tombstone.entityId)
             db.subTasks.remove(tombstone.entityId)
             db.subTaskIntervals.remove(tombstone.entityId)
+        }
+        db.emit()
+        return Result.Success(Unit)
+    }
+
+    override suspend fun applyTimerEcho(
+        taskIntervals: List<TaskInterval>,
+        subTaskIntervals: List<SubTaskInterval>
+    ): EmptyResult<DataError.Local> {
+        if (failApplyTimerEcho) return Result.Error(DataError.Local.DISK_FULL)
+        applyTimerEchoCalls++
+        // The same merge a pull uses, which is the point of routing the echo through it.
+        taskIntervals.forEach { incoming ->
+            val local = intervals[incoming.intervalId]
+            if (local == null || serverWinsOnPullForInterval(
+                    local.endDateTimeUtc?.toEpochMilliseconds(),
+                    incoming.endDateTimeUtc?.toEpochMilliseconds(),
+                    incoming.intervalId in db.pendingIntervalIds
+                )) {
+                intervals[incoming.intervalId] =
+                    incoming.copy(startedByDeviceId = incoming.startedByDeviceId ?: local?.startedByDeviceId)
+            }
+        }
+        subTaskIntervals.forEach { incoming ->
+            val local = db.subTaskIntervals[incoming.subTaskIntervalId]
+            if (local == null || serverWinsOnPullForInterval(
+                    local.endDateTimeUtc?.toEpochMilliseconds(),
+                    incoming.endDateTimeUtc?.toEpochMilliseconds(),
+                    incoming.subTaskIntervalId in db.pendingIntervalIds
+                )) {
+                db.subTaskIntervals[incoming.subTaskIntervalId] = incoming.copy(
+                    startedParentTimer = local?.startedParentTimer ?: false,
+                    startedByDeviceId = incoming.startedByDeviceId ?: local?.startedByDeviceId
+                )
+            }
         }
         db.emit()
         return Result.Success(Unit)

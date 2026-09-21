@@ -5,6 +5,8 @@ import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.features.project.domain.models.Project
+import com.jvcs.tracky.features.project.domain.models.SubTaskInterval
+import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import kotlinx.coroutines.flow.Flow
 import kotlin.time.Instant
 
@@ -45,6 +47,24 @@ interface LocalProjectDataSource {
      * offline. A tombstone is the server stating a fact, which is a different thing entirely.
      */
     suspend fun applyDelta(changes: SyncChanges): EmptyResult<DataError.Local>
+
+    /**
+     * Writes the interval rows an active-timer call echoed back, under the same merge rules a pull
+     * uses.
+     *
+     * Start and stop answer with every interval they touched, not just the one named — so the
+     * device that superseded another device's timer learns the closing row here rather than up to
+     * five minutes later, when the next delta happens to carry it.
+     *
+     * It goes through the pull merge on purpose: the echo is the server stating what it did, which
+     * is exactly what a pulled row is, and both have to respect an unsent local change and keep a
+     * row's provenance. Nothing is ever deleted, so this needs no tombstones.
+     */
+    suspend fun applyTimerEcho(
+        taskIntervals: List<TaskInterval>,
+        subTaskIntervals: List<SubTaskInterval>
+    ): EmptyResult<DataError.Local>
+
     suspend fun deleteProject(projectId: String): EmptyResult<DataError.Local>
     suspend fun deleteAllProjects(): EmptyResult<DataError.Local>
 }
