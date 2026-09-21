@@ -48,9 +48,12 @@ the stacked-branch workflow (push once the stack is finished).
 Base branch `45-Sync-across-devices` holds `cdb1596`, the four backend specs.
 
 **Backend:** `backend-delta-sync-api.md` and `backend-active-timer-api.md` are **implemented and
-deployed**. `backend-realtime-and-devices-api.md` and `backend-pro-entitlement-api.md` are not.
+deployed**, and both were verified clause by clause against the live server on 2026-09-21 — 34/34
+assertions pass. `backend-realtime-and-devices-api.md` and `backend-pro-entitlement-api.md` are not
+implemented.
 
-**Phase 2 has not been started.**
+**Phase 2 has not been started.** One phase-1 bug was found by that verification and must be fixed
+first — see slice 9b under "Next steps".
 
 ---
 
@@ -178,34 +181,99 @@ the current timer is foreign, or Resume silently steals the timer using a minute
 
 ## Next steps
 
-### 1. Verify phase 1 against the live backend — do this first
+### 1. Verify phase 1 against the live backend — DONE 2026-09-21
 
-Every line of phase 1 was written blind against a spec. The backend has since shipped, so this is
-the first chance to check the contract.
+Driven against the live VPS with the `local.properties` credentials. **34/34 contract assertions
+pass. The server is fully compliant with both shipped specs.** Confirmed directly:
 
-- **`parentProjectId` on every flat row**, at all four levels (tasks, task intervals, subtasks,
-  subtask intervals). Reported done, but check it anyway: the client **silently drops** a flat row
-  without one, because the column is `NOT NULL` locally and backs the cascade onto projects. The
-  symptom is missing tasks and intervals, not an error. Note this requirement was added to
-  `backend-delta-sync-api.md` in commit `0649661`, which is only on the stack branches — the copy
-  on `main` and on the base branch still lacks it.
-- `cursor` is monotonic and is the highest `change_seq` *included*, not the server's current max.
-- Tombstones are emitted for cascaded children, not only the row the user deleted.
-- `serverNowUtc` is present, so `ServerClock` gets a sample.
-- `fullResyncRequired` on a cursor older than retention, and the client falls back to
-  `fetchProjects()` and clears the cursor.
-- Paging: `hasMore` with a cursor that advances, and rows sharing one `change_seq` never split
-  across pages.
+- **`parentProjectId` is present and non-null on all 309 flat rows**, at all four levels. This was
+  the one that would have failed silently.
+- `cursor` is the highest `change_seq` *included*, not the server's max (`since=cursor` → empty),
+  monotonic, and a `since` newer than anything on the server is echoed back rather than erroring.
+- Paging is exact: a full walk at `limit=2` took 158 pages and reproduced the unpaged pull
+  row-for-row — 315 rows, zero duplicates, zero omissions, cursor strictly advancing.
+- Cascaded tombstones are emitted for the whole subtree (`project`, `task`, `task_interval`).
+- `serverNowUtc` on every response; `since=-5` → `400`.
+- All ten active-timer clauses hold: `204` when idle, `touched` carries the new interval, an
+  identical replay leaves `startedAtUtc` alone, a supersede closes the previous interval **exactly
+  at the new one's `startedAtUtc`** and returns both, a stop naming a non-active interval is `409`
+  with the current timer in the body, restarting a closed interval is `409`, and
+  `startedByDeviceId` survives a closing `PUT` that omits the field.
+- `POST .../intervals` accepts and persists `startedByDeviceId`, per spec section 4.
 
-Two devices on one account end to end: start on Android, confirm the second device adopts the timer
-and shows the same duration; stop on the second, confirm the Android notification clears; start on
-both while offline, reconnect, confirm one timer survives and the other is closed at the winner's
-start; delete a project on one device and confirm it disappears on the other; kill the app
-mid-timer and confirm the stranded dialog appears **only** on the device that started it.
+Not exercisable yet: `fullResyncRequired`. Nothing has aged past the 90-day tombstone retention, so
+`since=1` correctly returns the full set with `fullResyncRequired: false`. Re-check once the
+account has a real retention gap.
+
+The probe script is `verify_sync_contract` in the session scratchpad — throwaway, not committed. It
+creates a project, exercises the timer against it and deletes it; the account was left at its
+baseline of 6 projects.
+
+> **zsh trap, for whoever writes the next probe:** `echo "$json"` **expands `\n` inside JSON string
+> literals** and corrupts the payload — zsh's `echo` interprets backslash escapes where bash's does
+> not. It looks exactly like a malformed server response. Use `printf '%s'` or redirect curl
+> straight to a file.
+
+#### Finding — `startedByDeviceId` never crosses the wire, in either direction
+
+**This is a real bug in phase 1, and it disables the mechanism slices 1–3 exist to provide.**
+
+The server sends `startedByDeviceId` on both interval levels, in the delta feed *and* in the nested
+`GET /api/projects`. The client throws it away:
+
+1. `TaskIntervalDto` and `SubTaskIntervalDto` (`core/data/networking/dto/ProjectDto.kt`) do not
+   declare the field, and the Json is configured `ignoreUnknownKeys = true`
+   (`HttpClientFactory.kt:34`), so it is **discarded silently**.
+2. `SyncChangesMapper.kt:32,39` and `DtoMappers.kt:55,79` hardcode `startedByDeviceId = null`.
+3. `CreateTaskIntervalRequest` / `CreateSubTaskIntervalRequest` do not send it either.
+
+`upsertServerTree` then does `incoming.startedByDeviceId ?: local?.startedByDeviceId`. With
+`incoming` always null and `local` null for a row this device has never seen, **a pulled foreign
+interval lands with `startedByDeviceId = null` — which this design reads as "this device".** The
+in-code comment ("A row this device has never seen gets the defaults, which is what it should
+have") was written when the wire genuinely had no such field. It does now.
+
+Consequences, both of which the column was added to prevent:
+
+- `StrandedTimerReconciler` would park another device's **live** timer on cold start and interrogate
+  the user about it — exactly the failure slice 3 describes.
+- In phase 2, `RunningTimer.isForeign` would be `false` for a genuinely foreign timer, so every
+  foreign-timer guard silently disengages — including the one stopping `addTaskDuration` from
+  double-counting, which this document calls the sharpest such risk in the whole plan.
+
+Latent **only** because no client has ever written a non-null value: all 285 existing interval rows
+are null. It goes live the moment S11 starts sending `deviceId` to `PUT /api/timer/active`.
+
+**Fix as slice `9b`, before S10** (`-9b-interval-device-id-wire`, ~120 lines). Declare
+`startedByDeviceId: String? = null` on both interval DTOs and pass `dto.startedByDeviceId` at the
+four call sites that currently pass null. Keep the mapper *parameter* — `KtorRemoteIntervalDataSource`
+(`:29,:37`) and `KtorRemoteSubTaskIntervalDataSource` (`:67`) legitimately override it with the
+local row's value on a push echo, and `startedParentTimer` still has no wire counterpart. The
+`?:` fallback in `upsertServerTree` then becomes correct on its own. The **push** half — sending
+the id on the plain interval routes — belongs in S11, which already injects `DeviceIdProvider`.
+
+#### Finding — a replayed stop returns `touched: []`
+
+Not a bug; the server is right. But S11 must not read an empty echo as failure. Measured: the first
+`POST /api/timer/active/stop` returns the closed interval in `touched` with its duration; an
+identical replay returns `200` with `active: null` and **`touched: []`**, and the stored duration
+does not move. A client that treats "no rows echoed" as "the stop did not take" would leave the
+local row open forever on any retry.
+
+#### Still outstanding — the two-device pass
+
+Not automatable from here; needs two real devices on one account. Start on Android, confirm the
+second device adopts the timer and shows the same duration; stop on the second, confirm the Android
+notification clears; start on both while offline, reconnect, confirm one timer survives and the
+other is closed at the winner's start; delete a project on one device and confirm it disappears on
+the other; kill the app mid-timer and confirm the stranded dialog appears **only** on the device
+that started it. **Do this after slice 9b** — before it, the stranded-dialog check is guaranteed to
+fail.
 
 ### 2. Phase 2 — slices 10 to 13
 
-Branch off the tip of the phase-1 stack. Line estimates are against the 400 cap.
+Branch off slice **9b** (see the finding above), not off slice 9. Line estimates are against the
+400 cap.
 
 **S10 `-10-active-timer-remote` (~300)** — `ActiveTimer`, `ActiveTimerRepository`,
 `RemoteActiveTimerDataSource`, the DTOs and `KtorRemoteActiveTimerDataSource`. The response must
