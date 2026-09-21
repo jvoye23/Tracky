@@ -7,6 +7,8 @@ import com.jvcs.tracky.core.data.device.DataStoreDeviceIdProvider
 import com.jvcs.tracky.core.data.networking.HttpClientFactory
 import com.jvcs.tracky.core.data.sync.DataStoreServerClockOffsetStore
 import com.jvcs.tracky.core.data.timer.KtorRemoteActiveTimerDataSource
+import com.jvcs.tracky.core.data.timer.OfflineFirstActiveTimerRepository
+import com.jvcs.tracky.core.domain.timer.ActiveTimerRepository
 import com.jvcs.tracky.core.domain.timer.RemoteActiveTimerDataSource
 import com.jvcs.tracky.core.data.sync.DataStoreSyncCursorStore
 import com.jvcs.tracky.core.data.sync.KtorRemoteSyncDataSource
@@ -285,6 +287,20 @@ val coreDataModule = module {
     // The server's view of which timer is running. Passive: driven by user actions and the sync
     // manager, never by a loop of its own, so it needs no createdAtStart and no start() call.
     singleOf(::KtorRemoteActiveTimerDataSource) bind RemoteActiveTimerDataSource::class
+
+    single {
+        OfflineFirstActiveTimerRepository(
+            remoteActiveTimerDataSource = get(),
+            localProjectDataSource = get(),
+            deviceIdProvider = get(),
+            pendingSyncDataSource = get(),
+            deltaSyncApplier = get(),
+            syncScheduler = get(),
+            serverClock = get(),
+            timeProvider = get(),
+            applicationScope = get(qualifier = named("AppScope"))
+        )
+    } bind ActiveTimerRepository::class
 
     // Only the timer reads this; everything else keeps using TimeProvider directly.
     singleOf(::DataStoreServerClockOffsetStore) bind ServerClockOffsetStore::class
