@@ -191,7 +191,9 @@ val coreDataModule = module {
     } bind StrandedTimerRepository::class
 
     // The read-only counterpart to the parked-timer repository above: same join, opposite filter.
-    single { OfflineFirstRunningTimerRepository(projectDao = get()) } bind RunningTimerRepository::class
+    single {
+        OfflineFirstRunningTimerRepository(projectDao = get(), deviceIdProvider = get())
+    } bind RunningTimerRepository::class
 
     // The one place the projects → tasks → intervals → subtasks → subtask intervals sync order
     // is expressed.

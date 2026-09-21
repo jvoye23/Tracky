@@ -1,6 +1,8 @@
 package com.jvcs.tracky.features.project.data.timer
 
 import com.jvcs.tracky.core.database.dao.ProjectDao
+import com.jvcs.tracky.core.domain.device.DeviceIdProvider
+import com.jvcs.tracky.core.domain.timer.isForeignTimer
 import com.jvcs.tracky.core.database.entity.SubTaskIntervalEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 import com.jvcs.tracky.features.project.domain.timer.ProjectRef
@@ -28,7 +30,8 @@ import kotlin.time.Instant
  * [ProjectDao.getBankedTaskDuration].
  */
 class OfflineFirstRunningTimerRepository(
-    private val projectDao: ProjectDao
+    private val projectDao: ProjectDao,
+    private val deviceIdProvider: DeviceIdProvider
 ) : RunningTimerRepository {
 
     override fun observeRunningTimer(): Flow<RunningTimer?> =
@@ -59,7 +62,8 @@ class OfflineFirstRunningTimerRepository(
             task = TaskRef(id = task.projectTaskId, title = task.title),
             subTask = TaskRef(id = subTask.projectSubTaskId, title = subTask.title),
             startedAt = Instant.fromEpochMilliseconds(interval.startDateTimeEpochMs),
-            bankedDuration = projectDao.getBankedSubTaskDuration(subTask.projectSubTaskId).milliseconds
+            bankedDuration = projectDao.getBankedSubTaskDuration(subTask.projectSubTaskId).milliseconds,
+            isForeign = isForeignTimer(interval.startedByDeviceId, deviceIdProvider.deviceId())
         )
     }
 
@@ -73,7 +77,8 @@ class OfflineFirstRunningTimerRepository(
             task = TaskRef(id = task.projectTaskId, title = task.title),
             subTask = null,
             startedAt = Instant.fromEpochMilliseconds(interval.startDateTimeEpochMs),
-            bankedDuration = projectDao.getBankedTaskDuration(task.projectTaskId).milliseconds
+            bankedDuration = projectDao.getBankedTaskDuration(task.projectTaskId).milliseconds,
+            isForeign = isForeignTimer(interval.startedByDeviceId, deviceIdProvider.deviceId())
         )
     }
 }

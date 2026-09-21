@@ -192,6 +192,47 @@ internal class TimerNotificationCoordinatorTest {
     }
 
     @Test
+    fun pauseDoesNothingToATimerAnotherDeviceIsRunning() = runTest {
+        // Pause is stop-then-start, so pausing a foreign timer would globally stop it — that is
+        // Stop, not Pause. Until the surfaces hide the button, doing nothing is the honest answer.
+        reconciled.complete(Unit)
+        runningTimer.value = taskTimer.copy(isForeign = true)
+        val coordinator = coordinator()
+        settle()
+
+        coordinator.onPause()
+        settle()
+
+        assertTrue(stoppedTaskIds.isEmpty())
+        assertTrue(stoppedSubTaskIds.isEmpty())
+        // And the card keeps showing it running, because it is.
+        assertTrue(controller.shown.last().isRunning)
+    }
+
+    @Test
+    fun playIsAbandonedWhenAnotherDeviceTookTheTimerOverWhilePaused() = runTest {
+        // Resuming would supersede that device's timer from a snapshot minutes out of date. What
+        // prevents it is the collector, not a check in onResume: any running timer clears `paused`,
+        // so the frozen card is replaced by the foreign one before Resume can do anything.
+        reconciled.complete(Unit)
+        runningTimer.value = taskTimer
+        val coordinator = coordinator()
+        settle()
+        coordinator.onPause()
+        runningTimer.value = null
+        settle()
+        // The other device starts something while this one sits paused.
+        runningTimer.value = subTaskTimer.copy(isForeign = true)
+        settle()
+
+        coordinator.onResume()
+        settle()
+
+        assertTrue(startedTaskIds.isEmpty())
+        assertTrue(startedSubTaskIds.isEmpty())
+    }
+
+    @Test
     fun playDoesNothingWhenNothingWasPaused() = runTest {
         reconciled.complete(Unit)
         val coordinator = coordinator()

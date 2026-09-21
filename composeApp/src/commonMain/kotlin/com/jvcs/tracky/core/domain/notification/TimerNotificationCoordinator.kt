@@ -68,6 +68,11 @@ class TimerNotificationCoordinator(
 
     suspend fun onPause() {
         val timer = running ?: return
+        // Pause is stop-then-start, so pausing a timer another device is running would globally
+        // stop it — that is Stop, not Pause, and the user pressed the wrong one of two buttons.
+        // Doing nothing is the honest answer until the surfaces hide the button for a foreign
+        // timer; see the flag in Requirements/Cross_Device_Sync_TODO.md.
+        if (timer.isForeign) return
         val now = serverClock.now()
 
         // Freeze and show before writing: stopping makes the flow emit null, and the collector has
@@ -85,6 +90,10 @@ class TimerNotificationCoordinator(
     }
 
     suspend fun onResume() {
+        // No foreign check here, and none is needed: the collector clears `paused` the moment any
+        // timer starts running, foreign or not, so a non-null `paused` means nothing is running
+        // anywhere this device has heard about. A device that took the timer over while this one
+        // sat paused replaces the frozen card with its own before Resume can be pressed.
         val timer = paused?.timer ?: return
         // No state cleared here on purpose: the write opens an interval, the flow emits it, and the
         // collector clears `paused`. A failed start therefore leaves the frozen card up.
