@@ -2,6 +2,7 @@ package com.jvcs.tracky.core.domain.timer
 
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
+import com.jvcs.tracky.features.project.domain.models.SubTaskInterval
 import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import kotlin.time.Instant
 
@@ -21,13 +22,19 @@ import kotlin.time.Instant
 interface ActiveTimerRepository {
 
     /**
-     * Announces a task interval this device has just opened as the one running timer, closing
-     * whatever was running elsewhere at this one's start.
+     * Announces an interval this device has just opened as the one running timer, closing whatever
+     * was running elsewhere at this one's start.
      *
-     * Subtask timers follow in their own slice: timing a subtask opens two intervals at once, and
-     * the inner one is what the server has to arbitrate.
+     * @param taskInterval the open task interval. Always present: timing a subtask also runs its
+     *   parent task's timer, so that row is open either way.
+     * @param subTaskInterval the interval inside it when a subtask is what the user started. That
+     *   inner row is then the timer the server arbitrates, because it is what the user started —
+     *   the enclosing task interval is a consequence, not the choice.
      */
-    suspend fun start(taskInterval: TaskInterval): EmptyResult<DataError>
+    suspend fun start(
+        taskInterval: TaskInterval,
+        subTaskInterval: SubTaskInterval? = null
+    ): EmptyResult<DataError>
 
     /**
      * Closes [intervalId] at [endedAt], but only while it is still the running timer.

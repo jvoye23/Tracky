@@ -18,6 +18,7 @@ import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.core.domain.util.asEmptyDataResult
 import com.jvcs.tracky.core.domain.util.isMissingOrForbidden
 import com.jvcs.tracky.core.domain.util.isTransient
+import com.jvcs.tracky.features.project.domain.models.SubTaskInterval
 import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import com.jvcs.tracky.features.project.domain.project.LocalProjectDataSource
 import kotlinx.coroutines.CoroutineScope
@@ -54,23 +55,44 @@ class OfflineFirstActiveTimerRepository(
     private val applicationScope: CoroutineScope
 ) : ActiveTimerRepository {
 
-    override suspend fun start(taskInterval: TaskInterval): EmptyResult<DataError> {
-        val request = StartActiveTimer(
-            intervalId = taskInterval.intervalId,
-            kind = ActiveTimerKind.TASK,
-            parentTaskId = taskInterval.parentTaskId,
-            parentSubTaskId = null,
-            parentTaskIntervalId = null,
-            startedAt = taskInterval.startDateTimeUtc,
-            deviceId = deviceIdProvider.deviceId()
-        )
+    override suspend fun start(
+        taskInterval: TaskInterval,
+        subTaskInterval: SubTaskInterval?
+    ): EmptyResult<DataError> {
+        val deviceId = deviceIdProvider.deviceId()
+        // The inner row wins when there is one. Timing a subtask opens its parent task's interval
+        // as well, but naming the task interval here would let another device stop the task while
+        // this one still shows the subtask running — two devices disagreeing about what is timed.
+        val request = if (subTaskInterval != null) {
+            StartActiveTimer(
+                intervalId = subTaskInterval.subTaskIntervalId,
+                kind = ActiveTimerKind.SUB_TASK,
+                parentTaskId = taskInterval.parentTaskId,
+                parentSubTaskId = subTaskInterval.parentSubTaskId,
+                parentTaskIntervalId = taskInterval.intervalId,
+                startedAt = subTaskInterval.startDateTimeUtc,
+                deviceId = deviceId
+            )
+        } else {
+            StartActiveTimer(
+                intervalId = taskInterval.intervalId,
+                kind = ActiveTimerKind.TASK,
+                parentTaskId = taskInterval.parentTaskId,
+                parentSubTaskId = null,
+                parentTaskIntervalId = null,
+                startedAt = taskInterval.startDateTimeUtc,
+                deviceId = deviceId
+            )
+        }
 
         return when (val result = remoteActiveTimerDataSource.start(request)) {
             is Result.Success -> settle(result.data)
             is Result.Error -> fallBackToTheQueue(
                 intervalId = request.intervalId,
                 kind = request.kind,
-                parentId = request.parentTaskId,
+                // A subtask interval hangs off its subtask, not the task, and the drain resolves
+                // the rest of the ancestry from local rows.
+                parentId = request.parentSubTaskId ?: request.parentTaskId,
                 operationType = PendingSyncOperation.OP_CREATE,
                 error = result.error
             )
