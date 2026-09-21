@@ -89,7 +89,14 @@ Query parameters: `since` (optional `bigint`; omitted or `0` means "everything")
   five types, plus every tombstone with `change_seq > since`.
 - The collections are **flat, not nested**. This is deliberate and differs from `GET /api/projects`:
   a delta routinely carries a task whose project did not change, and nesting it would force the
-  server to send unchanged parents. Each object carries its parent id, exactly as it does today.
+  server to send unchanged parents.
+- **Every row below project level must carry `parentProjectId`**, including tasks, task intervals,
+  subtasks and subtask intervals. This is the one field the nested payload does *not* have, because
+  there it is implied by the enclosing project — but the client stores it on every level as a
+  `NOT NULL` column backing a cascading foreign key onto projects, so a flat row without it cannot
+  be written at all. The client drops such a row rather than failing the whole delta, which means
+  omitting the field loses data silently. The other parent ids (`parentTaskId`,
+  `parentSubTaskId`, `parentTaskIntervalId`) are already on the wire and stay as they are.
 - Order within each collection does not matter. The **client** applies them parents-first
   (projects → tasks → task intervals → subtasks → subtask intervals) and skips any row whose parent
   it does not have.
@@ -195,6 +202,8 @@ the first time. The body is the same shape as `GET /api/projects` returns — th
   re-creation after the tombstone.
 - `since` older than the retention window returns `fullResyncRequired: true` with empty collections.
 - `since` omitted returns the full tree and **no** tombstones.
+- Every flat row below project level carries `parentProjectId`, at all four levels, and a
+  `GET /api/projects` round trip still omits it inside the nested payload.
 - Paging: with `limit` smaller than the change set, `hasMore` is true, the cursor advances, and
   requesting again with it returns the remainder exactly once. Rows sharing one `change_seq` are
   never split across pages.
