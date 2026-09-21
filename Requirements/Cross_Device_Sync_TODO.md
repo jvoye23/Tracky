@@ -209,9 +209,11 @@ Not exercisable yet: `fullResyncRequired`. Nothing has aged past the 90-day tomb
 `since=1` correctly returns the full set with `fullResyncRequired: false`. Re-check once the
 account has a real retention gap.
 
-The probe script is `verify_sync_contract` in the session scratchpad — throwaway, not committed. It
-creates a project, exercises the timer against it and deletes it; the account was left at its
-baseline of 6 projects.
+The probe is committed as `scripts/verify_sync_contract.sh` — 48 assertions over both specs, run
+it with no arguments. It reads `BASE_URL` / `TEST_EMAIL` / `TEST_PASSWORD` from the gitignored
+`local.properties`, creates a throwaway project, exercises the timer against it and deletes it, so
+the account is left as it was found. **Two assertions fail today and should**: they are the open
+backend bug below, and they are how to know when it is closed.
 
 > **zsh trap, for whoever writes the next probe:** `echo "$json"` **expands `\n` inside JSON string
 > literals** and corrupts the payload — zsh's `echo` interprets backslash escapes where bash's does
