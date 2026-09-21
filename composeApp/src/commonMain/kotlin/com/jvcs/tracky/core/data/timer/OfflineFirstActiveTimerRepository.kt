@@ -22,6 +22,7 @@ import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import com.jvcs.tracky.features.project.domain.project.LocalProjectDataSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlin.time.Instant
 
 /**
  * Takes the timer's transitions to the server and writes back what it says happened.
@@ -68,12 +69,30 @@ class OfflineFirstActiveTimerRepository(
             is Result.Success -> settle(result.data)
             is Result.Error -> fallBackToTheQueue(
                 intervalId = request.intervalId,
+                kind = request.kind,
                 parentId = request.parentTaskId,
                 operationType = PendingSyncOperation.OP_CREATE,
                 error = result.error
             )
         }
     }
+
+    override suspend fun stop(
+        intervalId: String,
+        kind: ActiveTimerKind,
+        endedAt: Instant
+    ): EmptyResult<DataError> =
+        when (val result = remoteActiveTimerDataSource.stop(intervalId, endedAt)) {
+            is Result.Success -> settle(result.data)
+            is Result.Error -> fallBackToTheQueue(
+                intervalId = intervalId,
+                kind = kind,
+                // An UPDATE re-reads the row when it drains, so the stored parent goes unused.
+                parentId = null,
+                operationType = PendingSyncOperation.OP_UPDATE,
+                error = result.error
+            )
+        }
 
     /**
      * Writes back whatever the server says it did.
@@ -112,6 +131,7 @@ class OfflineFirstActiveTimerRepository(
      */
     private suspend fun fallBackToTheQueue(
         intervalId: String,
+        kind: ActiveTimerKind,
         parentId: String?,
         operationType: String,
         error: DataError.Remote
@@ -119,9 +139,13 @@ class OfflineFirstActiveTimerRepository(
         if (!error.isTransient() && !error.isMissingOrForbidden()) {
             return Result.Error(error)
         }
+        val entityType = when (kind) {
+            ActiveTimerKind.TASK -> PendingSyncOperation.ENTITY_INTERVAL
+            ActiveTimerKind.SUB_TASK -> PendingSyncOperation.ENTITY_SUBTASK_INTERVAL
+        }
         val queued = pendingSyncDataSource.enqueue(
             entityId = intervalId,
-            entityType = PendingSyncOperation.ENTITY_INTERVAL,
+            entityType = entityType,
             operationType = operationType,
             parentEntityId = parentId,
             createdAt = timeProvider.nowInstant

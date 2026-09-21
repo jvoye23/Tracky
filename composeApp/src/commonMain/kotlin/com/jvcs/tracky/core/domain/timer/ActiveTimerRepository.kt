@@ -3,6 +3,7 @@ package com.jvcs.tracky.core.domain.timer
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.features.project.domain.models.TaskInterval
+import kotlin.time.Instant
 
 /**
  * Runs the timer's transitions past the server, so that one timer runs per user rather than one
@@ -27,4 +28,21 @@ interface ActiveTimerRepository {
      * the inner one is what the server has to arbitrate.
      */
     suspend fun start(taskInterval: TaskInterval): EmptyResult<DataError>
+
+    /**
+     * Closes [intervalId] at [endedAt], but only while it is still the running timer.
+     *
+     * A compare-and-swap rather than "stop whatever is running", because those race: a stop sent
+     * from a tablet while the user looked at a timer the phone replaced 200ms earlier would
+     * otherwise kill the phone's fresh timer instead of the one the tablet meant.
+     *
+     * [kind] says which table the id lives in. The server does not need telling — it knows the
+     * row — but a stop that has to be queued does: the outbox routes by entity type, and a subtask
+     * interval queued as a task one would drain to the wrong endpoint.
+     */
+    suspend fun stop(
+        intervalId: String,
+        kind: ActiveTimerKind,
+        endedAt: Instant
+    ): EmptyResult<DataError>
 }
