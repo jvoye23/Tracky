@@ -40,23 +40,49 @@ suspend inline fun <reified T> responseToResult(response: HttpResponse): Result<
                 Result.Error(DataError.Remote.SERIALIZATION)
             }
         }
-        400 -> Result.Error(DataError.Remote.BAD_REQUEST)
-        401 -> Result.Error(DataError.Remote.UNAUTHORIZED)
-        403 -> Result.Error(DataError.Remote.FORBIDDEN)
-        404 -> Result.Error(DataError.Remote.NOT_FOUND)
-        408 -> Result.Error(DataError.Remote.REQUEST_TIMEOUT)
-        409 -> Result.Error(DataError.Remote.CONFLICT)
-        413 -> Result.Error(DataError.Remote.PAYLOAD_TOO_LARGE)
-        429 -> Result.Error(DataError.Remote.TOO_MANY_REQUESTS)
-        503 -> Result.Error(DataError.Remote.SERVICE_UNAVAILABLE)
-        in 500..599 -> Result.Error(DataError.Remote.SERVER_ERROR)
-        else -> Result.Error(DataError.Remote.UNKNOWN)
+        else -> Result.Error(httpStatusToRemoteError(response.status.value))
     }
+}
+
+/**
+ * The status-code half of [responseToResult], split out so a caller that needs the *body* of a
+ * non-2xx response can reuse the mapping instead of restating it.
+ *
+ * `/api/timer/active` is the case: a `409` there is a domain answer carrying the timer that is
+ * actually running, not an opaque failure.
+ */
+fun httpStatusToRemoteError(status: Int): DataError.Remote = when (status) {
+    400 -> DataError.Remote.BAD_REQUEST
+    401 -> DataError.Remote.UNAUTHORIZED
+    403 -> DataError.Remote.FORBIDDEN
+    404 -> DataError.Remote.NOT_FOUND
+    408 -> DataError.Remote.REQUEST_TIMEOUT
+    409 -> DataError.Remote.CONFLICT
+    413 -> DataError.Remote.PAYLOAD_TOO_LARGE
+    429 -> DataError.Remote.TOO_MANY_REQUESTS
+    503 -> DataError.Remote.SERVICE_UNAVAILABLE
+    in 500..599 -> DataError.Remote.SERVER_ERROR
+    else -> DataError.Remote.UNKNOWN
 }
 
 suspend inline fun <reified Response : Any> safeCall(
     execute: () -> HttpResponse
-): Result<Response, DataError.Remote> {
+): Result<Response, DataError.Remote> = when (val response = safeResponse(execute)) {
+    is Result.Success -> responseToResult(response.data)
+    is Result.Error -> response
+}
+
+/**
+ * [safeCall] without the status mapping: every transport failure is still turned into a
+ * [DataError.Remote], but any response the server actually sent comes back intact, whatever its
+ * status.
+ *
+ * For callers that have to read a non-2xx body, or tell `204 No Content` apart from a body that
+ * failed to decode — [safeCall] reports both as an error.
+ */
+suspend inline fun safeResponse(
+    execute: () -> HttpResponse
+): Result<HttpResponse, DataError.Remote> {
     // Order is load-bearing: on JVM, Ktor's ConnectTimeoutException subclasses
     // java.net.ConnectException, so the timeout branches must precede anything that treats a
     // connect/socket failure as "offline" — otherwise timeouts get reported as NO_INTERNET.
@@ -84,7 +110,7 @@ suspend inline fun <reified Response : Any> safeCall(
         e.printStackTrace()
         return Result.Error(e.toRemoteDataError())
     }
-    return responseToResult(response)
+    return Result.Success(response)
 }
 
 suspend inline fun <reified Request, reified Response : Any> HttpClient.post(
