@@ -55,9 +55,8 @@ implemented.
 **Phase 2 is underway.** The verification found one phase-1 bug, fixed as slice `9b`; the remote
 layer landed as `10`–`12`, the active-timer repository as `13`–`15`, and the task-side wiring as
 `16`–`18` and the presentation as `19`–`21`. **Phase 2 is code-complete**: 632 jvm tests green,
-all three targets compiling, still nothing pushed. Two things stand between this and a usable
-feature — one backend bug (the subtask-stop table under "Next steps") and the two-device pass,
-which is only meaningful once that is fixed.
+all three targets compiling, still nothing pushed. The backend is green too — 48/48 contract
+assertions as of 2026-09-22. **The two-device pass is the next thing, and nothing blocks it.**
 
 ---
 
@@ -338,28 +337,25 @@ server, and the double-count guard is written and mutation-checked.
 **`-18-subtask-timer-routing`** — `8e78086`, 173 lines. Done. Both timer paths now go through the
 server, and both double-count guards are mutation-checked.
 
-#### Backend bug found while wiring it — needs fixing before the two-device pass
+#### Backend bug found while wiring it — FIXED and verified 2026-09-22
 
-Verified against the deployed backend on 2026-09-21, by probing all four subtask cases:
+Stopping a `sub_task` interval used to close its enclosing task interval unconditionally, so the
+flow "start task → start subtask → stop subtask" ended both timers. The damage was not the
+response: the closed task interval went out on the next `GET /api/sync/changes`, and the client's
+merge rule lets a server-closed interval win over a locally-open one, so the user's task timer
+disappeared and a duration they never asked to end was banked.
 
-| Case | Server behaviour | Correct? |
-|---|---|---|
-| `sub_task` start naming a task interval the server does not have | creates it, same id, same instant, both rows in `touched` | yes |
-| `sub_task` start naming one that is already open | leaves it open, only the subtask row in `touched` | yes |
-| stop a subtask that *opened* its parent interval | closes both at the same instant | yes |
-| stop a subtask while the task timer was started **independently** | **closes both** | **no** |
+The server now records which of the two intervals the subtask start opened, and closes the parent
+only when the subtask opened it. Re-verified against the deployed build:
 
-The last row is the bug. The client tracks which timer opened which —
-`SubTaskInterval.startedParentTimer` — so that a user who starts a task timer, drills into a
-subtask and then stops the subtask keeps the task running. The server stops it, so the next pull
-closes it on their screen and banks a duration they did not ask to end.
+- `scripts/verify_sync_contract.sh` → **48 passed, 0 failed**.
+- And the consequence that actually bit the client: after the flow above, the task interval comes
+  back from `GET /api/sync/changes` with `endDateTimeUtc: null`. Still open, so the client's merge
+  has nothing to close.
+- `opened_parent_interval` stayed server-internal — it is on no payload, so no client DTO changed.
 
-**The client cannot work around this.** `startedParentTimer` has no wire counterpart and never
-will: which timer opened which is a purely local fact, which is why the merge rules preserve it.
-The server needs its own record of it. Written up in `backend-active-timer-api.md` section 3, and
-as a paste-ready prompt in `backend-subtask-stop-fix.md`.
-
-Until it is fixed, the flow "start task → start subtask → stop subtask" ends both timers.
+The prompt that fixed it is `backend-subtask-stop-fix.md`; the rule is in
+`backend-active-timer-api.md` section 3.
 
 ### The presentation slices — DONE
 
