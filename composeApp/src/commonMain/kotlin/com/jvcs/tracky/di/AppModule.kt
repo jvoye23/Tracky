@@ -23,6 +23,7 @@ val appModule = module {
         TimeManager(
             runningTimerRepository = get(),
             serverClock = get(),
+            syncRecency = get(),
             scope = get(named("AppScope"))
         )
     }

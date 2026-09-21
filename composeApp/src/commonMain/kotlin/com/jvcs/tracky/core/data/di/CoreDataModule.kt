@@ -32,6 +32,7 @@ import com.jvcs.tracky.features.project.domain.timer.StrandedTimerRepository
 import com.jvcs.tracky.core.domain.sync.DeltaSyncApplier
 import com.jvcs.tracky.core.domain.sync.RemoteSyncDataSource
 import com.jvcs.tracky.core.domain.sync.SyncCursorStore
+import com.jvcs.tracky.core.domain.sync.SyncRecency
 import com.jvcs.tracky.core.domain.sync.SyncRepository
 import com.jvcs.tracky.core.domain.util.ServerClock
 import com.jvcs.tracky.core.domain.util.ServerClockOffsetStore
@@ -216,6 +217,7 @@ val coreDataModule = module {
             appLifecycleObserver = get(),
             syncRepository = get(),
             deltaSyncApplier = get(),
+            syncRecency = get(),
             applicationScope = get(qualifier = named("AppScope")),
             timeProvider = get(),
         )
@@ -313,6 +315,9 @@ val coreDataModule = module {
     // Only the timer reads this; everything else keeps using TimeProvider directly.
     singleOf(::DataStoreServerClockOffsetStore) bind ServerClockOffsetStore::class
     singleOf(::ServerClock)
+
+    // How recently this device heard from the server; the timer freezes a foreign one without it.
+    single { SyncRecency() }
 
     // Auth
     singleOf(::DataStoreSessionStorage) bind SessionStorage::class
