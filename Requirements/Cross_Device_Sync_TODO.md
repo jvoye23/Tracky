@@ -53,9 +53,9 @@ assertions pass. `backend-realtime-and-devices-api.md` and `backend-pro-entitlem
 implemented.
 
 **Phase 2 is underway.** The verification found one phase-1 bug, fixed as slice `9b`; the remote
-layer landed as slices `10`–`12` and the active-timer repository as `13`–`15`. **614 jvm tests
-green**, all three targets compiling, still nothing pushed. Nothing calls the repository yet —
-slice `17` is the wiring, and it is where the double-count guard has to be written.
+layer landed as `10`–`12`, the active-timer repository as `13`–`15`, and the task-side wiring as
+`16`–`17`. **620 jvm tests green**, all three targets compiling, still nothing pushed. A task
+timer now starts and stops through the server; subtasks are still on the old local-only path.
 
 ---
 
@@ -326,18 +326,18 @@ Decisions worth knowing:
 
 **Still to do, in order:**
 
-**`-16-active-timer-subtask-start` (~150)** — `start` currently takes a `TaskInterval` only. Add
-the subtask overload: timing a subtask opens two intervals, and the **inner** one is what the
-server arbitrates (`kind = sub_task`, `parentTaskIntervalId` = the enclosing task interval). The
-queue fallback already routes by kind, so only the start side is missing.
+**`-16-active-timer-subtask-start`** — `c6df214`, 85 lines. Done.
 
-**`-17-timer-start-stop-routing` (~300)** — nothing calls the repository yet. Route
-`OfflineFirstTaskRepository.startProjectTask` / `stopProjectTask`
-(`features/project/data/task/OfflineFirstTaskRepository.kt:159` and `:174`) and the subtask
-equivalents through it when online, keeping the `startupReconciliation.awaitReconciled()` gate.
-**This is where the double-count guard actually has to be written**: a stop of a *foreign* timer
-must not call `localTaskDataSource.stopTask`, because that is what banks the duration
-(`ProjectDao.addTaskDuration`, `ProjectDao.kt:282`) and the server's task row already carries it.
+**`-17-task-timer-routing`** — `bba8a27`, 226 lines. Done. The task paths now go through the
+server, and the double-count guard is written and mutation-checked.
+
+Still to do: **`-18-subtask-timer-routing` (~250)** — the same wiring for
+`OfflineFirstSubTaskRepository.startSubTask` / `stopSubTask`
+(`features/project/data/subtask/OfflineFirstSubTaskRepository.kt:121` and `:137`). Both go through
+`pushTimerChange`, which pushes up to four rows: the subtask interval, the enclosing task interval
+when this start opened it, the subtask row and the task row. The foreign guard has to skip
+`localSubTaskDataSource.stopSubTask` for the same reason the task one does, and the subtask stop
+must pass `ActiveTimerKind.SUB_TASK` so a queued stop lands on the right entity type.
 
 **`-18-foreign-timer-presentation` (~290)** — `RunningTimer.isForeign`;
 `OfflineFirstRunningTimerRepository` injects `DeviceIdProvider` and **switches `bankedDuration` to
@@ -399,6 +399,11 @@ Both must change before an anonymous tier is possible.
 - **400 net added lines per slice, tests included.** `count_diff.py` needs
   `--exclude 'composeApp/schemas/**'` — Room's generated schema export is not in its default
   exclude list and it is several hundred lines per migration.
+- **A fake that is missing production behaviour makes a test pass vacuously.** `FakeLocalTaskDataSource.stopTask`
+  did not bank the interval's duration onto the task the way `ProjectDao.addTaskDuration` does, so
+  the first version of the double-count guard's test could not have failed. Found by mutating
+  `isForeignTimer` to return `false` and watching nothing break. **Mutate the rule and confirm the
+  test catches it** before believing a guard is covered.
 - **JUnit rejects a test whose `runBlocking` block ends on a value-returning assertion** such as
   `assertNotNull`. It fails as `initializationError` for the whole class, not as the test. End on
   `assertEquals` / `assertNull` / `assertTrue`, or add a trailing `Unit`. Cost three round trips.
