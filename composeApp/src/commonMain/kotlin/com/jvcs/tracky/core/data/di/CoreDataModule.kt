@@ -132,6 +132,9 @@ val coreDataModule = module {
             pendingSyncDataSource = get(),
             syncScheduler = get(),
             intervalRepository = get(),
+            activeTimerRepository = get(),
+            deviceIdProvider = get(),
+            serverClock = get(),
             timeProvider = get(),
             applicationScope = get(qualifier = named("AppScope")),
             startupReconciliation = get()

@@ -1,6 +1,11 @@
 package com.jvcs.tracky.features.project.data.task
 
+import com.jvcs.tracky.core.domain.device.DeviceIdProvider
 import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource
+import com.jvcs.tracky.core.domain.timer.ActiveTimerKind
+import com.jvcs.tracky.core.domain.timer.ActiveTimerRepository
+import com.jvcs.tracky.core.domain.timer.isForeignTimer
+import com.jvcs.tracky.core.domain.util.ServerClock
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
 import com.jvcs.tracky.core.domain.sync.SyncOutcome
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
@@ -35,6 +40,9 @@ class OfflineFirstTaskRepository(
     private val pendingSyncDataSource: PendingSyncDataSource,
     private val syncScheduler: SyncScheduler,
     private val intervalRepository: IntervalRepository,
+    private val activeTimerRepository: ActiveTimerRepository,
+    private val deviceIdProvider: DeviceIdProvider,
+    private val serverClock: ServerClock,
     private val timeProvider: TimeProvider,
     private val applicationScope: CoroutineScope,
     private val startupReconciliation: StartupReconciliation
@@ -168,10 +176,26 @@ class OfflineFirstTaskRepository(
         }
         // Null means an already-open interval was reused, so there is no new row to create.
         val openedInterval = start.openedInterval ?: return Result.Success(Unit)
-        return intervalRepository.createTaskInterval(openedInterval)
+
+        // A task that exists only on this device has no server-side row for the timer resource to
+        // hang off, so do not spend a request learning that. The interval queue already knows how
+        // to wait for the parent, and the drain pushes tasks before intervals.
+        if (pendingSyncDataSource.hasPendingCreate(taskId).getOrDefault(false)) {
+            return intervalRepository.createTaskInterval(openedInterval)
+        }
+        // Otherwise the start goes through the server, which closes whatever was running on the
+        // user's other devices and hands back the rows it touched.
+        return activeTimerRepository.start(openedInterval)
     }
 
     override suspend fun stopProjectTask(taskId: String): EmptyResult<DataError> {
+        val openInterval = intervalRepository.getOpenIntervalByTaskId(taskId).getOrDefault(null)
+        if (openInterval != null &&
+            isForeignTimer(openInterval.startedByDeviceId, deviceIdProvider.deviceId())
+        ) {
+            return stopForeignTimer(openInterval.intervalId)
+        }
+
         val closedInterval = when (val stopped = localTaskDataSource.stopTask(taskId)) {
             is Result.Success -> stopped.data
             is Result.Error -> return stopped.asEmptyDataResult()
@@ -179,8 +203,14 @@ class OfflineFirstTaskRepository(
         // The interval carries the measured span, the task carries the accumulated total and the
         // cleared timer flag; both have to reach the server. The interval goes first so that a
         // failure pushing the task cannot strand it.
-        val intervalResult = if (closedInterval != null) {
-            intervalRepository.updateTaskInterval(closedInterval)
+        val intervalResult = if (closedInterval?.endDateTimeUtc != null) {
+            // The same compare-and-swap a foreign stop uses. It is this device's own timer, so the
+            // local close above is right either way — the server is being told, not asked.
+            activeTimerRepository.stop(
+                intervalId = closedInterval.intervalId,
+                kind = ActiveTimerKind.TASK,
+                endedAt = closedInterval.endDateTimeUtc
+            )
         } else {
             Result.Success(Unit)
         }
@@ -189,6 +219,25 @@ class OfflineFirstTaskRepository(
         val taskResult = upsertProjectTask(task)
         return if (intervalResult is Result.Error) intervalResult else taskResult
     }
+
+    /**
+     * Stops a timer another device started, without banking anything locally.
+     *
+     * **`localTaskDataSource.stopTask` is deliberately not called.** It is what adds the interval's
+     * duration to the task (`ProjectDao.addTaskDuration`), and the server's task row already
+     * carries a foreign timer's time — adding it again here would charge the user twice for the
+     * same minutes. The echo closes the interval, and the duration arrives with the task row.
+     *
+     * The end instant is the server-corrected clock rather than this device's. `startedAt` came
+     * from the other device, so subtracting a skewed local `now` from it is exactly the error
+     * [ServerClock] exists to remove — and here that error would be persisted as tracked time.
+     */
+    private suspend fun stopForeignTimer(intervalId: String): EmptyResult<DataError> =
+        activeTimerRepository.stop(
+            intervalId = intervalId,
+            kind = ActiveTimerKind.TASK,
+            endedAt = serverClock.now()
+        )
 
     // REORDER: persist the manual order of one project's tasks. orderedTaskIds is the new order of
     // the whole list; each task's sortIndex becomes its position in it. A drag is one action for the
