@@ -132,6 +132,9 @@ kotlin {
             implementation(libs.kotlinx.coroutines.test)
             // Ordered, suspending assertions on event flows; fails on unconsumed emissions.
             implementation(libs.turbine)
+            // A scripted HTTP engine, for the data sources whose behaviour is the status code
+            // itself — a 204 that means "nothing is running", a 409 that carries an answer.
+            implementation(libs.ktor.client.mock)
         }
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
