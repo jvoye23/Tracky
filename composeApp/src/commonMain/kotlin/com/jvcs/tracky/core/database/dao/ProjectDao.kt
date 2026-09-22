@@ -39,6 +39,12 @@ interface ProjectDao {
      * nothing is ever deleted: a local row the server does not know about is either still queued
      * for upload or was created offline, and must survive the pull either way.
      *
+     * Interval rows additionally consult the outbox: [serverWinsOnPullForInterval] lets the server
+     * close a locally-open interval, which is how a timer stopped on another device stops here,
+     * unless this device still owes the server a change for that exact row. The pending ids are
+     * read once up front rather than per row — this runs inside the transaction, and it is five
+     * levels deep.
+     *
      * Rows are written parents-first because Room enforces the foreign keys, and a row whose parent
      * is absent is skipped rather than inserted: one dangling reference throws inside the
      * transaction and would lose the *entire* pull, not just that row. The three oldest levels need
@@ -53,6 +59,8 @@ interface ProjectDao {
         subTasks: List<ProjectSubTaskEntity> = emptyList(),
         subTaskIntervals: List<SubTaskIntervalEntity> = emptyList()
     ) {
+        val pendingIntervalIds = getPendingIntervalIds().toSet()
+
         projects.forEach { incoming ->
             val local = getProjectById(incoming.projectId)
             if (serverWinsOnPull(local?.updatedAtEpochMs, incoming.updatedAtEpochMs)) {
@@ -67,8 +75,20 @@ interface ProjectDao {
         }
         intervals.forEach { incoming ->
             val local = getIntervalById(incoming.intervalId)
-            if (local == null || serverWinsOnPullForInterval(local.endDateTimeEpochMs, incoming.endDateTimeEpochMs)) {
-                upsertTaskInterval(incoming)
+            val serverWins = local == null || serverWinsOnPullForInterval(
+                localEndDateTimeEpochMs = local.endDateTimeEpochMs,
+                serverEndDateTimeEpochMs = incoming.endDateTimeEpochMs,
+                hasPendingLocalPush = incoming.intervalId in pendingIntervalIds
+            )
+            if (serverWins) {
+                // startedByDeviceId has no wire counterpart either, so the server's copy is always
+                // null. Keeping the local value is what stops a pull from making this device's own
+                // open interval look foreign and unrecoverable.
+                upsertTaskInterval(
+                    incoming.copy(
+                        startedByDeviceId = incoming.startedByDeviceId ?: local?.startedByDeviceId
+                    )
+                )
             }
         }
         subTasks.forEach { incoming ->
@@ -84,14 +104,22 @@ interface ProjectDao {
             if (getSubTaskById(incoming.parentSubTaskId) == null) return@forEach
             if (getIntervalById(incoming.parentTaskIntervalId) == null) return@forEach
             val local = getSubTaskIntervalById(incoming.subTaskIntervalId)
-            if (local == null || serverWinsOnPullForInterval(local.endDateTimeEpochMs, incoming.endDateTimeEpochMs)) {
-                // startedParentTimer has no wire counterpart, so the server's copy is always false.
-                // Keeping the local value is what preserves "stopping this subtask also stops its
-                // parent task" across a pull. A row this device has never seen gets false, which is
-                // safe: the merge only lets the server win when the local row is already closed,
-                // and the flag is only ever read off an open one.
+            val serverWins = local == null || serverWinsOnPullForInterval(
+                localEndDateTimeEpochMs = local.endDateTimeEpochMs,
+                serverEndDateTimeEpochMs = incoming.endDateTimeEpochMs,
+                hasPendingLocalPush = incoming.subTaskIntervalId in pendingIntervalIds
+            )
+            if (serverWins) {
+                // Neither startedParentTimer nor startedByDeviceId has a wire counterpart, so the
+                // server's copies are always false and null. Keeping the local values preserves
+                // "stopping this subtask also stops its parent task" and this row's provenance
+                // across a pull. A row this device has never seen gets the defaults, which is what
+                // it should have.
                 upsertSubTaskInterval(
-                    incoming.copy(startedParentTimer = local?.startedParentTimer ?: false)
+                    incoming.copy(
+                        startedParentTimer = local?.startedParentTimer ?: false,
+                        startedByDeviceId = incoming.startedByDeviceId ?: local?.startedByDeviceId
+                    )
                 )
             }
         }
@@ -324,6 +352,21 @@ interface ProjectDao {
             "ORDER BY startDateTimeEpochMs DESC LIMIT 1"
     )
     fun observeOpenSubTaskInterval(): Flow<SubTaskIntervalEntity?>
+
+    /**
+     * The interval ids this device still owes the server, at either level.
+     *
+     * Read by [upsertServerTree] so a pull cannot overwrite a row whose change has not drained.
+     * It reaches into `pending_sync_operations` rather than going through `PendingSyncDao` on
+     * purpose: the decision has to be made inside the same transaction as the writes it guards,
+     * and the literals are the persisted `PendingSyncOperation.ENTITY_INTERVAL` and
+     * `ENTITY_SUBTASK_INTERVAL` values, which that file documents as un-renameable.
+     */
+    @Query(
+        "SELECT entityId FROM pending_sync_operations " +
+            "WHERE entityType IN ('task_interval', 'sub_task_interval')"
+    )
+    suspend fun getPendingIntervalIds(): List<String>
 
     // The reconciler's two inputs.
     //

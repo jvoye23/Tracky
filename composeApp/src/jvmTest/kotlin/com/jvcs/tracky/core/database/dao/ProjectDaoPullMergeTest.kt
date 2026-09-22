@@ -3,6 +3,7 @@ package com.jvcs.tracky.core.database.dao
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.jvcs.tracky.core.database.TrackyDatabase
+import com.jvcs.tracky.core.database.entity.PendingSyncEntity
 import com.jvcs.tracky.core.database.entity.ProjectEntity
 import com.jvcs.tracky.core.database.entity.ProjectSubTaskEntity
 import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
@@ -16,6 +17,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /**
  * Exercises [ProjectDao.upsertServerTree] against a real (in-memory) database.
@@ -102,6 +104,20 @@ class ProjectDaoPullMergeTest {
     }
 
     /** project_tasks has a CASCADE foreign key onto projects, so the parent must exist first. */
+    /** Queues an outbox row, which is what makes a local interval defend itself against a pull. */
+    private suspend fun queuePush(intervalId: String, entityType: String = "task_interval") {
+        db.pendingSyncDao.enqueueDeduped(
+            PendingSyncEntity(
+                operationId = "op-$intervalId",
+                entityId = intervalId,
+                entityType = entityType,
+                operationType = "UPDATE",
+                createdAtEpochMs = 0,
+                parentEntityId = null
+            )
+        )
+    }
+
     private suspend fun seedProject(id: String = "p1") {
         dao.upsertProject(projectEntity(id, updatedAt = 0))
     }
@@ -141,9 +157,26 @@ class ProjectDaoPullMergeTest {
     }
 
     @Test
-    fun doesNotCloseAnIntervalThatIsStillRunningLocally() = runBlocking {
+    fun closesAnIntervalTheServerSaysWasStoppedElsewhere() = runBlocking {
         seedTask()
-        dao.upsertTaskInterval(intervalEntity("i1", "t1", end = null)) // timer running here
+        dao.upsertTaskInterval(intervalEntity("i1", "t1", end = null)) // still ticking here
+
+        dao.upsertServerTree(
+            projects = emptyList(),
+            tasks = emptyList(),
+            intervals = listOf(intervalEntity("i1", "t1", end = 60_000)),
+        )
+
+        // The user stopped it on their other device. Nothing is queued here, so this device has
+        // no unsent change to defend and the server is canonical.
+        assertEquals(60_000L, dao.getIntervalById("i1")?.endDateTimeEpochMs)
+    }
+
+    @Test
+    fun doesNotCloseAnIntervalWhoseOwnChangeIsStillQueued() = runBlocking {
+        seedTask()
+        dao.upsertTaskInterval(intervalEntity("i1", "t1", end = null))
+        queuePush("i1")
 
         dao.upsertServerTree(
             projects = emptyList(),
@@ -152,6 +185,40 @@ class ProjectDaoPullMergeTest {
         )
 
         assertNull(dao.getIntervalById("i1")?.endDateTimeEpochMs)
+    }
+
+    @Test
+    fun doesNotReopenAClosedIntervalTheServerStillHasOpen() = runBlocking {
+        seedTask()
+        dao.upsertTaskInterval(intervalEntity("i1", "t1", end = 60_000))
+
+        dao.upsertServerTree(
+            projects = emptyList(),
+            tasks = emptyList(),
+            intervals = listOf(intervalEntity("i1", "t1", end = null)),
+        )
+
+        // Reopening would discard the banked duration; a server copy still open is just the
+        // server not having heard the stop yet.
+        assertEquals(60_000L, dao.getIntervalById("i1")?.endDateTimeEpochMs)
+    }
+
+    @Test
+    fun keepsTheLocalDeviceIdWhenTheServerCloseWins() = runBlocking {
+        seedTask()
+        dao.upsertTaskInterval(
+            intervalEntity("i1", "t1", end = null).copy(startedByDeviceId = "device-a")
+        )
+
+        dao.upsertServerTree(
+            projects = emptyList(),
+            tasks = emptyList(),
+            intervals = listOf(intervalEntity("i1", "t1", end = 60_000)),
+        )
+
+        // The wire carries no provenance, so a blind overwrite would blank it and the next
+        // start-up would read this device's own rows as foreign.
+        assertEquals("device-a", dao.getIntervalById("i1")?.startedByDeviceId)
     }
 
     @Test
@@ -326,7 +393,7 @@ class ProjectDaoPullMergeTest {
     }
 
     @Test
-    fun doesNotCloseASubTaskIntervalThatIsStillRunningLocally() = runBlocking {
+    fun closesASubTaskIntervalTheServerSaysWasStoppedElsewhere() = runBlocking {
         seedSubTask()
         dao.upsertSubTaskInterval(subTaskIntervalEntity("si1", "s1", "ti1", end = null))
 
@@ -336,8 +403,38 @@ class ProjectDaoPullMergeTest {
             subTaskIntervals = listOf(subTaskIntervalEntity("si1", "s1", "ti1", end = 60_000)),
         )
 
-        // A timer running on this device is never stopped by a pull.
+        assertEquals(60_000L, dao.getSubTaskIntervalById("si1")?.endDateTimeEpochMs)
+    }
+
+    @Test
+    fun doesNotCloseASubTaskIntervalWhoseOwnChangeIsStillQueued() = runBlocking {
+        seedSubTask()
+        dao.upsertSubTaskInterval(subTaskIntervalEntity("si1", "s1", "ti1", end = null))
+        queuePush("si1", entityType = "sub_task_interval")
+
+        dao.upsertServerTree(
+            projects = emptyList(), tasks = emptyList(), intervals = emptyList(),
+            subTasks = emptyList(),
+            subTaskIntervals = listOf(subTaskIntervalEntity("si1", "s1", "ti1", end = 60_000)),
+        )
+
         assertNull(dao.getSubTaskIntervalById("si1")?.endDateTimeEpochMs)
+    }
+
+    @Test
+    fun aQueuedTaskIntervalDoesNotShieldAnUnrelatedSubTaskInterval() = runBlocking {
+        seedSubTask()
+        dao.upsertSubTaskInterval(subTaskIntervalEntity("si1", "s1", "ti1", end = null))
+        // Same id space, different level: the guard is per id, and these must not collide.
+        queuePush("unrelated")
+
+        dao.upsertServerTree(
+            projects = emptyList(), tasks = emptyList(), intervals = emptyList(),
+            subTasks = emptyList(),
+            subTaskIntervals = listOf(subTaskIntervalEntity("si1", "s1", "ti1", end = 60_000)),
+        )
+
+        assertEquals(60_000L, dao.getSubTaskIntervalById("si1")?.endDateTimeEpochMs)
     }
 
     @Test
