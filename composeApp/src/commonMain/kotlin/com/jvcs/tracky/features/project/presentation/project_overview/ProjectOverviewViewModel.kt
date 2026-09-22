@@ -10,6 +10,7 @@ import com.jvcs.tracky.core.domain.auth.AuthService
 import com.jvcs.tracky.core.domain.auth.SessionStorage
 import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
 import com.jvcs.tracky.features.project.domain.models.Project
+import com.jvcs.tracky.core.domain.sync.SyncCursorStore
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeManager
@@ -58,6 +59,7 @@ class ProjectOverviewViewModel(
     private val sessionStorage: SessionStorage,
     private val authService: AuthService,
     private val connectivityObserver: ConnectivityObserver,
+    private val syncCursorStore: SyncCursorStore,
     private val applicationScope: CoroutineScope
 ): ViewModel() {
 
@@ -507,6 +509,9 @@ class ProjectOverviewViewModel(
             sessionStorage.set(null)
             authService.clearTokenCache()
             projectRepository.deleteAllProjects()
+            // The next account to sign in here has its own change feed; a cursor carried across
+            // would silently skip everything below that sequence number.
+            syncCursorStore.clear()
         }
     }
 

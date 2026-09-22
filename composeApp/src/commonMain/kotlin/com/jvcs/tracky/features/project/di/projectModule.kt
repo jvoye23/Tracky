@@ -41,6 +41,7 @@ val projectModule = module {
             sessionStorage = get(),
             authService = get(),
             connectivityObserver = get(),
+            syncCursorStore = get(),
             applicationScope = get(qualifier = named("AppScope"))
         )
     }

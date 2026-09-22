@@ -8,6 +8,7 @@ import com.jvcs.tracky.core.domain.auth.FakeSessionStorage
 import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
+import com.jvcs.tracky.core.domain.sync.FakeSyncCursorStore
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
@@ -89,6 +90,7 @@ class ProjectOverviewViewModelTest {
         authService = authService,
         // An `expect class`, so it cannot be faked; the JVM actual is already always-connected.
         connectivityObserver = ConnectivityObserver(),
+        syncCursorStore = FakeSyncCursorStore(),
         // Shares the test scheduler, so `advanceUntilIdle` drives the logout teardown and the
         // scope dies with the test instead of outliving it.
         applicationScope = backgroundScope,
