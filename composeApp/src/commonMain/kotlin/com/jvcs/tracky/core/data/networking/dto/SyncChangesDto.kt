@@ -43,9 +43,14 @@ data class SyncChangesDto(
 /**
  * One deleted row.
  *
- * [entityType] uses the same vocabulary as the outbox's `PendingSyncOperation` entity types, which
- * is not a coincidence worth undoing: the applier compares tombstones against queued operations by
- * id, and matching strings keep that comparison honest.
+ * [entityType] is the *server's* vocabulary — `project | task | task_interval | sub_task |
+ * sub_task_interval`, per `backend-delta-sync-api.md` §3 — and the constants for it live on
+ * `Tombstone`.
+ *
+ * It is emphatically **not** the outbox's `PendingSyncOperation` vocabulary, which this was once
+ * documented as being on the grounds that "the applier compares tombstones against queued
+ * operations by id, and matching strings keep that comparison honest". That reasoning refutes
+ * itself: the comparison is by id, so the type strings never had to match, and they did not.
  */
 @Serializable
 data class TombstoneDto(
