@@ -50,6 +50,35 @@ class ProjectTaskDtoTest {
     }
 
     @Test
+    fun aNestedIntervalKeepsTheDeviceThatOpenedIt() {
+        // GET /api/projects carries startedByDeviceId too, not just the delta feed. Handing the
+        // nested intervals a hardcoded null here would blank the provenance of every interval on
+        // every full pull - including the fallback pull a full resync triggers.
+        val dto = json.decodeFromString<ProjectTaskDto>(
+            """
+            {
+              "id": "fe316e35-bd3f-4c6f-9d7d-23d6b6e8877e",
+              "title": "Work task",
+              "startDateTimeUtc": "2026-03-28T15:16:40Z",
+              "intervals": [
+                {
+                  "id": "9c1f0b52-6a4e-4f0d-9d16-2b5b0f8c9a31",
+                  "parentTaskId": "fe316e35-bd3f-4c6f-9d7d-23d6b6e8877e",
+                  "startDateTimeUtc": "2026-03-28T15:16:40Z",
+                  "startedByDeviceId": "d41c7f90-0000-4000-8000-00000000000a"
+                }
+              ]
+            }
+            """.trimIndent()
+        )
+
+        assertEquals(
+            "d41c7f90-0000-4000-8000-00000000000a",
+            dto.toProjectTask("p1").intervals.single().startedByDeviceId
+        )
+    }
+
+    @Test
     fun fallsBackToDescriptionWhenTheDeploymentPredatesTheTitleField() {
         // A pre-1.6.0 server sends no title at all, and the title lives in description.
         val dto = json.decodeFromString<ProjectTaskDto>(

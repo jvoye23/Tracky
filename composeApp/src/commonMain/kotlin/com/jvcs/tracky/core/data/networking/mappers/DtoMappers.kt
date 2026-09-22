@@ -52,7 +52,7 @@ fun ProjectTaskDto.toProjectTask(parentProjectId: String): ProjectTask {
         isFinished = isFinished,
         parentProjectId = parentProjectId,
         isTimerRunning = isTimerRunning,
-        intervals = intervals.map { it.toTaskInterval(parentProjectId, startedByDeviceId = null) },
+        intervals = intervals.map { it.toTaskInterval(parentProjectId, it.startedByDeviceId) },
         ownUpdatedAt = updatedAt?.let(Instant::parse),
         subTasks = subTasks.map { it.toProjectSubTask(parentProjectId) },
         sortIndex = sortIndex,
@@ -75,8 +75,9 @@ fun ProjectSubTaskDto.toProjectSubTask(parentProjectId: String): ProjectSubTask 
         isFinished = isFinished,
         // startedParentTimer is unknowable from the wire; upsertServerTree keeps whatever the
         // local row already had, and false is safe for a row this device has never seen.
+        // startedByDeviceId is on the wire, so it is carried across rather than invented.
         subTaskIntervals = intervals.map {
-            it.toSubTaskInterval(parentProjectId, startedParentTimer = false, startedByDeviceId = null)
+            it.toSubTaskInterval(parentProjectId, startedParentTimer = false, it.startedByDeviceId)
         },
         ownUpdatedAt = updatedAt?.let(Instant::parse),
         sortIndex = sortIndex,

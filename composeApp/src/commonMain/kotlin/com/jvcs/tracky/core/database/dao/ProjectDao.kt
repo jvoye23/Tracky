@@ -81,8 +81,11 @@ interface ProjectDao {
                 hasPendingLocalPush = incoming.intervalId in pendingIntervalIds
             )
             if (serverWins) {
-                // startedByDeviceId has no wire counterpart either, so the server's copy is always
-                // null. Keeping the local value is what stops a pull from making this device's own
+                // The server does carry startedByDeviceId, so the incoming value is preferred: a
+                // row this device has never seen must keep the provenance of the device that
+                // opened it, or an adopted foreign timer reads as one this device started.
+                // Falling back to the local value covers a row the server still has null for -
+                // every row predating the column - and stops a pull from making this device's own
                 // open interval look foreign and unrecoverable.
                 upsertTaskInterval(
                     incoming.copy(
@@ -110,11 +113,11 @@ interface ProjectDao {
                 hasPendingLocalPush = incoming.subTaskIntervalId in pendingIntervalIds
             )
             if (serverWins) {
-                // Neither startedParentTimer nor startedByDeviceId has a wire counterpart, so the
-                // server's copies are always false and null. Keeping the local values preserves
-                // "stopping this subtask also stops its parent task" and this row's provenance
-                // across a pull. A row this device has never seen gets the defaults, which is what
-                // it should have.
+                // startedParentTimer has no wire counterpart, so the local value is kept to
+                // preserve "stopping this subtask also stops its parent task"; a row this device
+                // has never seen gets false, which is what it should have. startedByDeviceId does
+                // travel, so the incoming value wins and only falls back to the local one for a
+                // row the server still has null for.
                 upsertSubTaskInterval(
                     incoming.copy(
                         startedParentTimer = local?.startedParentTimer ?: false,

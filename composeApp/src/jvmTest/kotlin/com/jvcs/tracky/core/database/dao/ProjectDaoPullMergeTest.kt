@@ -216,9 +216,29 @@ class ProjectDaoPullMergeTest {
             intervals = listOf(intervalEntity("i1", "t1", end = 60_000)),
         )
 
-        // The wire carries no provenance, so a blind overwrite would blank it and the next
-        // start-up would read this device's own rows as foreign.
+        // Every row written before the column existed comes back with a null, so a blind
+        // overwrite would blank it and the next start-up would read this device's own rows as
+        // foreign.
         assertEquals("device-a", dao.getIntervalById("i1")?.startedByDeviceId)
+    }
+
+    @Test
+    fun takesTheServersDeviceIdForAnIntervalItHasNeverSeen() = runBlocking {
+        seedTask()
+
+        dao.upsertServerTree(
+            projects = emptyList(),
+            tasks = emptyList(),
+            intervals = listOf(
+                intervalEntity("i-foreign", "t1", end = null)
+                    .copy(startedByDeviceId = "device-b")
+            ),
+        )
+
+        // The timer another device is running right now. Storing null instead would read as "this
+        // device", so StrandedTimerReconciler would park a live timer and ask the user to reclaim
+        // it, and phase 2's isForeign would be false for every foreign timer.
+        assertEquals("device-b", dao.getIntervalById("i-foreign")?.startedByDeviceId)
     }
 
     @Test

@@ -107,6 +107,11 @@ data class SubTaskIntervalDto(
     // Only populated by the flat delta feed (GET /api/sync/changes), where there is no enclosing
     // project to hand it down from. Null inside a nested GET /api/projects payload.
     val parentProjectId: String? = null,
+    // Which installation opened this interval. Null for every row written before the column
+    // existed, and read as "this device" — see DeviceIdProvider. Declared here because the Json is
+    // configured ignoreUnknownKeys: without the field the server's value is discarded silently,
+    // and a pulled foreign interval then looks like one this device started.
+    val startedByDeviceId: String? = null,
 )
 
 
@@ -126,4 +131,6 @@ data class TaskIntervalDto(
     // Only populated by the flat delta feed (GET /api/sync/changes), where there is no enclosing
     // project to hand it down from. Null inside a nested GET /api/projects payload.
     val parentProjectId: String? = null,
+    // See SubTaskIntervalDto.startedByDeviceId — same field, same reason, one level up.
+    val startedByDeviceId: String? = null,
 )
