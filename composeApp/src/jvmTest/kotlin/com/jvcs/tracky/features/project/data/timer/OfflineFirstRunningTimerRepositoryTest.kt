@@ -97,6 +97,26 @@ internal class OfflineFirstRunningTimerRepositoryTest {
         )
     }
 
+    /** A finished session on the task, which is what the banked total is summed from. */
+    private suspend fun closedTaskInterval(id: String, millis: Long) {
+        db.projectDao.upsertTaskInterval(
+            TaskIntervalEntity(
+                intervalId = id, parentTaskId = "t1", parentProjectId = "p1",
+                startDateTimeEpochMs = 0, endDateTimeEpochMs = millis, durationMillis = millis
+            )
+        )
+    }
+
+    private suspend fun closedSubTaskInterval(id: String, millis: Long) {
+        db.projectDao.upsertSubTaskInterval(
+            SubTaskIntervalEntity(
+                subTaskIntervalId = id, parentSubTaskId = "s1", parentTaskIntervalId = "i1",
+                parentProjectId = "p1", startDateTimeEpochMs = 0,
+                endDateTimeEpochMs = millis, durationMillis = millis
+            )
+        )
+    }
+
     @Test
     fun nothingIsRunningWhenNoIntervalIsOpen() = runBlocking {
         seedProjectAndTask()
@@ -118,11 +138,26 @@ internal class OfflineFirstRunningTimerRepositoryTest {
     }
 
     @Test
-    fun aTaskLevelTimerBanksFromTheTask() = runBlocking {
+    fun aTaskLevelTimerBanksTheSumOfItsClosedIntervals() = runBlocking {
         seedProjectAndTask()
+        closedTaskInterval("done1", 2.minutes.inWholeMilliseconds)
+        closedTaskInterval("done2", 3.minutes.inWholeMilliseconds)
         openTaskInterval()
 
+        // Summed, and the open interval contributes nothing — it has not been measured yet.
         assertEquals(5.minutes, repository.observeRunningTimer().first()!!.bankedDuration)
+    }
+
+    @Test
+    fun theBankedTotalIgnoresAStaleTaskRow() = runBlocking {
+        // Why the sum exists. project_tasks.durationMillis is maintained by whichever device did
+        // the stopping, so a device that just adopted a foreign timer may not have pulled it yet.
+        // Reading it would show a number the interval table disagrees with.
+        seedProjectAndTask() // seeds the task row with 5 minutes
+        closedTaskInterval("done1", 7.minutes.inWholeMilliseconds)
+        openTaskInterval()
+
+        assertEquals(7.minutes, repository.observeRunningTimer().first()!!.bankedDuration)
     }
 
     @Test
@@ -130,6 +165,7 @@ internal class OfflineFirstRunningTimerRepositoryTest {
         seedProjectAndTask()
         openTaskInterval()
         openSubTaskInterval()
+        closedSubTaskInterval("sdone1", 9.minutes.inWholeMilliseconds)
 
         val running = repository.observeRunningTimer().first()!!
 
@@ -138,17 +174,16 @@ internal class OfflineFirstRunningTimerRepositoryTest {
         assertEquals("Token refresh", running.task.title)
         // Dated and banked from the subtask, which is the timer the user actually started.
         assertEquals(subTaskStartedAt, running.startedAt.toEpochMilliseconds())
+        // The subtask's own closed intervals, not the task's and not the subtask row's total.
         assertEquals(9.minutes, running.bankedDuration)
     }
 
     @Test
     fun aSubTaskWithoutBankedTimeStartsFromZero() = runBlocking {
+        // No closed intervals at all: COALESCE turns the null SUM into zero rather than crashing.
         seedProjectAndTask()
         openTaskInterval()
         openSubTaskInterval()
-        db.projectDao.upsertProjectSubTask(
-            db.projectDao.getSubTaskById("s1")!!.copy(durationMillis = null)
-        )
 
         assertEquals(Duration.ZERO, repository.observeRunningTimer().first()!!.bankedDuration)
     }

@@ -284,6 +284,31 @@ interface ProjectDao {
     @Query("UPDATE project_tasks SET durationMillis = durationMillis + :additionalDuration WHERE projectTaskId = :taskId")
     suspend fun addTaskDuration(taskId: String, additionalDuration: Long)
 
+    /**
+     * What a task has already banked, summed from its own closed intervals.
+     *
+     * Not `project_tasks.durationMillis`, which is a running total maintained by whichever device
+     * did the stopping. A device that has just adopted a timer another device started may not have
+     * pulled that total yet, so reading it would show the wrong number until it does — and would
+     * keep showing it if the task row's last-write-wins ever went the other way.
+     *
+     * The sum cannot disagree with the interval table, and it converges the instant the closing
+     * interval arrives. `parentTaskId` is indexed, so the cost is one indexed aggregate per
+     * emission of the running timer.
+     */
+    @Query(
+        "SELECT COALESCE(SUM(durationMillis), 0) FROM task_intervals " +
+            "WHERE parentTaskId = :taskId AND endDateTimeEpochMs IS NOT NULL"
+    )
+    suspend fun getBankedTaskDuration(taskId: String): Long
+
+    /** The subtask twin of [getBankedTaskDuration]; `parentSubTaskId` is indexed too. */
+    @Query(
+        "SELECT COALESCE(SUM(durationMillis), 0) FROM sub_task_intervals " +
+            "WHERE parentSubTaskId = :subTaskId AND endDateTimeEpochMs IS NOT NULL"
+    )
+    suspend fun getBankedSubTaskDuration(subTaskId: String): Long
+
     @Query("UPDATE project_tasks SET title = :title WHERE projectTaskId = :taskId")
     suspend fun updateTaskTitle(taskId: String, title: String)
 

@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
-import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
 
@@ -22,6 +21,11 @@ import kotlin.time.Instant
  *
  * Local only. There is no push half here because nothing is written - observing a timer is a read,
  * and the start/stop paths that do write already sync through their own repositories.
+ *
+ * The banked total is summed from closed intervals rather than read off the task or subtask row.
+ * Those rows carry a running total maintained by whichever device stopped the timer, and a device
+ * that has just adopted a foreign timer may not have pulled it yet — see
+ * [ProjectDao.getBankedTaskDuration].
  */
 class OfflineFirstRunningTimerRepository(
     private val projectDao: ProjectDao
@@ -55,8 +59,7 @@ class OfflineFirstRunningTimerRepository(
             task = TaskRef(id = task.projectTaskId, title = task.title),
             subTask = TaskRef(id = subTask.projectSubTaskId, title = subTask.title),
             startedAt = Instant.fromEpochMilliseconds(interval.startDateTimeEpochMs),
-            // A subtask that has never been stopped has a null duration, not a zero one.
-            bankedDuration = subTask.durationMillis?.milliseconds ?: Duration.ZERO
+            bankedDuration = projectDao.getBankedSubTaskDuration(subTask.projectSubTaskId).milliseconds
         )
     }
 
@@ -70,7 +73,7 @@ class OfflineFirstRunningTimerRepository(
             task = TaskRef(id = task.projectTaskId, title = task.title),
             subTask = null,
             startedAt = Instant.fromEpochMilliseconds(interval.startDateTimeEpochMs),
-            bankedDuration = task.durationMillis.milliseconds
+            bankedDuration = projectDao.getBankedTaskDuration(task.projectTaskId).milliseconds
         )
     }
 }
