@@ -17,6 +17,7 @@ import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.ServerClock
 import com.jvcs.tracky.features.project.data.project.OfflineFirstProjectRepository
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
+import com.jvcs.tracky.features.project.domain.models.SubTaskInterval
 import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import com.jvcs.tracky.features.project_tracker.data.FakeLocalProjectDataSource
 import com.jvcs.tracky.features.project_tracker.data.FakePendingSyncDataSource
@@ -133,6 +134,16 @@ class OfflineFirstActiveTimerRepositoryTest {
         startedByDeviceId = device
     )
 
+    private fun subTaskInterval(id: String = "si1") = SubTaskInterval(
+        subTaskIntervalId = id,
+        parentTaskIntervalId = "i1",
+        parentSubTaskId = "s1",
+        parentProjectId = "p1",
+        startDateTimeUtc = Instant.fromEpochMilliseconds(0),
+        endDateTimeUtc = null,
+        durationMillis = 0L
+    )
+
     @Test
     fun aTaskStartNamesTheTaskIntervalAndStampsThisDevice() = runTest {
         repository.start(taskInterval())
@@ -143,6 +154,35 @@ class OfflineFirstActiveTimerRepositoryTest {
         assertNull(sent.parentSubTaskId)
         // Provenance is what lets the user's other devices tell a timer to adopt from one to reclaim.
         assertEquals(FakeDeviceIdProvider.THIS_DEVICE, sent.deviceId)
+    }
+
+    @Test
+    fun aSubTaskStartNamesTheInnerIntervalAndItsEnclosingOne() = runTest {
+        // Timing a subtask opens the parent task's interval too, but the timer the server
+        // arbitrates is the inner one — that is what the user started.
+        repository.start(taskInterval(), subTaskInterval())
+
+        val sent = remote.starts.single()
+        assertEquals("si1", sent.intervalId)
+        assertEquals(ActiveTimerKind.SUB_TASK, sent.kind)
+        assertEquals("s1", sent.parentSubTaskId)
+        assertEquals("i1", sent.parentTaskIntervalId)
+        // Still names the enclosing task, so the server can open it if it does not have it.
+        assertEquals("t1", sent.parentTaskId)
+    }
+
+    @Test
+    fun aSubTaskStartIsQueuedUnderTheSubTaskIntervalTypeAndItsSubTask() = runTest {
+        // Queued as a task interval it would drain to the wrong endpoint, and the entityType
+        // strings are persisted, so the mistake would outlive the upgrade that caused it.
+        remote.nextStart = Result.Error(DataError.Remote.NO_INTERNET)
+
+        repository.start(taskInterval(), subTaskInterval())
+
+        val queued = queue.all().single()
+        assertEquals("si1", queued.entityId)
+        assertEquals(PendingSyncOperation.ENTITY_SUBTASK_INTERVAL, queued.entityType)
+        assertEquals("s1", queued.parentEntityId)
     }
 
     @Test
