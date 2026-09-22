@@ -6,6 +6,7 @@ import com.jvcs.tracky.core.data.auth.KtorAuthService
 import com.jvcs.tracky.core.data.device.DataStoreDeviceIdProvider
 import com.jvcs.tracky.core.data.networking.HttpClientFactory
 import com.jvcs.tracky.core.data.sync.DataStoreSyncCursorStore
+import com.jvcs.tracky.core.data.sync.KtorRemoteSyncDataSource
 import com.jvcs.tracky.core.data.sync.RoomPendingSyncDataSource
 import com.jvcs.tracky.core.data.sync.SyncCoordinator
 import com.jvcs.tracky.core.database.DatabaseFactory
@@ -23,6 +24,7 @@ import com.jvcs.tracky.features.project.data.timer.OfflineFirstStrandedTimerRepo
 import com.jvcs.tracky.features.project.data.timer.StrandedTimerReconciler
 import com.jvcs.tracky.features.project.domain.timer.RunningTimerRepository
 import com.jvcs.tracky.features.project.domain.timer.StrandedTimerRepository
+import com.jvcs.tracky.core.domain.sync.RemoteSyncDataSource
 import com.jvcs.tracky.core.domain.sync.SyncCursorStore
 import com.jvcs.tracky.core.domain.sync.SyncRepository
 import com.jvcs.tracky.core.domain.util.SystemTimeProvider
@@ -262,6 +264,7 @@ val coreDataModule = module {
 
     // How far this device has read the server's change feed. Cleared on logout.
     singleOf(::DataStoreSyncCursorStore) bind SyncCursorStore::class
+    singleOf(::KtorRemoteSyncDataSource) bind RemoteSyncDataSource::class
 
     // Auth
     singleOf(::DataStoreSessionStorage) bind SessionStorage::class

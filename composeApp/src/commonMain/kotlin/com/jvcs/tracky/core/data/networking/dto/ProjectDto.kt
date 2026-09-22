@@ -43,6 +43,10 @@ data class ProjectTaskDto(
     // Nullable manual order. The server stores and echoes it verbatim without ordering by it,
     // exactly as it does for a project's — the client applies the order itself.
     val sortIndex: Long? = null,
+    // Only populated by the flat delta feed (GET /api/sync/changes), where there is no enclosing
+    // project to hand it down from. Null inside a nested GET /api/projects payload, which is why
+    // the mappers still take it as a parameter.
+    val parentProjectId: String? = null,
 )
 
 /**
@@ -72,6 +76,10 @@ data class ProjectSubTaskDto(
     // Nullable manual order. The server stores and echoes it verbatim without ordering by it,
     // exactly as it does for a project's — the client applies the order itself.
     val sortIndex: Long? = null,
+    // Only populated by the flat delta feed (GET /api/sync/changes), where there is no enclosing
+    // project to hand it down from. Null inside a nested GET /api/projects payload, which is why
+    // the mappers still take it as a parameter.
+    val parentProjectId: String? = null,
 )
 
 /**
@@ -95,7 +103,10 @@ data class SubTaskIntervalDto(
     // Stamped by the server but not carried into the domain, for the same reason TaskIntervalDto's
     // is not: intervals resolve conflicts by retrying a duplicate CREATE as an UPDATE, not by
     // last-write-wins, so there is nothing local to compare it against.
-    @SerialName("updatedAtUtc") val updatedAt: String? = null
+    @SerialName("updatedAtUtc") val updatedAt: String? = null,
+    // Only populated by the flat delta feed (GET /api/sync/changes), where there is no enclosing
+    // project to hand it down from. Null inside a nested GET /api/projects payload.
+    val parentProjectId: String? = null,
 )
 
 
@@ -111,5 +122,8 @@ data class TaskIntervalDto(
     // Stamped by the server but deliberately not carried into the domain: intervals resolve
     // conflicts by retrying a duplicate CREATE as an UPDATE, not by last-write-wins, so there is
     // nothing local to compare it against. See TaskInterval.ownUpdatedAt.
-    @SerialName("updatedAtUtc") val updatedAt: String? = null
+    @SerialName("updatedAtUtc") val updatedAt: String? = null,
+    // Only populated by the flat delta feed (GET /api/sync/changes), where there is no enclosing
+    // project to hand it down from. Null inside a nested GET /api/projects payload.
+    val parentProjectId: String? = null,
 )
