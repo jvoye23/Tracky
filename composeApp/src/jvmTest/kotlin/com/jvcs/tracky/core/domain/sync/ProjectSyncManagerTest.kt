@@ -44,10 +44,13 @@ internal class ProjectSyncManagerTest {
         connectivityObserver = ConnectivityObserver(),
         appLifecycleObserver = AppLifecycleObserver(),
         syncRepository = syncRepository,
-        deltaSyncApplier = testDeltaSyncApplier(
-            remote = remote,
-            timeProvider = timeProvider,
-            syncRecency = syncRecency
+        pullCoordinator = SyncPullCoordinator(
+            deltaSyncApplier = testDeltaSyncApplier(
+                remote = remote,
+                timeProvider = timeProvider,
+                syncRecency = syncRecency
+            ),
+            applicationScope = scope
         ),
         applicationScope = scope
     )

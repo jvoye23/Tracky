@@ -36,7 +36,7 @@ class ProjectSyncManager(
     private val connectivityObserver: ConnectivityObserver,
     private val appLifecycleObserver: AppLifecycleObserver,
     private val syncRepository: SyncRepository,
-    private val deltaSyncApplier: DeltaSyncApplier,
+    private val pullCoordinator: SyncPullCoordinator,
     private val applicationScope: CoroutineScope
 ) {
     private var started = false
@@ -64,10 +64,9 @@ class ProjectSyncManager(
             }
             .onEach {
                 syncRepository.syncPendingOperations()
-                // A delta, falling back to the full tree when the feed cannot be used. Recording
-                // that we heard from the server is the applier's job, so that a pull from anywhere
-                // else counts the same as one from here.
-                deltaSyncApplier.pullChanges()
+                // Through the coordinator, not straight at the applier: this tick is no longer the
+                // only thing that pulls, and two pulls overlapping can walk the cursor backwards.
+                pullCoordinator.pullNow()
             }
             .launchIn(applicationScope)
     }
