@@ -33,7 +33,7 @@ internal fun TestScope.testTimeManager(
     timeProvider: TimeProvider = FakeTimeProvider()
 ) = TimeManager(
     runningTimerRepository = repository,
-    timeProvider = timeProvider,
+    serverClock = testServerClock(timeProvider),
     scope = backgroundScope
 )
 

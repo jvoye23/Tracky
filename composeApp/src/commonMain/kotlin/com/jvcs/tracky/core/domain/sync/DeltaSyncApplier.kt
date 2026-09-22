@@ -3,6 +3,8 @@ package com.jvcs.tracky.core.domain.sync
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
+import com.jvcs.tracky.core.domain.util.ServerClock
+import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.core.domain.util.isTransient
 import com.jvcs.tracky.features.project.domain.project.LocalProjectDataSource
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
@@ -26,7 +28,9 @@ class DeltaSyncApplier(
     private val remoteSyncDataSource: RemoteSyncDataSource,
     private val localProjectDataSource: LocalProjectDataSource,
     private val projectRepository: ProjectRepository,
-    private val syncCursorStore: SyncCursorStore
+    private val syncCursorStore: SyncCursorStore,
+    private val serverClock: ServerClock,
+    private val timeProvider: TimeProvider
 ) {
 
     /**
@@ -50,6 +54,10 @@ class DeltaSyncApplier(
                     else -> Result.Error(result.error)
                 }
             }
+
+            // Every response is a clock sample, including one that asks for a full resync — the
+            // timer wants the offset whatever else happened.
+            changes.serverNow?.let { serverClock.observe(it, timeProvider.nowInstant) }
 
             // The server cannot prove what was deleted since our cursor, so carrying on from it
             // would leave this device quietly diverged.

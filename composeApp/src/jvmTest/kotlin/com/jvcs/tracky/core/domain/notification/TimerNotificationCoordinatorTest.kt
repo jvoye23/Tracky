@@ -1,6 +1,7 @@
 package com.jvcs.tracky.core.domain.notification
 
 import com.jvcs.tracky.core.domain.startup.StartupReconciliation
+import com.jvcs.tracky.core.domain.util.testServerClock
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
@@ -67,7 +68,7 @@ internal class TimerNotificationCoordinatorTest {
             startupReconciliation = object : StartupReconciliation {
                 override suspend fun awaitReconciled() = reconciled.await()
             },
-            timeProvider = timeProvider,
+            serverClock = testServerClock(timeProvider),
             applicationScope = backgroundScope
         )
         coordinator.start()
