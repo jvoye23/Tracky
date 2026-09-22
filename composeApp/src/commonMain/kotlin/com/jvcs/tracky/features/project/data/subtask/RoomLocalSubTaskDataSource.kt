@@ -3,6 +3,7 @@ package com.jvcs.tracky.features.project.data.subtask
 import com.jvcs.tracky.core.database.dao.ProjectDao
 import com.jvcs.tracky.core.database.entity.SubTaskIntervalEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
+import com.jvcs.tracky.core.domain.device.DeviceIdProvider
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
@@ -26,7 +27,8 @@ import kotlin.uuid.Uuid
 
 class RoomLocalSubTaskDataSource(
     private val projectDao: ProjectDao,
-    private val timeProvider: TimeProvider
+    private val timeProvider: TimeProvider,
+    private val deviceIdProvider: DeviceIdProvider
 ) : LocalSubTaskDataSource {
 
     // Same single-writer funnel as the other Room data sources — see RoomLocalProjectDataSource.
@@ -70,6 +72,8 @@ class RoomLocalSubTaskDataSource(
         subTaskId: String
     ): Result<SubTaskTimerChange, DataError.Local> {
         return try {
+            // Outside the write dispatcher for the same reason as RoomLocalTaskDataSource.startTask.
+            val deviceId = deviceIdProvider.deviceId()
             val change = withContext(dbWriteDispatcher) {
                 val subTask = projectDao.getSubTaskById(subTaskId) ?: return@withContext null
                 val taskId = subTask.parentProjectTaskId
@@ -90,7 +94,8 @@ class RoomLocalSubTaskDataSource(
                     parentProjectId = subTask.parentProjectId,
                     startDateTimeEpochMs = now.toEpochMilliseconds(),
                     endDateTimeEpochMs = null,
-                    durationMillis = 0L
+                    durationMillis = 0L,
+                    startedByDeviceId = deviceId
                 ).also {
                     projectDao.upsertTaskInterval(it)
                     projectDao.updateSessionTimerStatus(taskId, true)
@@ -104,7 +109,8 @@ class RoomLocalSubTaskDataSource(
                     startDateTimeEpochMs = now.toEpochMilliseconds(),
                     endDateTimeEpochMs = null,
                     durationMillis = 0L,
-                    startedParentTimer = opened != null
+                    startedParentTimer = opened != null,
+                    startedByDeviceId = deviceId
                 )
                 projectDao.upsertSubTaskInterval(interval)
                 projectDao.updateSubTaskTimerStatus(subTaskId, true)

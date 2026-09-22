@@ -26,7 +26,7 @@ import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
         PendingSyncEntity::class,
         StrandedIntervalEntity::class
     ],
-    version = 18,
+    version = 19,
 )
 @ConstructedBy(TrackyDatabaseConstructor::class)
 abstract class TrackyDatabase: RoomDatabase() {
@@ -651,6 +651,20 @@ abstract class TrackyDatabase: RoomDatabase() {
                 // @Relations carry no ORDER BY, so SQLite's row order was all that held them.
                 connection.execSQL("ALTER TABLE project_tasks ADD COLUMN sortIndex INTEGER")
                 connection.execSQL("ALTER TABLE project_sub_tasks ADD COLUMN sortIndex INTEGER")
+            }
+        }
+
+        val MIGRATION_18_19 = object : Migration(18, 19) {
+            override fun migrate(connection: SQLiteConnection) {
+                // startedByDeviceId: which installation opened the interval, so the stranded-timer
+                // pass can park the ones this device left open without touching a timer another
+                // device is still running.
+                //
+                // Nullable and deliberately not backfilled. Null reads as "this device", which is
+                // exactly what every existing row means — inventing an id for them would make this
+                // device's own crashed timers look foreign and unrecoverable.
+                connection.execSQL("ALTER TABLE task_intervals ADD COLUMN startedByDeviceId TEXT")
+                connection.execSQL("ALTER TABLE sub_task_intervals ADD COLUMN startedByDeviceId TEXT")
             }
         }
     }

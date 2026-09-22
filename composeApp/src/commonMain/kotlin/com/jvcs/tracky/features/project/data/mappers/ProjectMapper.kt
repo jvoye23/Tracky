@@ -170,7 +170,8 @@ fun TaskIntervalEntity.toTaskInterval(): TaskInterval {
         parentProjectId = parentProjectId,
         startDateTimeUtc = Instant.fromEpochMilliseconds(startDateTimeEpochMs),
         endDateTimeUtc = endDateTimeEpochMs?.let(Instant::fromEpochMilliseconds),
-        durationMillis = durationMillis
+        durationMillis = durationMillis,
+        startedByDeviceId = startedByDeviceId
     )
 }
 
@@ -181,7 +182,8 @@ fun TaskInterval.toTaskIntervalEntity(): TaskIntervalEntity {
         parentProjectId = parentProjectId,
         startDateTimeEpochMs = startDateTimeUtc.toEpochMilliseconds(),
         endDateTimeEpochMs = endDateTimeUtc?.toEpochMilliseconds(),
-        durationMillis = durationMillis
+        durationMillis = durationMillis,
+        startedByDeviceId = startedByDeviceId
     )
 }
 
@@ -306,7 +308,8 @@ fun SubTaskIntervalEntity.toSubTaskInterval(): SubTaskInterval {
         startDateTimeUtc = Instant.fromEpochMilliseconds(startDateTimeEpochMs),
         endDateTimeUtc = endDateTimeEpochMs?.let(Instant::fromEpochMilliseconds),
         durationMillis = durationMillis,
-        startedParentTimer = startedParentTimer
+        startedParentTimer = startedParentTimer,
+        startedByDeviceId = startedByDeviceId
     )
 }
 
@@ -319,7 +322,8 @@ fun SubTaskInterval.toSubTaskIntervalEntity(): SubTaskIntervalEntity {
         startDateTimeEpochMs = startDateTimeUtc.toEpochMilliseconds(),
         endDateTimeEpochMs = endDateTimeUtc?.toEpochMilliseconds(),
         durationMillis = durationMillis,
-        startedParentTimer = startedParentTimer
+        startedParentTimer = startedParentTimer,
+        startedByDeviceId = startedByDeviceId
     )
 }
 

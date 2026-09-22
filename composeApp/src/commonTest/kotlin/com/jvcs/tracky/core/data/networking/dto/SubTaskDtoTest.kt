@@ -98,10 +98,15 @@ class SubTaskDtoTest {
         val dto = json.decodeFromString<ProjectTaskDto>(documentedTask)
             .subTasks.single().intervals.single()
 
-        val interval = dto.toSubTaskInterval(parentProjectId = "p1", startedParentTimer = true)
+        val interval = dto.toSubTaskInterval(
+            parentProjectId = "p1",
+            startedParentTimer = true,
+            startedByDeviceId = "device-1"
+        )
 
-        // The one field with no wire counterpart: it must survive a server echo unchanged.
+        // The fields with no wire counterpart: they must survive a server echo unchanged.
         assertTrue(interval.startedParentTimer)
+        assertEquals("device-1", interval.startedByDeviceId)
         // The nesting now comes off the wire rather than from the caller.
         assertEquals("9c1f0b52-6a4e-4f0d-9d16-2b5b0f8c9a31", interval.parentTaskIntervalId)
         assertEquals("p1", interval.parentProjectId)
@@ -148,7 +153,7 @@ class SubTaskDtoTest {
         assertTrue(body.title.isNotBlank()) // the server's @NotBlank rule
 
         val intervalBody: CreateSubTaskIntervalRequest = subTask.intervals.single()
-            .toSubTaskInterval("p1", startedParentTimer = true)
+            .toSubTaskInterval("p1", startedParentTimer = true, startedByDeviceId = null)
             .toCreateSubTaskIntervalRequest()
         assertEquals("7a41e0c9-2b8d-4f31-8c05-9e6a3d1f4b72", intervalBody.id)
         // Required on create; a missing value is a 400.

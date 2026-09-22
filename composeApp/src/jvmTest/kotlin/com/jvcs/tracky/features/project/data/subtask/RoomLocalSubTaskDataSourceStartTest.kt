@@ -2,6 +2,7 @@ package com.jvcs.tracky.features.project.data.subtask
 
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import com.jvcs.tracky.core.domain.device.FakeDeviceIdProvider
 import com.jvcs.tracky.core.database.TrackyDatabase
 import com.jvcs.tracky.core.database.entity.ProjectEntity
 import com.jvcs.tracky.core.database.entity.ProjectSubTaskEntity
@@ -41,7 +42,7 @@ internal class RoomLocalSubTaskDataSourceStartTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
             .build()
-        dataSource = RoomLocalSubTaskDataSource(db.projectDao, timeProvider)
+        dataSource = RoomLocalSubTaskDataSource(db.projectDao, timeProvider, FakeDeviceIdProvider())
     }
 
     @AfterTest
