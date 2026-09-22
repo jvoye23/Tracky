@@ -21,6 +21,7 @@ interface ProjectRepository {
      */
     fun observeProjectById(projectId: String): Flow<Project?>
     suspend fun getProjectWithTasksByProjectId(projectId: String): Project?
+    fun observeProjectWithTaskTreeById(projectId: String): Flow<Project?>
     suspend fun upsertProject(project: Project): EmptyResult<DataError>
     suspend fun setProjectArchived(projectId: String, isArchived: Boolean): EmptyResult<DataError>
     suspend fun setProjectTrashed(projectId: String, trashedAt: Instant?): EmptyResult<DataError>

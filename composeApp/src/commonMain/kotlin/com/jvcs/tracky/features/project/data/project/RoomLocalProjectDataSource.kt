@@ -73,6 +73,9 @@ class RoomLocalProjectDataSource (
         projectDao.getProjectWithTaskTreeById(projectId)?.toProject()
     }
 
+    override fun observeProjectWithTaskTreeById(projectId: String): Flow<Project?> =
+        projectDao.observeProjectWithTaskTreeById(projectId).map { it?.toProject() }
+
     override suspend fun getSortIndices(): Result<Map<String, Long?>, DataError.Local> = read {
         projectDao.getSortIndices().associate { it.projectId to it.sortIndex }
     }

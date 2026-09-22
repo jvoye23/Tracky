@@ -1006,6 +1006,8 @@ private class FakeDetailProjectRepository(project: Project) : ProjectRepository 
     override suspend fun getProjectWithTasksByProjectId(projectId: String): Project? = projectFlow.value
     override suspend fun getProjectById(projectId: String): Project? = projectFlow.value
     override fun observeProjectById(projectId: String): Flow<Project?> = projectFlow
+    // Room would repaint both from the same write, so emit() drives the tree too.
+    override fun observeProjectWithTaskTreeById(projectId: String): Flow<Project?> = projectFlow
 
     override fun getProjects(): Flow<List<Project>> = projectFlow.map { listOf(it) }
     override fun getActiveProjects(): Flow<List<Project>> = projectFlow.map { listOf(it) }

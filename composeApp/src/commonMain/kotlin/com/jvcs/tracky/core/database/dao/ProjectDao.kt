@@ -240,6 +240,15 @@ interface ProjectDao {
     @Query("SELECT * FROM projects WHERE projectId = :projectId")
     suspend fun getProjectWithTaskTreeById(projectId: String): ProjectWithTaskTreeEntity?
 
+    /**
+     * The same tree, streamed. A sync writes another device's rows straight into these tables, so
+     * the detail screen has to hear about it the way every other screen does — by observing Room
+     * rather than by re-reading on a trigger someone has to remember to fire.
+     */
+    @Transaction
+    @Query("SELECT * FROM projects WHERE projectId = :projectId")
+    fun observeProjectWithTaskTreeById(projectId: String): Flow<ProjectWithTaskTreeEntity?>
+
     @Upsert
     suspend fun upsertProjectTask(task: ProjectTaskEntity)
 

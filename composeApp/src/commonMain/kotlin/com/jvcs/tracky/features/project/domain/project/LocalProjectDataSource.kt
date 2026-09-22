@@ -32,6 +32,9 @@ interface LocalProjectDataSource {
     /** The project row as a live stream, without its task tree. Emits null once the row is gone. */
     fun observeProjectById(projectId: String): Flow<Project?>
     suspend fun getProjectWithTasksByProjectId(projectId: String): Result<Project?, DataError.Local>
+
+    /** The same tree, streamed, so a sync writing another device's rows repaints the screen. */
+    fun observeProjectWithTaskTreeById(projectId: String): Flow<Project?>
     /** Current sortIndex per project id. A null value means the project was never manually ordered. */
     suspend fun getSortIndices(): Result<Map<String, Long?>, DataError.Local>
     /** Writes every index in one transaction, so a reorder can never land half-applied. */
