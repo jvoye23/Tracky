@@ -18,6 +18,10 @@ import com.jvcs.tracky.core.database.DatabaseFactory
 import com.jvcs.tracky.core.database.TrackyDatabase
 import com.jvcs.tracky.core.domain.auth.AuthService
 import com.jvcs.tracky.core.domain.auth.SessionStorage
+import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
+import com.jvcs.tracky.core.domain.lifecycle.AppLifecycleObserver
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import com.jvcs.tracky.core.domain.device.DeviceIdProvider
 import com.jvcs.tracky.core.domain.auth.SocialAuthProvider
 import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource
@@ -37,6 +41,8 @@ import com.jvcs.tracky.core.data.networking.dto.RealtimeEnvelopeParser
 import com.jvcs.tracky.core.data.networking.realtimeUrl
 import com.jvcs.tracky.core.data.realtime.KtorRealtimeChannel
 import com.jvcs.tracky.core.domain.realtime.RealtimeChannel
+import com.jvcs.tracky.core.domain.realtime.RealtimeConnectivity
+import com.jvcs.tracky.core.domain.realtime.RealtimeTimerConnection
 import com.jvcs.tracky.core.domain.sync.SyncPullCoordinator
 import com.jvcs.tracky.core.domain.sync.SyncRecency
 import com.jvcs.tracky.core.domain.sync.SyncRepository
@@ -295,6 +301,26 @@ val coreDataModule = module {
         )
     }
     single { RealtimeEnvelopeParser(json = get()) }
+    single { RealtimeConnectivity() }
+    single(createdAtStart = true) {
+        RealtimeTimerConnection(
+            channel = get(),
+            parser = get(),
+            deviceIdProvider = get(),
+            syncCursorStore = get(),
+            pullCoordinator = get(),
+            connectivity = get(),
+            json = get(),
+            isOnline = get<ConnectivityObserver>().isConnected,
+            isInForeground = get<AppLifecycleObserver>().isInForeground,
+            // A socket without a session is refused by the server anyway; gating on it here means
+            // logging out tears the connection down without anyone having to remember to.
+            isAuthenticated = get<SessionStorage>().observeAuthInfo()
+                .map { !it?.accessToken.isNullOrBlank() }
+                .distinctUntilChanged(),
+            applicationScope = get(qualifier = named("AppScope"))
+        )
+    }
     single {
         SyncPullCoordinator(
             deltaSyncApplier = get(),

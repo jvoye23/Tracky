@@ -201,6 +201,90 @@ internal class RealtimeTimerConnectionTest {
         assertTrue(remote.calls - before <= 2, "burst cost ${remote.calls - before} pulls")
     }
 
+    // --- reconnection ------------------------------------------------------------------------
+
+    @Test
+    fun reconnectsWhenTheServerHangsUp() = runTest {
+        connection(backgroundScope).start()
+        settleConnect(this)
+
+        channel.current.closeFromServer()
+        advanceTimeBy(5.seconds)
+        advanceUntilIdle()
+
+        assertTrue(channel.opens >= 2, "expected a reconnect, saw ${channel.opens} opens")
+    }
+
+    /** Backoff must grow, or a server that is down gets hammered. */
+    @Test
+    fun backoffGrowsBetweenFailedAttempts() = runTest {
+        channel.failNextWith(
+            DataError.Remote.SERVER_ERROR, DataError.Remote.SERVER_ERROR,
+            DataError.Remote.SERVER_ERROR, DataError.Remote.SERVER_ERROR,
+            DataError.Remote.SERVER_ERROR, DataError.Remote.SERVER_ERROR
+        )
+        connection(backgroundScope).start()
+        advanceTimeBy(2.seconds)
+        advanceUntilIdle()
+        val earlyOpens = channel.opens
+
+        advanceTimeBy(2.seconds)
+        advanceUntilIdle()
+        val laterOpens = channel.opens - earlyOpens
+
+        // The same two seconds buys fewer attempts later than it did at the start.
+        assertTrue(
+            laterOpens < earlyOpens,
+            "backoff did not grow: $earlyOpens attempts in the first window, $laterOpens in the second"
+        )
+    }
+
+    @Test
+    fun backoffIsCappedSoADeadServerIsStillRetried() = runTest {
+        repeat(40) { channel.failNextWith(DataError.Remote.SERVER_ERROR) }
+        connection(backgroundScope).start()
+        advanceTimeBy(10.minutesAsSeconds())
+        advanceUntilIdle()
+        val opensByTenMinutes = channel.opens
+
+        advanceTimeBy(2.minutesAsSeconds())
+        advanceUntilIdle()
+
+        assertTrue(
+            channel.opens > opensByTenMinutes,
+            "a capped backoff must keep retrying; stalled at $opensByTenMinutes"
+        )
+    }
+
+    // --- auth ---------------------------------------------------------------------------------
+
+    /**
+     * Ktor's Auth plugin refreshes on a 401 *response*; a refused upgrade never reaches it. The
+     * connection drives the refresh by making the pull it owes anyway.
+     */
+    @Test
+    fun aRefusedUpgradeDrivesARefreshByPulling() = runTest {
+        channel.failNextWith(DataError.Remote.UNAUTHORIZED)
+        connection(backgroundScope).start()
+        advanceTimeBy(6.seconds)
+        advanceUntilIdle()
+
+        assertTrue(remote.calls >= 1, "a 401 upgrade should have driven a REST pull to refresh")
+        assertTrue(channel.opens >= 2, "and then retried the socket")
+    }
+
+    @Test
+    fun aPersistent401DegradesIntoOrdinaryBackoffRatherThanARefreshStorm() = runTest {
+        repeat(20) { channel.failNextWith(DataError.Remote.UNAUTHORIZED) }
+        connection(backgroundScope).start()
+        advanceTimeBy(30.seconds)
+        advanceUntilIdle()
+
+        // Capped at MAX_AUTH_RETRIES; everything after is plain backoff, so pulls stay bounded
+        // even though attempts continue.
+        assertTrue(remote.calls <= 3, "refresh storm: ${remote.calls} pulls")
+    }
+
     // --- lifecycle -----------------------------------------------------------------------------
 
     @Test
