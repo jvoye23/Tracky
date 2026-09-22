@@ -28,7 +28,18 @@ data class RunningTimer(
     val task: TaskRef,
     val subTask: TaskRef?,
     val startedAt: Instant,
-    val bankedDuration: Duration
+    val bankedDuration: Duration,
+    /**
+     * True when another of the user's devices opened this interval.
+     *
+     * It still ticks here, and it still shows the right number — both devices subtract the same
+     * [startedAt]. What changes is what may be done to it: Pause is unavailable, because pausing
+     * is implemented as stop-then-start and stopping someone else's timer is Stop, not Pause.
+     *
+     * Null provenance reads as "this device", so every interval written before multi-device sync
+     * is correctly not foreign. See [com.jvcs.tracky.core.domain.timer.isForeignTimer].
+     */
+    val isForeign: Boolean = false
 ) {
     /** The subtask when one is being timed, else the task. What Pause has to stop. */
     val timedEntityId: String get() = subTask?.id ?: task.id

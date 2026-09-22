@@ -9,6 +9,7 @@ import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
 import com.jvcs.tracky.core.database.entity.StrandedIntervalEntity
 import com.jvcs.tracky.core.database.entity.SubTaskIntervalEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
+import com.jvcs.tracky.core.domain.device.FakeDeviceIdProvider
 import com.jvcs.tracky.features.project.domain.timer.TaskRef
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -17,6 +18,8 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 import kotlin.test.assertNull
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
@@ -41,7 +44,7 @@ internal class OfflineFirstRunningTimerRepositoryTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
             .build()
-        repository = OfflineFirstRunningTimerRepository(projectDao = db.projectDao)
+        repository = OfflineFirstRunningTimerRepository(db.projectDao, FakeDeviceIdProvider())
     }
 
     @AfterTest
@@ -115,6 +118,48 @@ internal class OfflineFirstRunningTimerRepositoryTest {
                 endDateTimeEpochMs = millis, durationMillis = millis
             )
         )
+    }
+
+    @Test
+    fun aTimerThisDeviceStartedIsNotForeign() = runBlocking {
+        seedProjectAndTask()
+        openTaskInterval()
+
+        assertFalse(repository.observeRunningTimer().first()!!.isForeign)
+    }
+
+    @Test
+    fun anIntervalWithNoProvenanceIsNotForeign() = runBlocking {
+        // Null means "this device". Every row written before the column existed reads that way,
+        // and treating them as foreign would make this device's own crashed timers unreclaimable.
+        seedProjectAndTask()
+        db.projectDao.upsertTaskInterval(
+            TaskIntervalEntity(
+                intervalId = "i1", parentTaskId = "t1", parentProjectId = "p1",
+                startDateTimeEpochMs = taskStartedAt, endDateTimeEpochMs = null,
+                durationMillis = 0, startedByDeviceId = null
+            )
+        )
+
+        assertFalse(repository.observeRunningTimer().first()!!.isForeign)
+    }
+
+    @Test
+    fun aTimerAnotherDeviceStartedIsForeign() = runBlocking {
+        seedProjectAndTask()
+        db.projectDao.upsertTaskInterval(
+            TaskIntervalEntity(
+                intervalId = "i1", parentTaskId = "t1", parentProjectId = "p1",
+                startDateTimeEpochMs = taskStartedAt, endDateTimeEpochMs = null,
+                durationMillis = 0, startedByDeviceId = FakeDeviceIdProvider.OTHER_DEVICE
+            )
+        )
+
+        val running = repository.observeRunningTimer().first()!!
+        // It still ticks, and still shows the right number — both devices subtract the same
+        // startedAt. Only what may be done to it changes.
+        assertTrue(running.isForeign)
+        assertEquals(taskStartedAt, running.startedAt.toEpochMilliseconds())
     }
 
     @Test
