@@ -4,8 +4,6 @@ package com.jvcs.tracky.core.domain.sync
 
 import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
 import com.jvcs.tracky.core.domain.lifecycle.AppLifecycleObserver
-import com.jvcs.tracky.core.domain.util.Result
-import com.jvcs.tracky.core.domain.util.TimeProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -39,9 +37,7 @@ class ProjectSyncManager(
     private val appLifecycleObserver: AppLifecycleObserver,
     private val syncRepository: SyncRepository,
     private val deltaSyncApplier: DeltaSyncApplier,
-    private val syncRecency: SyncRecency,
-    private val applicationScope: CoroutineScope,
-    private val timeProvider: TimeProvider
+    private val applicationScope: CoroutineScope
 ) {
     private var started = false
 
@@ -68,13 +64,10 @@ class ProjectSyncManager(
             }
             .onEach {
                 syncRepository.syncPendingOperations()
-                // A delta, falling back to the full tree when the feed cannot be used.
-                // Only a pull that landed counts as hearing from the server. Stamping the
-                // attempt would keep a foreign timer ticking through an outage, which is the
-                // one thing SyncRecency exists to stop.
-                if (deltaSyncApplier.pullChanges() is Result.Success) {
-                    syncRecency.markSynced(timeProvider.nowInstant)
-                }
+                // A delta, falling back to the full tree when the feed cannot be used. Recording
+                // that we heard from the server is the applier's job, so that a pull from anywhere
+                // else counts the same as one from here.
+                deltaSyncApplier.pullChanges()
             }
             .launchIn(applicationScope)
     }

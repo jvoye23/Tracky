@@ -5,6 +5,7 @@ import com.jvcs.tracky.core.domain.sync.DeltaSyncApplier
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
 import com.jvcs.tracky.core.domain.sync.RemoteSyncDataSource
 import com.jvcs.tracky.core.domain.sync.SyncChanges
+import com.jvcs.tracky.core.domain.sync.SyncRecency
 import com.jvcs.tracky.core.domain.timer.ActiveTimer
 import com.jvcs.tracky.core.domain.timer.ActiveTimerChange
 import com.jvcs.tracky.core.domain.timer.ActiveTimerKind
@@ -111,7 +112,8 @@ class OfflineFirstActiveTimerRepositoryTest {
             ),
             syncCursorStore = FakeSyncCursorStore(),
             serverClock = serverClock,
-            timeProvider = timeProvider
+            timeProvider = timeProvider,
+            syncRecency = SyncRecency()
         ),
         syncScheduler = scheduler,
         serverClock = serverClock,

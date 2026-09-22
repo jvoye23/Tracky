@@ -5,18 +5,8 @@ package com.jvcs.tracky.core.domain.sync
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
 import com.jvcs.tracky.core.domain.lifecycle.AppLifecycleObserver
-import com.jvcs.tracky.core.domain.util.DataError
-import com.jvcs.tracky.core.domain.util.FakeServerClockOffsetStore
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
-import com.jvcs.tracky.core.domain.util.Result
-import com.jvcs.tracky.core.domain.util.ServerClock
-import com.jvcs.tracky.features.project.data.project.OfflineFirstProjectRepository
-import com.jvcs.tracky.features.project_tracker.data.FakeLocalProjectDataSource
-import com.jvcs.tracky.features.project_tracker.data.FakePendingSyncDataSource
-import com.jvcs.tracky.features.project_tracker.data.FakeRemoteProjectDataSource
-import com.jvcs.tracky.features.project_tracker.data.FakeSyncScheduler
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -36,37 +26,6 @@ private class RecordingSyncRepository : SyncRepository {
     }
 }
 
-/** A feed that always answers, and counts how many times it was asked. */
-private class CountingRemoteSyncDataSource(
-    private var failures: Int = 0
-) : RemoteSyncDataSource {
-
-    var calls = 0
-        private set
-
-    override suspend fun getChanges(since: Long?): Result<SyncChanges, DataError.Remote> {
-        calls++
-        if (failures > 0) {
-            failures--
-            return Result.Error(DataError.Remote.NO_INTERNET)
-        }
-        return Result.Success(
-            SyncChanges(
-                cursor = since ?: 0,
-                serverNow = null,
-                fullResyncRequired = false,
-                hasMore = false,
-                projects = emptyList(),
-                tasks = emptyList(),
-                taskIntervals = emptyList(),
-                subTasks = emptyList(),
-                subTaskIntervals = emptyList(),
-                tombstones = emptyList()
-            )
-        )
-    }
-}
-
 /**
  * The JVM actuals of [ConnectivityObserver] and [AppLifecycleObserver] are both `flowOf(true)` —
  * always online, always foregrounded. That is exactly the device-B case these tests are about: an
@@ -81,32 +40,17 @@ internal class ProjectSyncManagerTest {
     private fun manager(
         remote: CountingRemoteSyncDataSource,
         scope: CoroutineScope
-    ): ProjectSyncManager {
-        val local = FakeLocalProjectDataSource()
-        return ProjectSyncManager(
-            connectivityObserver = ConnectivityObserver(),
-            appLifecycleObserver = AppLifecycleObserver(),
-            syncRepository = syncRepository,
-            deltaSyncApplier = DeltaSyncApplier(
-                remoteSyncDataSource = remote,
-                localProjectDataSource = local,
-                projectRepository = OfflineFirstProjectRepository(
-                    localProjectDataSource = local,
-                    remoteProjectDataSource = FakeRemoteProjectDataSource(),
-                    pendingSyncDataSource = FakePendingSyncDataSource(),
-                    syncScheduler = FakeSyncScheduler(),
-                    applicationScope = CoroutineScope(Dispatchers.Unconfined),
-                    timeProvider = timeProvider
-                ),
-                syncCursorStore = FakeSyncCursorStore(),
-                serverClock = ServerClock(timeProvider, FakeServerClockOffsetStore()),
-                timeProvider = timeProvider
-            ),
-            syncRecency = syncRecency,
-            applicationScope = scope,
-            timeProvider = timeProvider
-        )
-    }
+    ) = ProjectSyncManager(
+        connectivityObserver = ConnectivityObserver(),
+        appLifecycleObserver = AppLifecycleObserver(),
+        syncRepository = syncRepository,
+        deltaSyncApplier = testDeltaSyncApplier(
+            remote = remote,
+            timeProvider = timeProvider,
+            syncRecency = syncRecency
+        ),
+        applicationScope = scope
+    )
 
     /**
      * The regression this class exists for. A device that stays online and foregrounded used to

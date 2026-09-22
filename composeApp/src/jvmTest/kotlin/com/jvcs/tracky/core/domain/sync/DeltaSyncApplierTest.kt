@@ -63,6 +63,7 @@ internal class DeltaSyncApplierTest {
     private val timeProvider = FakeTimeProvider()
     private val offsetStore = FakeServerClockOffsetStore()
     private val serverClock = ServerClock(timeProvider, offsetStore)
+    private val syncRecency = SyncRecency()
 
     private fun applier(remote: FakeRemoteSyncDataSource) = DeltaSyncApplier(
         remoteSyncDataSource = remote,
@@ -77,7 +78,8 @@ internal class DeltaSyncApplierTest {
         ),
         syncCursorStore = cursorStore,
         serverClock = serverClock,
-        timeProvider = timeProvider
+        timeProvider = timeProvider,
+        syncRecency = syncRecency
     )
 
     @Test
@@ -219,5 +221,30 @@ internal class DeltaSyncApplierTest {
         applier(remote).pullChanges()
 
         assertEquals(40_000L, offsetStore.offsetMillis())
+    }
+
+    /**
+     * Recency is stamped here rather than by the caller, so that every route to a pull counts the
+     * same. It used to be stamped only by the sync loop, which meant a pull-to-refresh brought
+     * fresh rows in while leaving the timer believing it had not synced since launch -- and a
+     * foreign timer froze as stale fifteen minutes later regardless.
+     */
+    @Test
+    fun aPullThatLandedCountsAsHearingFromTheServer() = runTest {
+        val remote = FakeRemoteSyncDataSource().enqueue(Result.Success(changes(cursor = 7)))
+
+        applier(remote).pullChanges()
+
+        assertEquals(timeProvider.nowInstant, syncRecency.lastSuccessfulSync.value)
+    }
+
+    @Test
+    fun aPullThatFailedDoesNot() = runTest {
+        val remote = FakeRemoteSyncDataSource()
+            .enqueue(Result.Error(DataError.Remote.NO_INTERNET))
+
+        applier(remote).pullChanges()
+
+        assertNull(syncRecency.lastSuccessfulSync.value)
     }
 }

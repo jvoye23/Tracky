@@ -42,6 +42,7 @@ val projectModule = module {
             authService = get(),
             connectivityObserver = get(),
             syncCursorStore = get(),
+            deltaSyncApplier = get(),
             applicationScope = get(qualifier = named("AppScope"))
         )
     }

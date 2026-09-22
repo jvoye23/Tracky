@@ -13,6 +13,7 @@ import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
 import com.jvcs.tracky.core.domain.util.Result
+import com.jvcs.tracky.core.domain.sync.testDeltaSyncApplier
 import com.jvcs.tracky.core.domain.util.testTimeManager
 import com.jvcs.tracky.design_system.util.UiText
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
@@ -91,6 +92,7 @@ class ProjectOverviewViewModelTest {
         // An `expect class`, so it cannot be faked; the JVM actual is already always-connected.
         connectivityObserver = ConnectivityObserver(),
         syncCursorStore = FakeSyncCursorStore(),
+        deltaSyncApplier = testDeltaSyncApplier(),
         // Shares the test scheduler, so `advanceUntilIdle` drives the logout teardown and the
         // scope dies with the test instead of outliving it.
         applicationScope = backgroundScope,

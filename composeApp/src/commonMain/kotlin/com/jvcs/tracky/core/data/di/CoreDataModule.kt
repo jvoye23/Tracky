@@ -217,9 +217,7 @@ val coreDataModule = module {
             appLifecycleObserver = get(),
             syncRepository = get(),
             deltaSyncApplier = get(),
-            syncRecency = get(),
             applicationScope = get(qualifier = named("AppScope")),
-            timeProvider = get(),
         )
     }
 
@@ -290,7 +288,8 @@ val coreDataModule = module {
             projectRepository = get(),
             syncCursorStore = get(),
             serverClock = get(),
-            timeProvider = get()
+            timeProvider = get(),
+            syncRecency = get()
         )
     }
 

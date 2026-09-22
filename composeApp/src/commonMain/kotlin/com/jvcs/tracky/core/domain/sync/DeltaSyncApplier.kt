@@ -30,7 +30,8 @@ class DeltaSyncApplier(
     private val projectRepository: ProjectRepository,
     private val syncCursorStore: SyncCursorStore,
     private val serverClock: ServerClock,
-    private val timeProvider: TimeProvider
+    private val timeProvider: TimeProvider,
+    private val syncRecency: SyncRecency
 ) {
 
     /**
@@ -38,8 +39,22 @@ class DeltaSyncApplier(
      *
      * Follows `hasMore` to the end of the feed, so one call always leaves the device current
      * rather than one page behind.
+     *
+     * Stamping [SyncRecency] belongs here rather than in the callers. It used to live in
+     * [ProjectSyncManager], which made "we heard from the server" mean "the sync loop heard from
+     * the server": a pull-to-refresh brought fresh data in and left the timer believing it had not
+     * synced since launch, so a foreign timer froze as stale fifteen minutes later however recently
+     * the user had refreshed. One pull, one stamp, wherever the pull came from.
      */
     suspend fun pullChanges(): EmptyResult<DataError> {
+        val result = pull()
+        // Only a pull that landed counts. Stamping the attempt would keep a foreign timer ticking
+        // through an outage, which is the one thing SyncRecency exists to stop.
+        if (result is Result.Success) syncRecency.markSynced(timeProvider.nowInstant)
+        return result
+    }
+
+    private suspend fun pull(): EmptyResult<DataError> {
         var pagesApplied = 0
         while (true) {
             val since = syncCursorStore.cursor()
