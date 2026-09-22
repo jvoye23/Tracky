@@ -95,6 +95,8 @@ import tracky.composeapp.generated.resources.last_active
 import tracky.composeapp.generated.resources.ok
 import tracky.composeapp.generated.resources.light_text_color
 import tracky.composeapp.generated.resources.project_duration
+import tracky.composeapp.generated.resources.timer_running_on_another_device
+import tracky.composeapp.generated.resources.timer_stale_on_another_device
 import tracky.composeapp.generated.resources.select_project_color
 import tracky.composeapp.generated.resources.start_date
 import tracky.composeapp.generated.resources.task_completed_count
@@ -348,6 +350,16 @@ fun ProjectDetailScreen(
                             onStartStopClick = {
                                 // Logic for project-wide tracker if needed
                                 onAction(ProjectDetailAction.OnStartTrackerClick)
+                            },
+                            // The number keeps ticking for a foreign timer and is right; when it
+                            // goes stale it stops and is merely the last thing known to be true.
+                            // Either way the card has to say whose timer it is.
+                            caption = when {
+                                state.isRunningTimerStale ->
+                                    stringResource(Res.string.timer_stale_on_another_device)
+                                state.isRunningTimerForeign ->
+                                    stringResource(Res.string.timer_running_on_another_device)
+                                else -> null
                             }
                         )
                     }

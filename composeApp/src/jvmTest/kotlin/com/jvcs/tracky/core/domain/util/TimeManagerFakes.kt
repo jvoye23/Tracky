@@ -49,12 +49,14 @@ internal fun runningTimer(
     taskId: String,
     subTaskId: String? = null,
     startedAt: Instant = Instant.fromEpochMilliseconds(0),
-    bankedDuration: Duration = Duration.ZERO
+    bankedDuration: Duration = Duration.ZERO,
+    isForeign: Boolean = false
 ) = RunningTimer(
     project = ProjectRef(id = "project", title = "Project", colorArgb = null),
     useLightTextColor = false,
     task = TaskRef(id = taskId, title = "Task"),
     subTask = subTaskId?.let { TaskRef(id = it, title = "Sub task") },
     startedAt = startedAt,
-    bankedDuration = bankedDuration
+    bankedDuration = bankedDuration,
+    isForeign = isForeign
 )

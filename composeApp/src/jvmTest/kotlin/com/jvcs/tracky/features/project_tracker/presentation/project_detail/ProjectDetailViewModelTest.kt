@@ -678,6 +678,43 @@ class ProjectDetailViewModelTest {
         }
     }
 
+    /** The chain from the open interval's provenance all the way to the card. */
+    @Test
+    fun `a timer another device started is marked foreign on screen`() = runTest {
+        val running = FakeRunningTimerRepository()
+        val (vm, _) = viewModel(project(taskDurationMillis = 0), running = running)
+
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+
+            running.startTimer(runningTimer(taskId = TASK_ID, isForeign = true))
+            settle()
+
+            assertTrue(vm.state.value.isRunningTimerForeign, "the hero card has nothing to say")
+            assertTrue(vm.task()!!.isForeign)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `a timer this device started is not marked foreign`() = runTest {
+        val running = FakeRunningTimerRepository()
+        val (vm, _) = viewModel(project(taskDurationMillis = 0), running = running)
+
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+
+            running.startTimer(runningTimer(taskId = TASK_ID))
+            settle()
+
+            assertFalse(vm.state.value.isRunningTimerForeign)
+            assertFalse(vm.task()!!.isForeign)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
     /** Replaces a test that asserted the opposite while the tree was read once and refreshed by hand. */
     @Test
     fun `a subtask added elsewhere arrives without the screen being returned to`() = runTest {

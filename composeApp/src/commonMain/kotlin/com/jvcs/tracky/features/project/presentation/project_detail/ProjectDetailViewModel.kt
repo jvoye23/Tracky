@@ -192,10 +192,11 @@ class ProjectDetailViewModel(
                     if (subTaskTimerState != null && subTaskTimerState.isRunning) {
                         subTask.copy(
                             durationMillis = subTaskTimerState.totalDuration.inWholeMilliseconds,
-                            isTimerRunning = true
+                            isTimerRunning = true,
+                            isForeign = subTaskTimerState.isForeign
                         )
                     } else {
-                        subTask.copy(isTimerRunning = false)
+                        subTask.copy(isTimerRunning = false, isForeign = false)
                     }
                 }
 
@@ -205,6 +206,8 @@ class ProjectDetailViewModel(
                 if (task.subTasks.isNotEmpty()) {
                     task.copy(
                         isTimerRunning = updatedSubTasks.any { it.isTimerRunning },
+                        // A task timed through its subtasks inherits their provenance.
+                        isForeign = updatedSubTasks.any { it.isTimerRunning && it.isForeign },
                         subTasks = updatedSubTasks
                     )
                 } else if (timerState != null && timerState.isRunning) {
@@ -212,6 +215,7 @@ class ProjectDetailViewModel(
                     task.copy(
                         durationMillis = timerState.totalDuration.inWholeMilliseconds,
                         isTimerRunning = timerState.isRunning,
+                        isForeign = timerState.isForeign,
                         subTasks = updatedSubTasks
                     )
                 } else {
@@ -219,13 +223,19 @@ class ProjectDetailViewModel(
                     // This prevents "flickering" back to 0s if the timer stops
                     task.copy(
                         isTimerRunning = false,
+                        isForeign = false,
                         subTasks = updatedSubTasks
                     )
                 }
             }
 
+            // At most one timer runs per user, so the project's provenance is whichever entry in
+            // the map is running -- there is never more than one to disagree with.
+            val live = activeTimersMap.values.firstOrNull { it.isRunning }
             currentState.copy(
-                project = currentProject.copy(projectTasks = updatedTasks)
+                project = currentProject.copy(projectTasks = updatedTasks),
+                isRunningTimerForeign = live?.isForeign == true,
+                isRunningTimerStale = live?.isStale == true
             )
         }
     }
