@@ -22,6 +22,11 @@ import com.jvcs.tracky.features.project.domain.subtask.SubTaskRepository
 import com.jvcs.tracky.features.project.domain.subtask.SubTaskTimerChange
 import com.jvcs.tracky.features.project.domain.subtaskinterval.SubTaskIntervalRepository
 import com.jvcs.tracky.features.project.domain.task.LocalTaskDataSource
+import com.jvcs.tracky.core.domain.device.DeviceIdProvider
+import com.jvcs.tracky.core.domain.timer.ActiveTimerKind
+import com.jvcs.tracky.core.domain.timer.ActiveTimerRepository
+import com.jvcs.tracky.core.domain.timer.isForeignTimer
+import com.jvcs.tracky.core.domain.util.ServerClock
 import com.jvcs.tracky.features.project.domain.task.ProjectTaskRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
@@ -45,6 +50,9 @@ class OfflineFirstSubTaskRepository(
     private val intervalRepository: IntervalRepository,
     private val subTaskIntervalRepository: SubTaskIntervalRepository,
     private val projectTaskRepository: ProjectTaskRepository,
+    private val activeTimerRepository: ActiveTimerRepository,
+    private val deviceIdProvider: DeviceIdProvider,
+    private val serverClock: ServerClock,
     private val pendingSyncDataSource: PendingSyncDataSource,
     private val syncScheduler: SyncScheduler,
     private val applicationScope: CoroutineScope,
@@ -135,6 +143,19 @@ class OfflineFirstSubTaskRepository(
         localSubTaskDataSource.lastStartedSubTaskId(taskId).getOrDefault(null)
 
     override suspend fun stopSubTask(subTaskId: String): EmptyResult<DataError> {
+        val open = subTaskIntervalRepository.getOpenIntervalBySubTaskId(subTaskId).getOrDefault(null)
+        if (open != null && isForeignTimer(open.startedByDeviceId, deviceIdProvider.deviceId())) {
+            // Never stopSubTask() here. That is what banks the interval's duration onto the
+            // subtask and its task, and the server's rows already carry a foreign timer's time —
+            // the same double count OfflineFirstTaskRepository.stopProjectTask guards against, one
+            // level down. The echo closes both intervals, at the instant the server recorded.
+            return activeTimerRepository.stop(
+                intervalId = open.subTaskIntervalId,
+                kind = ActiveTimerKind.SUB_TASK,
+                endedAt = serverClock.now()
+            )
+        }
+
         val change = when (val stopped = localSubTaskDataSource.stopSubTask(subTaskId)) {
             is Result.Success -> stopped.data ?: return Result.Success(Unit) // timer was not running
             is Result.Error -> return stopped.asEmptyDataResult()
@@ -150,20 +171,12 @@ class OfflineFirstSubTaskRepository(
         // Null when the task's timer was already running (or is left running): that interval is
         // already on its way to the server, and the task's own row has not changed either.
         val taskInterval = change.taskInterval
-        val taskIntervalResult = taskInterval?.let {
-            if (isCreate) intervalRepository.createTaskInterval(it)
-            else intervalRepository.updateTaskInterval(it)
-        }
-
-        val subTaskIntervalResult = if (isCreate) {
-            subTaskIntervalRepository.createSubTaskInterval(change.subTaskInterval)
-        } else {
-            subTaskIntervalRepository.updateSubTaskInterval(change.subTaskInterval)
-        }
 
         // Re-read rather than reusing the pre-write copy: the data source is what banked the
         // duration and cleared the flag, so this is the only place the new values exist.
         val subTask = localSubTaskDataSource.getSubTaskById(subTaskId).getOrDefault(null)
+
+        val intervalsResult = pushIntervals(subTask?.parentProjectTaskId, change, isCreate)
 
         val taskResult = if (taskInterval != null && subTask != null) {
             pushParentTask(subTask.parentProjectTaskId)
@@ -172,8 +185,61 @@ class OfflineFirstSubTaskRepository(
         }
         val subTaskResult = subTask?.let { upsertSubTask(it) }
 
-        return firstError(taskIntervalResult, subTaskIntervalResult, taskResult, subTaskResult)
-            ?: Result.Success(Unit)
+        return firstError(intervalsResult, taskResult, subTaskResult) ?: Result.Success(Unit)
+    }
+
+    /**
+     * Takes the timer's transition to the server, or pushes the interval rows the old way when it
+     * cannot go there.
+     *
+     * One call replaces two pushes on the happy path. `PUT /api/timer/active` with
+     * `kind = sub_task` opens the enclosing task interval itself when the client names one it does
+     * not have, at the same instant — verified against the deployed backend — and leaves it alone
+     * when it is already open. Pushing both rows separately as well would only race that.
+     *
+     * The fallbacks are the cases the timer resource cannot serve: a parent task that exists only
+     * on this device has nothing for it to hang off, and a subtask interval with no enclosing
+     * interval at all is a shape it will not accept. Both still have to reach the server
+     * eventually, so they take the ordinary queued route.
+     */
+    private suspend fun pushIntervals(
+        taskId: String?,
+        change: SubTaskTimerChange,
+        isCreate: Boolean
+    ): EmptyResult<DataError> {
+        if (taskId == null || pendingSyncDataSource.hasPendingCreate(taskId).getOrDefault(false)) {
+            return pushIntervalsSeparately(change, isCreate)
+        }
+        if (!isCreate) {
+            val endedAt = change.subTaskInterval.endDateTimeUtc
+                ?: return pushIntervalsSeparately(change, isCreate)
+            return activeTimerRepository.stop(
+                intervalId = change.subTaskInterval.subTaskIntervalId,
+                kind = ActiveTimerKind.SUB_TASK,
+                endedAt = endedAt
+            )
+        }
+        val enclosing = change.taskInterval
+            ?: intervalRepository.getOpenIntervalByTaskId(taskId).getOrDefault(null)
+            ?: return pushIntervalsSeparately(change, isCreate)
+        return activeTimerRepository.start(enclosing, change.subTaskInterval)
+    }
+
+    /** The pre-cross-device path: each interval through the repository that owns its queue. */
+    private suspend fun pushIntervalsSeparately(
+        change: SubTaskTimerChange,
+        isCreate: Boolean
+    ): EmptyResult<DataError> {
+        val taskIntervalResult = change.taskInterval?.let {
+            if (isCreate) intervalRepository.createTaskInterval(it)
+            else intervalRepository.updateTaskInterval(it)
+        }
+        val subTaskIntervalResult = if (isCreate) {
+            subTaskIntervalRepository.createSubTaskInterval(change.subTaskInterval)
+        } else {
+            subTaskIntervalRepository.updateSubTaskInterval(change.subTaskInterval)
+        }
+        return firstError(taskIntervalResult, subTaskIntervalResult) ?: Result.Success(Unit)
     }
 
     private fun firstError(vararg results: EmptyResult<DataError>?): EmptyResult<DataError>? =

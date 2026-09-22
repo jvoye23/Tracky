@@ -715,7 +715,18 @@ class FakeLocalSubTaskDataSource(private val db: FakeDb = FakeDb()) : LocalSubTa
     }
 
     override suspend fun startSubTask(subTaskId: String) = Result.Success(startResult!!)
-    override suspend fun stopSubTask(subTaskId: String) = Result.Success(stopResult)
+    /**
+     * Every subtask whose timer was closed locally, in call order.
+     *
+     * This is the banking call — the foreign-timer guard's whole job is to not make it — so the
+     * guard is only observable if the fake records it.
+     */
+    val stopped = mutableListOf<String>()
+
+    override suspend fun stopSubTask(subTaskId: String): Result<SubTaskTimerChange?, DataError.Local> {
+        stopped += subTaskId
+        return Result.Success(stopResult)
+    }
 
     /** Set by tests that exercise the parent button's "resume what ran last" branch. */
     var lastStarted: String? = null
@@ -1091,6 +1102,9 @@ internal class RepoFixture(
         intervalRepository = intervalRepository,
         subTaskIntervalRepository = subTaskIntervalRepository,
         projectTaskRepository = taskRepository,
+        activeTimerRepository = activeTimer,
+        deviceIdProvider = FakeDeviceIdProvider(),
+        serverClock = ServerClock(time, FakeServerClockOffsetStore()),
         pendingSyncDataSource = queue,
         syncScheduler = scheduler,
         applicationScope = scope,
