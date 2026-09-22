@@ -196,6 +196,68 @@ class OfflineFirstActiveTimerRepositoryTest {
     }
 
     @Test
+    fun aStopNeverBanksADurationOntoTheTask() = runTest {
+        // The sharpest double-count risk in the feature. The server's task row already carries a
+        // foreign timer's time, so this repository closes intervals and nothing else — banking
+        // stays with the caller, which is the only place that knows whose timer it was.
+        local.tasks["t1"] = ProjectTask(
+            projectTaskId = "t1",
+            title = "already banked by the server",
+            description = null,
+            durationMillis = 60_000,
+            startDateTimeUtc = Instant.fromEpochMilliseconds(0),
+            parentProjectId = "p1",
+            isTimerRunning = true
+        )
+        local.intervals["i1"] = taskInterval()
+        remote.nextStop = Result.Success(
+            applied(taskIntervals = listOf(taskInterval(end = Instant.fromEpochMilliseconds(60_000))))
+        )
+
+        repository.stop("i1", ActiveTimerKind.TASK, Instant.fromEpochMilliseconds(60_000))
+
+        assertEquals(Instant.fromEpochMilliseconds(60_000), local.intervals["i1"]?.endDateTimeUtc)
+        // The minute is on the task row once, not twice.
+        assertEquals(60_000, local.tasks["t1"]?.durationMillis)
+    }
+
+    @Test
+    fun aRejectedStopResyncsInsteadOfClosingLocally() = runTest {
+        // Another device moved the timer on. Closing here would need an end time nobody has, and
+        // the interval may still be running somewhere — the guess StrandedTimerReconciler refuses.
+        local.intervals["i1"] = taskInterval()
+        remote.nextStop = Result.Success(ActiveTimerChange.Rejected(active = null, serverNow = null))
+
+        val result = repository.stop("i1", ActiveTimerKind.TASK, Instant.fromEpochMilliseconds(60_000))
+
+        assertTrue(result is Result.Success)
+        assertNull(local.intervals["i1"]?.endDateTimeUtc)
+        assertEquals(1, syncRemote.pulls)
+    }
+
+    @Test
+    fun anUnreachableServerQueuesTheStopAsAnUpdate() = runTest {
+        remote.nextStop = Result.Error(DataError.Remote.REQUEST_TIMEOUT)
+
+        repository.stop("i1", ActiveTimerKind.TASK, Instant.fromEpochMilliseconds(60_000))
+
+        val queued = queue.all().single()
+        assertEquals(PendingSyncOperation.OP_UPDATE, queued.operationType)
+        assertEquals(PendingSyncOperation.ENTITY_INTERVAL, queued.entityType)
+    }
+
+    @Test
+    fun aSubTaskStopIsQueuedUnderTheSubTaskIntervalType() = runTest {
+        // Queued as a task interval it would drain to the wrong endpoint, and the entityType
+        // strings are persisted, so the mistake would outlive the upgrade that caused it.
+        remote.nextStop = Result.Error(DataError.Remote.NO_INTERNET)
+
+        repository.stop("si1", ActiveTimerKind.SUB_TASK, Instant.fromEpochMilliseconds(60_000))
+
+        assertEquals(PendingSyncOperation.ENTITY_SUBTASK_INTERVAL, queue.all().single().entityType)
+    }
+
+    @Test
     fun aPermanentErrorIsSurfacedRatherThanQueued() = runTest {
         // A queued retry would spend requests forever on one the server will keep refusing.
         remote.nextStart = Result.Error(DataError.Remote.BAD_REQUEST)
