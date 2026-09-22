@@ -7,7 +7,7 @@ import com.jvcs.tracky.core.domain.device.DeviceIdProvider
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
-import com.jvcs.tracky.core.domain.util.TimeProvider
+import com.jvcs.tracky.core.domain.util.ServerClock
 import com.jvcs.tracky.core.domain.util.platformIoDispatcher
 import com.jvcs.tracky.features.project.data.mappers.toProjectSubTask
 import com.jvcs.tracky.features.project.data.mappers.toProjectSubTaskEntity
@@ -27,8 +27,9 @@ import kotlin.uuid.Uuid
 
 class RoomLocalSubTaskDataSource(
     private val projectDao: ProjectDao,
-    private val timeProvider: TimeProvider,
-    private val deviceIdProvider: DeviceIdProvider
+    private val deviceIdProvider: DeviceIdProvider,
+    /** See [com.jvcs.tracky.features.project.data.task.RoomLocalTaskDataSource]'s serverClock. */
+    private val serverClock: ServerClock
 ) : LocalSubTaskDataSource {
 
     // Same single-writer funnel as the other Room data sources — see RoomLocalProjectDataSource.
@@ -74,10 +75,11 @@ class RoomLocalSubTaskDataSource(
         return try {
             // Outside the write dispatcher for the same reason as RoomLocalTaskDataSource.startTask.
             val deviceId = deviceIdProvider.deviceId()
+            val startedAt = serverClock.now()
             val change = withContext(dbWriteDispatcher) {
                 val subTask = projectDao.getSubTaskById(subTaskId) ?: return@withContext null
                 val taskId = subTask.parentProjectTaskId
-                val now = timeProvider.nowInstant
+                val now = startedAt
 
                 // One subtask at a time: whichever sibling is still running gets closed at the same
                 // instant this one starts, so their durations never overlap.
@@ -131,9 +133,10 @@ class RoomLocalSubTaskDataSource(
         subTaskId: String
     ): Result<SubTaskTimerChange?, DataError.Local> {
         return try {
+            val endedAt = serverClock.now()
             val change = withContext(dbWriteDispatcher) {
                 val open = projectDao.getOpenSubTaskInterval(subTaskId) ?: return@withContext null
-                val now = timeProvider.nowInstant
+                val now = endedAt
                 val closed = projectDao.closeSubTaskInterval(open, now)
 
                 // Only the subtask that opened the task's interval may close it again. A task the

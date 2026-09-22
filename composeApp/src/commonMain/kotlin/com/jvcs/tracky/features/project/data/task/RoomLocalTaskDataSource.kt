@@ -6,7 +6,7 @@ import com.jvcs.tracky.core.domain.device.DeviceIdProvider
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
-import com.jvcs.tracky.core.domain.util.TimeProvider
+import com.jvcs.tracky.core.domain.util.ServerClock
 import com.jvcs.tracky.core.domain.util.platformIoDispatcher
 import com.jvcs.tracky.features.project.data.mappers.toProjectTaskEntity
 import com.jvcs.tracky.features.project.data.mappers.toProjectTask
@@ -27,8 +27,14 @@ import kotlin.uuid.Uuid
 
 class RoomLocalTaskDataSource(
     private val projectDao: ProjectDao,
-    private val timeProvider: TimeProvider,
-    private val deviceIdProvider: DeviceIdProvider
+    private val deviceIdProvider: DeviceIdProvider,
+    /**
+     * Timer boundaries are written on the corrected clock, never the raw device one. `TimeManager`
+     * renders a running timer as `serverClock.now() - startedAt`; writing the start from
+     * `timeProvider` put the two sides on different bases and injected the whole device-to-server
+     * skew into the displayed duration — on every device, because the skew went into the row.
+     */
+    private val serverClock: ServerClock
 ) : LocalTaskDataSource {
 
     // Same single-writer funnel as the other Room data sources — see RoomLocalProjectDataSource.
@@ -80,6 +86,9 @@ class RoomLocalTaskDataSource(
             // Read outside the write dispatcher: minting the id on first launch writes to
             // DataStore, and the single-writer funnel is for Room.
             val deviceId = deviceIdProvider.deviceId()
+            // Read out here for the same reason as deviceId: the first call can touch DataStore,
+            // and the write dispatcher is a single-writer funnel for Room.
+            val startedAt = serverClock.now()
             val start = withContext(dbWriteDispatcher) {
                 // The owning project has to be read before the interval can be written: it is part
                 // of the row now, and the cascading foreign key would reject an interval whose task
@@ -97,7 +106,7 @@ class RoomLocalTaskDataSource(
                     return@withContext TaskTimerStart(open.toTaskInterval(), openedInterval = null)
                 }
 
-                val now = timeProvider.nowInstant
+                val now = startedAt
                 val interval = TaskIntervalEntity(
                     intervalId = Uuid.random().toString(),
                     parentTaskId = taskId,
@@ -121,10 +130,11 @@ class RoomLocalTaskDataSource(
 
     override suspend fun stopTask(taskId: String): Result<TaskInterval?, DataError.Local> {
         return try {
+            val endedAt = serverClock.now()
             val closedInterval = withContext(dbWriteDispatcher) {
                 val openInterval = projectDao.getOpenIntervalBySessionId(taskId)
                 val updatedInterval = if (openInterval != null) {
-                    val now = timeProvider.nowInstant
+                    val now = endedAt
                     // A subtask cannot outlive the interval it sits in: leaving it open would strand
                     // a running subtask inside a closed task interval, which the foreign key permits
                     // but nothing could ever reconcile. It closes at the same instant the task does.

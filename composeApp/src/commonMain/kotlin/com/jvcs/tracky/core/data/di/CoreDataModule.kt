@@ -205,7 +205,7 @@ val coreDataModule = module {
     single(createdAtStart = true) {
         StrandedTimerReconciler(
             projectDao = get(),
-            timeProvider = get(),
+            serverClock = get(),
             deviceIdProvider = get(),
             applicationScope = get(qualifier = named("AppScope"))
         )

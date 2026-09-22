@@ -1,6 +1,7 @@
 package com.jvcs.tracky.core.domain.sync
 
 import com.jvcs.tracky.core.domain.util.DataError
+import kotlin.time.Instant
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.ServerClock
@@ -59,6 +60,7 @@ class DeltaSyncApplier(
         while (true) {
             val since = syncCursorStore.cursor()
 
+            val sentAt = timeProvider.nowInstant
             val changes = when (val result = remoteSyncDataSource.getChanges(since)) {
                 is Result.Success -> result.data
                 is Result.Error -> return when {
@@ -72,7 +74,13 @@ class DeltaSyncApplier(
 
             // Every response is a clock sample, including one that asks for a full resync — the
             // timer wants the offset whatever else happened.
-            changes.serverNow?.let { serverClock.observe(it, timeProvider.nowInstant) }
+            //
+            // Halfway through the round trip, not the moment the response arrived: the server's
+            // instant was true somewhere in the middle, and crediting the whole latency to skew
+            // would bias the offset by however slow the network was. That mattered little while
+            // the offset only moved a rendered number; it matters now that interval timestamps
+            // are written on it.
+            changes.serverNow?.let { serverClock.observe(it, midpoint(sentAt, timeProvider.nowInstant)) }
 
             // The server cannot prove what was deleted since our cursor, so carrying on from it
             // would leave this device quietly diverged.
@@ -101,6 +109,10 @@ class DeltaSyncApplier(
      * what we could not trust. The next delta starts from scratch, which is correct if wasteful;
      * keeping a cursor the server has disowned is neither.
      */
+    /** The instant halfway between a request leaving and its answer arriving. */
+    private fun midpoint(sentAt: Instant, receivedAt: Instant): Instant =
+        sentAt + (receivedAt - sentAt) / 2
+
     private suspend fun fullPull(): EmptyResult<DataError> {
         syncCursorStore.clear()
         return projectRepository.fetchProjects()

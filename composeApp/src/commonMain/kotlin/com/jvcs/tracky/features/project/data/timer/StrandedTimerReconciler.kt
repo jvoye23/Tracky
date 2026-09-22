@@ -4,7 +4,7 @@ import com.jvcs.tracky.core.database.dao.ProjectDao
 import com.jvcs.tracky.core.database.entity.StrandedIntervalEntity
 import com.jvcs.tracky.core.domain.device.DeviceIdProvider
 import com.jvcs.tracky.core.domain.startup.StartupReconciliation
-import com.jvcs.tracky.core.domain.util.TimeProvider
+import com.jvcs.tracky.core.domain.util.ServerClock
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -33,7 +33,12 @@ import kotlinx.coroutines.launch
  */
 class StrandedTimerReconciler(
     private val projectDao: ProjectDao,
-    private val timeProvider: TimeProvider,
+    /**
+     * The corrected clock, because [detectedAtEpochMs] is subtracted from an interval's
+     * `startDateTimeEpochMs` to work out the duration the dialog offers, and that start is written
+     * on the corrected clock. Two bases here would offer the user the wrong number of minutes.
+     */
+    private val serverClock: ServerClock,
     private val deviceIdProvider: DeviceIdProvider,
     private val applicationScope: CoroutineScope
 ) : StartupReconciliation {
@@ -62,7 +67,7 @@ class StrandedTimerReconciler(
      * [StrandedIntervalEntity.detectedAtEpochMs], so the duration the dialog offers never grows.
      */
     internal suspend fun reconcile() {
-        val detectedAt = timeProvider.nowInstant.toEpochMilliseconds()
+        val detectedAt = serverClock.now().toEpochMilliseconds()
         val deviceId = deviceIdProvider.deviceId()
 
         // Children first, so a subtask interval is never left counted under a parked parent.
