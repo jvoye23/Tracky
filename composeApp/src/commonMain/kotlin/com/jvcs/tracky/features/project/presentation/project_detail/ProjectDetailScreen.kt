@@ -126,12 +126,6 @@ fun ProjectDetailScreenRoot(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
-    // Runs on every (re-)entry into composition. Nav3 drops this entry from composition while
-    // another screen sits on top of it, so coming back from the edit-text screen lands here again.
-    LaunchedEffect(Unit) {
-        viewModel.onAction(ProjectDetailAction.OnReturnedToScreen)
-    }
-
     ObserveAsEvents(viewModel.events) { event ->
         when(event) {
             is ProjectDetailEvent.Error -> {

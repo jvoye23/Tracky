@@ -42,6 +42,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
@@ -642,11 +643,7 @@ class ProjectDetailViewModelTest {
         vm.state.test {
             awaitItem()
             advanceUntilIdle()
-            vm.onAction(ProjectDetailAction.OnReturnedToScreen) // initial composition
-            advanceUntilIdle()
-
             projectRepo.emit(project(done, subTask("s2"), taskFinished = true))
-            vm.onAction(ProjectDetailAction.OnReturnedToScreen)
             advanceUntilIdle()
 
             assertEquals(2, vm.task()!!.subTasks.size)
@@ -657,16 +654,13 @@ class ProjectDetailViewModelTest {
     }
 
     @Test
-    fun `returning to the screen picks up edited tasks but keeps an unsaved colour`() = runTest {
+    fun `an edited task arrives on its own but keeps an unsaved colour`() = runTest {
         val proj = project(subTask("s1"))
         val projectRepo = FakeDetailProjectRepository(proj)
         val (vm, _) = viewModel(proj, projectRepository = projectRepo)
         vm.state.test {
             awaitItem()
             advanceUntilIdle()
-            vm.onAction(ProjectDetailAction.OnReturnedToScreen) // initial composition
-            advanceUntilIdle()
-
             vm.onAction(ProjectDetailAction.OnEditModeClick)
             vm.onAction(ProjectDetailAction.OnColorChanged(Color.Red))
             advanceUntilIdle()
@@ -675,7 +669,6 @@ class ProjectDetailViewModelTest {
             projectRepo.emit(
                 edited.copy(projectTasks = edited.projectTasks!!.map { it.copy(title = "renamed task") })
             )
-            vm.onAction(ProjectDetailAction.OnReturnedToScreen)
             advanceUntilIdle()
 
             assertEquals("renamed task", vm.task()!!.title)
@@ -685,8 +678,9 @@ class ProjectDetailViewModelTest {
         }
     }
 
+    /** Replaces a test that asserted the opposite while the tree was read once and refreshed by hand. */
     @Test
-    fun `the first return is the initial composition and reads nothing again`() = runTest {
+    fun `a subtask added elsewhere arrives without the screen being returned to`() = runTest {
         val proj = project(subTask("s1"))
         val projectRepo = FakeDetailProjectRepository(proj)
         val (vm, _) = viewModel(proj, projectRepository = projectRepo)
@@ -695,10 +689,9 @@ class ProjectDetailViewModelTest {
             advanceUntilIdle()
 
             projectRepo.emit(project(subTask("s1"), subTask("s2")))
-            vm.onAction(ProjectDetailAction.OnReturnedToScreen)
             advanceUntilIdle()
 
-            assertEquals(listOf("s1"), vm.subTaskIds())
+            assertEquals(listOf("s1", "s2"), vm.subTaskIds())
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -989,6 +982,116 @@ class ProjectDetailViewModelTest {
                 cancelAndIgnoreRemainingEvents()
             }
             assertEquals(listOf("s1", "s2"), vm.subTaskIds())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    // --- the task tree is streamed, not snapshotted ------------------------------------------
+
+    /**
+     * The regression these cover. The tree used to be read once, on entry, and refreshed only when
+     * the screen was returned to, so a sync that wrote another device's rows into Room left an
+     * open detail screen showing figures from whenever the user last opened it.
+     */
+    @Test
+    fun adoptsATaskTreeWrittenUnderneathIt() = runTest {
+        val repository = FakeDetailProjectRepository(project(taskDurationMillis = 1_000))
+        val (vm, _) = viewModel(project(taskDurationMillis = 1_000), projectRepository = repository)
+
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+
+            // What a pull of another device's stop looks like from here: a new banked duration.
+            repository.emit(project(taskDurationMillis = 9_000))
+            settle()
+
+            assertEquals(9_000L, vm.task()?.durationMillis)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun picksUpATaskCreatedOnAnotherDevice() = runTest {
+        val repository = FakeDetailProjectRepository(projectWithTasks("t1"))
+        val (vm, _) = viewModel(projectWithTasks("t1"), projectRepository = repository)
+
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+
+            repository.emit(projectWithTasks("t1", "t2"))
+            settle()
+
+            assertEquals(
+                listOf("t1", "t2"),
+                vm.state.value.project?.projectTasks?.map { it.projectTaskId }
+            )
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    /**
+     * The tree carries the banked figure; the ticker carries the live one. A tree emission must
+     * not snap a running timer back to what the row last stored.
+     */
+    @Test
+    fun aTreeEmissionDoesNotClobberARunningTimer() = runTest {
+        val running = FakeRunningTimerRepository()
+        val repository = FakeDetailProjectRepository(project(taskDurationMillis = 0))
+        val (vm, _) = viewModel(
+            project(taskDurationMillis = 0),
+            projectRepository = repository,
+            running = running
+        )
+
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+            // Banked, so the live figure is non-zero even against a pinned clock.
+            running.startTimer(runningTimer(taskId = TASK_ID, bankedDuration = 5.seconds))
+            settle()
+            val whileRunning = vm.task()?.durationMillis ?: 0L
+            assertEquals(5_000L, whileRunning, "the ticker should be driving the duration")
+
+            // A distinct value, or the StateFlow behind the fake conflates it away and the
+            // collector never runs -- which would make this assertion pass without the guard.
+            repository.emit(project(taskDurationMillis = 0).copy(description = "touched"))
+            settle()
+
+            assertTrue(
+                (vm.task()?.durationMillis ?: 0L) >= whileRunning,
+                "a tree emission reset the live duration to the stored one"
+            )
+            assertEquals(true, vm.task()?.isTimerRunning)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    /** A drag is the one time the screen's order outranks the database's. */
+    @Test
+    fun aTreeEmissionMidDragDoesNotReplayTheMove() = runTest {
+        val repository = FakeDetailProjectRepository(projectWithTasks("t1", "t2", "t3"))
+        val (vm, _) = viewModel(
+            projectWithTasks("t1", "t2", "t3"),
+            projectRepository = repository
+        )
+
+        vm.state.test {
+            awaitItem()
+            advanceUntilIdle()
+
+            vm.onAction(ProjectDetailAction.OnTaskReorderMove("t3", "t1"))
+            runCurrent()
+            // Distinct from the held value, so the flow actually emits (see above).
+            repository.emit(projectWithTasks("t1", "t2", "t3").copy(description = "touched"))
+            settle()
+
+            assertEquals(
+                listOf("t3", "t1", "t2"),
+                vm.state.value.project?.projectTasks?.map { it.projectTaskId },
+                "the database order overwrote the drag the user is still holding"
+            )
             cancelAndIgnoreRemainingEvents()
         }
     }
