@@ -52,6 +52,7 @@ internal fun TimerNotificationSession.toLiveActivityState(): LiveActivityState {
         // this by itself and never needs another update.
         startedAtEpochSeconds = asOf.epochSeconds.toDouble() - elapsedSeconds,
         elapsedSeconds = elapsedSeconds,
-        isRunning = isRunning
+        isRunning = isRunning,
+        isForeign = isForeign
     )
 }

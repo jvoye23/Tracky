@@ -34,5 +34,12 @@ struct TrackyTimerAttributes: ActivityAttributes, Equatable {
         let elapsedSeconds: Double
         /// False after Pause — the clock stops where it is and the button offers Play.
         let isRunning: Bool
+        /// True when another device started this timer. Lives here rather than in the attributes
+        /// because it can change while one timer runs — the other device may hand it over — and a
+        /// change to the attributes would have to end the activity and request a new one.
+        ///
+        /// Pause is stop-then-start, so pausing a timer another device owns would stop it
+        /// globally. The toggle is hidden for one rather than left to do nothing.
+        var isForeign: Bool = false
     }
 }

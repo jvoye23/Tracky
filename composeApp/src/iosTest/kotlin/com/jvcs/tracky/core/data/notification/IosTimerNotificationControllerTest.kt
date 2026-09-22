@@ -43,7 +43,8 @@ class IosTimerNotificationControllerTest {
         useLightTextColor: Boolean = false,
         subTask: TaskRef? = TaskRef(id = "sub-1", title = "Auth endpoints"),
         elapsed: Duration = 90.minutes,
-        isRunning: Boolean = true
+        isRunning: Boolean = true,
+        isForeign: Boolean = false
     ) = TimerNotificationSession(
         project = ProjectRef(id = "p-1", title = "Tracky App Redesign", colorArgb = colorArgb),
         useLightTextColor = useLightTextColor,
@@ -51,8 +52,16 @@ class IosTimerNotificationControllerTest {
         subTask = subTask,
         elapsed = elapsed,
         asOf = asOf,
-        isRunning = isRunning
+        isRunning = isRunning,
+        isForeign = isForeign
     )
+
+    /** The widget hides its toggle off this flag, so it has to survive the crossing into Swift. */
+    @Test
+    fun foreignnessCrossesToTheWidget() {
+        assertTrue(session(isForeign = true).toLiveActivityState().isForeign)
+        assertFalse(session().toLiveActivityState().isForeign)
+    }
 
     @Test
     fun aRunningSessionStartsAtTheInstantItsElapsedTimeWouldHaveBegun() {

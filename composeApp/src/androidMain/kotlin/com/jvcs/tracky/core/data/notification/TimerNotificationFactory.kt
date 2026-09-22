@@ -60,6 +60,13 @@ class TimerNotificationFactory(private val context: Context) {
                 elapsed,
                 accent
             )
+            // Pause is stop-then-start, so pausing a timer another device is running would stop
+            // it globally. The coordinator refuses that; hiding the button is how the user finds
+            // out, instead of tapping something that silently does nothing.
+            setViewVisibility(
+                R.id.timer_collapsed_button,
+                if (session.isForeign) View.GONE else View.VISIBLE
+            )
             setImageViewResource(R.id.timer_collapsed_button, icon)
             tint(R.id.timer_collapsed_button, accent)
             setInt(R.id.timer_collapsed_button, "setColorFilter", onAccent)
@@ -77,6 +84,10 @@ class TimerNotificationFactory(private val context: Context) {
                 if (session.subTask == null) View.GONE else View.VISIBLE
             )
             clock(R.id.timer_chronometer, R.id.timer_clock, session.isRunning, elapsed, accent)
+            setViewVisibility(
+                R.id.timer_button,
+                if (session.isForeign) View.GONE else View.VISIBLE
+            )
             setImageViewResource(R.id.timer_button_icon, icon)
             setInt(R.id.timer_button_icon, "setColorFilter", onAccent)
             setTextViewText(R.id.timer_button_label, label)

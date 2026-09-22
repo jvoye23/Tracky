@@ -98,8 +98,14 @@ private struct TimerCard: View {
                 // what centres that clamped box in the card.
                 .frame(maxWidth: .infinity)
 
-            ToggleGlyph(state: state, size: compact ? 28 : 34)
-                .frame(maxWidth: .infinity)
+            // Pause is stop-then-start, so pausing a timer another device is running would stop
+            // it globally. The app refuses that either way; hiding the button is how the user
+            // finds out, rather than tapping something that does nothing. One conditional covers
+            // both surfaces, because this card is the Lock Screen and the expanded Island alike.
+            if !state.isForeign {
+                ToggleGlyph(state: state, size: compact ? 28 : 34)
+                    .frame(maxWidth: .infinity)
+            }
         }
         .padding(compact ? 0 : 16)
     }
