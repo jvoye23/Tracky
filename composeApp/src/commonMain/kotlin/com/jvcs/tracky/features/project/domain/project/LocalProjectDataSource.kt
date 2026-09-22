@@ -1,5 +1,6 @@
 package com.jvcs.tracky.features.project.domain.project
 
+import com.jvcs.tracky.core.domain.sync.SyncChanges
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
@@ -35,6 +36,15 @@ interface LocalProjectDataSource {
     suspend fun updateSortIndices(indices: Map<String, Long>, updatedAt: Instant): EmptyResult<DataError.Local>
     suspend fun upsertProject(project: Project): EmptyResult<DataError.Local>
     suspend fun upsertProjects(projects: List<Project>): EmptyResult<DataError.Local>
+
+    /**
+     * Applies one page of the change feed — the upserts and the tombstoned deletions — atomically.
+     *
+     * Separate from [upsertProjects] because that one promises never to delete, and it has to
+     * keep promising it: in a full-tree pull an absent row may simply be one this device created
+     * offline. A tombstone is the server stating a fact, which is a different thing entirely.
+     */
+    suspend fun applyDelta(changes: SyncChanges): EmptyResult<DataError.Local>
     suspend fun deleteProject(projectId: String): EmptyResult<DataError.Local>
     suspend fun deleteAllProjects(): EmptyResult<DataError.Local>
 }

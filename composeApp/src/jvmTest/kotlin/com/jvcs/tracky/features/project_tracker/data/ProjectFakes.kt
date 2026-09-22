@@ -10,6 +10,7 @@ import com.jvcs.tracky.core.domain.sync.serverWinsOnPull
 import com.jvcs.tracky.core.domain.startup.StartupReconciliation
 import com.jvcs.tracky.features.project.domain.task.TaskTimerStart
 import com.jvcs.tracky.core.domain.sync.serverWinsOnPullForInterval
+import com.jvcs.tracky.core.domain.sync.SyncChanges
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
@@ -301,6 +302,48 @@ class FakeLocalProjectDataSource(private val db: FakeDb = FakeDb()) : LocalProje
         return Result.Success(Unit)
     }
 
+    var applyDeltaCalls = 0
+        private set
+
+    /** Makes the transaction fail, so a test can assert the cursor does not move past it. */
+    var failApplyDelta = false
+
+    override suspend fun applyDelta(changes: SyncChanges): EmptyResult<DataError.Local> {
+        if (failApplyDelta) return Result.Error(DataError.Local.DISK_FULL)
+        applyDeltaCalls++
+        upsertProjects(
+            // Rebuild the nesting the fake's merge walks; the feed itself is flat.
+            changes.projects.map { project ->
+                project.copy(
+                    projectTasks = changes.tasks.filter { it.parentProjectId == project.projectId }
+                        .map { task ->
+                            task.copy(
+                                intervals = changes.taskIntervals.filter { it.parentTaskId == task.projectTaskId },
+                                subTasks = changes.subTasks.filter { it.parentProjectTaskId == task.projectTaskId }
+                                    .map { sub ->
+                                        sub.copy(
+                                            subTaskIntervals = changes.subTaskIntervals
+                                                .filter { it.parentSubTaskId == sub.projectSubTaskId }
+                                        )
+                                    }
+                            )
+                        }
+                )
+            }
+        )
+        val pending = db.pendingIntervalIds
+        changes.tombstones.forEach { tombstone ->
+            if (tombstone.entityId in pending) return@forEach
+            db.projects.remove(tombstone.entityId)
+            db.tasks.remove(tombstone.entityId)
+            db.intervals.remove(tombstone.entityId)
+            db.subTasks.remove(tombstone.entityId)
+            db.subTaskIntervals.remove(tombstone.entityId)
+        }
+        db.emit()
+        return Result.Success(Unit)
+    }
+
     override suspend fun deleteProject(projectId: String): EmptyResult<DataError.Local> {
         db.cascadeDeleteProject(projectId)
         return Result.Success(Unit)
@@ -461,8 +504,14 @@ class FakeRemoteProjectDataSource : RemoteProjectDataSource {
     /** What GET /api/projects hands back — the whole tree, tasks and intervals included. */
     var projectsToReturn: List<Project> = emptyList()
 
-    override suspend fun getProjects(): Result<List<Project>, DataError.Remote> =
-        failWith?.let { Result.Error(it) } ?: Result.Success(projectsToReturn)
+    /** So a test can assert the delta applier fell back to the full pull, or did not. */
+    var getProjectsCallCount = 0
+        private set
+
+    override suspend fun getProjects(): Result<List<Project>, DataError.Remote> {
+        getProjectsCallCount++
+        return failWith?.let { Result.Error(it) } ?: Result.Success(projectsToReturn)
+    }
 
     override suspend fun postProject(project: Project): Result<Project, DataError.Remote> {
         failWith?.let { return Result.Error(it) }
