@@ -2,6 +2,7 @@ package com.jvcs.tracky.core.domain.util
 
 import com.jvcs.tracky.features.project.domain.timer.ProjectRef
 import com.jvcs.tracky.features.project.domain.timer.RunningTimer
+import com.jvcs.tracky.core.domain.sync.SyncRecency
 import com.jvcs.tracky.features.project.domain.timer.RunningTimerRepository
 import com.jvcs.tracky.features.project.domain.timer.TaskRef
 import kotlinx.coroutines.flow.Flow
@@ -30,10 +31,12 @@ internal class FakeRunningTimerRepository : RunningTimerRepository {
  */
 internal fun TestScope.testTimeManager(
     repository: RunningTimerRepository = FakeRunningTimerRepository(),
-    timeProvider: TimeProvider = FakeTimeProvider()
+    timeProvider: TimeProvider = FakeTimeProvider(),
+    syncRecency: SyncRecency = SyncRecency()
 ) = TimeManager(
     runningTimerRepository = repository,
     serverClock = testServerClock(timeProvider),
+    syncRecency = syncRecency,
     scope = backgroundScope
 )
 

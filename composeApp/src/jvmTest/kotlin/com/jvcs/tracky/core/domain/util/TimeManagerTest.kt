@@ -6,10 +6,12 @@ import com.jvcs.tracky.features.project.domain.timer.TaskRef
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
+import com.jvcs.tracky.core.domain.sync.SyncRecency
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.yield
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
@@ -37,8 +39,10 @@ internal class TimeManagerTest {
     )
     private val subTaskTimer = taskTimer.copy(subTask = TaskRef(id = "s1", title = "Auth endpoints"))
 
+    private val syncRecency = SyncRecency()
+
     private fun TestScope.timeManager() =
-        testTimeManager(repository = running, timeProvider = timeProvider)
+        testTimeManager(repository = running, timeProvider = timeProvider, syncRecency = syncRecency)
 
     /**
      * runCurrent(), not advanceUntilIdle(): the ticker is an endless delay loop, so draining the
@@ -123,5 +127,76 @@ internal class TimeManagerTest {
         settle()
 
         assertEquals("00:02:01", timeManager.taskStates.value.getValue("t1").formattedTime)
+    }
+
+    @Test
+    fun aForeignTimerFreezesOnceTheServerHasNotBeenHeardFromForTooLong() = runTest {
+        // The hole this closes: a timer on the user's other phone keeps ticking here forever, and
+        // stays *correct* while doing it — but if that phone stopped it an hour ago and this one
+        // has not pulled since, the growing number is a confident lie.
+        running.startTimer(taskTimer.copy(isForeign = true))
+        syncRecency.markSynced(Instant.fromEpochMilliseconds(0))
+        val timeManager = timeManager()
+        settle()
+
+        // Sixteen minutes later, with no successful pull in between.
+        timeProvider.now = Instant.fromEpochMilliseconds(16.minutes.inWholeMilliseconds)
+        advanceTimeBy(16.minutes.inWholeMilliseconds + 1)
+        settle()
+
+        val tick = timeManager.tick.value!!
+        assertTrue(tick.isStale)
+        // Frozen at what it read when the server was last heard from, not at "now".
+        assertEquals(2.minutes, tick.elapsed)
+    }
+
+    @Test
+    fun aForeignTimerKeepsTickingWhileSyncIsRecent() = runTest {
+        // One failed pull must not freeze a healthy timer; the threshold is three pull cycles.
+        running.startTimer(taskTimer.copy(isForeign = true))
+        syncRecency.markSynced(Instant.fromEpochMilliseconds(0))
+        val timeManager = timeManager()
+        settle()
+
+        timeProvider.now = Instant.fromEpochMilliseconds(5.minutes.inWholeMilliseconds)
+        advanceTimeBy(5.minutes.inWholeMilliseconds + 1)
+        settle()
+
+        val tick = timeManager.tick.value!!
+        assertFalse(tick.isStale)
+        assertEquals(7.minutes, tick.elapsed)
+    }
+
+    @Test
+    fun aTimerThisDeviceStartedNeverGoesStale() = runTest {
+        // There is nothing to confirm: it is running because this device is running it. Freezing
+        // it would break the offline case the whole design exists to protect.
+        running.startTimer(taskTimer)
+        syncRecency.markSynced(Instant.fromEpochMilliseconds(0))
+        val timeManager = timeManager()
+        settle()
+
+        timeProvider.now = Instant.fromEpochMilliseconds(60.minutes.inWholeMilliseconds)
+        advanceTimeBy(60.minutes.inWholeMilliseconds + 1)
+        settle()
+
+        val tick = timeManager.tick.value!!
+        assertFalse(tick.isStale)
+        assertEquals(62.minutes, tick.elapsed)
+    }
+
+    @Test
+    fun aForeignTimerTicksWhenThisProcessHasNeverSynced() = runTest {
+        // A cold start has not synced by definition. Treating that as stale would freeze every
+        // adopted timer on launch, which is the opposite of the intent.
+        running.startTimer(taskTimer.copy(isForeign = true))
+        val timeManager = timeManager()
+        settle()
+
+        timeProvider.now = Instant.fromEpochMilliseconds(60.minutes.inWholeMilliseconds)
+        advanceTimeBy(60.minutes.inWholeMilliseconds + 1)
+        settle()
+
+        assertFalse(timeManager.tick.value!!.isStale)
     }
 }

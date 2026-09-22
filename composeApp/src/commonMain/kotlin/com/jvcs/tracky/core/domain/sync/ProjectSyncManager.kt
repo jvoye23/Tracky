@@ -4,6 +4,7 @@ package com.jvcs.tracky.core.domain.sync
 
 import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
 import com.jvcs.tracky.core.domain.lifecycle.AppLifecycleObserver
+import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
@@ -27,6 +28,7 @@ class ProjectSyncManager(
     private val appLifecycleObserver: AppLifecycleObserver,
     private val syncRepository: SyncRepository,
     private val deltaSyncApplier: DeltaSyncApplier,
+    private val syncRecency: SyncRecency,
     private val applicationScope: CoroutineScope,
     private val timeProvider: TimeProvider
 ) {
@@ -50,7 +52,12 @@ class ProjectSyncManager(
                     // A delta, falling back to the full tree when the feed cannot be used. The
                     // throttle stays: it bounds how often this device talks to the server at all,
                     // and a delta on a quiet account is cheap but not free.
-                    deltaSyncApplier.pullChanges()
+                    // Only a pull that landed counts as hearing from the server. Stamping the
+                    // attempt would keep a foreign timer ticking through an outage, which is the
+                    // one thing SyncRecency exists to stop.
+                    if (deltaSyncApplier.pullChanges() is Result.Success) {
+                        syncRecency.markSynced(timeProvider.nowInstant)
+                    }
                     lastPull = now
                 }
             }
