@@ -14,6 +14,8 @@ import com.jvcs.tracky.features.project.data.mappers.toProjectSubTaskEntity
 import com.jvcs.tracky.features.project.data.mappers.toSubTaskIntervalEntity
 import com.jvcs.tracky.features.project.data.mappers.toTaskIntervalEntity
 import com.jvcs.tracky.features.project.domain.models.Project
+import com.jvcs.tracky.features.project.domain.models.SubTaskInterval
+import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import com.jvcs.tracky.features.project.domain.project.LocalProjectDataSource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
@@ -122,6 +124,20 @@ class RoomLocalProjectDataSource (
         )
         // An entityType this build does not recognise is simply absent from the map above. A
         // newer server knowing about a kind of row this one does not is not a reason to fail.
+    }
+
+    override suspend fun applyTimerEcho(
+        taskIntervals: List<TaskInterval>,
+        subTaskIntervals: List<SubTaskInterval>
+    ): EmptyResult<DataError.Local> = write {
+        // upsertServerTree, not applyDelta: an echo names rows the server changed, never rows it
+        // removed, and that method is the one that promises never to delete.
+        projectDao.upsertServerTree(
+            projects = emptyList(),
+            tasks = emptyList(),
+            intervals = taskIntervals.map { it.toTaskIntervalEntity() },
+            subTaskIntervals = subTaskIntervals.map { it.toSubTaskIntervalEntity() }
+        )
     }
 
     override suspend fun deleteProject(projectId: String): EmptyResult<DataError.Local> = write {
