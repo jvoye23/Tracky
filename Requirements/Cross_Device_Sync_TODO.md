@@ -456,9 +456,9 @@ Both must change before an anonymous tier is possible.
 - **Phase 1 changes behaviour visibly on upgrade:** the first pull closes every local open interval
   the server considers closed, including rows the old reconciler would have parked. Intended, and
   an improvement, but it belongs in the PR description.
-- Four MADR ADRs under `docs/decisions/` were planned and never written, for the four
-  hard-to-reverse choices: server-authoritative active timer, sequence-cursor delta sync,
-  outbox-driven interval merge, server-enforced entitlement via RevenueCat. The repo has an
-  `architecture-decision-record` skill for it. `docs/decisions/` does not exist yet.
+- ~~Four MADR ADRs were planned and never written.~~ Written 2026-09-22 under `docs/decisions/`,
+  with an index: `0001` server-authoritative active timer, `0002` sequence-cursor delta sync,
+  `0003` outbox-driven interval merge — all accepted and implemented — and `0004` server-enforced
+  entitlement via RevenueCat, proposed, since it is specified but not built.
 - Nothing in the stack is pushed. Per the workflow, push once the stack is finished — arguably now,
   since phase 1 is complete and phase 2 is a separate stack.
