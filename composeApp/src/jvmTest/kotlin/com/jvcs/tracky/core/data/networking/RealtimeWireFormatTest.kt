@@ -3,6 +3,12 @@ package com.jvcs.tracky.core.data.networking
 import com.jvcs.tracky.core.data.networking.dto.HelloEnvelopeDto
 import com.jvcs.tracky.core.data.networking.dto.RealtimeEnvelopeParser
 import com.jvcs.tracky.core.domain.realtime.RealtimeEvent
+import com.jvcs.tracky.core.data.realtime.KtorRealtimeChannel
+import com.jvcs.tracky.core.domain.util.Result
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.engine.mock.respondBadRequest
+import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -117,5 +123,23 @@ internal class RealtimeEnvelopeParserTest {
         assertTrue(json.contains(""""type":"hello""""), json)
         assertTrue(json.contains(""""deviceId":"d-1""""), json)
         assertTrue(json.contains(""""cursor":84213"""), json)
+    }
+}
+
+internal class KtorRealtimeChannelTest {
+
+    /**
+     * A device with no base URL configured must not open anything. An error rather than a throw
+     * keeps the connection's retry loop in one shape, and it reads as "realtime is unavailable
+     * here" rather than something to back off and retry forever.
+     */
+    @Test
+    fun withoutAConfiguredUrlItRefusesToOpen() = runTest {
+        // Never reached: the null url short-circuits before the client is touched.
+        val client = HttpClient(MockEngine { respondBadRequest() })
+
+        val result = KtorRealtimeChannel(httpClient = client, url = null).open()
+
+        assertTrue(result is Result.Error)
     }
 }

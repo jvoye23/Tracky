@@ -32,6 +32,11 @@ import com.jvcs.tracky.features.project.domain.timer.StrandedTimerRepository
 import com.jvcs.tracky.core.domain.sync.DeltaSyncApplier
 import com.jvcs.tracky.core.domain.sync.RemoteSyncDataSource
 import com.jvcs.tracky.core.domain.sync.SyncCursorStore
+import com.jvcs.tracky.core.data.networking.ApiConfig
+import com.jvcs.tracky.core.data.networking.dto.RealtimeEnvelopeParser
+import com.jvcs.tracky.core.data.networking.realtimeUrl
+import com.jvcs.tracky.core.data.realtime.KtorRealtimeChannel
+import com.jvcs.tracky.core.domain.realtime.RealtimeChannel
 import com.jvcs.tracky.core.domain.sync.SyncPullCoordinator
 import com.jvcs.tracky.core.domain.sync.SyncRecency
 import com.jvcs.tracky.core.domain.sync.SyncRepository
@@ -281,6 +286,15 @@ val coreDataModule = module {
 
     // How far this device has read the server's change feed. Cleared on logout.
     singleOf(::DataStoreSyncCursorStore) bind SyncCursorStore::class
+    single<RealtimeChannel> {
+        KtorRealtimeChannel(
+            httpClient = get(),
+            // ApiConfig is generated and internal to this module, so this is the one place that
+            // reads it besides constructRoute.
+            url = realtimeUrl(ApiConfig.BASE_URL)
+        )
+    }
+    single { RealtimeEnvelopeParser(json = get()) }
     single {
         SyncPullCoordinator(
             deltaSyncApplier = get(),
