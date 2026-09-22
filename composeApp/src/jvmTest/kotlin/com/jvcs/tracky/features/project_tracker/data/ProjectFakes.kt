@@ -3,7 +3,12 @@
 package com.jvcs.tracky.features.project_tracker.data
 
 import com.jvcs.tracky.core.data.sync.SyncCoordinator
+import com.jvcs.tracky.core.domain.device.FakeDeviceIdProvider
 import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource
+import com.jvcs.tracky.core.domain.timer.ActiveTimerKind
+import com.jvcs.tracky.core.domain.timer.ActiveTimerRepository
+import com.jvcs.tracky.core.domain.util.FakeServerClockOffsetStore
+import com.jvcs.tracky.core.domain.util.ServerClock
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
 import com.jvcs.tracky.core.domain.sync.serverWinsOnPull
@@ -497,6 +502,12 @@ class FakeLocalTaskDataSource(private val db: FakeDb = FakeDb()) : LocalTaskData
             durationMillis = (clock - open.startDateTimeUtc).inWholeMilliseconds,
         )
         intervals[closed.intervalId] = closed
+        // Banks it onto the task, exactly as ProjectDao.addTaskDuration does. Without this the
+        // fake cannot show a double count, and the guard that prevents one would look tested
+        // when it is not.
+        tasks[taskId]?.let {
+            tasks[taskId] = it.copy(durationMillis = (it.durationMillis ?: 0L) + closed.durationMillis)
+        }
         return Result.Success(closed)
     }
 }
@@ -961,6 +972,36 @@ class FakePendingSyncDataSource : PendingSyncDataSource {
     }
 }
 
+/**
+ * Stands in for the server's arbitration of the running timer.
+ *
+ * Faked at this boundary on purpose: the routing tests care whether a start or stop was taken to
+ * the server and, far more importantly, whether the local bank was skipped — not how the request
+ * is shaped. [OfflineFirstActiveTimerRepositoryTest] covers that.
+ */
+class FakeActiveTimerRepository : ActiveTimerRepository {
+    val starts = mutableListOf<Pair<TaskInterval, SubTaskInterval?>>()
+    val stops = mutableListOf<Triple<String, ActiveTimerKind, Instant>>()
+    var result: EmptyResult<DataError> = Result.Success(Unit)
+
+    override suspend fun start(
+        taskInterval: TaskInterval,
+        subTaskInterval: SubTaskInterval?
+    ): EmptyResult<DataError> {
+        starts += taskInterval to subTaskInterval
+        return result
+    }
+
+    override suspend fun stop(
+        intervalId: String,
+        kind: ActiveTimerKind,
+        endedAt: Instant
+    ): EmptyResult<DataError> {
+        stops += Triple(intervalId, kind, endedAt)
+        return result
+    }
+}
+
 class FakeSyncScheduler : SyncScheduler {
     var scheduleCount = 0
     override suspend fun schedulePeriodicSync() { scheduleCount++ }
@@ -1015,6 +1056,8 @@ internal class RepoFixture(
         timeProvider = time
     )
 
+    val activeTimer = FakeActiveTimerRepository()
+
     val taskRepository = OfflineFirstTaskRepository(
         startupReconciliation = AlreadyReconciled,
         localTaskDataSource = localTask,
@@ -1022,6 +1065,9 @@ internal class RepoFixture(
         pendingSyncDataSource = queue,
         syncScheduler = scheduler,
         intervalRepository = intervalRepository,
+        activeTimerRepository = activeTimer,
+        deviceIdProvider = FakeDeviceIdProvider(),
+        serverClock = ServerClock(time, FakeServerClockOffsetStore()),
         timeProvider = time,
         applicationScope = scope
     )
@@ -1050,6 +1096,24 @@ internal class RepoFixture(
         applicationScope = scope,
         timeProvider = time
     )
+
+    /**
+     * Opens a task interval and pushes it through the interval repository.
+     *
+     * What `startProjectTask` used to do. It now announces the start to the server instead, so
+     * tests whose subject is the interval repository drive that repository directly rather than
+     * through a timer path that no longer reaches it.
+     */
+    suspend fun createIntervalForTask(taskId: String = "t1") {
+        val opened = (localTask.startTask(taskId) as Result.Success).data.openedInterval ?: return
+        intervalRepository.createTaskInterval(opened)
+    }
+
+    /** The closing half of [createIntervalForTask], for the same reason. */
+    suspend fun closeIntervalForTask(taskId: String = "t1") {
+        val closed = (localTask.stopTask(taskId) as Result.Success).data ?: return
+        intervalRepository.updateTaskInterval(closed)
+    }
 
     val syncCoordinator = SyncCoordinator(
         projectRepository = projectRepository,

@@ -2,7 +2,9 @@
 
 package com.jvcs.tracky.features.project_tracker.data
 
+import com.jvcs.tracky.core.domain.device.FakeDeviceIdProvider
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
+import com.jvcs.tracky.core.domain.timer.ActiveTimerKind
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
 import com.jvcs.tracky.core.domain.util.Result
@@ -296,9 +298,80 @@ internal class OfflineFirstTaskRepositoryTest {
 
         f.taskRepository.stopProjectTask("t1")
 
-        // The interval carries the measured span; the task carries the total and the cleared flag.
-        assertEquals(listOf("i1"), f.remoteInterval.updatedIntervalIds)
+        // The interval's close now goes through the timer resource — a compare-and-swap naming the
+        // interval — rather than a blind PUT to the interval route. The task still carries the
+        // accumulated total and the cleared flag, and still goes the ordinary way.
+        val (intervalId, kind, endedAt) = f.activeTimer.stops.single()
+        assertEquals("i1", intervalId)
+        assertEquals(ActiveTimerKind.TASK, kind)
+        // The instant the interval was actually closed at, not "now" read a second time.
+        assertEquals(Instant.fromEpochMilliseconds(70_000), endedAt)
         assertEquals(listOf("t1"), f.remoteTask.updatedTaskIds)
         assertFalse(f.db.tasks.getValue("t1").isTimerRunning)
+    }
+
+    @Test
+    fun startProjectTask_announcesTheOpenedIntervalToTheServer() = runBlocking<Unit> {
+        val f = fixture()
+        f.taskRepository.upsertProjectTask(task("t1"))
+
+        f.taskRepository.startProjectTask("t1")
+
+        // The server closes whatever was running on the user's other devices at this start.
+        val (taskInterval, subTaskInterval) = f.activeTimer.starts.single()
+        assertEquals("i1", taskInterval.intervalId)
+        assertNull(subTaskInterval)
+    }
+
+    @Test
+    fun startProjectTask_skipsTheServer_whenTheTaskItselfIsStillQueuedForCreation() = runBlocking<Unit> {
+        // A task that exists only here has no server-side row for the timer resource to hang off,
+        // so the start goes on the interval queue instead of spending a doomed request.
+        val f = fixture()
+        f.remoteTask.failWith = DataError.Remote.NO_INTERNET
+        f.taskRepository.upsertProjectTask(task("t1"))
+
+        f.taskRepository.startProjectTask("t1")
+
+        assertTrue(f.activeTimer.starts.isEmpty())
+        assertTrue(f.queue.all().any { it.entityType == PendingSyncOperation.ENTITY_INTERVAL })
+    }
+
+    @Test
+    fun stopProjectTask_neverBanksTheDuration_whenAnotherDeviceStartedTheTimer() = runBlocking<Unit> {
+        // The sharpest double-count risk in the feature. stopTask is what calls addTaskDuration,
+        // and the server's task row already carries a foreign timer's time — running it here too
+        // would charge the user twice for the same minutes.
+        val f = fixture()
+        f.taskRepository.upsertProjectTask(task("t1"))
+        f.taskRepository.startProjectTask("t1")
+        f.db.intervals["i1"] = f.db.intervals.getValue("i1")
+            .copy(startedByDeviceId = FakeDeviceIdProvider.OTHER_DEVICE)
+        val bankedBefore = f.db.tasks.getValue("t1").durationMillis
+        f.localTask.clock = Instant.fromEpochMilliseconds(70_000)
+
+        f.taskRepository.stopProjectTask("t1")
+
+        assertEquals(bankedBefore, f.db.tasks.getValue("t1").durationMillis)
+        // The local row is left open: the echo closes it, at the instant the server recorded.
+        assertNull(f.db.intervals.getValue("i1").endDateTimeUtc)
+        // And the stop still reached the server, which is the whole point of the feature.
+        assertEquals("i1", f.activeTimer.stops.single().first)
+    }
+
+    @Test
+    fun stopProjectTask_banksNormally_whenThisDeviceStartedTheTimer() = runBlocking<Unit> {
+        // The other half of the guard: a null device id means "this device", so the ordinary
+        // local close and bank must still happen for every row written before the column existed.
+        val f = fixture()
+        f.taskRepository.upsertProjectTask(task("t1"))
+        f.taskRepository.startProjectTask("t1")
+        f.db.intervals["i1"] = f.db.intervals.getValue("i1").copy(startedByDeviceId = null)
+        f.localTask.clock = Instant.fromEpochMilliseconds(70_000)
+
+        f.taskRepository.stopProjectTask("t1")
+
+        assertEquals(60_000, f.db.tasks.getValue("t1").durationMillis)
+        assertNotNull(f.db.intervals.getValue("i1").endDateTimeUtc)
     }
 }
