@@ -21,7 +21,15 @@ import kotlin.time.Duration.Companion.minutes
 data class TimerState(
     val isRunning: Boolean = false,
     val totalDuration: Duration = Duration.ZERO,
-    val formattedTime: String = "00:00:00"
+    val formattedTime: String = "00:00:00",
+    /**
+     * True when another device started this timer. It still ticks and still shows the right
+     * number; what changes is what may be done to it, since pause is stop-then-start and pausing
+     * a timer another device is running would globally stop it.
+     */
+    val isForeign: Boolean = false,
+    /** True when [totalDuration] is frozen at the last figure the server confirmed. */
+    val isStale: Boolean = false
 )
 
 /** The running timer together with its live elapsed value. */
@@ -106,7 +114,11 @@ class TimeManager(
                     tick.timer.timedEntityId to TimerState(
                         isRunning = true,
                         totalDuration = tick.elapsed,
-                        formattedTime = tick.formatted
+                        formattedTime = tick.formatted,
+                        // Carried through rather than dropped here: this projection is what every
+                        // screen reads, so anything it leaves out is invisible to the whole UI.
+                        isForeign = tick.timer.isForeign,
+                        isStale = tick.isStale
                     )
                 )
             }
@@ -120,7 +132,7 @@ class TimeManager(
         /**
          * Three missed pull cycles, so one failed sync does not freeze a healthy timer.
          *
-         * `ProjectSyncManager` pulls at most every five minutes while online and foregrounded, so
+         * `ProjectSyncManager` pulls every thirty seconds while online and foregrounded, so
          * anything past this means the device has genuinely stopped hearing from the server rather
          * than merely being between polls.
          */

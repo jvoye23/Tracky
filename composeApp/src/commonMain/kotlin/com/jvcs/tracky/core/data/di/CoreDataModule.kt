@@ -18,6 +18,10 @@ import com.jvcs.tracky.core.database.DatabaseFactory
 import com.jvcs.tracky.core.database.TrackyDatabase
 import com.jvcs.tracky.core.domain.auth.AuthService
 import com.jvcs.tracky.core.domain.auth.SessionStorage
+import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
+import com.jvcs.tracky.core.domain.lifecycle.AppLifecycleObserver
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import com.jvcs.tracky.core.domain.device.DeviceIdProvider
 import com.jvcs.tracky.core.domain.auth.SocialAuthProvider
 import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource
@@ -32,6 +36,14 @@ import com.jvcs.tracky.features.project.domain.timer.StrandedTimerRepository
 import com.jvcs.tracky.core.domain.sync.DeltaSyncApplier
 import com.jvcs.tracky.core.domain.sync.RemoteSyncDataSource
 import com.jvcs.tracky.core.domain.sync.SyncCursorStore
+import com.jvcs.tracky.core.data.networking.ApiConfig
+import com.jvcs.tracky.core.data.networking.dto.RealtimeEnvelopeParser
+import com.jvcs.tracky.core.data.networking.realtimeUrl
+import com.jvcs.tracky.core.data.realtime.KtorRealtimeChannel
+import com.jvcs.tracky.core.domain.realtime.RealtimeChannel
+import com.jvcs.tracky.core.domain.realtime.RealtimeConnectivity
+import com.jvcs.tracky.core.domain.realtime.RealtimeTimerConnection
+import com.jvcs.tracky.core.domain.sync.SyncPullCoordinator
 import com.jvcs.tracky.core.domain.sync.SyncRecency
 import com.jvcs.tracky.core.domain.sync.SyncRepository
 import com.jvcs.tracky.core.domain.util.ServerClock
@@ -205,7 +217,7 @@ val coreDataModule = module {
     single(createdAtStart = true) {
         StrandedTimerReconciler(
             projectDao = get(),
-            timeProvider = get(),
+            serverClock = get(),
             deviceIdProvider = get(),
             applicationScope = get(qualifier = named("AppScope"))
         )
@@ -216,10 +228,8 @@ val coreDataModule = module {
             connectivityObserver = get(),
             appLifecycleObserver = get(),
             syncRepository = get(),
-            deltaSyncApplier = get(),
-            syncRecency = get(),
+            pullCoordinator = get(),
             applicationScope = get(qualifier = named("AppScope")),
-            timeProvider = get(),
         )
     }
 
@@ -282,6 +292,41 @@ val coreDataModule = module {
 
     // How far this device has read the server's change feed. Cleared on logout.
     singleOf(::DataStoreSyncCursorStore) bind SyncCursorStore::class
+    single<RealtimeChannel> {
+        KtorRealtimeChannel(
+            httpClient = get(),
+            // ApiConfig is generated and internal to this module, so this is the one place that
+            // reads it besides constructRoute.
+            url = realtimeUrl(ApiConfig.BASE_URL)
+        )
+    }
+    single { RealtimeEnvelopeParser(json = get()) }
+    single { RealtimeConnectivity() }
+    single(createdAtStart = true) {
+        RealtimeTimerConnection(
+            channel = get(),
+            parser = get(),
+            deviceIdProvider = get(),
+            syncCursorStore = get(),
+            pullCoordinator = get(),
+            connectivity = get(),
+            json = get(),
+            isOnline = get<ConnectivityObserver>().isConnected,
+            isInForeground = get<AppLifecycleObserver>().isInForeground,
+            // A socket without a session is refused by the server anyway; gating on it here means
+            // logging out tears the connection down without anyone having to remember to.
+            isAuthenticated = get<SessionStorage>().observeAuthInfo()
+                .map { !it?.accessToken.isNullOrBlank() }
+                .distinctUntilChanged(),
+            applicationScope = get(qualifier = named("AppScope"))
+        )
+    }
+    single {
+        SyncPullCoordinator(
+            deltaSyncApplier = get(),
+            applicationScope = get(qualifier = named("AppScope"))
+        )
+    }
     singleOf(::KtorRemoteSyncDataSource) bind RemoteSyncDataSource::class
     single {
         DeltaSyncApplier(
@@ -290,7 +335,8 @@ val coreDataModule = module {
             projectRepository = get(),
             syncCursorStore = get(),
             serverClock = get(),
-            timeProvider = get()
+            timeProvider = get(),
+            syncRecency = get()
         )
     }
 

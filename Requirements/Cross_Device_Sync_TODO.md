@@ -403,17 +403,99 @@ Flag to whoever owns the Swift side: `KoinHelper`'s exported `onTimerNotificatio
 `onTimerNotificationResume` keep their signatures but become "may do nothing" for a foreign timer,
 so the Live Activity may need to hide those buttons. Out of scope for phases 1–2.
 
-### 3. Phases 3 to 5 — specced only
+### 3. Phases 3 to 5 — phase 3 is half done
 
 | Phase | Contents | Backend |
 |---|---|---|
-| 3 | WebSocket (foreground) + FCM/APNs (background) + ActivityKit push for the Live Activity | `backend-realtime-and-devices-api.md`, not implemented |
+| 3a | WebSocket while foregrounded — **DONE** client-side, `61b3381` | `backend-realtime-and-devices-api.md` §1–§2, deployed and verified live |
+| 3b | FCM/APNs silent push (§3) + ActivityKit push for the Live Activity (§4) | not implemented on either side; see "4. The Live Activity keeps running" below |
 | 4 | RevenueCat, entitlement gate, paywall, settings screen | `backend-pro-entitlement-api.md`, not implemented |
 | 5 | Anonymous mode, optional login, bulk import on upgrade, trial + downgrade | uses `POST /api/sync/import` |
 
 Phase 5 is larger than it looks: the app currently requires a session
 (`ProjectOverviewViewModel.observeProjects()` gates on it) and logout wipes the local database.
 Both must change before an anonymous tier is possible.
+
+### 4. The Live Activity keeps running after another device stops the timer — OPEN
+
+Found in two-device E2E on **2026-09-23**. Android is device A, iOS is device B with its app
+**backgrounded** and a Live Activity on the Lock Screen:
+
+> "when I stop the task on Device A the LiveActivity on iOS continues running"
+
+Diagnosed, not fixed. **Nothing was built** — see "why no mitigation" below.
+
+#### Why it happens
+
+The chain that ends a Live Activity is:
+
+```
+server → pull (DeltaSyncApplier) → Room interval row closed
+       → observeRunningTimer() emits null → controller.dismiss()
+       → live.end(nil, dismissalPolicy: .immediate)
+```
+
+Backgrounding cuts it at the first arrow, and every link that could restore it is absent:
+
+- `ProjectSyncManager.kt:49-71` and `RealtimeTimerConnection.kt:72-86` both `flatMapLatest` on
+  `isInForeground`, so backgrounding cancels the poll and tears the socket down outright.
+- Both `BGTaskScheduler` handlers are **push-only**. `KoinHelper.runSync` (`:115-130`) calls
+  `syncPendingOperations()` — an outbox drain — and never pulls. `IosSyncScheduler.kt:27` also puts
+  `earliestBeginDate` 6 hours out, so it could not help even if it did.
+- There is no APNs plumbing at all: no `registerForRemoteNotifications`, no `aps-environment`, **no
+  `.entitlements` file in the repo**, `UIBackgroundModes` is `fetch, processing` with no
+  `remote-notification`, and `LiveActivityBridgeImpl.swift:37` requests the activity with
+  `pushType: nil`, so it holds no push token.
+
+`TimerNotificationCoordinator` is *not* foreground-gated — it keeps collecting on `AppScope` the
+whole time. It simply never hears anything. The card ticks on until the user foregrounds the app, or
+until iOS reaps the activity at ~8 hours.
+
+The server is not at fault: `GET /api/timer/active` returned **204** while the card was still
+running. The stop landed; only device B's card was stale.
+
+**Scope:** backgrounded apps only. Foregrounded, the socket delivers in ~1s and the card ends
+correctly. Android is unaffected — its notification is driven by the same Room flow, but `SyncWorker`
+and a foregrounded app cover it.
+
+#### The fix: ActivityKit push, spec §4
+
+`backend-realtime-and-devices-api.md` §4 says it outright: *"This is the only channel that works when
+the other device's app has been killed."* A Live Activity is drawn out of process; a push to its own
+token updates it with the app not running at all.
+
+**Blocked on: a paid Apple Developer account.** Everything below waits behind that, because a Live
+Activity push token *is* an APNs token. As of 2026-09-23 there is no paid account.
+
+Then, in order:
+
+1. Push Notifications capability + an `aps-environment` entitlement. No `.entitlements` file exists
+   yet. **Read the `TEAM_ID` / `PRODUCT_BUNDLE_IDENTIFIER` trap in the iOS Live Activity notes before
+   touching signing config** — `TEAM_ID` is interpolated into the bundle id, so giving it a value
+   renames both the app and the widget extension.
+2. Client: observe `Activity.pushTokenUpdates`, register it through `POST /api/devices` as
+   `liveActivityToken`, and clear it when the activity ends. **Device registration does not exist
+   client-side at all today** — the realtime socket deliberately skipped it, because fan-out excludes
+   the originator by the `deviceId` sent in `hello`, not by a registry row. `DeviceIdProvider`
+   already mints the stable UUID the endpoint wants.
+3. Backend: an APNs key, and `apns-push-type: liveactivity` on a timer transition. A stop must send a
+   push that **ends** the activity, not one that merely marks it not-running.
+
+Two traps, recorded now so they are not rediscovered:
+
+- `ContentState.startedAt` is a Swift `Date`, and `JSONDecoder`'s default strategy reads a bare
+  number as seconds since **2001**, not 1970. The payload encoding must be agreed against
+  `iosApp/Shared/TrackyTimerAttributes.swift` — §4 already says that is the client team's call.
+- §3 (silent background push) is unreliable by Apple's design; the spec itself says "assume it will
+  sometimes not be delivered". Do §4 first. §3 is not a stepping stone to it.
+
+#### Why no mitigation was shipped
+
+A `staleDate` on the `ActivityContent` was designed and rejected on 2026-09-23. ActivityKit evaluates
+it out of process, so it would have worked without the app running, and the card would have marked
+itself unconfirmed after `SyncRecency`'s 15-minute horizon. But the card still would not stop, which
+is the actual complaint — it would only have turned a confident lie into a hedged one. Deliberately
+not built, so the real gap stays visible.
 
 ---
 
@@ -462,3 +544,13 @@ Both must change before an anonymous tier is possible.
   entitlement via RevenueCat, proposed, since it is specified but not built.
 - Nothing in the stack is pushed. Per the workflow, push once the stack is finished — arguably now,
   since phase 1 is complete and phase 2 is a separate stack.
+- **Two comments went stale when `stopForeignTimer` shipped (`0db77ed`)**, and both were true when
+  written. Fix them alongside the ActivityKit push work, since that is when the reasoning matters:
+  - `LiveActivityBridgeImpl.swift:18-21`, justifying `staleDate: nil` — *"The clock ticks locally, so
+    nothing here goes stale in the way a pushed score would."* It can go stale now: another device
+    can stop the timer.
+  - `TimeManager.kt:86-88` — *"Only a foreign timer can go stale. One this device started is running
+    because this device is running it."* A locally-started timer can also be stopped from elsewhere.
+    The on-screen behaviour is nonetheless left as it is on purpose: freezing a local timer's display
+    whenever the device has been offline 15 minutes would be wrong far more often than right. It is
+    the *comment's reasoning* that no longer holds, not the choice.

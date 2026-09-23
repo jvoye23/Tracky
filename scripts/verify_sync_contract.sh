@@ -228,9 +228,18 @@ CUR=$(jq -r .cursor "$TMP/r.json")
 RCDEL=$(req DELETE "/api/projects/$P")
 chk "delete the probe project" "$([ "$RCDEL" -lt 300 ] && echo ok || echo "$RCDEL")" ok
 req GET "/api/sync/changes?since=$CUR" >/dev/null
-for pair in "project:$P" "task:$T" "subtask:$ST" "interval:$A" "subtask interval:$STI"; do
-  chk "tombstone for the ${pair%%:*}" \
-    "$(jq -r --arg i "${pair##*:}" 'if ([.tombstones[].entityId]|index($i)) != null then "yes" else "no" end' "$TMP/r.json")" yes
+# The entityType is checked, not just the id. Matching on the id alone is what let a real bug
+# through: the client groups tombstones by this exact string to decide which table to delete from,
+# it was using the outbox's local table names, and those disagree with the wire on `task` and
+# `sub_task`. Every task and subtask deleted on one device stayed on the others, and this script
+# said the server was fully compliant throughout — which it was. See Tombstone's companion.
+for triple in "project:$P:project" "task:$T:task" "subtask:$ST:sub_task" \
+              "interval:$A:task_interval" "subtask interval:$STI:sub_task_interval"; do
+  label="${triple%%:*}"; rest="${triple#*:}"; id="${rest%%:*}"; want="${rest##*:}"
+  chk "tombstone for the $label" \
+    "$(jq -r --arg i "$id" 'if ([.tombstones[].entityId]|index($i)) != null then "yes" else "no" end' "$TMP/r.json")" yes
+  chk "  and the client will read it as \"$want\"" \
+    "$(jq -r --arg i "$id" '[.tombstones[]|select(.entityId==$i)|.entityType]|first // "missing"' "$TMP/r.json")" "$want"
 done
 
 printf '\n==== %s passed, %s failed ====\n' "$PASS" "$FAIL"

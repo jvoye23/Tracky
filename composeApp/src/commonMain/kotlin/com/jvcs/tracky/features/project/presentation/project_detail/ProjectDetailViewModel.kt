@@ -65,7 +65,15 @@ class ProjectDetailViewModel(
     val events = eventChannel.receiveAsFlow()
 
     private var hasLoadedInitialData = false
-    private var hasShownScreen = false
+
+    /**
+     * True from the first move of a drag until the reorder it produced is written (or abandoned).
+     * Only while this holds may the displayed order outrank the database's.
+     *
+     * This became necessary when the task tree started being streamed: while it was read once and
+     * refreshed by hand, nothing could arrive mid-drag and replay the move. Now something can.
+     */
+    private var reorderInFlight = false
 
     /**
      * The locally held state folded over the live project row.
@@ -73,10 +81,14 @@ class ProjectDetailViewModel(
      * The row is streamed rather than read once because the title and description are edited on
      * their own screen: that ViewModel writes straight to the database, and this entry stays on the
      * back stack with its state intact, so a snapshot taken on entry would still be on screen after
-     * the user navigates back. The task tree is deliberately not part of the stream — it stays on
-     * the one-shot [getProject] read, so the timer values [updateUiWithTimerValues] maintains are
-     * never overwritten by a row change. Edits made on the edit-text screen reach it through
-     * [refreshTaskTree] instead, when the screen is shown again.
+     * the user navigates back.
+     *
+     * The task tree is streamed too, by [observeTaskTree], for the same reason a second device
+     * makes urgent: a sync pull writes another device's rows straight into Room, and a screen that
+     * only re-read its tree when it was returned to would sit there showing figures from whenever
+     * the user last opened it. It used to be a one-shot read guarded by [updateUiWithTimerValues]
+     * clobbering; the overlay is now re-applied after every adoption instead, which gets the same
+     * protection without the staleness.
      */
     val state = combine(
         _state,
@@ -103,6 +115,7 @@ class ProjectDetailViewModel(
         )
 
     init {
+        if (projectId != null) observeTaskTree(projectId)
         viewModelScope.launch {
             // A stop leaves the card showing the last second the ticker drew, up to a second below
             // the exact figure banked into the row. Re-reading the project here to close that gap
@@ -136,18 +149,25 @@ class ProjectDetailViewModel(
             is ProjectDetailAction.OnSubTaskCheckedChange -> {onSubTaskCheckedChange(action.subTaskId)}
             is ProjectDetailAction.OnToggleTaskExpanded -> {toggleTaskExpanded(action.taskId)}
             is ProjectDetailAction.OnTaskReorderMove -> {
+                reorderInFlight = true
                 _state.update { it.withTaskMoved(action.fromTaskId, action.toTaskId) }
             }
             ProjectDetailAction.OnTaskReorderCommit -> {commitTaskReorder()}
-            ProjectDetailAction.OnTaskReorderCancel -> {reloadTasksFromDatabase()}
+            ProjectDetailAction.OnTaskReorderCancel -> {
+                reorderInFlight = false
+                reloadTasksFromDatabase()
+            }
             is ProjectDetailAction.OnSubTaskReorderMove -> {
+                reorderInFlight = true
                 _state.update {
                     it.withSubTaskMoved(action.taskId, action.fromSubTaskId, action.toSubTaskId)
                 }
             }
             is ProjectDetailAction.OnSubTaskReorderCommit -> {commitSubTaskReorder(action.taskId)}
-            ProjectDetailAction.OnSubTaskReorderCancel -> {reloadTasksFromDatabase()}
-            ProjectDetailAction.OnReturnedToScreen -> {onReturnedToScreen()}
+            ProjectDetailAction.OnSubTaskReorderCancel -> {
+                reorderInFlight = false
+                reloadTasksFromDatabase()
+            }
             ProjectDetailAction.OnToggleColorPicker -> {toggleColorPicker()}
             is ProjectDetailAction.OnColorChanged -> {onColorChanged(action.color)}
             is ProjectDetailAction.OnUseLightTextColorToggled -> {onUseLightTextColorToggled(action.useLightTextColor)}
@@ -172,10 +192,11 @@ class ProjectDetailViewModel(
                     if (subTaskTimerState != null && subTaskTimerState.isRunning) {
                         subTask.copy(
                             durationMillis = subTaskTimerState.totalDuration.inWholeMilliseconds,
-                            isTimerRunning = true
+                            isTimerRunning = true,
+                            isForeign = subTaskTimerState.isForeign
                         )
                     } else {
-                        subTask.copy(isTimerRunning = false)
+                        subTask.copy(isTimerRunning = false, isForeign = false)
                     }
                 }
 
@@ -185,6 +206,8 @@ class ProjectDetailViewModel(
                 if (task.subTasks.isNotEmpty()) {
                     task.copy(
                         isTimerRunning = updatedSubTasks.any { it.isTimerRunning },
+                        // A task timed through its subtasks inherits their provenance.
+                        isForeign = updatedSubTasks.any { it.isTimerRunning && it.isForeign },
                         subTasks = updatedSubTasks
                     )
                 } else if (timerState != null && timerState.isRunning) {
@@ -192,6 +215,7 @@ class ProjectDetailViewModel(
                     task.copy(
                         durationMillis = timerState.totalDuration.inWholeMilliseconds,
                         isTimerRunning = timerState.isRunning,
+                        isForeign = timerState.isForeign,
                         subTasks = updatedSubTasks
                     )
                 } else {
@@ -199,13 +223,19 @@ class ProjectDetailViewModel(
                     // This prevents "flickering" back to 0s if the timer stops
                     task.copy(
                         isTimerRunning = false,
+                        isForeign = false,
                         subTasks = updatedSubTasks
                     )
                 }
             }
 
+            // At most one timer runs per user, so the project's provenance is whichever entry in
+            // the map is running -- there is never more than one to disagree with.
+            val live = activeTimersMap.values.firstOrNull { it.isRunning }
             currentState.copy(
-                project = currentProject.copy(projectTasks = updatedTasks)
+                project = currentProject.copy(projectTasks = updatedTasks),
+                isRunningTimerForeign = live?.isForeign == true,
+                isRunningTimerStale = live?.isStale == true
             )
         }
     }
@@ -643,11 +673,8 @@ class ProjectDetailViewModel(
     }
 
     /**
-     * Writes the order the drag settled on.
-     *
-     * Unlike the project overview this needs no in-flight guard: [withProjectRow] never rewrites
-     * project.projectTasks, so nothing can arrive mid-drag and replay the move. The displayed order
-     * simply is the order, until a failed write sends us back to the database for it.
+     * Writes the order the drag settled on, and releases the in-flight guard once it is written —
+     * after that the database is authoritative again and an arriving tree may be adopted.
      */
     private fun commitTaskReorder() {
         val projectId = projectId ?: return
@@ -660,6 +687,7 @@ class ProjectDetailViewModel(
                     reloadTasksFromDatabase()
                     eventChannel.send(ProjectDetailEvent.ReorderError(error.toUiText()))
                 }
+            reorderInFlight = false
         }
     }
 
@@ -673,41 +701,41 @@ class ProjectDetailViewModel(
                     reloadTasksFromDatabase()
                     eventChannel.send(ProjectDetailEvent.ReorderError(error.toUiText()))
                 }
+            reorderInFlight = false
         }
-    }
-
-    private fun onReturnedToScreen() {
-        // The first call is the screen's initial composition, which getProject already covers.
-        if (!hasShownScreen) {
-            hasShownScreen = true
-            return
-        }
-        refreshTaskTree()
     }
 
     /**
-     * Re-reads the task tree after another screen may have written to it - a renamed task or
-     * subtask, or a subtask created on the edit-text screen.
+     * Keeps the task tree level with the database, whoever wrote to it — the edit-text screen, an
+     * optimistic write of our own, or a sync pull carrying another device's rows.
      *
-     * Unlike getProject this replaces only the tasks and the per-day strip: the colour, contrast
-     * and edit mode are left alone, so a colour pick the user has not saved yet survives. Running
-     * timers show their stored value until the next tick of timeManager repaints them.
+     * Replaces only the tasks and the per-day strip: the colour, contrast and edit mode are left
+     * alone, so a colour pick the user has not saved yet survives an arrival.
      */
-    private fun refreshTaskTree() {
-        val projectId = projectId ?: return
-        viewModelScope.launch(ioDispatcher) {
-            val fresh = projectRepository.getProjectWithTasksByProjectId(projectId) ?: return@launch
-            val freshTasks = fresh.toProjectUi().projectTasks
-            _state.update { current ->
-                val project = current.project ?: return@update current
-                current.copy(
-                    project = project.copy(projectTasks = freshTasks),
-                    perDayStrip = fresh.perDayStrip()
-                )
+    private fun observeTaskTree(projectId: String) {
+        viewModelScope.launch {
+            projectRepository.observeProjectWithTaskTreeById(projectId).collect { fresh ->
+                if (fresh == null) return@collect
+                // A drag is the one time the order on screen outranks the order in the database.
+                if (reorderInFlight) return@collect
+
+                val freshTasks = fresh.toProjectUi().projectTasks
+                _state.update { current ->
+                    val project = current.project ?: return@update current
+                    current.copy(
+                        project = project.copy(projectTasks = freshTasks),
+                        perDayStrip = fresh.perDayStrip()
+                    )
+                }
+                // The tree carries what the row banked; the ticker carries what is accruing now.
+                // Re-applying the overlay here is what lets the tree be streamed at all: without
+                // it every arrival would snap a running timer back to its stored value.
+                updateUiWithTimerValues(timeManager.taskStates.value)
+
+                // A subtask created elsewhere is open, so a finished parent re-opens - the escape
+                // route out of the uncheck-blocked dialog that the inline draft row used to provide.
+                freshTasks?.forEach { syncTaskFinishedFromSubTasks(it.projectTaskId) }
             }
-            // A subtask created elsewhere is open, so a finished parent re-opens - the escape
-            // route out of the uncheck-blocked dialog that the inline draft row used to provide.
-            freshTasks?.forEach { syncTaskFinishedFromSubTasks(it.projectTaskId) }
         }
     }
 

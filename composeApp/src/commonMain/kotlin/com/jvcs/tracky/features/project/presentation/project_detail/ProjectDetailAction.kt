@@ -65,7 +65,6 @@ sealed interface ProjectDetailAction {
      * The screen is showing again, after the edit-text screen (or any other) was popped off it.
      * That screen writes straight to the database, so the task tree is re-read.
      */
-    data object OnReturnedToScreen: ProjectDetailAction
     data object OnToggleColorPicker: ProjectDetailAction
     data class OnColorChanged(val color: Color): ProjectDetailAction
     data class OnUseLightTextColorToggled(val useLightTextColor: Boolean): ProjectDetailAction

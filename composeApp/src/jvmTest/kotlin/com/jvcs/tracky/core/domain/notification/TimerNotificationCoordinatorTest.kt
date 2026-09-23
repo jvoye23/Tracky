@@ -194,7 +194,7 @@ internal class TimerNotificationCoordinatorTest {
     @Test
     fun pauseDoesNothingToATimerAnotherDeviceIsRunning() = runTest {
         // Pause is stop-then-start, so pausing a foreign timer would globally stop it — that is
-        // Stop, not Pause. Until the surfaces hide the button, doing nothing is the honest answer.
+        // Stop, not Pause. The surfaces hide the button; this is the belt to that's braces.
         reconciled.complete(Unit)
         runningTimer.value = taskTimer.copy(isForeign = true)
         val coordinator = coordinator()
@@ -207,6 +207,30 @@ internal class TimerNotificationCoordinatorTest {
         assertTrue(stoppedSubTaskIds.isEmpty())
         // And the card keeps showing it running, because it is.
         assertTrue(controller.shown.last().isRunning)
+    }
+
+    /**
+     * The flag has to reach the session or neither surface can hide anything: the notification and
+     * the Live Activity both read it from there and nowhere else.
+     */
+    @Test
+    fun tellsTheSurfacesWhenTheTimerIsAnotherDevices() = runTest {
+        reconciled.complete(Unit)
+        runningTimer.value = taskTimer.copy(isForeign = true)
+        coordinator()
+        settle()
+
+        assertTrue(controller.shown.last().isForeign)
+    }
+
+    @Test
+    fun aTimerThisDeviceStartedIsNotMarkedForeign() = runTest {
+        reconciled.complete(Unit)
+        runningTimer.value = taskTimer
+        coordinator()
+        settle()
+
+        assertFalse(controller.shown.last().isForeign)
     }
 
     @Test

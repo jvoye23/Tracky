@@ -1,8 +1,8 @@
 package com.jvcs.tracky.features.project.data.project
 
 import com.jvcs.tracky.core.database.dao.ProjectDao
-import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
 import com.jvcs.tracky.core.domain.sync.SyncChanges
+import com.jvcs.tracky.core.domain.sync.Tombstone
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
@@ -73,6 +73,9 @@ class RoomLocalProjectDataSource (
         projectDao.getProjectWithTaskTreeById(projectId)?.toProject()
     }
 
+    override fun observeProjectWithTaskTreeById(projectId: String): Flow<Project?> =
+        projectDao.observeProjectWithTaskTreeById(projectId).map { it?.toProject() }
+
     override suspend fun getSortIndices(): Result<Map<String, Long?>, DataError.Local> = read {
         projectDao.getSortIndices().associate { it.projectId to it.sortIndex }
     }
@@ -116,14 +119,21 @@ class RoomLocalProjectDataSource (
             intervals = changes.taskIntervals.map { it.toTaskIntervalEntity() },
             subTasks = changes.subTasks.map { it.toProjectSubTaskEntity() },
             subTaskIntervals = changes.subTaskIntervals.map { it.toSubTaskIntervalEntity() },
-            deletedProjectIds = deletions[PendingSyncOperation.ENTITY_PROJECT].orEmpty(),
-            deletedTaskIds = deletions[PendingSyncOperation.ENTITY_TASK].orEmpty(),
-            deletedIntervalIds = deletions[PendingSyncOperation.ENTITY_INTERVAL].orEmpty(),
-            deletedSubTaskIds = deletions[PendingSyncOperation.ENTITY_SUBTASK].orEmpty(),
-            deletedSubTaskIntervalIds = deletions[PendingSyncOperation.ENTITY_SUBTASK_INTERVAL].orEmpty()
+            deletedProjectIds = deletions[Tombstone.PROJECT].orEmpty(),
+            deletedTaskIds = deletions[Tombstone.TASK].orEmpty(),
+            deletedIntervalIds = deletions[Tombstone.TASK_INTERVAL].orEmpty(),
+            deletedSubTaskIds = deletions[Tombstone.SUB_TASK].orEmpty(),
+            deletedSubTaskIntervalIds = deletions[Tombstone.SUB_TASK_INTERVAL].orEmpty()
         )
-        // An entityType this build does not recognise is simply absent from the map above. A
-        // newer server knowing about a kind of row this one does not is not a reason to fail.
+        // These are the *wire's* names, not the outbox's — see Tombstone's companion, which is
+        // where they used to come from and where two of the five were wrong.
+        //
+        // An entityType this build does not recognise is simply absent from the map above, so a
+        // newer server knowing about a kind of row this one does not is not a reason to fail. That
+        // tolerance is only safe while the five names above are known to be right: it cannot tell a
+        // future level from a misspelt current one, which is exactly how task and subtask deletions
+        // went missing without a single error. RoomLocalProjectDataSourceTombstoneTest pins each
+        // name against the spec for that reason.
     }
 
     override suspend fun applyTimerEcho(

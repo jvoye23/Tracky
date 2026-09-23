@@ -10,6 +10,7 @@ import com.jvcs.tracky.core.domain.auth.AuthService
 import com.jvcs.tracky.core.domain.auth.SessionStorage
 import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
 import com.jvcs.tracky.features.project.domain.models.Project
+import com.jvcs.tracky.core.domain.sync.DeltaSyncApplier
 import com.jvcs.tracky.core.domain.sync.SyncCursorStore
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.Result
@@ -60,6 +61,7 @@ class ProjectOverviewViewModel(
     private val authService: AuthService,
     private val connectivityObserver: ConnectivityObserver,
     private val syncCursorStore: SyncCursorStore,
+    private val deltaSyncApplier: DeltaSyncApplier,
     private val applicationScope: CoroutineScope
 ): ViewModel() {
 
@@ -381,10 +383,19 @@ class ProjectOverviewViewModel(
         }
     }
 
+    /**
+     * A delta rather than a full tree, so a refresh leaves the device in the same state a synced
+     * one is in: cursor advanced, recency stamped. Pulling the whole tree here did bring fresh
+     * rows in, but it walked past the cursor and past [SyncRecency] both, which left a timer
+     * adopted by refresh believing it had not heard from the server since launch.
+     *
+     * Nothing is lost by the switch: the applier falls back to the full tree whenever the feed is
+     * unusable.
+     */
     private fun refreshProjectsFromServer() {
         viewModelScope.launch {
             _state.update { it.copy(isRefreshing = true) }
-            projectRepository.fetchProjects()
+            deltaSyncApplier.pullChanges()
                 .onFailure { error ->
                     eventChannel.send(ProjectOverviewEvent.Error(error.toUiText()))
                 }

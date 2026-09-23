@@ -10,6 +10,7 @@ import com.jvcs.tracky.core.database.entity.SubTaskIntervalEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 import com.jvcs.tracky.core.domain.device.FakeDeviceIdProvider
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
+import com.jvcs.tracky.core.domain.util.testServerClock
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -46,7 +47,7 @@ internal class StrandedTimerReconcilerTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
             .build()
-        reconciler = StrandedTimerReconciler(db.projectDao, timeProvider, FakeDeviceIdProvider(), TestScope())
+        reconciler = StrandedTimerReconciler(db.projectDao, testServerClock(timeProvider), FakeDeviceIdProvider(), TestScope())
     }
 
     @AfterTest

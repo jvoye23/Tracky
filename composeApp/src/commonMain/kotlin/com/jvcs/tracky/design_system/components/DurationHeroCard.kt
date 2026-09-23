@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -32,7 +33,12 @@ fun DurationHeroCard(
     totalDuration: String,
     projectColor: Color,
     useLightTextColor: Boolean,
-    onStartStopClick: () -> Unit
+    onStartStopClick: () -> Unit,
+    /**
+     * Shown under the figure when it is not this device's to explain. Null draws nothing, so the
+     * card keeps its height for the ordinary case.
+     */
+    caption: String? = null
 ) {
     val contentColor = if (useLightTextColor) Color.White else Color.Black
 
@@ -58,6 +64,15 @@ fun DurationHeroCard(
                 fontWeight = FontWeight.Bold,
                 color = contentColor
             )
+            if (caption != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = caption,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = contentColor.copy(alpha = 0.7f),
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }

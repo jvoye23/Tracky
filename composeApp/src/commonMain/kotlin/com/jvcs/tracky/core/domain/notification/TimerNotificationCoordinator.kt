@@ -112,7 +112,8 @@ class TimerNotificationCoordinator(
         subTask = subTask,
         elapsed = elapsedAt(now),
         asOf = now,
-        isRunning = true
+        isRunning = true,
+        isForeign = isForeign
     )
 
     private val PausedTimer.session: TimerNotificationSession

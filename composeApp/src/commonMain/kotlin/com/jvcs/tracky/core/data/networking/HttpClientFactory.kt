@@ -17,6 +17,7 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logging
+import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
@@ -43,6 +44,11 @@ class HttpClientFactory(
                 }
                 level = LogLevel.ALL
             }
+            // No pingInterval here on purpose. The server already pings every thirty seconds and
+            // drops a socket that misses two, and the plugin's own setting is not honoured by the
+            // engines that own the WS protocol themselves (OkHttp, Darwin) — configuring it here
+            // would buy a false sense of half-open detection rather than the real thing.
+            install(WebSockets)
             defaultRequest {
                 contentType(ContentType.Application.Json)
             }

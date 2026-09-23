@@ -65,7 +65,8 @@ private extension LiveActivityState {
             subTaskTitle: subTaskTitle,
             startedAt: Date(timeIntervalSince1970: startedAtEpochSeconds),
             elapsedSeconds: elapsedSeconds,
-            isRunning: isRunning
+            isRunning: isRunning,
+            isForeign: isForeign
         )
     }
 }

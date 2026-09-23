@@ -12,6 +12,7 @@ import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.device.FakeDeviceIdProvider
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
+import com.jvcs.tracky.core.domain.util.testServerClock
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.features.project.domain.interval.IntervalRepository
 import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
@@ -120,7 +121,7 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
         }
         timeProvider.now = Instant.fromEpochMilliseconds(detectedAt)
         StrandedTimerReconciler(
-            db.projectDao, timeProvider, FakeDeviceIdProvider(), kotlinx.coroutines.test.TestScope()
+            db.projectDao, testServerClock(timeProvider), FakeDeviceIdProvider(), kotlinx.coroutines.test.TestScope()
         )
             .reconcile()
     }

@@ -328,6 +328,7 @@ private class FakeEditTextProjectRepository(project: Project) : ProjectRepositor
     override suspend fun getProjectById(projectId: String): Project? = projectFlow.value
     override suspend fun getProjectWithTasksByProjectId(projectId: String): Project? = projectFlow.value
     override fun observeProjectById(projectId: String): Flow<Project?> = projectFlow
+    override fun observeProjectWithTaskTreeById(projectId: String): Flow<Project?> = projectFlow
 
     override suspend fun upsertProject(project: Project): EmptyResult<DataError> {
         upserted += project

@@ -85,8 +85,9 @@ class OfflineFirstActiveTimerRepository(
             )
         }
 
+        val sentAt = timeProvider.nowInstant
         return when (val result = remoteActiveTimerDataSource.start(request)) {
-            is Result.Success -> settle(result.data)
+            is Result.Success -> settle(result.data, midpoint(sentAt, timeProvider.nowInstant))
             is Result.Error -> fallBackToTheQueue(
                 intervalId = request.intervalId,
                 kind = request.kind,
@@ -103,9 +104,16 @@ class OfflineFirstActiveTimerRepository(
         intervalId: String,
         kind: ActiveTimerKind,
         endedAt: Instant
+    ): EmptyResult<DataError> = stopAt(intervalId, kind, endedAt, timeProvider.nowInstant)
+
+    private suspend fun stopAt(
+        intervalId: String,
+        kind: ActiveTimerKind,
+        endedAt: Instant,
+        sentAt: Instant
     ): EmptyResult<DataError> =
         when (val result = remoteActiveTimerDataSource.stop(intervalId, endedAt)) {
-            is Result.Success -> settle(result.data)
+            is Result.Success -> settle(result.data, midpoint(sentAt, timeProvider.nowInstant))
             is Result.Error -> fallBackToTheQueue(
                 intervalId = intervalId,
                 kind = kind,
@@ -127,8 +135,14 @@ class OfflineFirstActiveTimerRepository(
      * the guess `StrandedTimerReconciler` exists to refuse. A pull carries the real row, so that is
      * what is asked for.
      */
-    private suspend fun settle(change: ActiveTimerChange): EmptyResult<DataError> {
-        change.serverNow?.let { serverClock.observe(it, timeProvider.nowInstant) }
+    /** The instant halfway between a request leaving and its answer arriving. */
+    private fun midpoint(sentAt: Instant, receivedAt: Instant): Instant =
+        sentAt + (receivedAt - sentAt) / 2
+
+    private suspend fun settle(change: ActiveTimerChange, receivedAt: Instant): EmptyResult<DataError> {
+        // receivedAt, not "now": settle() runs after the round trip, so passing the current
+        // instant would credit the whole call's latency to clock skew.
+        change.serverNow?.let { serverClock.observe(it, receivedAt) }
 
         return when (change) {
             is ActiveTimerChange.Applied -> localProjectDataSource.applyTimerEcho(

@@ -1,6 +1,7 @@
 package com.jvcs.tracky.core.data.di
 
 import com.jvcs.tracky.core.domain.notification.TimerNotificationCoordinator
+import com.jvcs.tracky.core.domain.realtime.RealtimeTimerConnection
 import com.jvcs.tracky.core.domain.sync.ProjectSyncManager
 import com.jvcs.tracky.core.domain.sync.SyncRepository
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
@@ -26,6 +27,8 @@ fun startKoinIos() {
     // Before the sync manager: a pull must not land on intervals the pass has not parked yet.
     koin.get<StrandedTimerReconciler>().start()
     koin.get<ProjectSyncManager>().start()
+    // After it, so the poll is already running: the socket is the fast path, never the only one.
+    koin.get<RealtimeTimerConnection>().start()
     koin.get<TimerNotificationCoordinator>().start()
     koin.get<CoroutineScope>(named("AppScope")).launch {
         koin.get<SyncScheduler>().schedulePeriodicSyncOnStart()

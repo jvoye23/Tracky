@@ -64,7 +64,13 @@ data class ProjectTaskUi(
     val formattedEndDateTimeUtc: String,
     val isTimerRunning: Boolean,
     val subTasks: List<ProjectSubTaskUi>,
-    val isFinished: Boolean
+    val isFinished: Boolean,
+    /**
+     * True while this task's running timer belongs to another device. Pause is hidden for one:
+     * pausing is stop-then-start, so it would stop the other device's timer globally.
+     * Overlaid from TimeManager, never stored.
+     */
+    val isForeign: Boolean = false
 ) {
     val formattedDuration: String
         get() = formatDuration(durationMillis.milliseconds)
@@ -111,7 +117,9 @@ data class ProjectSubTaskUi(
     val formattedStartDateTime: String,
     val formattedEndDateTimeUtc: String?,
     val isTimerRunning: Boolean,
-    val isFinished: Boolean
+    val isFinished: Boolean,
+    /** See [ProjectTaskUi.isForeign]. */
+    val isForeign: Boolean = false
 ) {
     val formattedDuration: String
         get() = formatDuration(durationMillis.milliseconds)

@@ -13,6 +13,7 @@ import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
 import com.jvcs.tracky.core.domain.util.Result
+import com.jvcs.tracky.core.domain.sync.testDeltaSyncApplier
 import com.jvcs.tracky.core.domain.util.testTimeManager
 import com.jvcs.tracky.design_system.util.UiText
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
@@ -91,6 +92,7 @@ class ProjectOverviewViewModelTest {
         // An `expect class`, so it cannot be faked; the JVM actual is already always-connected.
         connectivityObserver = ConnectivityObserver(),
         syncCursorStore = FakeSyncCursorStore(),
+        deltaSyncApplier = testDeltaSyncApplier(),
         // Shares the test scheduler, so `advanceUntilIdle` drives the logout teardown and the
         // scope dies with the test instead of outliving it.
         applicationScope = backgroundScope,
@@ -371,6 +373,8 @@ private class FakeProjectRepository(initial: List<Project>) : ProjectRepository 
     override suspend fun getProjectById(projectId: String): Project? = projectsFlow.value.find { it.projectId == projectId }
     override fun observeProjectById(projectId: String): Flow<Project?> =
         projectsFlow.map { projects -> projects.find { it.projectId == projectId } }
+    override fun observeProjectWithTaskTreeById(projectId: String): Flow<Project?> =
+        observeProjectById(projectId)
     override suspend fun getProjectWithTasksByProjectId(projectId: String): Project? = getProjectById(projectId)
     override suspend fun upsertProject(project: Project): EmptyResult<DataError> = Result.Success(Unit)
     override suspend fun setProjectArchived(projectId: String, isArchived: Boolean): EmptyResult<DataError> = Result.Success(Unit)

@@ -46,8 +46,16 @@ internal suspend fun ProjectDao.closeSubTaskInterval(
     return closed
 }
 
+/**
+ * Floored at zero, mirroring [com.jvcs.tracky.features.project.domain.timer.RunningTimer.elapsedAt].
+ *
+ * The closed duration is added straight to the parent's running total, so a negative one silently
+ * subtracts time the user did track. It should now be unreachable — both ends are written on the
+ * corrected clock — but the cost of being wrong here is corrupted totals, and the cost of the guard
+ * is a comparison.
+ */
 private fun TaskIntervalEntity.elapsedAt(now: Instant): Long =
-    (now - Instant.fromEpochMilliseconds(startDateTimeEpochMs)).inWholeMilliseconds
+    (now - Instant.fromEpochMilliseconds(startDateTimeEpochMs)).inWholeMilliseconds.coerceAtLeast(0)
 
 private fun SubTaskIntervalEntity.elapsedAt(now: Instant): Long =
-    (now - Instant.fromEpochMilliseconds(startDateTimeEpochMs)).inWholeMilliseconds
+    (now - Instant.fromEpochMilliseconds(startDateTimeEpochMs)).inWholeMilliseconds.coerceAtLeast(0)

@@ -7,7 +7,9 @@ import com.jvcs.tracky.core.database.TrackyDatabase
 import com.jvcs.tracky.core.database.entity.ProjectEntity
 import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
+import com.jvcs.tracky.core.domain.util.FakeServerClockOffsetStore
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
+import com.jvcs.tracky.core.domain.util.ServerClock
 import com.jvcs.tracky.core.domain.util.Result
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -35,6 +37,8 @@ internal class RoomLocalTaskDataSourceStartTest {
     private lateinit var db: TrackyDatabase
     private lateinit var dataSource: RoomLocalTaskDataSource
     private val timeProvider = FakeTimeProvider()
+    private val offsetStore = FakeServerClockOffsetStore()
+    private val serverClock = ServerClock(timeProvider, offsetStore)
 
     @BeforeTest
     fun setUp() {
@@ -42,7 +46,7 @@ internal class RoomLocalTaskDataSourceStartTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
             .build()
-        dataSource = RoomLocalTaskDataSource(db.projectDao, timeProvider, FakeDeviceIdProvider())
+        dataSource = RoomLocalTaskDataSource(db.projectDao, FakeDeviceIdProvider(), serverClock)
     }
 
     @AfterTest
@@ -135,5 +139,88 @@ internal class RoomLocalTaskDataSourceStartTest {
         // of a row nothing was tracking.
         assertEquals("i-recent", closed.data.intervalId)
         assertEquals(5_000L, closed.data.durationMillis)
+    }
+
+    // --- clock basis ---------------------------------------------------------------------------
+
+    /**
+     * The regression these exist for. An interval's start used to be written from the raw device
+     * clock while the tick read it back against the server-corrected one, so the displayed duration
+     * carried the whole device-to-server skew: a timer started at zero read 00:00:49 on a phone
+     * forty-nine seconds behind the server, on both devices, because the skew was stored in the row.
+     */
+    @Test
+    fun startsTheIntervalOnTheServerCorrectedClock() = runBlocking {
+        seed()
+        timeProvider.now = Instant.fromEpochMilliseconds(1_000)
+        // This phone is 49 seconds behind the server.
+        offsetStore.setOffsetMillis(49_000)
+
+        val result = dataSource.startTask("t1")
+
+        assertTrue(result is Result.Success)
+        assertEquals(50_000L, result.data.interval.startDateTimeUtc.toEpochMilliseconds())
+    }
+
+    @Test
+    fun closesTheIntervalOnTheServerCorrectedClockToo() = runBlocking {
+        seed()
+        offsetStore.setOffsetMillis(49_000)
+        timeProvider.now = Instant.fromEpochMilliseconds(1_000)
+        dataSource.startTask("t1")
+        timeProvider.now = Instant.fromEpochMilliseconds(6_000)
+
+        val closed = dataSource.stopTask("t1")
+
+        assertTrue(closed is Result.Success)
+        assertNotNull(closed.data)
+        assertEquals(55_000L, closed.data.endDateTimeUtc!!.toEpochMilliseconds())
+        // Both ends on one basis, so the offset cancels and the banked figure is the real one.
+        assertEquals(5_000L, closed.data.durationMillis)
+    }
+
+    /**
+     * The offset is re-measured on every pull, so it moves. If it shrinks while a timer runs, the
+     * corrected clock steps *backwards*, and the close instant can land before the start instant.
+     * The duration is added straight to the task's running total, so an unfloored negative would
+     * silently delete time the user really did track.
+     */
+    @Test
+    fun aClockCorrectionThatMovesBackwardsNeverBanksNegativeTime() = runBlocking {
+        seed()
+        offsetStore.setOffsetMillis(49_000)
+        timeProvider.now = Instant.fromEpochMilliseconds(1_000)
+        dataSource.startTask("t1")
+
+        // A later pull measures the truth: the phone was right all along, so the correction
+        // steps the clock back by the forty-nine seconds it had been adding.
+        timeProvider.now = Instant.fromEpochMilliseconds(2_000)
+        serverClock.observe(
+            serverNow = Instant.fromEpochMilliseconds(2_000),
+            receivedAt = Instant.fromEpochMilliseconds(2_000)
+        )
+
+        val closed = dataSource.stopTask("t1")
+
+        assertTrue(closed is Result.Success)
+        assertNotNull(closed.data)
+        assertEquals(0L, closed.data.durationMillis)
+        assertEquals(0L, db.projectDao.getTaskById("t1")!!.durationMillis)
+    }
+
+    /**
+     * The composed property, and the thing the user actually sees: under skew, a timer just started
+     * reads zero. `TimeManager` renders `elapsedAt(serverClock.now())`, so this is that subtraction.
+     */
+    @Test
+    fun aTimerJustStartedReadsZeroUnderClockSkew() = runBlocking {
+        seed()
+        offsetStore.setOffsetMillis(49_000)
+        timeProvider.now = Instant.fromEpochMilliseconds(1_000)
+        val result = dataSource.startTask("t1")
+
+        assertTrue(result is Result.Success)
+        val startedAt = result.data.interval.startDateTimeUtc
+        assertEquals(0L, (serverClock.now() - startedAt).inWholeMilliseconds)
     }
 }

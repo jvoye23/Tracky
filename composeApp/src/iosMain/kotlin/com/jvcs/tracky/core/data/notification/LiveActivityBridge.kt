@@ -26,7 +26,9 @@ data class LiveActivityState(
     val useLightTextColor: Boolean,
     val startedAtEpochSeconds: Double,
     val elapsedSeconds: Double,
-    val isRunning: Boolean
+    val isRunning: Boolean,
+    /** True when another device started this timer; the widget hides its toggle for one. */
+    val isForeign: Boolean = false
 )
 
 /**

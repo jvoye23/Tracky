@@ -40,11 +40,34 @@ data class SyncChanges(
 /**
  * A row the server says was deleted.
  *
- * [entityType] is one of the `PendingSyncOperation.ENTITY_*` constants. An unrecognised value is
- * ignored rather than treated as an error: a newer server may know about a kind of row this build
- * does not, and refusing the whole delta over it would strand the device.
+ * An unrecognised [entityType] is ignored rather than treated as an error: a newer server may know
+ * about a kind of row this build does not, and refusing the whole delta over it would strand the
+ * device.
  */
 data class Tombstone(
     val entityType: String,
     val entityId: String
-)
+) {
+    /**
+     * The server's vocabulary for [entityType], transcribed from `backend-delta-sync-api.md` §3.
+     *
+     * Deliberately **not** the `PendingSyncOperation.ENTITY_*` constants, which this used to be
+     * documented as. Those are local Room table names, they are persisted in
+     * `pending_sync_operations` and therefore cannot be renamed, and they disagree with the wire on
+     * exactly two of the five levels: the server says `task` where the outbox says `project_task`,
+     * and `sub_task` where it says `project_sub_task`. Matching tombstones against them meant every
+     * task and subtask deleted on one device was silently dropped on every other — the lookup
+     * missed, and a missed lookup is indistinguishable from a type this build does not know.
+     *
+     * The two vocabularies coincide on `project`, `task_interval` and `sub_task_interval`, which is
+     * what made the mistake survive: every tombstone fixture in the test suite happened to use
+     * `project`, the one level where being wrong is invisible.
+     */
+    companion object {
+        const val PROJECT = "project"
+        const val TASK = "task"
+        const val TASK_INTERVAL = "task_interval"
+        const val SUB_TASK = "sub_task"
+        const val SUB_TASK_INTERVAL = "sub_task_interval"
+    }
+}

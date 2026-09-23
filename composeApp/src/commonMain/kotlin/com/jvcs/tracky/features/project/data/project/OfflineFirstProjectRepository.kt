@@ -76,6 +76,12 @@ class OfflineFirstProjectRepository(
         return localProjectDataSource.getProjectWithTasksByProjectId(projectId).getOrDefault(null)
     }
 
+    // Local only, for the same reason as observeProjectById: Room is the source of truth and a
+    // sync pull is what puts another device's rows into it.
+    override fun observeProjectWithTaskTreeById(projectId: String): Flow<Project?> {
+        return localProjectDataSource.observeProjectWithTaskTreeById(projectId)
+    }
+
     // CREATE/UPDATE project: local first (optimistic), then remote; on transient failure → queue.
     override suspend fun upsertProject(project: Project): EmptyResult<DataError> {
         val isCreate = when (val existing = localProjectDataSource.getProjectById(project.projectId)) {

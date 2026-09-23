@@ -9,6 +9,7 @@ import com.jvcs.tracky.core.database.entity.ProjectSubTaskEntity
 import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
+import com.jvcs.tracky.core.domain.util.testServerClock
 import com.jvcs.tracky.core.domain.util.Result
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -42,7 +43,7 @@ internal class RoomLocalSubTaskDataSourceStartTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
             .build()
-        dataSource = RoomLocalSubTaskDataSource(db.projectDao, timeProvider, FakeDeviceIdProvider())
+        dataSource = RoomLocalSubTaskDataSource(db.projectDao, FakeDeviceIdProvider(), testServerClock(timeProvider))
     }
 
     @AfterTest
