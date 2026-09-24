@@ -380,7 +380,7 @@ class EditTextViewModelTest {
 
 // --- fakes -------------------------------------------------------------------------------------
 
-private class FakeEditTextProjectRepository(project: Project) : ProjectRepository {
+internal class FakeEditTextProjectRepository(project: Project) : ProjectRepository {
     private val projectFlow = MutableStateFlow(project)
 
     val upserted = mutableListOf<Project>()
@@ -414,12 +414,12 @@ private class FakeEditTextProjectRepository(project: Project) : ProjectRepositor
     override suspend fun syncPendingProjects(): EmptyResult<DataError> = Result.Success(Unit)
 }
 
-private object FixedTimeProvider : TimeProvider {
+internal object FixedTimeProvider : TimeProvider {
     override val nowZoneTimeInUtc: LocalDateTime = LocalDateTime(2026, 1, 1, 0, 0)
     override val nowInstant: Instant = Instant.fromEpochMilliseconds(1_000_000)
 }
 
-private class FakeEditTextTaskRepository(private val task: ProjectTask) : ProjectTaskRepository {
+internal class FakeEditTextTaskRepository(private val task: ProjectTask) : ProjectTaskRepository {
     val textUpdates = mutableListOf<Triple<String, String, String?>>()
 
     override suspend fun updateProjectTaskText(
@@ -455,7 +455,7 @@ private class FakeEditTextTaskRepository(private val task: ProjectTask) : Projec
     override suspend fun syncPendingTasks(): EmptyResult<DataError> = Result.Success(Unit)
 }
 
-private class FakeEditTextSubTaskRepository(private val subTasks: List<ProjectSubTask>) : SubTaskRepository {
+internal class FakeEditTextSubTaskRepository(private val subTasks: List<ProjectSubTask>) : SubTaskRepository {
     val upserted = mutableListOf<ProjectSubTask>()
 
     override fun getSubTasksForTask(taskId: String): Flow<List<ProjectSubTask>> =

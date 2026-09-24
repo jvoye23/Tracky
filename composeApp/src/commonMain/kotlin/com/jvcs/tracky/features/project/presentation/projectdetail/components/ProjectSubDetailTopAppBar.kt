@@ -27,6 +27,7 @@ import org.jetbrains.compose.resources.stringResource
 import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.back
 import tracky.composeapp.generated.resources.edit_uppercase
+import tracky.composeapp.generated.resources.save
 import kotlin.time.ExperimentalTime
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -85,7 +86,7 @@ fun ProjectSubDetailTopAppBar(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Check,
-                            contentDescription = stringResource(Res.string.edit_uppercase),
+                            contentDescription = stringResource(Res.string.save),
                         )
                     }
                 } else {
