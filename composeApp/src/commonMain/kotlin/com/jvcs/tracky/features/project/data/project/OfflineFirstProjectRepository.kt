@@ -4,6 +4,7 @@ import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
 import com.jvcs.tracky.core.domain.sync.SyncOutcome
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
+import com.jvcs.tracky.core.domain.sync.drain
 import com.jvcs.tracky.core.domain.sync.pushQueuedRow
 import com.jvcs.tracky.core.domain.sync.toSyncOutcome
 import com.jvcs.tracky.core.domain.util.DataError
@@ -183,20 +184,11 @@ class OfflineFirstProjectRepository(
     // Pending-sync queue draining
     // ---------------------------------------------------------------------------------------------
 
-    override suspend fun syncPendingProjects() {
-        val operations = pendingSyncDataSource.getPendingOperations().getOrDefault(emptyList())
-        // Drain FIFO so a CREATE is always pushed before a later UPDATE on the same project.
-        operations
-            .filter {
-                it.entityType == PendingSyncOperation.ENTITY_PROJECT ||
-                    it.entityType == PendingSyncOperation.ENTITY_PROJECT_ORDER
-            }.forEach { op ->
-                when (runProjectOperation(op)) {
-                    SyncOutcome.SUCCESS, SyncOutcome.DROP -> pendingSyncDataSource.deleteOperation(op.operationId)
-                    SyncOutcome.RETRY -> Unit // leave queued for the next attempt
-                }
-            }
-    }
+    override suspend fun syncPendingProjects(): EmptyResult<DataError> =
+        pendingSyncDataSource.drain(matching = {
+            it.entityType == PendingSyncOperation.ENTITY_PROJECT ||
+                it.entityType == PendingSyncOperation.ENTITY_PROJECT_ORDER
+        }) { runProjectOperation(it) }
 
     private suspend fun runProjectOperation(op: PendingSyncOperation): SyncOutcome =
         when (op.entityType) {

@@ -291,7 +291,7 @@ private class RecordingSubTaskIntervalRepository : SubTaskIntervalRepository {
 
     override suspend fun getOpenIntervalBySubTaskId(subTaskId: String) = Result.Success(openInterval)
 
-    override suspend fun syncPendingSubTaskIntervals() = Unit
+    override suspend fun syncPendingSubTaskIntervals(): EmptyResult<DataError> = Result.Success(Unit)
 }
 
 private class RecordingIntervalRepository : IntervalRepository {
@@ -313,7 +313,7 @@ private class RecordingIntervalRepository : IntervalRepository {
 
     override suspend fun getOpenIntervalByTaskId(taskId: String) = Result.Success(null)
 
-    override suspend fun syncPendingIntervals() = Unit
+    override suspend fun syncPendingIntervals(): EmptyResult<DataError> = Result.Success(Unit)
 }
 
 private class RecordingTaskRepository : ProjectTaskRepository {
@@ -344,5 +344,5 @@ private class RecordingTaskRepository : ProjectTaskRepository {
 
     override suspend fun reorderTasks(projectId: String, orderedTaskIds: List<String>) = Result.Success(Unit)
 
-    override suspend fun syncPendingTasks() = Unit
+    override suspend fun syncPendingTasks(): EmptyResult<DataError> = Result.Success(Unit)
 }

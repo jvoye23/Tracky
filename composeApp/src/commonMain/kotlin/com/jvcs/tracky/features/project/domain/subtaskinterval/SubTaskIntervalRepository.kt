@@ -29,5 +29,5 @@ interface SubTaskIntervalRepository {
      * row in the tree, with no route until its subtask — and the task above that — exist on the
      * server, so ops whose subtask is still pending stay queued.
      */
-    suspend fun syncPendingSubTaskIntervals()
+    suspend fun syncPendingSubTaskIntervals(): EmptyResult<DataError>
 }

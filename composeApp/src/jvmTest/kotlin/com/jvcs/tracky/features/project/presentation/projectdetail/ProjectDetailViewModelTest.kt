@@ -1286,7 +1286,7 @@ private class FakeDetailProjectRepository(project: Project) : ProjectRepository 
 
     override suspend fun deleteAllProjects() = Unit
 
-    override suspend fun syncPendingProjects() = Unit
+    override suspend fun syncPendingProjects(): EmptyResult<DataError> = Result.Success(Unit)
 }
 
 private class FakeProjectTaskRepository(initial: ProjectTask? = null) : ProjectTaskRepository {
@@ -1341,7 +1341,7 @@ private class FakeProjectTaskRepository(initial: ProjectTask? = null) : ProjectT
 
     override fun getProjectTaskWithIntervalsById(taskId: String): Flow<ProjectTask?> = task
 
-    override suspend fun syncPendingTasks() = Unit
+    override suspend fun syncPendingTasks(): EmptyResult<DataError> = Result.Success(Unit)
 }
 
 /** What [FakeSubTaskRepository.stopSubTask] adds to a subtask's duration, standing in for a real interval. */
@@ -1419,5 +1419,5 @@ private class FakeSubTaskRepository(initial: List<ProjectSubTask> = emptyList())
         return reorderFailWith?.let { Result.Error(it) } ?: Result.Success(Unit)
     }
 
-    override suspend fun syncPendingSubTasks() = Unit
+    override suspend fun syncPendingSubTasks(): EmptyResult<DataError> = Result.Success(Unit)
 }

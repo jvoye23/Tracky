@@ -429,5 +429,5 @@ private class FakeProjectRepository(initial: List<Project>) :
 
     override suspend fun deleteAllProjects() = Unit
 
-    override suspend fun syncPendingProjects() = Unit
+    override suspend fun syncPendingProjects(): EmptyResult<DataError> = Result.Success(Unit)
 }

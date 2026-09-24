@@ -409,7 +409,7 @@ private class FakeEditTextProjectRepository(project: Project) : ProjectRepositor
 
     override suspend fun deleteAllProjects() = Unit
 
-    override suspend fun syncPendingProjects() = Unit
+    override suspend fun syncPendingProjects(): EmptyResult<DataError> = Result.Success(Unit)
 }
 
 private object FixedTimeProvider : TimeProvider {
@@ -450,7 +450,7 @@ private class FakeEditTextTaskRepository(private val task: ProjectTask) : Projec
     override suspend fun reorderTasks(projectId: String, orderedTaskIds: List<String>): EmptyResult<DataError> =
         Result.Success(Unit)
 
-    override suspend fun syncPendingTasks() = Unit
+    override suspend fun syncPendingTasks(): EmptyResult<DataError> = Result.Success(Unit)
 }
 
 private class FakeEditTextSubTaskRepository(private val subTasks: List<ProjectSubTask>) : SubTaskRepository {
@@ -475,5 +475,5 @@ private class FakeEditTextSubTaskRepository(private val subTasks: List<ProjectSu
     override suspend fun reorderSubTasks(taskId: String, orderedSubTaskIds: List<String>): EmptyResult<DataError> =
         Result.Success(Unit)
 
-    override suspend fun syncPendingSubTasks() = Unit
+    override suspend fun syncPendingSubTasks(): EmptyResult<DataError> = Result.Success(Unit)
 }

@@ -27,5 +27,5 @@ interface IntervalRepository {
      * Drains the queued interval writes. Runs last of the three drains: an interval has no route
      * until its task exists on the server, so ops whose task is still pending stay queued.
      */
-    suspend fun syncPendingIntervals()
+    suspend fun syncPendingIntervals(): EmptyResult<DataError>
 }

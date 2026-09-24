@@ -7,7 +7,10 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isTrue
 import com.jvcs.tracky.core.domain.connectivity.FakeConnectivityObserver
 import com.jvcs.tracky.core.domain.lifecycle.FakeAppLifecycleObserver
+import com.jvcs.tracky.core.domain.util.DataError
+import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
+import com.jvcs.tracky.core.domain.util.Result
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceTimeBy
@@ -22,8 +25,9 @@ private class RecordingSyncRepository : SyncRepository {
     var drains = 0
         private set
 
-    override suspend fun syncPendingOperations() {
+    override suspend fun syncPendingOperations(): EmptyResult<DataError> {
         drains++
+        return Result.Success(Unit)
     }
 }
 

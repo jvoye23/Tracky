@@ -1,6 +1,9 @@
 package com.jvcs.tracky.core.data.sync
 
 import com.jvcs.tracky.core.domain.sync.SyncRepository
+import com.jvcs.tracky.core.domain.util.DataError
+import com.jvcs.tracky.core.domain.util.EmptyResult
+import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.features.project.domain.interval.IntervalRepository
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
 import com.jvcs.tracky.features.project.domain.subtask.SubTaskRepository
@@ -32,12 +35,17 @@ class SyncCoordinator(
     private val dispatcher: CoroutineDispatcher,
 ) : SyncRepository {
 
-    override suspend fun syncPendingOperations() =
+    override suspend fun syncPendingOperations(): EmptyResult<DataError> =
         withContext(dispatcher) {
-            projectRepository.syncPendingProjects()
-            taskRepository.syncPendingTasks()
-            intervalRepository.syncPendingIntervals()
-            subTaskRepository.syncPendingSubTasks()
-            subTaskIntervalRepository.syncPendingSubTaskIntervals()
+            // Every level still runs when an earlier one could not read the queue, in the same
+            // parent-first order as always: a later drain may get through, and anything it cannot
+            // push yet stays queued behind its parent. The first failure is the one reported.
+            listOf(
+                projectRepository.syncPendingProjects(),
+                taskRepository.syncPendingTasks(),
+                intervalRepository.syncPendingIntervals(),
+                subTaskRepository.syncPendingSubTasks(),
+                subTaskIntervalRepository.syncPendingSubTaskIntervals(),
+            ).firstOrNull { it is Result.Error } ?: Result.Success(Unit)
         }
 }

@@ -43,5 +43,5 @@ interface SubTaskRepository {
      * Drains the queued subtask writes. Runs after the task drain: a subtask has no route until its
      * task exists on the server, so ops whose task is still pending stay queued.
      */
-    suspend fun syncPendingSubTasks()
+    suspend fun syncPendingSubTasks(): EmptyResult<DataError>
 }

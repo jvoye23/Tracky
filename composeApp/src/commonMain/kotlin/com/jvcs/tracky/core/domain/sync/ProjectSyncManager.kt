@@ -2,8 +2,10 @@
 
 package com.jvcs.tracky.core.domain.sync
 
+import co.touchlab.kermit.Logger
 import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
 import com.jvcs.tracky.core.domain.lifecycle.AppLifecycleObserver
+import com.jvcs.tracky.core.domain.util.onFailure
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -66,7 +68,11 @@ class ProjectSyncManager(
                     }
                 }
             }.onEach {
-                syncRepository.syncPendingOperations()
+                syncRepository.syncPendingOperations().onFailure { error ->
+                    // Nothing was pushed this tick, but nothing was lost either: the queue is still
+                    // there for the next one. The pull below goes ahead regardless.
+                    Logger.withTag("ProjectSyncManager").w { "could not read the sync queue: $error" }
+                }
                 // Through the coordinator, not straight at the applier: this tick is no longer the
                 // only thing that pulls, and two pulls overlapping can walk the cursor backwards.
                 pullCoordinator.pullNow()
