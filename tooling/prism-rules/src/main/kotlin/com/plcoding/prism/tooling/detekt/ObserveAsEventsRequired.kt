@@ -6,7 +6,10 @@ import dev.detekt.api.Finding
 import dev.detekt.api.Rule
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
+import org.jetbrains.kotlin.psi.KtExpression
+import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.psiUtil.collectDescendantsOfType
+import org.jetbrains.kotlin.psi.psiUtil.getStrictParentOfType
 
 /**
  * Reports a `LaunchedEffect` that collects a flow.
@@ -24,11 +27,15 @@ class ObserveAsEventsRequired(config: Config) :
     override fun visitCallExpression(expression: KtCallExpression) {
         super.visitCallExpression(expression)
         if (expression.calleeExpression?.text != LAUNCHED_EFFECT) return
+        // The implementation of ObserveAsEvents is itself a collecting LaunchedEffect.
+        if (expression.getStrictParentOfType<KtNamedFunction>()?.name == OBSERVE_AS_EVENTS) return
 
+        // snapshotFlow turns local Compose state (a pager, a scroll position) into a flow; those
+        // are not one-time events from a ViewModel, and ObserveAsEvents is not for them.
         val collects =
             expression.lambdaArguments
                 .flatMap { it.collectDescendantsOfType<KtDotQualifiedExpression>() }
-                .any { it.selectorExpression?.let(::isCollectCall) == true }
+                .any { it.selectorExpression?.let(::isCollectCall) == true && !it.isSnapshotFlowCollection() }
         if (!collects) return
 
         report(
@@ -40,11 +47,19 @@ class ObserveAsEventsRequired(config: Config) :
         )
     }
 
-    private fun isCollectCall(selector: org.jetbrains.kotlin.psi.KtExpression): Boolean =
+    private fun KtDotQualifiedExpression.isSnapshotFlowCollection(): Boolean {
+        var receiver: KtExpression = receiverExpression
+        while (receiver is KtDotQualifiedExpression) receiver = receiver.receiverExpression
+        return (receiver as? KtCallExpression)?.calleeExpression?.text == SNAPSHOT_FLOW
+    }
+
+    private fun isCollectCall(selector: KtExpression): Boolean =
         (selector as? KtCallExpression)?.calleeExpression?.text in COLLECT_FUNCTIONS
 
     private companion object {
         const val LAUNCHED_EFFECT = "LaunchedEffect"
+        const val OBSERVE_AS_EVENTS = "ObserveAsEvents"
+        const val SNAPSHOT_FLOW = "snapshotFlow"
         val COLLECT_FUNCTIONS = setOf("collect", "collectLatest")
     }
 }

@@ -25,7 +25,10 @@ class NonAtomicStateFlowAssignment(config: Config) :
         val left = expression.left as? KtDotQualifiedExpression ?: return
         if (left.selectorExpression?.text != "value") return
         val receiver = left.receiverExpression.text
-        if (receiver.startsWith("_")) {
+        // Replacing the whole value is one atomic write. The race is reading the current value on
+        // the right-hand side and writing back something derived from it.
+        val readsCurrentValue = expression.right?.text?.contains("$receiver.value") == true
+        if (receiver.startsWith("_") && readsCurrentValue) {
             report(
                 Finding(
                     Entity.from(expression),

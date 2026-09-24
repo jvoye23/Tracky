@@ -23,7 +23,7 @@ import org.jetbrains.kotlin.psi.psiUtil.getStrictParentOfType
 class DispatchersSetMainWithoutReset(config: Config) :
     Rule(
         config,
-        "A test class that calls Dispatchers.setMain must reset it in an @AfterEach/@After teardown.",
+        "A test class that calls Dispatchers.setMain must reset it in an @AfterEach/@After/@AfterTest teardown.",
     ) {
     override fun visitDotQualifiedExpression(expression: KtDotQualifiedExpression) {
         super.visitDotQualifiedExpression(expression)
@@ -62,6 +62,6 @@ class DispatchersSetMainWithoutReset(config: Config) :
         const val DISPATCHERS = "Dispatchers"
         const val SET_MAIN = "setMain"
         const val RESET_MAIN = "resetMain"
-        val TEARDOWN_ANNOTATIONS = setOf("AfterEach", "After")
+        val TEARDOWN_ANNOTATIONS = setOf("AfterEach", "After", "AfterTest")
     }
 }
