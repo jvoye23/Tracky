@@ -54,8 +54,19 @@ internal class FakeAuthService : AuthService {
 
     override suspend fun verifyEmail(token: String): EmptyResult<DataError.Remote> = Result.Success(Unit)
 
-    override suspend fun forgotPassword(email: String): EmptyResult<DataError.Remote> = Result.Success(Unit)
+    var forgotPasswordResult: EmptyResult<DataError.Remote> = Result.Success(Unit)
+    val forgotPasswordCalls = mutableListOf<String>()
 
-    override suspend fun resetPassword(newPassword: String, token: String): EmptyResult<DataError.Remote> =
-        Result.Success(Unit)
+    override suspend fun forgotPassword(email: String): EmptyResult<DataError.Remote> {
+        forgotPasswordCalls += email
+        return forgotPasswordResult
+    }
+
+    var resetPasswordResult: EmptyResult<DataError.Remote> = Result.Success(Unit)
+    val resetPasswordCalls = mutableListOf<Pair<String, String>>()
+
+    override suspend fun resetPassword(newPassword: String, token: String): EmptyResult<DataError.Remote> {
+        resetPasswordCalls += newPassword to token
+        return resetPasswordResult
+    }
 }

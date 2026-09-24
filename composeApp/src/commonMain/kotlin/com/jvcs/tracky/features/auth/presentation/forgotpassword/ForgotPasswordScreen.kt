@@ -48,6 +48,7 @@ import com.jvcs.tracky.designsystem.theme.authTextStyle
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import tracky.composeapp.generated.resources.Res
+import tracky.composeapp.generated.resources.back
 import tracky.composeapp.generated.resources.back_to_login
 import tracky.composeapp.generated.resources.check_your_email
 import tracky.composeapp.generated.resources.check_your_email_desc
@@ -95,7 +96,7 @@ fun ForgotPasswordScreen(
                     IconButton(onClick = { onAction(ForgotPasswordAction.OnBackClick) }) {
                         Icon(
                             imageVector = Icon_ArrowLeft,
-                            contentDescription = null,
+                            contentDescription = stringResource(Res.string.back),
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
