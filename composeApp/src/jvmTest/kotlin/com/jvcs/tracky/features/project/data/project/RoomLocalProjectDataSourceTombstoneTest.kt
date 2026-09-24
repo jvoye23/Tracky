@@ -89,7 +89,7 @@ internal class RoomLocalProjectDataSourceTombstoneTest {
                 updatedAtEpochMs = 0,
             ),
         )
-        db.projectDao.upsertTaskInterval(
+        db.taskIntervalDao.upsertTaskInterval(
             TaskIntervalEntity(
                 intervalId = "i1",
                 parentTaskId = "t1",
@@ -156,7 +156,10 @@ internal class RoomLocalProjectDataSourceTombstoneTest {
             assertThat(db.projectDao.getTaskById("t1"), name = "the task row survived its tombstone").isNull()
             // Room cascades, so the task's own interval goes with it whether or not the server
             // bothered to name it.
-            assertThat(db.projectDao.getIntervalById("i1"), name = "the task's interval was left orphaned").isNull()
+            assertThat(
+                db.taskIntervalDao.getIntervalById("i1"),
+                name = "the task's interval was left orphaned",
+            ).isNull()
         }
 
     /** The other half of the same bug, and the one easy to forget. */
@@ -191,7 +194,7 @@ internal class RoomLocalProjectDataSourceTombstoneTest {
 
             applyTombstones(Tombstone("task_interval", "i1"))
 
-            assertThat(db.projectDao.getIntervalById("i1")).isNull()
+            assertThat(db.taskIntervalDao.getIntervalById("i1")).isNull()
             assertThat(
                 db.projectDao.getTaskById("t1"),
                 name = "deleting an interval must not take its task",
@@ -225,7 +228,7 @@ internal class RoomLocalProjectDataSourceTombstoneTest {
 
             assertThat(db.projectDao.getProjectById("p1")).isNull()
             assertThat(db.projectDao.getTaskById("t1")).isNull()
-            assertThat(db.projectDao.getIntervalById("i1")).isNull()
+            assertThat(db.taskIntervalDao.getIntervalById("i1")).isNull()
             assertThat(db.projectDao.getSubTaskById("s1")).isNull()
             assertThat(db.projectDao.getSubTaskIntervalById("si1")).isNull()
         }

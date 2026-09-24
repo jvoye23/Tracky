@@ -95,7 +95,7 @@ class ProjectDaoTaskTreeTest {
                 updatedAtEpochMs = null,
             ),
         )
-        dao.upsertTaskInterval(
+        db.taskIntervalDao.upsertTaskInterval(
             TaskIntervalEntity(
                 intervalId = "ti1",
                 parentTaskId = "t1",

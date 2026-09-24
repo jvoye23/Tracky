@@ -47,7 +47,7 @@ internal class OfflineFirstRunningTimerRepositoryTest {
                 .setDriver(BundledSQLiteDriver())
                 .setQueryCoroutineContext(Dispatchers.IO)
                 .build()
-        repository = OfflineFirstRunningTimerRepository(db.projectDao, FakeDeviceIdProvider())
+        repository = OfflineFirstRunningTimerRepository(db.projectDao, db.taskIntervalDao, FakeDeviceIdProvider())
     }
 
     @AfterTest
@@ -90,7 +90,7 @@ internal class OfflineFirstRunningTimerRepositoryTest {
     }
 
     private suspend fun openTaskInterval() {
-        db.projectDao.upsertTaskInterval(
+        db.taskIntervalDao.upsertTaskInterval(
             TaskIntervalEntity(
                 intervalId = "i1",
                 parentTaskId = "t1",
@@ -135,7 +135,7 @@ internal class OfflineFirstRunningTimerRepositoryTest {
 
     /** A finished session on the task, which is what the banked total is summed from. */
     private suspend fun closedTaskInterval(id: String, millis: Long) {
-        db.projectDao.upsertTaskInterval(
+        db.taskIntervalDao.upsertTaskInterval(
             TaskIntervalEntity(
                 intervalId = id,
                 parentTaskId = "t1",
@@ -176,7 +176,7 @@ internal class OfflineFirstRunningTimerRepositoryTest {
             // Null means "this device". Every row written before the column existed reads that way,
             // and treating them as foreign would make this device's own crashed timers unreclaimable.
             seedProjectAndTask()
-            db.projectDao.upsertTaskInterval(
+            db.taskIntervalDao.upsertTaskInterval(
                 TaskIntervalEntity(
                     intervalId = "i1",
                     parentTaskId = "t1",
@@ -195,7 +195,7 @@ internal class OfflineFirstRunningTimerRepositoryTest {
     fun aTimerAnotherDeviceStartedIsForeign() =
         runBlocking {
             seedProjectAndTask()
-            db.projectDao.upsertTaskInterval(
+            db.taskIntervalDao.upsertTaskInterval(
                 TaskIntervalEntity(
                     intervalId = "i1",
                     parentTaskId = "t1",
@@ -308,7 +308,7 @@ internal class OfflineFirstRunningTimerRepositoryTest {
         runBlocking {
             seedProjectAndTask()
             openTaskInterval()
-            db.projectDao.upsertStrandedInterval(
+            db.strandedIntervalDao.upsertStrandedInterval(
                 StrandedIntervalEntity(intervalId = "i1", isSubTaskInterval = false, detectedAtEpochMs = 2_000_000L),
             )
 
@@ -321,7 +321,7 @@ internal class OfflineFirstRunningTimerRepositoryTest {
             seedProjectAndTask()
             openTaskInterval()
             openSubTaskInterval()
-            db.projectDao.upsertStrandedInterval(
+            db.strandedIntervalDao.upsertStrandedInterval(
                 StrandedIntervalEntity(intervalId = "si1", isSubTaskInterval = true, detectedAtEpochMs = 2_000_000L),
             )
 
@@ -336,8 +336,8 @@ internal class OfflineFirstRunningTimerRepositoryTest {
         runBlocking {
             seedProjectAndTask()
             openTaskInterval()
-            db.projectDao.upsertTaskInterval(
-                db.projectDao.getIntervalById("i1")!!.copy(endDateTimeEpochMs = 2_000_000L),
+            db.taskIntervalDao.upsertTaskInterval(
+                db.taskIntervalDao.getIntervalById("i1")!!.copy(endDateTimeEpochMs = 2_000_000L),
             )
 
             assertThat(repository.observeRunningTimer().first()).isNull()

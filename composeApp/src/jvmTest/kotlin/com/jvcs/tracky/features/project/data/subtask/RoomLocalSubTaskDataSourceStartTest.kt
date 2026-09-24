@@ -46,7 +46,14 @@ internal class RoomLocalSubTaskDataSourceStartTest {
                 .setDriver(BundledSQLiteDriver())
                 .setQueryCoroutineContext(Dispatchers.IO)
                 .build()
-        dataSource = RoomLocalSubTaskDataSource(db.projectDao, FakeDeviceIdProvider(), testServerClock(timeProvider))
+        dataSource =
+            RoomLocalSubTaskDataSource(
+                db.projectDao,
+                db.taskIntervalDao,
+                db.strandedIntervalDao,
+                FakeDeviceIdProvider(),
+                testServerClock(timeProvider),
+            )
     }
 
     @AfterTest
@@ -117,7 +124,7 @@ internal class RoomLocalSubTaskDataSourceStartTest {
             val result = dataSource.startSubTask("s1")
 
             check(result is Result.Success)
-            val openTaskInterval = db.projectDao.getOpenIntervalBySessionId("t1")
+            val openTaskInterval = db.taskIntervalDao.getOpenIntervalBySessionId("t1")
             checkNotNull(openTaskInterval) { "the subtask interval needs a task interval to sit in" }
             assertThat(result.data.subTaskInterval.parentTaskIntervalId).isEqualTo(openTaskInterval.intervalId)
             assertThat(taskIsRunning()).isTrue()
@@ -132,7 +139,7 @@ internal class RoomLocalSubTaskDataSourceStartTest {
     fun startingASubTaskWhoseTaskIsAlreadyRunningNestsInTheOpenInterval() =
         runBlocking {
             seed("s1")
-            db.projectDao.upsertTaskInterval(
+            db.taskIntervalDao.upsertTaskInterval(
                 TaskIntervalEntity(
                     intervalId = "i-manual",
                     parentTaskId = "t1",
@@ -204,7 +211,7 @@ internal class RoomLocalSubTaskDataSourceStartTest {
             val result = dataSource.startSubTask("nope")
 
             assertThat(result is Result.Error).isTrue()
-            assertThat(db.projectDao.getOpenIntervalBySessionId("t1")).isNull()
+            assertThat(db.taskIntervalDao.getOpenIntervalBySessionId("t1")).isNull()
             assertThat(taskIsRunning()).isFalse()
         }
 }

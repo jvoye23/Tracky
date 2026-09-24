@@ -89,7 +89,7 @@ class ServerTreeWriterApplyDeltaTest {
     private suspend fun seedTree() {
         dao.upsertProject(projectEntity("p1"))
         dao.upsertProjectTask(taskEntity("t1"))
-        dao.upsertTaskInterval(intervalEntity("i1"))
+        db.taskIntervalDao.upsertTaskInterval(intervalEntity("i1"))
     }
 
     private suspend fun queuePush(entityId: String, entityType: String) {
@@ -134,7 +134,7 @@ class ServerTreeWriterApplyDeltaTest {
 
             assertThat(dao.getProjectById("p1")).isNull()
             assertThat(dao.getTaskById("t1")).isNull()
-            assertThat(dao.getIntervalById("i1")).isNull()
+            assertThat(db.taskIntervalDao.getIntervalById("i1")).isNull()
         }
 
     @Test
@@ -205,7 +205,7 @@ class ServerTreeWriterApplyDeltaTest {
 
             applyDeletions(intervals = listOf("i1"))
 
-            assertThat(dao.getIntervalById("i1")).isNull()
+            assertThat(db.taskIntervalDao.getIntervalById("i1")).isNull()
             assertThat(dao.getTaskById("t1")?.projectTaskId).isEqualTo("t1")
         }
 }

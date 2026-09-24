@@ -111,7 +111,7 @@ class ServerTreeWriterPullMergeTest {
             assertThat(dao.getProjectById("p1")).isNotNull()
             assertThat(dao.getTaskById("t1")).isNotNull()
             // Intervals are the whole point: this is what a fresh install could not recover before.
-            assertThat(dao.getIntervalById("i1")?.durationMillis).isEqualTo(60_000L)
+            assertThat(db.taskIntervalDao.getIntervalById("i1")?.durationMillis).isEqualTo(60_000L)
         }
 
     /** project_tasks has a CASCADE foreign key onto projects, so the parent must exist first. */
@@ -174,7 +174,7 @@ class ServerTreeWriterPullMergeTest {
     fun closesAnIntervalTheServerSaysWasStoppedElsewhere() =
         runBlocking {
             seedTask()
-            dao.upsertTaskInterval(intervalEntity("i1", "t1", end = null)) // still ticking here
+            db.taskIntervalDao.upsertTaskInterval(intervalEntity("i1", "t1", end = null)) // still ticking here
 
             writer.upsertServerTree(
                 projects = emptyList(),
@@ -184,14 +184,14 @@ class ServerTreeWriterPullMergeTest {
 
             // The user stopped it on their other device. Nothing is queued here, so this device has
             // no unsent change to defend and the server is canonical.
-            assertThat(dao.getIntervalById("i1")?.endDateTimeEpochMs).isEqualTo(60_000L)
+            assertThat(db.taskIntervalDao.getIntervalById("i1")?.endDateTimeEpochMs).isEqualTo(60_000L)
         }
 
     @Test
     fun doesNotCloseAnIntervalWhoseOwnChangeIsStillQueued() =
         runBlocking {
             seedTask()
-            dao.upsertTaskInterval(intervalEntity("i1", "t1", end = null))
+            db.taskIntervalDao.upsertTaskInterval(intervalEntity("i1", "t1", end = null))
             queuePush("i1")
 
             writer.upsertServerTree(
@@ -200,14 +200,14 @@ class ServerTreeWriterPullMergeTest {
                 intervals = listOf(intervalEntity("i1", "t1", end = 60_000)),
             )
 
-            assertThat(dao.getIntervalById("i1")?.endDateTimeEpochMs).isNull()
+            assertThat(db.taskIntervalDao.getIntervalById("i1")?.endDateTimeEpochMs).isNull()
         }
 
     @Test
     fun doesNotReopenAClosedIntervalTheServerStillHasOpen() =
         runBlocking {
             seedTask()
-            dao.upsertTaskInterval(intervalEntity("i1", "t1", end = 60_000))
+            db.taskIntervalDao.upsertTaskInterval(intervalEntity("i1", "t1", end = 60_000))
 
             writer.upsertServerTree(
                 projects = emptyList(),
@@ -217,14 +217,14 @@ class ServerTreeWriterPullMergeTest {
 
             // Reopening would discard the banked duration; a server copy still open is just the
             // server not having heard the stop yet.
-            assertThat(dao.getIntervalById("i1")?.endDateTimeEpochMs).isEqualTo(60_000L)
+            assertThat(db.taskIntervalDao.getIntervalById("i1")?.endDateTimeEpochMs).isEqualTo(60_000L)
         }
 
     @Test
     fun keepsTheLocalDeviceIdWhenTheServerCloseWins() =
         runBlocking {
             seedTask()
-            dao.upsertTaskInterval(
+            db.taskIntervalDao.upsertTaskInterval(
                 intervalEntity("i1", "t1", end = null).copy(startedByDeviceId = "device-a"),
             )
 
@@ -237,7 +237,7 @@ class ServerTreeWriterPullMergeTest {
             // Every row written before the column existed comes back with a null, so a blind
             // overwrite would blank it and the next start-up would read this device's own rows as
             // foreign.
-            assertThat(dao.getIntervalById("i1")?.startedByDeviceId).isEqualTo("device-a")
+            assertThat(db.taskIntervalDao.getIntervalById("i1")?.startedByDeviceId).isEqualTo("device-a")
         }
 
     @Test
@@ -258,7 +258,7 @@ class ServerTreeWriterPullMergeTest {
             // The timer another device is running right now. Storing null instead would read as "this
             // device", so StrandedTimerReconciler would park a live timer and ask the user to reclaim
             // it, and phase 2's isForeign would be false for every foreign timer.
-            assertThat(dao.getIntervalById("i-foreign")?.startedByDeviceId).isEqualTo("device-b")
+            assertThat(db.taskIntervalDao.getIntervalById("i-foreign")?.startedByDeviceId).isEqualTo("device-b")
         }
 
     @Test
@@ -266,12 +266,12 @@ class ServerTreeWriterPullMergeTest {
         runBlocking {
             seedProject()
             dao.upsertProjectTask(taskEntity("local-only", "p1", "created offline", updatedAt = null))
-            dao.upsertTaskInterval(intervalEntity("i-local", "local-only", end = 1_000))
+            db.taskIntervalDao.upsertTaskInterval(intervalEntity("i-local", "local-only", end = 1_000))
 
             writer.upsertServerTree(projects = emptyList(), tasks = emptyList(), intervals = emptyList())
 
             assertThat(dao.getTaskById("local-only")).isNotNull()
-            assertThat(dao.getIntervalById("i-local")).isNotNull()
+            assertThat(db.taskIntervalDao.getIntervalById("i-local")).isNotNull()
             Unit
         }
 
@@ -403,7 +403,7 @@ class ServerTreeWriterPullMergeTest {
     private suspend fun seedSubTask(subTaskId: String = "s1", taskId: String = "t1") {
         seedTask(taskId)
         dao.upsertProjectSubTask(subTaskEntity(subTaskId, taskId, "seeded", updatedAt = 0))
-        dao.upsertTaskInterval(intervalEntity("ti1", taskId, end = null))
+        db.taskIntervalDao.upsertTaskInterval(intervalEntity("ti1", taskId, end = null))
     }
 
     @Test

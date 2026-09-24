@@ -71,6 +71,8 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
         repository =
             OfflineFirstStrandedTimerRepository(
                 projectDao = db.projectDao,
+                taskIntervalDao = db.taskIntervalDao,
+                strandedIntervalDao = db.strandedIntervalDao,
                 intervalRepository = FakeIntervalRepository(),
                 subTaskIntervalRepository = FakeSubTaskIntervalRepository(),
                 projectTaskRepository = FakeProjectTaskRepository(),
@@ -115,7 +117,7 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
                 updatedAtEpochMs = null,
             ),
         )
-        db.projectDao.upsertTaskInterval(
+        db.taskIntervalDao.upsertTaskInterval(
             TaskIntervalEntity(
                 intervalId = "i1",
                 parentTaskId = "t1",
@@ -157,6 +159,8 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
         timeProvider.now = Instant.fromEpochMilliseconds(detectedAt)
         StrandedTimerReconciler(
             db.projectDao,
+            db.taskIntervalDao,
+            db.strandedIntervalDao,
             testServerClock(timeProvider),
             FakeDeviceIdProvider(),
             kotlinx.coroutines.test.TestScope(),
@@ -177,7 +181,7 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
             assertThat(timer.proposedEndAt.toEpochMilliseconds()).isEqualTo(detectedAt)
             // The reported number: 75h21m, offered but not banked.
             assertThat(timer.proposedDuration).isEqualTo(75.hours + 21.minutes)
-            assertThat(db.projectDao.getStrandedInterval("i1")).isNotNull()
+            assertThat(db.strandedIntervalDao.getStrandedInterval("i1")).isNotNull()
             assertThat(db.projectDao.getTaskById("t1")!!.durationMillis).isEqualTo(0L)
         }
 
@@ -190,12 +194,12 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
             val result = repository.keep(timer)
 
             assertThat(result is Result.Success).isTrue()
-            val closed = db.projectDao.getIntervalById("i1")!!
+            val closed = db.taskIntervalDao.getIntervalById("i1")!!
             assertThat(closed.endDateTimeEpochMs).isEqualTo(detectedAt)
             assertThat(closed.durationMillis).isEqualTo(detectedAt)
             assertThat(db.projectDao.getTaskById("t1")!!.durationMillis).isEqualTo(detectedAt)
             // Resolved once, gone for good.
-            assertThat(db.projectDao.getStrandedInterval("i1")).isNull()
+            assertThat(db.strandedIntervalDao.getStrandedInterval("i1")).isNull()
             assertThat(repository.observeStrandedTimers().first().isEmpty()).isTrue()
             // And the closed row reaches the server.
             assertThat(pushedIntervalUpdates.map { it.intervalId }).isEqualTo(listOf("i1"))
@@ -210,7 +214,7 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
 
             repository.keepWithDuration(timer, 2.hours)
 
-            val closed = db.projectDao.getIntervalById("i1")!!
+            val closed = db.taskIntervalDao.getIntervalById("i1")!!
             assertThat(closed.durationMillis).isEqualTo(2 * 60 * 60 * 1000L)
             assertThat(closed.endDateTimeEpochMs).isEqualTo(2 * 60 * 60 * 1000L)
             assertThat(db.projectDao.getTaskById("t1")!!.durationMillis).isEqualTo(2 * 60 * 60 * 1000L)
@@ -224,7 +228,7 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
 
             repository.discard(timer)
 
-            assertThat(db.projectDao.getStrandedInterval("i1")).isNull()
+            assertThat(db.strandedIntervalDao.getStrandedInterval("i1")).isNull()
             // Remote too: upsertServerTree re-inserts an interval the local side no longer has, so a
             // local-only delete would come back on the next pull.
             assertThat(deletedIntervalIds).isEqualTo(listOf("i1"))
@@ -247,9 +251,9 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
             repository.keep(timer)
 
             assertThat(db.projectDao.getSubTaskIntervalById("si1")!!.endDateTimeEpochMs).isEqualTo(detectedAt)
-            assertThat(db.projectDao.getIntervalById("i1")!!.endDateTimeEpochMs).isEqualTo(detectedAt)
-            assertThat(db.projectDao.getStrandedInterval("si1")).isNull()
-            assertThat(db.projectDao.getStrandedInterval("i1")).isNull()
+            assertThat(db.taskIntervalDao.getIntervalById("i1")!!.endDateTimeEpochMs).isEqualTo(detectedAt)
+            assertThat(db.strandedIntervalDao.getStrandedInterval("si1")).isNull()
+            assertThat(db.strandedIntervalDao.getStrandedInterval("i1")).isNull()
             assertThat(repository.observeStrandedTimers().first().isEmpty()).isTrue()
         }
 
@@ -295,9 +299,9 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
             repository.keepWithDuration(timer, 1.hours)
 
             assertThat(deletedSubTaskIntervalIds).isEqualTo(listOf("si1"))
-            assertThat(db.projectDao.getStrandedInterval("si1")).isNull()
+            assertThat(db.strandedIntervalDao.getStrandedInterval("si1")).isNull()
             // The task interval still closes at the edited end.
-            assertThat(db.projectDao.getIntervalById("i1")!!.durationMillis).isEqualTo(60 * 60 * 1000L)
+            assertThat(db.taskIntervalDao.getIntervalById("i1")!!.durationMillis).isEqualTo(60 * 60 * 1000L)
         }
 
     // --- fakes: the push side, recorded rather than performed ------------------------------------

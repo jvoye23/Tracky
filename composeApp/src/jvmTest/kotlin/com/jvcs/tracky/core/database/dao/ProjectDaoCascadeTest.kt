@@ -79,7 +79,7 @@ class ProjectDaoCascadeTest {
                     updatedAtEpochMs = null,
                 ),
             )
-            dao.upsertTaskInterval(
+            db.taskIntervalDao.upsertTaskInterval(
                 TaskIntervalEntity(
                     intervalId = "i-$taskId",
                     parentTaskId = taskId,
@@ -101,8 +101,8 @@ class ProjectDaoCascadeTest {
 
             assertThat(dao.getTaskById("t1")).isNull()
             assertThat(dao.getTaskById("t2")).isNull()
-            assertThat(dao.getIntervalById("i-t1")).isNull()
-            assertThat(dao.getIntervalById("i-t2")).isNull()
+            assertThat(db.taskIntervalDao.getIntervalById("i-t1")).isNull()
+            assertThat(db.taskIntervalDao.getIntervalById("i-t2")).isNull()
         }
 
     @Test
@@ -112,10 +112,10 @@ class ProjectDaoCascadeTest {
 
             dao.deleteProjectTask("t1")
 
-            assertThat(dao.getIntervalById("i-t1")).isNull()
+            assertThat(db.taskIntervalDao.getIntervalById("i-t1")).isNull()
             // The sibling task is untouched, so its tracked time has to survive.
             assertThat(dao.getTaskById("t2")).isNotNull()
-            assertThat(dao.getIntervalById("i-t2")).isNotNull()
+            assertThat(db.taskIntervalDao.getIntervalById("i-t2")).isNotNull()
             Unit
         }
 
@@ -127,7 +127,7 @@ class ProjectDaoCascadeTest {
             dao.deleteAllProjects()
 
             assertThat(dao.getTaskById("t1")).isNull()
-            assertThat(dao.getIntervalById("i-t1")).isNull()
-            assertThat(dao.getIntervalById("i-t2")).isNull()
+            assertThat(db.taskIntervalDao.getIntervalById("i-t1")).isNull()
+            assertThat(db.taskIntervalDao.getIntervalById("i-t2")).isNull()
         }
 }

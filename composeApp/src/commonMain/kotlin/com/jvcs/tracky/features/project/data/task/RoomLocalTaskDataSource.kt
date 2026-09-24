@@ -3,6 +3,7 @@ package com.jvcs.tracky.features.project.data.task
 import androidx.sqlite.SQLiteException
 import co.touchlab.kermit.Logger
 import com.jvcs.tracky.core.database.dao.ProjectDao
+import com.jvcs.tracky.core.database.dao.TaskIntervalDao
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 import com.jvcs.tracky.core.domain.device.DeviceIdProvider
 import com.jvcs.tracky.core.domain.util.DataError
@@ -29,6 +30,7 @@ import kotlin.uuid.Uuid
 
 class RoomLocalTaskDataSource(
     private val projectDao: ProjectDao,
+    private val taskIntervalDao: TaskIntervalDao,
     private val deviceIdProvider: DeviceIdProvider,
     /**
      * Timer boundaries are written on the corrected clock, never the raw device one. `TimeManager`
@@ -104,7 +106,7 @@ class RoomLocalTaskDataSource(
                     // startSubTask does. The timer lives only in memory, so a process death leaves the
                     // open interval behind with nothing tracking it; starting again would strand that
                     // row, and the next stop would close it with the whole wall-clock gap since.
-                    projectDao.getOpenIntervalBySessionId(taskId)?.let { open ->
+                    taskIntervalDao.getOpenIntervalBySessionId(taskId)?.let { open ->
                         projectDao.updateSessionTimerStatus(taskId, true)
                         // openedInterval stays null: that row is already on the server, or queued for
                         // it, and pushing a CREATE for it a second time would be a duplicate.
@@ -123,7 +125,7 @@ class RoomLocalTaskDataSource(
                             startedByDeviceId = deviceId,
                         )
 
-                    projectDao.upsertTaskInterval(interval)
+                    taskIntervalDao.upsertTaskInterval(interval)
                     projectDao.updateSessionTimerStatus(taskId, true)
 
                     val domain = interval.toTaskInterval()
@@ -141,7 +143,7 @@ class RoomLocalTaskDataSource(
             val endedAt = serverClock.now()
             val closedInterval =
                 withContext(dbWriteDispatcher) {
-                    val openInterval = projectDao.getOpenIntervalBySessionId(taskId)
+                    val openInterval = taskIntervalDao.getOpenIntervalBySessionId(taskId)
                     val updatedInterval =
                         if (openInterval != null) {
                             val now = endedAt
@@ -152,7 +154,7 @@ class RoomLocalTaskDataSource(
                                 .getOpenSubTaskIntervalForTask(taskId)
                                 ?.let { projectDao.closeSubTaskInterval(it, now) }
 
-                            projectDao.closeTaskInterval(openInterval, now)
+                            taskIntervalDao.closeTaskInterval(openInterval, now, projectDao)
                         } else {
                             null
                         }
