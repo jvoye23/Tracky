@@ -24,6 +24,8 @@ import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.delete_permanently
 import tracky.composeapp.generated.resources.restore_selected
 
+private const val UPSIDE_DOWN_DEGREES = 180f
+
 @Composable
 fun ProjectTrashSelectionTopAppBar(
     modifier: Modifier = Modifier,
@@ -48,7 +50,7 @@ fun ProjectTrashSelectionTopAppBar(
                     imageVector = Icon_Archive,
                     contentDescription = stringResource(Res.string.restore_selected),
                     tint = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.rotate(180f),
+                    modifier = Modifier.rotate(UPSIDE_DOWN_DEGREES),
                 )
             }
         },

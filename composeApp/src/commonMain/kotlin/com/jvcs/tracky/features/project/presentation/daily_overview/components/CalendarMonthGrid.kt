@@ -41,6 +41,9 @@ import tracky.composeapp.generated.resources.calendar_day_description
 import tracky.composeapp.generated.resources.calendar_day_untracked
 import kotlin.time.Duration.Companion.milliseconds
 
+/** Above this luminance, black text reads better than white on the tint. */
+private const val DARK_TEXT_LUMINANCE_THRESHOLD = 0.18f
+
 /** Tint alpha of the least busy tracked day. Matches the "Per day" strip's ramp. */
 internal const val MIN_INTENSITY = 0.22f
 
@@ -59,7 +62,7 @@ internal const val DAYS_PER_WEEK = 7
 @Composable
 internal fun onProjectColor(tint: Color): Color {
     val composited = tint.compositeOver(MaterialTheme.colorScheme.surfaceContainerLow)
-    return if (composited.luminance() > 0.18f) Color.Black else Color.White
+    return if (composited.luminance() > DARK_TEXT_LUMINANCE_THRESHOLD) Color.Black else Color.White
 }
 
 @Composable
