@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -204,7 +205,7 @@ fun RegisterScreen(
                 TrackyCheckbox(
                     checked = state.agreedToTerms,
                     onCheckedChange = { onAction(RegisterAction.OnTermsToggle(it)) },
-                    modifier = Modifier.padding(top = 1.dp),
+                    modifier = Modifier.padding(top = 1.dp).testTag("register_terms_checkbox"),
                 )
 
                 val onSurfaceVariantColor = MaterialTheme.colorScheme.onSurfaceVariant
