@@ -572,8 +572,13 @@ prism:
   #               'The three meanings of off'
   # ---------------------------------------------------------------------------
   # The file wrapping the raw Ktor verbs has to call them directly.
+  # Tracky's wrappers: safeCall/safeResponse blocks (plus the timer data source's
+  # changing { }, which wraps safeResponse), and the HttpClient.get/post/put/delete
+  # overloads in HttpClientExt.kt, which all take `route`.
   KtorCallMustUseSafeCall:
     active: true
+    safeWrappers: ['safeCall', 'safeGet', 'safePost', 'safePut', 'safePatch', 'safeDelete', 'safeResponse', 'changing']
+    safeOverloadArgument: 'route'
     excludes: ['**/test/**', '**/*Test/**', '**/androidTest/**', '**/SafeCall.kt']
   # The typealias declaration file is the one place Result<Unit, E> is spelled out.
   EmptyResultOverResultUnit:
