@@ -7,14 +7,19 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.runComposeUiTest
 import assertk.assertThat
 import assertk.assertions.containsExactly
+import com.jvcs.tracky.core.domain.auth.FakeAuthService
+import com.jvcs.tracky.core.domain.auth.FakeSessionStorage
+import com.jvcs.tracky.core.domain.auth.SocialAuthProvider
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.designsystem.util.UiText
 import kotlinx.coroutines.runBlocking
@@ -98,5 +103,32 @@ internal class RegisterScreenTest {
 
             onNodeWithText(text(Res.string.continue_with_google)).performScrollTo().assertIsNotEnabled()
             onNodeWithText(text(Res.string.continue_with_apple)).performScrollTo().assertIsNotEnabled()
+        }
+
+    @Test
+    fun theRootRegistersAndNavigatesWithTheEmail() =
+        runComposeUiTest {
+            val navigation = mutableListOf<String>()
+            val viewModel =
+                RegisterViewModel(FakeAuthService(), FakeSessionStorage(initial = null), SocialAuthProvider())
+            setContent {
+                TrackyTheme {
+                    RegisterScreenRoot(
+                        onRegisterSuccess = { navigation += "success:$it" },
+                        onLoginClick = { navigation += "login" },
+                        viewModel = viewModel,
+                    )
+                }
+            }
+
+            val fields = onAllNodes(hasSetTextAction())
+            listOf("Ada Lovelace", "ada@example.com", "Secret123!", "Secret123!")
+                .forEachIndexed { index, value -> fields[index].performTextInput(value) }
+            onNodeWithTag("register_terms_checkbox").performScrollTo().performClick()
+            onNodeWithText(text(Res.string.login)).performScrollTo().performClick()
+            onNode(createAccountButton()).performScrollTo().performClick()
+            waitForIdle()
+
+            assertThat(navigation).containsExactly("login", "success:ada@example.com")
         }
 }

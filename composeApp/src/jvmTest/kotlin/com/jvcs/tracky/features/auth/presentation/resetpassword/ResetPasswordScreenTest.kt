@@ -3,12 +3,16 @@ package com.jvcs.tracky.features.auth.presentation.resetpassword
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.runComposeUiTest
 import assertk.assertThat
 import assertk.assertions.containsExactly
+import assertk.assertions.isEqualTo
+import com.jvcs.tracky.core.domain.auth.FakeAuthService
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.designsystem.util.UiText
 import kotlinx.coroutines.runBlocking
@@ -59,5 +63,25 @@ internal class ResetPasswordScreenTest {
             onNodeWithText(text(Res.string.login)).performScrollTo().performClick()
 
             assertThat(actions).containsExactly(ResetPasswordAction.OnLoginClick)
+        }
+
+    @Test
+    fun theRootResetsAndLeadsToLogin() =
+        runComposeUiTest {
+            var loginClicks = 0
+            setContent {
+                TrackyTheme {
+                    ResetPasswordScreenRoot(
+                        viewModel = ResetPasswordViewModel(FakeAuthService(), token = "reset-token"),
+                        onLoginClick = { loginClicks++ },
+                    )
+                }
+            }
+
+            onNode(hasSetTextAction()).performTextInput("Secret123!")
+            onNodeWithText(text(Res.string.submit)).performScrollTo().performClick()
+            onNodeWithText(text(Res.string.login)).performScrollTo().performClick()
+
+            assertThat(loginClicks).isEqualTo(1)
         }
 }
