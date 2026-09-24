@@ -1,13 +1,14 @@
 package com.jvcs.tracky.features.project.data.subtaskinterval
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.features.project_tracker.data.RepoFixture
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 /**
  * The deepest row in the tree, and the only one whose route cannot be built from itself.
@@ -37,10 +38,10 @@ internal class OfflineFirstSubTaskIntervalRepositoryTest {
 
             val result = repo.createSubTaskInterval(interval())
 
-            assertTrue(result is Result.Success)
+            assertThat(result is Result.Success).isTrue()
             // p1 and si1 come off the interval; t1 could only have come from the subtask row.
-            assertEquals(listOf("p1/t1/s1"), remote.intervalRoutes)
-            assertEquals(listOf("si1"), remote.postedIntervalIds)
+            assertThat(remote.intervalRoutes).isEqualTo(listOf("p1/t1/s1"))
+            assertThat(remote.postedIntervalIds).isEqualTo(listOf("si1"))
         }
 
     @Test
@@ -54,8 +55,8 @@ internal class OfflineFirstSubTaskIntervalRepositoryTest {
             // Room — where parentTaskIntervalId is a NOT NULL foreign key and startedParentTimer is
             // what decides whether stopping this subtask also stops its parent task.
             val stored = fixture.db.subTaskIntervals.getValue("si1")
-            assertEquals("ti1", stored.parentTaskIntervalId)
-            assertTrue(stored.startedParentTimer)
+            assertThat(stored.parentTaskIntervalId).isEqualTo("ti1")
+            assertThat(stored.startedParentTimer).isTrue()
         }
 
     @Test
@@ -68,10 +69,10 @@ internal class OfflineFirstSubTaskIntervalRepositoryTest {
 
             repo.createSubTaskInterval(interval())
 
-            assertTrue(remote.intervalRoutes.isEmpty())
+            assertThat(remote.intervalRoutes.isEmpty()).isTrue()
             val op = queue.all().single { it.entityType == PendingSyncOperation.ENTITY_SUBTASK_INTERVAL }
-            assertEquals(PendingSyncOperation.OP_CREATE, op.operationType)
-            assertEquals("s1", op.parentEntityId)
+            assertThat(op.operationType).isEqualTo(PendingSyncOperation.OP_CREATE)
+            assertThat(op.parentEntityId).isEqualTo("s1")
         }
 
     @Test
@@ -84,8 +85,8 @@ internal class OfflineFirstSubTaskIntervalRepositoryTest {
 
             val result = repo.createSubTaskInterval(interval())
 
-            assertTrue(result is Result.Success)
-            assertEquals(listOf("si1"), remote.updatedIntervalIds)
+            assertThat(result is Result.Success).isTrue()
+            assertThat(remote.updatedIntervalIds).isEqualTo(listOf("si1"))
         }
 
     @Test
@@ -97,7 +98,7 @@ internal class OfflineFirstSubTaskIntervalRepositoryTest {
 
             repo.createSubTaskInterval(interval())
 
-            assertEquals("si1", queue.all().single().entityId)
+            assertThat(queue.all().single().entityId).isEqualTo("si1")
         }
 
     @Test
@@ -109,9 +110,9 @@ internal class OfflineFirstSubTaskIntervalRepositoryTest {
             val result = repo.createSubTaskInterval(interval())
 
             // The local row already stands, so queuing is the success path.
-            assertTrue(result is Result.Success)
-            assertEquals(PendingSyncOperation.ENTITY_SUBTASK_INTERVAL, queue.all().single().entityType)
-            assertTrue(fixture.scheduler.scheduleCount > 0)
+            assertThat(result is Result.Success).isTrue()
+            assertThat(queue.all().single().entityType).isEqualTo(PendingSyncOperation.ENTITY_SUBTASK_INTERVAL)
+            assertThat(fixture.scheduler.scheduleCount > 0).isTrue()
         }
 
     @Test
@@ -124,8 +125,8 @@ internal class OfflineFirstSubTaskIntervalRepositoryTest {
 
             repo.syncPendingSubTaskIntervals()
 
-            assertEquals(listOf("si1"), remote.postedIntervalIds)
-            assertTrue(queue.all().isEmpty())
+            assertThat(remote.postedIntervalIds).isEqualTo(listOf("si1"))
+            assertThat(queue.all().isEmpty()).isTrue()
         }
 
     @Test
@@ -139,8 +140,8 @@ internal class OfflineFirstSubTaskIntervalRepositoryTest {
 
             repo.deleteSubTaskInterval("si1")
 
-            assertTrue(queue.all().isEmpty())
-            assertTrue(remote.intervalRoutes.isEmpty())
+            assertThat(queue.all().isEmpty()).isTrue()
+            assertThat(remote.intervalRoutes.isEmpty()).isTrue()
         }
 
     @Test
@@ -153,9 +154,9 @@ internal class OfflineFirstSubTaskIntervalRepositoryTest {
             repo.deleteSubTaskInterval("si1")
 
             val op = queue.all().single()
-            assertEquals(PendingSyncOperation.OP_DELETE, op.operationType)
+            assertThat(op.operationType).isEqualTo(PendingSyncOperation.OP_DELETE)
             // Both remaining route segments are recovered from this one link.
-            assertEquals("s1", op.parentEntityId)
+            assertThat(op.parentEntityId).isEqualTo("s1")
         }
 
     @Test
@@ -172,7 +173,7 @@ internal class OfflineFirstSubTaskIntervalRepositoryTest {
 
             repo.syncPendingSubTaskIntervals()
 
-            assertTrue(queue.all().isEmpty())
-            assertTrue(remote.deletedIntervalIds.isEmpty())
+            assertThat(queue.all().isEmpty()).isTrue()
+            assertThat(remote.deletedIntervalIds.isEmpty()).isTrue()
         }
 }

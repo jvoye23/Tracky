@@ -2,6 +2,12 @@ package com.jvcs.tracky.features.project.data.subtask
 
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isNotNull
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.database.TrackyDatabase
 import com.jvcs.tracky.core.database.entity.ProjectEntity
 import com.jvcs.tracky.core.database.entity.ProjectSubTaskEntity
@@ -17,11 +23,6 @@ import kotlinx.coroutines.runBlocking
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 import kotlin.time.Instant
 
 /**
@@ -115,16 +116,16 @@ internal class RoomLocalSubTaskDataSourceStartTest {
 
             val result = dataSource.startSubTask("s1")
 
-            assertTrue(result is Result.Success)
+            check(result is Result.Success)
             val openTaskInterval = db.projectDao.getOpenIntervalBySessionId("t1")
-            assertNotNull(openTaskInterval, "the subtask interval needs a task interval to sit in")
-            assertEquals(openTaskInterval.intervalId, result.data.subTaskInterval.parentTaskIntervalId)
-            assertTrue(taskIsRunning())
-            assertTrue(subTaskIsRunning("s1"))
+            checkNotNull(openTaskInterval) { "the subtask interval needs a task interval to sit in" }
+            assertThat(result.data.subTaskInterval.parentTaskIntervalId).isEqualTo(openTaskInterval.intervalId)
+            assertThat(taskIsRunning()).isTrue()
+            assertThat(subTaskIsRunning("s1")).isTrue()
             // It opened the parent, so stopping it later has to close the parent again.
-            assertTrue(result.data.subTaskInterval.startedParentTimer)
+            assertThat(result.data.subTaskInterval.startedParentTimer).isTrue()
             // And it is handed back, because that row syncs and only the caller can push it.
-            assertEquals(openTaskInterval.intervalId, result.data.taskInterval?.intervalId)
+            assertThat(result.data.taskInterval?.intervalId).isEqualTo(openTaskInterval.intervalId)
         }
 
     @Test
@@ -146,19 +147,18 @@ internal class RoomLocalSubTaskDataSourceStartTest {
 
             val result = dataSource.startSubTask("s1")
 
-            assertTrue(result is Result.Success)
-            assertEquals("i-manual", result.data.subTaskInterval.parentTaskIntervalId)
+            check(result is Result.Success)
+            assertThat(result.data.subTaskInterval.parentTaskIntervalId).isEqualTo("i-manual")
             // Nothing new to push: that interval is already on its way to the server.
-            assertNull(result.data.taskInterval)
+            assertThat(result.data.taskInterval).isNull()
             // The task timer was the user's doing, so this subtask must not claim it.
-            assertFalse(result.data.subTaskInterval.startedParentTimer)
-            assertEquals(
-                1,
+            assertThat(result.data.subTaskInterval.startedParentTimer).isFalse()
+            assertThat(
                 db.projectDao
                     .getTaskWithSubTasksById("t1")
                     .first()!!
                     .intervals.size,
-            )
+            ).isEqualTo(1)
         }
 
     @Test
@@ -171,11 +171,11 @@ internal class RoomLocalSubTaskDataSourceStartTest {
             dataSource.startSubTask("s2")
 
             // s1 is closed at exactly the instant s2 starts, so the two never overlap.
-            assertNull(db.projectDao.getOpenSubTaskInterval("s1"))
-            assertNotNull(db.projectDao.getOpenSubTaskInterval("s2"))
-            assertFalse(subTaskIsRunning("s1"))
-            assertTrue(subTaskIsRunning("s2"))
-            assertEquals(30_000L, db.projectDao.getSubTaskById("s1")!!.durationMillis)
+            assertThat(db.projectDao.getOpenSubTaskInterval("s1")).isNull()
+            assertThat(db.projectDao.getOpenSubTaskInterval("s2")).isNotNull()
+            assertThat(subTaskIsRunning("s1")).isFalse()
+            assertThat(subTaskIsRunning("s2")).isTrue()
+            assertThat(db.projectDao.getSubTaskById("s1")!!.durationMillis).isEqualTo(30_000L)
         }
 
     @Test
@@ -187,14 +187,13 @@ internal class RoomLocalSubTaskDataSourceStartTest {
 
             val second = dataSource.startSubTask("s2")
 
-            assertTrue(first is Result.Success && second is Result.Success)
-            assertEquals(
-                first.data.subTaskInterval.parentTaskIntervalId,
+            check(first is Result.Success && second is Result.Success)
+            assertThat(
                 second.data.subTaskInterval.parentTaskIntervalId,
-            )
+            ).isEqualTo(first.data.subTaskInterval.parentTaskIntervalId)
             // Only s1 may claim the parent: if s2 claimed it too, stopping either would stop the task.
-            assertTrue(first.data.subTaskInterval.startedParentTimer)
-            assertFalse(second.data.subTaskInterval.startedParentTimer)
+            assertThat(first.data.subTaskInterval.startedParentTimer).isTrue()
+            assertThat(second.data.subTaskInterval.startedParentTimer).isFalse()
         }
 
     @Test
@@ -204,8 +203,8 @@ internal class RoomLocalSubTaskDataSourceStartTest {
 
             val result = dataSource.startSubTask("nope")
 
-            assertTrue(result is Result.Error)
-            assertNull(db.projectDao.getOpenIntervalBySessionId("t1"))
-            assertFalse(taskIsRunning())
+            assertThat(result is Result.Error).isTrue()
+            assertThat(db.projectDao.getOpenIntervalBySessionId("t1")).isNull()
+            assertThat(taskIsRunning()).isFalse()
         }
 }

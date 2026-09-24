@@ -1,13 +1,14 @@
 package com.jvcs.tracky.features.project.data.subtask
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.features.project_tracker.data.RepoFixture
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
@@ -37,10 +38,10 @@ internal class OfflineFirstSubTaskPushTest {
 
             val result = repo.upsertSubTask(newSubTask())
 
-            assertTrue(result is Result.Success)
-            assertEquals(listOf("s1"), remote.postedSubTaskIds)
-            assertEquals(listOf("p1/t1"), remote.subTaskRoutes)
-            assertTrue(queue.all().isEmpty())
+            assertThat(result is Result.Success).isTrue()
+            assertThat(remote.postedSubTaskIds).isEqualTo(listOf("s1"))
+            assertThat(remote.subTaskRoutes).isEqualTo(listOf("p1/t1"))
+            assertThat(queue.all().isEmpty()).isTrue()
         }
 
     @Test
@@ -51,12 +52,11 @@ internal class OfflineFirstSubTaskPushTest {
             repo.upsertSubTask(newSubTask())
 
             // Unlike an interval, a subtask is edited by hand and carries a real stamp.
-            assertEquals(
-                fixture.time.now,
+            assertThat(
                 fixture.db.subTasks
                     .getValue("s1")
                     .ownUpdatedAt,
-            )
+            ).isEqualTo(fixture.time.now)
         }
 
     @Test
@@ -68,12 +68,12 @@ internal class OfflineFirstSubTaskPushTest {
             val result = repo.upsertSubTask(newSubTask())
 
             // The local row already stands, so queuing is the success path.
-            assertTrue(result is Result.Success)
+            assertThat(result is Result.Success).isTrue()
             val op = queue.all().single()
-            assertEquals(PendingSyncOperation.ENTITY_SUBTASK, op.entityType)
-            assertEquals(PendingSyncOperation.OP_CREATE, op.operationType)
-            assertEquals("s1", op.entityId)
-            assertTrue(fixture.scheduler.scheduleCount > 0)
+            assertThat(op.entityType).isEqualTo(PendingSyncOperation.ENTITY_SUBTASK)
+            assertThat(op.operationType).isEqualTo(PendingSyncOperation.OP_CREATE)
+            assertThat(op.entityId).isEqualTo("s1")
+            assertThat(fixture.scheduler.scheduleCount > 0).isTrue()
         }
 
     @Test
@@ -87,11 +87,14 @@ internal class OfflineFirstSubTaskPushTest {
 
             repo.upsertSubTask(newSubTask())
 
-            assertTrue(remote.subTaskRoutes.isEmpty())
-            assertEquals(
-                PendingSyncOperation.OP_CREATE,
-                queue.all().single { it.entityType == PendingSyncOperation.ENTITY_SUBTASK }.operationType,
-            )
+            assertThat(remote.subTaskRoutes.isEmpty()).isTrue()
+            assertThat(
+                queue
+                    .all()
+                    .single {
+                        it.entityType == PendingSyncOperation.ENTITY_SUBTASK
+                    }.operationType,
+            ).isEqualTo(PendingSyncOperation.OP_CREATE)
         }
 
     @Test
@@ -104,7 +107,7 @@ internal class OfflineFirstSubTaskPushTest {
 
             repo.upsertSubTask(newSubTask())
 
-            assertEquals("s1", queue.all().single().entityId)
+            assertThat(queue.all().single().entityId).isEqualTo("s1")
         }
 
     @Test
@@ -117,13 +120,12 @@ internal class OfflineFirstSubTaskPushTest {
 
             repo.upsertSubTask(newSubTask().copy(title = "local"))
 
-            assertEquals(listOf("s1"), remote.updatedSubTaskIds)
-            assertEquals(
-                "local",
+            assertThat(remote.updatedSubTaskIds).isEqualTo(listOf("s1"))
+            assertThat(
                 fixture.db.subTasks
                     .getValue("s1")
                     .title,
-            )
+            ).isEqualTo("local")
         }
 
     @Test
@@ -138,13 +140,12 @@ internal class OfflineFirstSubTaskPushTest {
 
             repo.upsertSubTask(newSubTask().copy(title = "local"))
 
-            assertTrue(remote.updatedSubTaskIds.isEmpty())
-            assertEquals(
-                "server",
+            assertThat(remote.updatedSubTaskIds.isEmpty()).isTrue()
+            assertThat(
                 fixture.db.subTasks
                     .getValue("s1")
                     .title,
-            )
+            ).isEqualTo("server")
         }
 
     @Test
@@ -159,8 +160,8 @@ internal class OfflineFirstSubTaskPushTest {
             repo.deleteSubTask("s1")
 
             // A ghost: created offline and deleted before it ever existed remotely.
-            assertTrue(queue.all().isEmpty())
-            assertTrue(remote.subTaskRoutes.isEmpty())
+            assertThat(queue.all().isEmpty()).isTrue()
+            assertThat(remote.subTaskRoutes.isEmpty()).isTrue()
         }
 
     @Test
@@ -170,9 +171,9 @@ internal class OfflineFirstSubTaskPushTest {
 
             val result = repo.deleteSubTask("s1")
 
-            assertTrue(result is Result.Success)
-            assertEquals(listOf("s1"), remote.deletedSubTaskIds)
-            assertEquals(listOf("p1/t1"), remote.subTaskRoutes)
+            assertThat(result is Result.Success).isTrue()
+            assertThat(remote.deletedSubTaskIds).isEqualTo(listOf("s1"))
+            assertThat(remote.subTaskRoutes).isEqualTo(listOf("p1/t1"))
         }
 
     @Test
@@ -184,8 +185,8 @@ internal class OfflineFirstSubTaskPushTest {
             repo.deleteSubTask("s1")
 
             val op = queue.all().single()
-            assertEquals(PendingSyncOperation.OP_DELETE, op.operationType)
-            assertEquals("t1", op.parentEntityId)
+            assertThat(op.operationType).isEqualTo(PendingSyncOperation.OP_DELETE)
+            assertThat(op.parentEntityId).isEqualTo("t1")
         }
 
     @Test
@@ -198,8 +199,8 @@ internal class OfflineFirstSubTaskPushTest {
 
             repo.syncPendingSubTasks()
 
-            assertEquals(listOf("s1"), remote.postedSubTaskIds)
-            assertTrue(queue.all().isEmpty())
+            assertThat(remote.postedSubTaskIds).isEqualTo(listOf("s1"))
+            assertThat(queue.all().isEmpty()).isTrue()
         }
 
     @Test
@@ -215,7 +216,7 @@ internal class OfflineFirstSubTaskPushTest {
 
             repo.syncPendingSubTasks()
 
-            assertTrue(queue.all().isEmpty())
-            assertTrue(remote.deletedSubTaskIds.isEmpty())
+            assertThat(queue.all().isEmpty()).isTrue()
+            assertThat(remote.deletedSubTaskIds.isEmpty()).isTrue()
         }
 }

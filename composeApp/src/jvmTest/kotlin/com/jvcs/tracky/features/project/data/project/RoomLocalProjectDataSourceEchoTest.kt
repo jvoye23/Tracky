@@ -2,6 +2,10 @@ package com.jvcs.tracky.features.project.data.project
 
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNotNull
+import assertk.assertions.isNull
 import com.jvcs.tracky.core.database.TrackyDatabase
 import com.jvcs.tracky.core.database.entity.ProjectEntity
 import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
@@ -13,9 +17,6 @@ import kotlinx.coroutines.runBlocking
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 import kotlin.time.Instant
 
 /**
@@ -113,7 +114,7 @@ internal class RoomLocalProjectDataSourceEchoTest {
                 subTaskIntervals = emptyList(),
             )
 
-            assertEquals(60_000L, db.projectDao.getIntervalById("i1")?.endDateTimeEpochMs)
+            assertThat(db.projectDao.getIntervalById("i1")?.endDateTimeEpochMs).isEqualTo(60_000L)
         }
 
     @Test
@@ -128,7 +129,7 @@ internal class RoomLocalProjectDataSourceEchoTest {
                 subTaskIntervals = emptyList(),
             )
 
-            assertEquals(60_000L, db.projectDao.getIntervalById("i1")?.endDateTimeEpochMs)
+            assertThat(db.projectDao.getIntervalById("i1")?.endDateTimeEpochMs).isEqualTo(60_000L)
         }
 
     @Test
@@ -143,10 +144,9 @@ internal class RoomLocalProjectDataSourceEchoTest {
                 subTaskIntervals = emptyList(),
             )
 
-            assertEquals(
-                FakeDeviceIdProvider.THIS_DEVICE,
+            assertThat(
                 db.projectDao.getIntervalById("i1")?.startedByDeviceId,
-            )
+            ).isEqualTo(FakeDeviceIdProvider.THIS_DEVICE)
         }
 
     @Test
@@ -158,8 +158,8 @@ internal class RoomLocalProjectDataSourceEchoTest {
 
             dataSource.applyTimerEcho(taskIntervals = emptyList(), subTaskIntervals = emptyList())
 
-            assertNotNull(db.projectDao.getIntervalById("i1"))
-            assertNotNull(db.projectDao.getTaskById("t1"))
+            assertThat(db.projectDao.getIntervalById("i1")).isNotNull()
+            assertThat(db.projectDao.getTaskById("t1")).isNotNull()
             // Trailing Unit: JUnit rejects a whole class whose runBlocking test ends on a
             // value-returning assertion, and reports it as initializationError rather than a failure.
             Unit
@@ -183,6 +183,6 @@ internal class RoomLocalProjectDataSourceEchoTest {
                 subTaskIntervals = emptyList(),
             )
 
-            assertNull(db.projectDao.getIntervalById("i-orphan"))
+            assertThat(db.projectDao.getIntervalById("i-orphan")).isNull()
         }
 }

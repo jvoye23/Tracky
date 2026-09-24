@@ -2,6 +2,9 @@ package com.jvcs.tracky.features.project.data.project
 
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import assertk.assertThat
+import assertk.assertions.isNotNull
+import assertk.assertions.isNull
 import com.jvcs.tracky.core.database.TrackyDatabase
 import com.jvcs.tracky.core.database.entity.PendingSyncEntity
 import com.jvcs.tracky.core.database.entity.ProjectEntity
@@ -16,8 +19,6 @@ import kotlinx.coroutines.runBlocking
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 
 /**
  * Tombstones through `applyDelta`, against a real (in-memory) database.
@@ -151,10 +152,10 @@ internal class RoomLocalProjectDataSourceTombstoneTest {
 
             applyTombstones(Tombstone("task", "t1"))
 
-            assertNull(db.projectDao.getTaskById("t1"), "the task row survived its tombstone")
+            assertThat(db.projectDao.getTaskById("t1"), name = "the task row survived its tombstone").isNull()
             // Room cascades, so the task's own interval goes with it whether or not the server
             // bothered to name it.
-            assertNull(db.projectDao.getIntervalById("i1"), "the task's interval was left orphaned")
+            assertThat(db.projectDao.getIntervalById("i1"), name = "the task's interval was left orphaned").isNull()
         }
 
     /** The other half of the same bug, and the one easy to forget. */
@@ -165,11 +166,11 @@ internal class RoomLocalProjectDataSourceTombstoneTest {
 
             applyTombstones(Tombstone("sub_task", "s1"))
 
-            assertNull(db.projectDao.getSubTaskById("s1"), "the subtask row survived its tombstone")
-            assertNull(
+            assertThat(db.projectDao.getSubTaskById("s1"), name = "the subtask row survived its tombstone").isNull()
+            assertThat(
                 db.projectDao.getSubTaskIntervalById("si1"),
-                "the subtask's interval was left orphaned",
-            )
+                name = "the subtask's interval was left orphaned",
+            ).isNull()
         }
 
     @Test
@@ -179,7 +180,7 @@ internal class RoomLocalProjectDataSourceTombstoneTest {
 
             applyTombstones(Tombstone("project", "p1"))
 
-            assertNull(db.projectDao.getProjectById("p1"))
+            assertThat(db.projectDao.getProjectById("p1")).isNull()
         }
 
     @Test
@@ -189,8 +190,11 @@ internal class RoomLocalProjectDataSourceTombstoneTest {
 
             applyTombstones(Tombstone("task_interval", "i1"))
 
-            assertNull(db.projectDao.getIntervalById("i1"))
-            assertNotNull(db.projectDao.getTaskById("t1"), "deleting an interval must not take its task")
+            assertThat(db.projectDao.getIntervalById("i1")).isNull()
+            assertThat(
+                db.projectDao.getTaskById("t1"),
+                name = "deleting an interval must not take its task",
+            ).isNotNull()
         }
 
     @Test
@@ -200,8 +204,8 @@ internal class RoomLocalProjectDataSourceTombstoneTest {
 
             applyTombstones(Tombstone("sub_task_interval", "si1"))
 
-            assertNull(db.projectDao.getSubTaskIntervalById("si1"))
-            assertNotNull(db.projectDao.getSubTaskById("s1"))
+            assertThat(db.projectDao.getSubTaskIntervalById("si1")).isNull()
+            assertThat(db.projectDao.getSubTaskById("s1")).isNotNull()
         }
 
     /** A project delete cascades on the server, so all five arrive together. */
@@ -218,11 +222,11 @@ internal class RoomLocalProjectDataSourceTombstoneTest {
                 Tombstone("sub_task_interval", "si1"),
             )
 
-            assertNull(db.projectDao.getProjectById("p1"))
-            assertNull(db.projectDao.getTaskById("t1"))
-            assertNull(db.projectDao.getIntervalById("i1"))
-            assertNull(db.projectDao.getSubTaskById("s1"))
-            assertNull(db.projectDao.getSubTaskIntervalById("si1"))
+            assertThat(db.projectDao.getProjectById("p1")).isNull()
+            assertThat(db.projectDao.getTaskById("t1")).isNull()
+            assertThat(db.projectDao.getIntervalById("i1")).isNull()
+            assertThat(db.projectDao.getSubTaskById("s1")).isNull()
+            assertThat(db.projectDao.getSubTaskIntervalById("si1")).isNull()
         }
 
     // --- the guard this fix must not trample ---------------------------------------------------
@@ -248,10 +252,10 @@ internal class RoomLocalProjectDataSourceTombstoneTest {
 
             applyTombstones(Tombstone("task", "t1"))
 
-            assertNotNull(
+            assertThat(
                 db.projectDao.getTaskById("t1"),
-                "a tombstone destroyed an edit the outbox had not pushed yet",
-            )
+                name = "a tombstone destroyed an edit the outbox had not pushed yet",
+            ).isNotNull()
         }
 
     /** A newer server knowing about a level this build does not must not fail the page. */
@@ -262,7 +266,7 @@ internal class RoomLocalProjectDataSourceTombstoneTest {
 
             applyTombstones(Tombstone("something_new_in_v2", "x1"), Tombstone("task", "t1"))
 
-            assertNull(db.projectDao.getTaskById("t1"), "one unknown type stopped the rest of the page")
-            assertNotNull(db.projectDao.getProjectById("p1"))
+            assertThat(db.projectDao.getTaskById("t1"), name = "one unknown type stopped the rest of the page").isNull()
+            assertThat(db.projectDao.getProjectById("p1")).isNotNull()
         }
 }

@@ -1,5 +1,8 @@
 package com.jvcs.tracky.features.project.data.subtask
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.domain.device.FakeDeviceIdProvider
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
 import com.jvcs.tracky.core.domain.timer.ActiveTimerKind
@@ -31,8 +34,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import kotlin.time.Instant
 
 /**
@@ -116,13 +117,13 @@ internal class OfflineFirstSubTaskRepositoryTest {
             // One call, not two pushes: the timer resource opens the enclosing task interval itself
             // from the id named here, at the same instant. Pushing both rows as well would race it.
             val (taskInterval, subTaskInterval) = activeTimer.starts.single()
-            assertEquals("i1", taskInterval.intervalId)
-            assertEquals("si1", subTaskInterval?.subTaskIntervalId)
-            assertTrue(intervals.created.isEmpty())
-            assertTrue(subTaskIntervals.created.isEmpty())
+            assertThat(taskInterval.intervalId).isEqualTo("i1")
+            assertThat(subTaskInterval?.subTaskIntervalId).isEqualTo("si1")
+            assertThat(intervals.created.isEmpty()).isTrue()
+            assertThat(subTaskIntervals.created.isEmpty()).isTrue()
             // Both timer flags flipped, so both rows still have to go the ordinary way.
-            assertEquals(listOf("t1"), tasks.upserted)
-            assertEquals(listOf("s1"), remoteSubTasks.updatedSubTaskIds)
+            assertThat(tasks.upserted).isEqualTo(listOf("t1"))
+            assertThat(remoteSubTasks.updatedSubTaskIds).isEqualTo(listOf("s1"))
         }
 
     @Test
@@ -135,10 +136,10 @@ internal class OfflineFirstSubTaskRepositoryTest {
 
             repository.startSubTask("s1")
 
-            assertTrue(intervals.created.isEmpty())
-            assertTrue(tasks.upserted.isEmpty())
-            assertEquals(listOf("si1"), subTaskIntervals.created)
-            assertEquals(listOf("s1"), remoteSubTasks.updatedSubTaskIds)
+            assertThat(intervals.created.isEmpty()).isTrue()
+            assertThat(tasks.upserted.isEmpty()).isTrue()
+            assertThat(subTaskIntervals.created).isEqualTo(listOf("si1"))
+            assertThat(remoteSubTasks.updatedSubTaskIds).isEqualTo(listOf("s1"))
         }
 
     @Test
@@ -150,10 +151,10 @@ internal class OfflineFirstSubTaskRepositoryTest {
             repository.stopSubTask("s1")
 
             // Update, not create — the server already knows both rows from the start push.
-            assertEquals(listOf("i1"), intervals.updated)
-            assertEquals(listOf("si1"), subTaskIntervals.updated)
-            assertTrue(intervals.created.isEmpty() && subTaskIntervals.created.isEmpty())
-            assertEquals(listOf("t1"), tasks.upserted)
+            assertThat(intervals.updated).isEqualTo(listOf("i1"))
+            assertThat(subTaskIntervals.updated).isEqualTo(listOf("si1"))
+            assertThat(intervals.created.isEmpty() && subTaskIntervals.created.isEmpty()).isTrue()
+            assertThat(tasks.upserted).isEqualTo(listOf("t1"))
         }
 
     @Test
@@ -164,9 +165,9 @@ internal class OfflineFirstSubTaskRepositoryTest {
 
             repository.stopSubTask("s1")
 
-            assertTrue(intervals.updated.isEmpty())
-            assertTrue(tasks.upserted.isEmpty())
-            assertEquals(listOf("si1"), subTaskIntervals.updated)
+            assertThat(intervals.updated.isEmpty()).isTrue()
+            assertThat(tasks.upserted.isEmpty()).isTrue()
+            assertThat(subTaskIntervals.updated).isEqualTo(listOf("si1"))
         }
 
     @Test
@@ -176,10 +177,10 @@ internal class OfflineFirstSubTaskRepositoryTest {
 
             val result = repository.stopSubTask("s1")
 
-            assertTrue(result is Result.Success)
-            assertTrue(intervals.updated.isEmpty())
-            assertTrue(subTaskIntervals.updated.isEmpty())
-            assertTrue(tasks.upserted.isEmpty())
+            assertThat(result is Result.Success).isTrue()
+            assertThat(intervals.updated.isEmpty()).isTrue()
+            assertThat(subTaskIntervals.updated.isEmpty()).isTrue()
+            assertThat(tasks.upserted.isEmpty()).isTrue()
         }
 
     @Test
@@ -192,8 +193,8 @@ internal class OfflineFirstSubTaskRepositoryTest {
 
             repository.startSubTask("s1")
 
-            assertEquals(listOf("t1"), tasks.upserted)
-            assertEquals(listOf("s1"), remoteSubTasks.updatedSubTaskIds)
+            assertThat(tasks.upserted).isEqualTo(listOf("t1"))
+            assertThat(remoteSubTasks.updatedSubTaskIds).isEqualTo(listOf("s1"))
         }
 
     @Test
@@ -206,7 +207,7 @@ internal class OfflineFirstSubTaskRepositoryTest {
             val result = repository.startSubTask("s1")
 
             // A lost interval is a lost measurement; a task row is recomputable from its intervals.
-            assertEquals(Result.Error(DataError.Remote.SERVER_ERROR), result)
+            assertThat(result).isEqualTo(Result.Error(DataError.Remote.SERVER_ERROR))
         }
 
     @Test
@@ -226,9 +227,9 @@ internal class OfflineFirstSubTaskRepositoryTest {
 
             repository.startSubTask("s1")
 
-            assertTrue(activeTimer.starts.isEmpty())
-            assertEquals(listOf("i1"), intervals.created)
-            assertEquals(listOf("si1"), subTaskIntervals.created)
+            assertThat(activeTimer.starts.isEmpty()).isTrue()
+            assertThat(intervals.created).isEqualTo(listOf("i1"))
+            assertThat(subTaskIntervals.created).isEqualTo(listOf("si1"))
         }
 
     @Test
@@ -243,10 +244,10 @@ internal class OfflineFirstSubTaskRepositoryTest {
 
             repository.stopSubTask("s1")
 
-            assertTrue(localSubTasks.stopped.isEmpty())
+            assertThat(localSubTasks.stopped.isEmpty()).isTrue()
             val (intervalId, kind, _) = activeTimer.stops.single()
-            assertEquals("si1", intervalId)
-            assertEquals(ActiveTimerKind.SUB_TASK, kind)
+            assertThat(intervalId).isEqualTo("si1")
+            assertThat(kind).isEqualTo(ActiveTimerKind.SUB_TASK)
         }
 
     @Test
@@ -263,11 +264,8 @@ internal class OfflineFirstSubTaskRepositoryTest {
 
             repository.stopSubTask("s1")
 
-            assertEquals(listOf("s1"), localSubTasks.stopped)
-            assertEquals(
-                Instant.fromEpochMilliseconds(60_000),
-                activeTimer.stops.single().third,
-            )
+            assertThat(localSubTasks.stopped).isEqualTo(listOf("s1"))
+            assertThat(activeTimer.stops.single().third).isEqualTo(Instant.fromEpochMilliseconds(60_000))
         }
 }
 

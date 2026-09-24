@@ -2,6 +2,11 @@ package com.jvcs.tracky.features.project.data.timer
 
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.database.TrackyDatabase
 import com.jvcs.tracky.core.database.entity.ProjectEntity
 import com.jvcs.tracky.core.database.entity.ProjectSubTaskEntity
@@ -17,10 +22,6 @@ import kotlinx.coroutines.runBlocking
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 
@@ -166,7 +167,7 @@ internal class OfflineFirstRunningTimerRepositoryTest {
             seedProjectAndTask()
             openTaskInterval()
 
-            assertFalse(repository.observeRunningTimer().first()!!.isForeign)
+            assertThat(repository.observeRunningTimer().first()!!.isForeign).isFalse()
         }
 
     @Test
@@ -187,7 +188,7 @@ internal class OfflineFirstRunningTimerRepositoryTest {
                 ),
             )
 
-            assertFalse(repository.observeRunningTimer().first()!!.isForeign)
+            assertThat(repository.observeRunningTimer().first()!!.isForeign).isFalse()
         }
 
     @Test
@@ -209,8 +210,8 @@ internal class OfflineFirstRunningTimerRepositoryTest {
             val running = repository.observeRunningTimer().first()!!
             // It still ticks, and still shows the right number — both devices subtract the same
             // startedAt. Only what may be done to it changes.
-            assertTrue(running.isForeign)
-            assertEquals(taskStartedAt, running.startedAt.toEpochMilliseconds())
+            assertThat(running.isForeign).isTrue()
+            assertThat(running.startedAt.toEpochMilliseconds()).isEqualTo(taskStartedAt)
         }
 
     @Test
@@ -218,7 +219,7 @@ internal class OfflineFirstRunningTimerRepositoryTest {
         runBlocking {
             seedProjectAndTask()
 
-            assertNull(repository.observeRunningTimer().first())
+            assertThat(repository.observeRunningTimer().first()).isNull()
         }
 
     @Test
@@ -229,10 +230,10 @@ internal class OfflineFirstRunningTimerRepositoryTest {
 
             val running = repository.observeRunningTimer().first()!!
 
-            assertEquals("Tracky App Redesign", running.project.title)
-            assertEquals(TaskRef(id = "t1", title = "Token refresh"), running.task)
-            assertNull(running.subTask)
-            assertEquals(taskStartedAt, running.startedAt.toEpochMilliseconds())
+            assertThat(running.project.title).isEqualTo("Tracky App Redesign")
+            assertThat(running.task).isEqualTo(TaskRef(id = "t1", title = "Token refresh"))
+            assertThat(running.subTask).isNull()
+            assertThat(running.startedAt.toEpochMilliseconds()).isEqualTo(taskStartedAt)
         }
 
     @Test
@@ -244,7 +245,7 @@ internal class OfflineFirstRunningTimerRepositoryTest {
             openTaskInterval()
 
             // Summed, and the open interval contributes nothing — it has not been measured yet.
-            assertEquals(5.minutes, repository.observeRunningTimer().first()!!.bankedDuration)
+            assertThat(repository.observeRunningTimer().first()!!.bankedDuration).isEqualTo(5.minutes)
         }
 
     @Test
@@ -257,7 +258,7 @@ internal class OfflineFirstRunningTimerRepositoryTest {
             closedTaskInterval("done1", 7.minutes.inWholeMilliseconds)
             openTaskInterval()
 
-            assertEquals(7.minutes, repository.observeRunningTimer().first()!!.bankedDuration)
+            assertThat(repository.observeRunningTimer().first()!!.bankedDuration).isEqualTo(7.minutes)
         }
 
     @Test
@@ -270,13 +271,13 @@ internal class OfflineFirstRunningTimerRepositoryTest {
 
             val running = repository.observeRunningTimer().first()!!
 
-            assertEquals(TaskRef(id = "s1", title = "Auth endpoints"), running.subTask)
+            assertThat(running.subTask).isEqualTo(TaskRef(id = "s1", title = "Auth endpoints"))
             // Still names the task it sits under - the notification shows all three lines.
-            assertEquals("Token refresh", running.task.title)
+            assertThat(running.task.title).isEqualTo("Token refresh")
             // Dated and banked from the subtask, which is the timer the user actually started.
-            assertEquals(subTaskStartedAt, running.startedAt.toEpochMilliseconds())
+            assertThat(running.startedAt.toEpochMilliseconds()).isEqualTo(subTaskStartedAt)
             // The subtask's own closed intervals, not the task's and not the subtask row's total.
-            assertEquals(9.minutes, running.bankedDuration)
+            assertThat(running.bankedDuration).isEqualTo(9.minutes)
         }
 
     @Test
@@ -287,7 +288,7 @@ internal class OfflineFirstRunningTimerRepositoryTest {
             openTaskInterval()
             openSubTaskInterval()
 
-            assertEquals(Duration.ZERO, repository.observeRunningTimer().first()!!.bankedDuration)
+            assertThat(repository.observeRunningTimer().first()!!.bankedDuration).isEqualTo(Duration.ZERO)
         }
 
     @Test
@@ -298,8 +299,8 @@ internal class OfflineFirstRunningTimerRepositoryTest {
 
             val running = repository.observeRunningTimer().first()!!
 
-            assertEquals(0xFF7DA0B7.toInt(), running.project.colorArgb)
-            assertEquals(true, running.useLightTextColor)
+            assertThat(running.project.colorArgb).isEqualTo(0xFF7DA0B7.toInt())
+            assertThat(running.useLightTextColor).isEqualTo(true)
         }
 
     @Test
@@ -311,7 +312,7 @@ internal class OfflineFirstRunningTimerRepositoryTest {
                 StrandedIntervalEntity(intervalId = "i1", isSubTaskInterval = false, detectedAtEpochMs = 2_000_000L),
             )
 
-            assertNull(repository.observeRunningTimer().first())
+            assertThat(repository.observeRunningTimer().first()).isNull()
         }
 
     @Test
@@ -326,8 +327,8 @@ internal class OfflineFirstRunningTimerRepositoryTest {
 
             val running = repository.observeRunningTimer().first()!!
 
-            assertNull(running.subTask)
-            assertEquals("t1", running.task.id)
+            assertThat(running.subTask).isNull()
+            assertThat(running.task.id).isEqualTo("t1")
         }
 
     @Test
@@ -339,6 +340,6 @@ internal class OfflineFirstRunningTimerRepositoryTest {
                 db.projectDao.getIntervalById("i1")!!.copy(endDateTimeEpochMs = 2_000_000L),
             )
 
-            assertNull(repository.observeRunningTimer().first())
+            assertThat(repository.observeRunningTimer().first()).isNull()
         }
 }
