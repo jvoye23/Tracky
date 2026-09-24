@@ -9,40 +9,6 @@ import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
 /**
- * One stretch of tracked time the app is willing to count, resolved to the local day it belongs
- * to and to the titles that name it.
- *
- * Every per-day view derives from this. The "Per day" strip, the calendar heat map, the daily
- * overview's interval list and Task Detail's daily statistics all render the same underlying
- * minutes — a day's tile and that day's `TOTAL` sit centimetres apart on screen — so deriving the
- * set separately in each mapper is how they drift apart.
- *
- * An interval that crosses midnight yields one of these per day, not one in total.
- */
-internal data class CountedInterval(
-    /**
-     * The real interval row. Not unique across a multi-day interval's slices — two of them share
-     * it — but unique within any one day, which is all a per-day list needs, and it stays the id a
-     * delete or an edit would act on.
-     */
-    val intervalId: String,
-    /** The local day this slice falls on. */
-    val date: LocalDate,
-    val start: LocalTime,
-    /** Wall-clock end. `00:00` when [endsAtMidnight] — see [DaySlice]. */
-    val end: LocalTime,
-    val endsAtMidnight: Boolean,
-    val durationMillis: Long,
-    /** 0-based position within the interval; `0` of `1` when it did not cross midnight. */
-    val sliceIndex: Int,
-    val sliceCount: Int,
-    val taskId: String,
-    val taskTitle: String,
-    /** The subtask that owns this interval, or `null` when the task timed it directly. */
-    val subTaskTitle: String?,
-)
-
-/**
  * Every interval of this project that counts, flattened, dated and cut at midnight.
  *
  * Three rules live here and nowhere else:
@@ -128,3 +94,37 @@ internal fun ProjectTask.countedDayIntervals(timeZone: TimeZone): List<CountedIn
             }
         }
     }
+
+/**
+ * One stretch of tracked time the app is willing to count, resolved to the local day it belongs
+ * to and to the titles that name it.
+ *
+ * Every per-day view derives from this. The "Per day" strip, the calendar heat map, the daily
+ * overview's interval list and Task Detail's daily statistics all render the same underlying
+ * minutes — a day's tile and that day's `TOTAL` sit centimetres apart on screen — so deriving the
+ * set separately in each mapper is how they drift apart.
+ *
+ * An interval that crosses midnight yields one of these per day, not one in total.
+ */
+internal data class CountedInterval(
+    /**
+     * The real interval row. Not unique across a multi-day interval's slices — two of them share
+     * it — but unique within any one day, which is all a per-day list needs, and it stays the id a
+     * delete or an edit would act on.
+     */
+    val intervalId: String,
+    /** The local day this slice falls on. */
+    val date: LocalDate,
+    val start: LocalTime,
+    /** Wall-clock end. `00:00` when [endsAtMidnight] — see [DaySlice]. */
+    val end: LocalTime,
+    val endsAtMidnight: Boolean,
+    val durationMillis: Long,
+    /** 0-based position within the interval; `0` of `1` when it did not cross midnight. */
+    val sliceIndex: Int,
+    val sliceCount: Int,
+    val taskId: String,
+    val taskTitle: String,
+    /** The subtask that owns this interval, or `null` when the task timed it directly. */
+    val subTaskTitle: String?,
+)

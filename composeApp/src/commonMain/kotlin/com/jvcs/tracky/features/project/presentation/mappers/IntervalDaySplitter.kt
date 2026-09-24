@@ -11,24 +11,6 @@ import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
 /**
- * One day's share of an interval.
- *
- * @param endsAtMidnight true when the slice was cut at the day boundary rather than by the interval
- *   ending. [end] then reads `00:00` — the next day's midnight — which renders as `24:00`, because
- *   "23:40 – 00:00" reads like a session that ran backwards.
- * @param sliceIndex 0-based position within the interval; `0` of `1` for an ordinary same-day one.
- */
-internal data class DaySlice(
-    val date: LocalDate,
-    val start: LocalTime,
-    val end: LocalTime,
-    val endsAtMidnight: Boolean,
-    val durationMillis: Long,
-    val sliceIndex: Int,
-    val sliceCount: Int,
-)
-
-/**
  * Cuts an interval at every local midnight it crosses.
  *
  * Without this a day total can exceed 24 hours: an interval used to count in full against the day
@@ -119,3 +101,21 @@ internal fun splitAcrossLocalDays(
         )
     }
 }
+
+/**
+ * One day's share of an interval.
+ *
+ * @param endsAtMidnight true when the slice was cut at the day boundary rather than by the interval
+ *   ending. [end] then reads `00:00` — the next day's midnight — which renders as `24:00`, because
+ *   "23:40 – 00:00" reads like a session that ran backwards.
+ * @param sliceIndex 0-based position within the interval; `0` of `1` for an ordinary same-day one.
+ */
+internal data class DaySlice(
+    val date: LocalDate,
+    val start: LocalTime,
+    val end: LocalTime,
+    val endsAtMidnight: Boolean,
+    val durationMillis: Long,
+    val sliceIndex: Int,
+    val sliceCount: Int,
+)
