@@ -32,12 +32,12 @@ import com.jvcs.tracky.designsystem.theme.readOnlyCardSurface
 
 @Composable
 fun ColorInfoCard(
-    modifier: Modifier,
     label: String,
     colorValue: Color,
     hexCode: String,
     isEditMode: Boolean,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Surface(
         modifier = modifier.clickable(enabled = isEditMode) { onClick() },

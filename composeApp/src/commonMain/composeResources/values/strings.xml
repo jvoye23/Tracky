@@ -275,4 +275,8 @@
     <string name="timer_notification_permission_message">Without this permission you will not be able to see your timer when the app is in the background.</string>
     <string name="timer_notification_permission_open_settings">Open App Settings</string>
 
+    <string name="edit">Edit</string>
+    <string name="add_task">Add Task</string>
+    <string name="delete_session">Delete Session</string>
+    <string name="hex_code">Hex code</string>
 </resources>

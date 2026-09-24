@@ -6,7 +6,7 @@ import com.jvcs.tracky.features.project.domain.project.ProjectRepository
 import com.jvcs.tracky.features.project.domain.subtask.SubTaskRepository
 import com.jvcs.tracky.features.project.domain.subtaskinterval.SubTaskIntervalRepository
 import com.jvcs.tracky.features.project.domain.task.ProjectTaskRepository
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 
 /**
@@ -28,10 +28,12 @@ class SyncCoordinator(
     private val intervalRepository: IntervalRepository,
     private val subTaskRepository: SubTaskRepository,
     private val subTaskIntervalRepository: SubTaskIntervalRepository,
+    /** CPU-bound ordering work; the repositories move their own I/O. */
+    private val dispatcher: CoroutineDispatcher,
 ) : SyncRepository {
 
     override suspend fun syncPendingOperations() =
-        withContext(Dispatchers.Default) {
+        withContext(dispatcher) {
             projectRepository.syncPendingProjects()
             taskRepository.syncPendingTasks()
             intervalRepository.syncPendingIntervals()

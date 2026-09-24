@@ -24,6 +24,7 @@ import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import org.jetbrains.compose.resources.stringResource
 import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.archive_title
+import tracky.composeapp.generated.resources.back
 
 @Composable
 fun ProjectArchiveDetailScreen(
@@ -47,7 +48,7 @@ fun ProjectArchiveDetailScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icon_ArrowLeft,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(Res.string.back),
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }

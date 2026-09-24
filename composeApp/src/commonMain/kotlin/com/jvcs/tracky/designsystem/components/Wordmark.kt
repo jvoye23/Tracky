@@ -19,13 +19,15 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import tracky.composeapp.generated.resources.Res
+import tracky.composeapp.generated.resources.app_name
 import tracky.composeapp.generated.resources.tracky_icon
 
 enum class WordmarkSize { Md, Lg }
 
 @Composable
-fun Wordmark(size: WordmarkSize = WordmarkSize.Md, modifier: Modifier = Modifier) {
+fun Wordmark(modifier: Modifier = Modifier, size: WordmarkSize = WordmarkSize.Md) {
     val iconBoxSize: Dp = if (size == WordmarkSize.Lg) 44.dp else 32.dp
     val textStyle: TextStyle =
         if (size == WordmarkSize.Lg) {
@@ -63,7 +65,7 @@ fun Wordmark(size: WordmarkSize = WordmarkSize.Md, modifier: Modifier = Modifier
             )
         }
         Text(
-            text = "Tracky",
+            text = stringResource(Res.string.app_name),
             color = MaterialTheme.colorScheme.primary,
             style = textStyle,
         )

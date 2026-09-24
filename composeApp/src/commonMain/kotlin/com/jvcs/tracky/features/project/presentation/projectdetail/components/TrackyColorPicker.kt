@@ -32,6 +32,7 @@ import com.jvcs.tracky.designsystem.theme.rgbSliderRed
 import org.jetbrains.compose.resources.stringResource
 import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.cancel
+import tracky.composeapp.generated.resources.hex_code
 import tracky.composeapp.generated.resources.select
 import tracky.composeapp.generated.resources.select_color
 import kotlin.math.roundToInt
@@ -121,7 +122,7 @@ fun TrackyColorPicker(
                         value = hexString,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Hex code") },
+                        label = { Text(stringResource(Res.string.hex_code)) },
                         modifier = Modifier.weight(1f),
                         singleLine = true,
                     )

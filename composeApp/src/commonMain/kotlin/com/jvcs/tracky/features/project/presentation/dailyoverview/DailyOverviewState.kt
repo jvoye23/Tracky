@@ -1,10 +1,12 @@
 package com.jvcs.tracky.features.project.presentation.dailyoverview
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import com.jvcs.tracky.features.project.presentation.models.CalendarMonthUi
 import com.jvcs.tracky.features.project.presentation.models.DayDetailUi
 import kotlinx.datetime.LocalDate
 
+@Immutable
 data class DailyOverviewState(
     val projectTitle: String? = null,
     // Null until the project loads; the screen falls back to the default project colour.

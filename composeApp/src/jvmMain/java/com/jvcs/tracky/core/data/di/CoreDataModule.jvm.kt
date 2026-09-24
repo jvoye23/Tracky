@@ -17,14 +17,15 @@ import com.jvcs.tracky.core.domain.sync.TrashCleanupScheduler
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.okhttp.OkHttp
 import okio.Path.Companion.toPath
+import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.bind
 import org.koin.dsl.module
 
 actual val platformCoreDataModule =
     module {
-        single { DatabaseFactory() }
-        single { ConnectivityObserver() }
-        single { AppLifecycleObserver() }
+        singleOf(::DatabaseFactory)
+        singleOf(::ConnectivityObserver)
+        singleOf(::AppLifecycleObserver)
 
         single { JvmSyncScheduler() } bind SyncScheduler::class
         single { JvmTrashCleanupScheduler() } bind TrashCleanupScheduler::class

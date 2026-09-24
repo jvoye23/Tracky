@@ -1,7 +1,9 @@
 package com.jvcs.tracky.features.project.presentation.projectarchive
 
+import androidx.compose.runtime.Immutable
 import com.jvcs.tracky.features.project.presentation.models.ProjectUi
 
+@Immutable
 data class ProjectArchiveState(
     val projects: List<ProjectUi>? = null,
     val isSearchActive: Boolean = false,

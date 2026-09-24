@@ -1212,6 +1212,7 @@ internal class RepoFixture(val time: FakeTimeProvider = FakeTimeProvider()) {
             intervalRepository = intervalRepository,
             subTaskRepository = subTaskRepository,
             subTaskIntervalRepository = subTaskIntervalRepository,
+            dispatcher = Dispatchers.Default,
         )
 
     /** One project "p1" with one stopped task "t1" under it, both already known to the server. */

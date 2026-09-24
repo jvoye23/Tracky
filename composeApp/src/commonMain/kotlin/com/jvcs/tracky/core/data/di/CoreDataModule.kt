@@ -212,7 +212,16 @@ val coreDataModule =
 
         // The one place the projects → tasks → intervals → subtasks → subtask intervals sync order
         // is expressed.
-        singleOf(::SyncCoordinator) bind SyncRepository::class
+        single<SyncRepository> {
+            SyncCoordinator(
+                projectRepository = get(),
+                taskRepository = get(),
+                intervalRepository = get(),
+                subTaskRepository = get(),
+                subTaskIntervalRepository = get(),
+                dispatcher = get(named("DefaultDispatcher")),
+            )
+        }
 
         // Before the repositories that await it. createdAtStart so the pass is running by the time the
         // first screen composes, rather than on first timer start.
@@ -303,7 +312,7 @@ val coreDataModule =
             )
         }
         single { RealtimeEnvelopeParser(json = get()) }
-        single { RealtimeConnectivity() }
+        singleOf(::RealtimeConnectivity)
         single(createdAtStart = true) {
             RealtimeTimerConnection(
                 channel = get(),
@@ -368,11 +377,11 @@ val coreDataModule =
         singleOf(::ServerClock)
 
         // How recently this device heard from the server; the timer freezes a foreign one without it.
-        single { SyncRecency() }
+        singleOf(::SyncRecency)
 
         // Auth
         singleOf(::DataStoreSessionStorage) bind SessionStorage::class
         single { HttpClientFactory(get()).create(get()) }
         singleOf(::KtorAuthService) bind AuthService::class
-        single { SocialAuthProvider() }
+        singleOf(::SocialAuthProvider)
     }

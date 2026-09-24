@@ -24,6 +24,7 @@ import com.jvcs.tracky.features.project.presentation.projectoverview.ProjectOver
 import com.jvcs.tracky.features.project.presentation.projectoverview.SortOption
 import org.jetbrains.compose.resources.stringResource
 import tracky.composeapp.generated.resources.Res
+import tracky.composeapp.generated.resources.navigation_menu
 import tracky.composeapp.generated.resources.search_in_projects
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,7 +48,7 @@ fun ProjectOverviewSearchTopAppBar(
             IconButton(onClick = onMenuClick) {
                 Icon(
                     imageVector = Icons.Default.Menu,
-                    contentDescription = "Menu",
+                    contentDescription = stringResource(Res.string.navigation_menu),
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
             }

@@ -38,18 +38,18 @@ import tracky.composeapp.generated.resources.sort_by
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchTopAppBar(
-    title: String? = null,
-    isSearchBoxExpanded: Boolean = false,
     searchHint: String,
     searchQuery: String,
     onQueryChange: (String) -> Unit,
-    navigationIcon: @Composable () -> Unit = {},
-    sortOption: SortOption? = null,
-    onToggleSortBottomSheet: () -> Unit = {},
     scrollBehavior: TopAppBarScrollBehavior,
     actions: @Composable RowScope.() -> Unit,
-    colors: TopAppBarColors = TopAppBarDefaults.topAppBarColors(),
     modifier: Modifier = Modifier,
+    title: String? = null,
+    isSearchBoxExpanded: Boolean = false,
+    sortOption: SortOption? = null,
+    onToggleSortBottomSheet: () -> Unit = {},
+    colors: TopAppBarColors = TopAppBarDefaults.topAppBarColors(),
+    navigationIcon: @Composable () -> Unit = {},
 ) {
     TopAppBar(
         title = {

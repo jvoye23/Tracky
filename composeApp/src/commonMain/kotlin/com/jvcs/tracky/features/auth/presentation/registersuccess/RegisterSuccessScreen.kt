@@ -74,8 +74,8 @@ fun RegisterSuccessScreenRoot(viewModel: RegisterSuccessViewModel = koinViewMode
 @Composable
 fun RegisterSuccessScreen(
     state: RegisterSuccessState,
-    snackbarHostState: SnackbarHostState,
     onAction: (RegisterSuccessAction) -> Unit,
+    snackbarHostState: SnackbarHostState,
 ) {
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },

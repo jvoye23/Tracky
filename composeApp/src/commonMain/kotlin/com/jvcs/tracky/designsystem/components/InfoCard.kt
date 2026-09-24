@@ -32,10 +32,10 @@ import com.jvcs.tracky.designsystem.theme.TrackyTheme
 
 @Composable
 fun InfoCard(
-    modifier: Modifier,
     icon: ImageVector,
     label: String,
     value: String,
+    modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit = {},
 ) {
     Surface(
@@ -75,8 +75,18 @@ private fun InfoCardPairPreview() {
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                InfoCard(Modifier.weight(1f), Icons.Outlined.DateRange, "Busiest day", "Tue 08")
-                InfoCard(Modifier.weight(1f), Icons.Outlined.Schedule, "This month", "20:08")
+                InfoCard(
+                    icon = Icons.Outlined.DateRange,
+                    label = "Busiest day",
+                    value = "Tue 08",
+                    modifier = Modifier.weight(1f),
+                )
+                InfoCard(
+                    icon = Icons.Outlined.Schedule,
+                    label = "This month",
+                    value = "20:08",
+                    modifier = Modifier.weight(1f),
+                )
             }
         }
     }
@@ -92,8 +102,18 @@ private fun InfoCardFontScalePreview() {
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                InfoCard(Modifier.weight(1f), Icons.Outlined.DateRange, "Busiest day", "Tue 08")
-                InfoCard(Modifier.weight(1f), Icons.Outlined.Schedule, "This month", "20:08")
+                InfoCard(
+                    icon = Icons.Outlined.DateRange,
+                    label = "Busiest day",
+                    value = "Tue 08",
+                    modifier = Modifier.weight(1f),
+                )
+                InfoCard(
+                    icon = Icons.Outlined.Schedule,
+                    label = "This month",
+                    value = "20:08",
+                    modifier = Modifier.weight(1f),
+                )
             }
         }
     }

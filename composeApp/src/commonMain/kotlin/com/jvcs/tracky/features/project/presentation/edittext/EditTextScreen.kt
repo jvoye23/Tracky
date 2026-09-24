@@ -110,10 +110,10 @@ fun EditTextScreenRoot(onNavigateBack: () -> Unit, viewModel: EditTextViewModel 
 
 @Composable
 private fun EditTextScreen(
-    onNavigateBack: () -> Unit,
     state: EditTextState,
-    snackbarHostState: SnackbarHostState,
     onAction: (EditTextAction) -> Unit,
+    onNavigateBack: () -> Unit,
+    snackbarHostState: SnackbarHostState,
 ) {
     val focusRequester = remember { FocusRequester() }
 

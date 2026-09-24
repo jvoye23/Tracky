@@ -281,12 +281,8 @@ private fun taskBorder(isTimerRunning: Boolean, projectColor: Color): BorderStro
     )
 
 /** Edit mode outlines each tappable row - the task and every subtask - the way the card is. */
-@Composable
-private fun Modifier.editModeRowBorder(
-    isEditMode: Boolean,
-    isTimerRunning: Boolean,
-    projectColor: Color,
-): Modifier = if (isEditMode) border(taskBorder(isTimerRunning, projectColor), TaskCardShape) else this
+private fun Modifier.editModeRowBorder(isEditMode: Boolean, rowBorder: BorderStroke): Modifier =
+    if (isEditMode) border(rowBorder, TaskCardShape) else this
 
 @Composable
 fun TaskItemCard(
@@ -391,7 +387,7 @@ fun TaskItemCard(
                     modifier =
                         Modifier
                             .weight(1f)
-                            .editModeRowBorder(isEditMode, task.isTimerRunning, projectColor)
+                            .editModeRowBorder(isEditMode, taskBorder(task.isTimerRunning, projectColor))
                             .then(if (isEditMode) Modifier.padding(8.dp) else Modifier),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -590,8 +586,10 @@ fun TaskItemCard(
                                             },
                                         )
                                         // After the drag layer, so the outline travels with a dragged row.
-                                        .editModeRowBorder(isEditMode, projectSubTaskUi.isTimerRunning, projectColor)
-                                        .padding(vertical = 6.dp)
+                                        .editModeRowBorder(
+                                            isEditMode,
+                                            taskBorder(projectSubTaskUi.isTimerRunning, projectColor),
+                                        ).padding(vertical = 6.dp)
                                         .then(if (isEditMode) Modifier.padding(horizontal = 8.dp) else Modifier),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),

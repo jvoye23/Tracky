@@ -1,9 +1,11 @@
 package com.jvcs.tracky.features.project.presentation.projectoverview
 
 import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.runtime.Stable
 import com.jvcs.tracky.core.domain.auth.User
 import com.jvcs.tracky.features.project.presentation.models.ProjectUi
 
+@Stable
 data class ProjectOverviewState(
     val localUser: User? = null,
     val timer: Long = 0L,
