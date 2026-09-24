@@ -1,5 +1,10 @@
 package com.jvcs.tracky.features.project.presentation.mappers
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.jvcs.tracky.features.project.presentation.fakes.interval
 import com.jvcs.tracky.features.project.presentation.fakes.project
 import com.jvcs.tracky.features.project.presentation.fakes.subInterval
@@ -9,10 +14,6 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 /**
  * The three rules that live in [countedDayIntervals] and nowhere else: subtask-nesting dedupe,
@@ -27,12 +28,12 @@ class CountedDayIntervalsTest {
 
     @Test
     fun `a project with no tasks counts nothing`() {
-        assertTrue(project().countedDayIntervals(TimeZone.UTC).isEmpty())
+        assertThat(project().countedDayIntervals(TimeZone.UTC).isEmpty()).isTrue()
     }
 
     @Test
     fun `a task with no intervals counts nothing`() {
-        assertTrue(project(tasks = listOf(task())).countedDayIntervals(TimeZone.UTC).isEmpty())
+        assertThat(project(tasks = listOf(task())).countedDayIntervals(TimeZone.UTC).isEmpty()).isTrue()
     }
 
     @Test
@@ -42,7 +43,7 @@ class CountedDayIntervalsTest {
                 .copy(projectTasks = null)
                 .countedDayIntervals(TimeZone.UTC)
 
-        assertTrue(counted.isEmpty())
+        assertThat(counted.isEmpty()).isTrue()
     }
 
     // --- rule 2: open intervals are dropped ---------------------------------------------------
@@ -54,7 +55,7 @@ class CountedDayIntervalsTest {
                 tasks = listOf(task(intervals = listOf(interval("2026-09-08T09:00:00Z", minutes = 30, open = true)))),
             ).countedDayIntervals(TimeZone.UTC)
 
-        assertTrue(counted.isEmpty())
+        assertThat(counted.isEmpty()).isTrue()
     }
 
     @Test
@@ -78,8 +79,8 @@ class CountedDayIntervalsTest {
                     ),
             ).countedDayIntervals(TimeZone.UTC)
 
-        assertEquals(1, counted.size)
-        assertEquals(20 * 60_000L, counted.single().durationMillis)
+        assertThat(counted.size).isEqualTo(1)
+        assertThat(counted.single().durationMillis).isEqualTo(20 * 60_000L)
     }
 
     // --- rule 1: subtask nesting dedupe -------------------------------------------------------
@@ -97,9 +98,9 @@ class CountedDayIntervalsTest {
                     ),
             ).countedDayIntervals(TimeZone.UTC)
 
-        assertEquals(1, counted.size)
-        assertEquals("Design review", counted.single().taskTitle)
-        assertNull(counted.single().subTaskTitle)
+        assertThat(counted.size).isEqualTo(1)
+        assertThat(counted.single().taskTitle).isEqualTo("Design review")
+        assertThat(counted.single().subTaskTitle).isNull()
     }
 
     @Test
@@ -124,9 +125,9 @@ class CountedDayIntervalsTest {
                     ),
             ).countedDayIntervals(TimeZone.UTC)
 
-        assertEquals(1, counted.size)
-        assertEquals(42 * 60_000L, counted.sumOf { it.durationMillis })
-        assertEquals("Token refresh", counted.single().subTaskTitle)
+        assertThat(counted.size).isEqualTo(1)
+        assertThat(counted.sumOf { it.durationMillis }).isEqualTo(42 * 60_000L)
+        assertThat(counted.single().subTaskTitle).isEqualTo("Token refresh")
     }
 
     @Test
@@ -149,9 +150,9 @@ class CountedDayIntervalsTest {
                     ),
             ).countedDayIntervals(TimeZone.UTC)
 
-        assertEquals("Auth endpoints", counted.single().taskTitle)
-        assertEquals("Token refresh", counted.single().subTaskTitle)
-        assertEquals("task-7", counted.single().taskId)
+        assertThat(counted.single().taskTitle).isEqualTo("Auth endpoints")
+        assertThat(counted.single().subTaskTitle).isEqualTo("Token refresh")
+        assertThat(counted.single().taskId).isEqualTo("task-7")
     }
 
     @Test
@@ -178,8 +179,8 @@ class CountedDayIntervalsTest {
                     ),
             ).countedDayIntervals(TimeZone.UTC)
 
-        assertEquals(listOf("A", "B"), counted.map { it.subTaskTitle })
-        assertEquals(35 * 60_000L, counted.sumOf { it.durationMillis })
+        assertThat(counted.map { it.subTaskTitle }).isEqualTo(listOf("A", "B"))
+        assertThat(counted.sumOf { it.durationMillis }).isEqualTo(35 * 60_000L)
     }
 
     // --- rule 3: an interval belongs to the day it started on ---------------------------------
@@ -191,9 +192,9 @@ class CountedDayIntervalsTest {
                 tasks = listOf(task(intervals = listOf(interval("2026-09-08T09:30:00Z", minutes = 42)))),
             ).countedDayIntervals(TimeZone.UTC)
 
-        assertEquals(LocalDate(2026, 9, 8), counted.single().date)
-        assertEquals(LocalTime(9, 30), counted.single().start)
-        assertEquals(LocalTime(10, 12), counted.single().end)
+        assertThat(counted.single().date).isEqualTo(LocalDate(2026, 9, 8))
+        assertThat(counted.single().start).isEqualTo(LocalTime(9, 30))
+        assertThat(counted.single().end).isEqualTo(LocalTime(10, 12))
     }
 
     @Test
@@ -205,23 +206,23 @@ class CountedDayIntervalsTest {
 
         // Two entries, not one: billing all 40 minutes to the 8th is what let a single day total
         // more than 24 hours.
-        assertEquals(2, counted.size)
+        assertThat(counted.size).isEqualTo(2)
 
-        assertEquals(LocalDate(2026, 9, 8), counted[0].date)
-        assertEquals(LocalTime(23, 40), counted[0].start)
-        assertEquals(20 * 60 * 1000L, counted[0].durationMillis)
-        assertTrue(counted[0].endsAtMidnight, "cut at the boundary, so the label reads 24:00")
-        assertEquals(0, counted[0].sliceIndex)
-        assertEquals(2, counted[0].sliceCount)
+        assertThat(counted[0].date).isEqualTo(LocalDate(2026, 9, 8))
+        assertThat(counted[0].start).isEqualTo(LocalTime(23, 40))
+        assertThat(counted[0].durationMillis).isEqualTo(20 * 60 * 1000L)
+        assertThat(counted[0].endsAtMidnight, name = "cut at the boundary, so the label reads 24:00").isTrue()
+        assertThat(counted[0].sliceIndex).isEqualTo(0)
+        assertThat(counted[0].sliceCount).isEqualTo(2)
 
-        assertEquals(LocalDate(2026, 9, 9), counted[1].date)
-        assertEquals(LocalTime(0, 0), counted[1].start)
-        assertEquals(LocalTime(0, 20), counted[1].end)
-        assertEquals(20 * 60 * 1000L, counted[1].durationMillis)
-        assertFalse(counted[1].endsAtMidnight)
+        assertThat(counted[1].date).isEqualTo(LocalDate(2026, 9, 9))
+        assertThat(counted[1].start).isEqualTo(LocalTime(0, 0))
+        assertThat(counted[1].end).isEqualTo(LocalTime(0, 20))
+        assertThat(counted[1].durationMillis).isEqualTo(20 * 60 * 1000L)
+        assertThat(counted[1].endsAtMidnight).isFalse()
 
         // Same row on both days: the id still names the interval a delete would act on.
-        assertEquals(counted[0].intervalId, counted[1].intervalId)
+        assertThat(counted[1].intervalId).isEqualTo(counted[0].intervalId)
     }
 
     @Test
@@ -231,7 +232,7 @@ class CountedDayIntervalsTest {
                 tasks = listOf(task(intervals = listOf(interval("2026-09-08T23:40:00Z", minutes = 40)))),
             ).countedDayIntervals(TimeZone.UTC)
 
-        assertEquals(40 * 60 * 1000L, counted.sumOf { it.durationMillis })
+        assertThat(counted.sumOf { it.durationMillis }).isEqualTo(40 * 60 * 1000L)
     }
 
     @Test
@@ -242,20 +243,21 @@ class CountedDayIntervalsTest {
             ).countedDayIntervals(TimeZone.UTC)
 
         // The common case must not move: one row in, one row out, sliceCount 1.
-        assertEquals(1, counted.size)
-        assertEquals(1, counted.single().sliceCount)
-        assertFalse(counted.single().endsAtMidnight)
+        assertThat(counted.size).isEqualTo(1)
+        assertThat(counted.single().sliceCount).isEqualTo(1)
+        assertThat(counted.single().endsAtMidnight).isFalse()
     }
 
     @Test
     fun `the zone decides the local day`() {
         val tasks = listOf(task(intervals = listOf(interval("2026-09-05T02:00:00Z", minutes = 30))))
 
-        assertEquals(LocalDate(2026, 9, 5), project(tasks = tasks).countedDayIntervals(TimeZone.UTC).single().date)
-        assertEquals(
-            LocalDate(2026, 9, 4),
+        assertThat(
+            project(tasks = tasks).countedDayIntervals(TimeZone.UTC).single().date,
+        ).isEqualTo(LocalDate(2026, 9, 5))
+        assertThat(
             project(tasks = tasks).countedDayIntervals(TimeZone.of("America/New_York")).single().date,
-        )
+        ).isEqualTo(LocalDate(2026, 9, 4))
     }
 
     @Test
@@ -269,7 +271,7 @@ class CountedDayIntervalsTest {
 
         val perDayIds = counted.groupBy { it.date }.mapValues { (_, slices) -> slices.map { it.intervalId } }
         perDayIds.forEach { (date, ids) ->
-            assertEquals(ids.size, ids.distinct().size, "duplicate interval id on $date")
+            assertThat(ids.distinct().size, name = "duplicate interval id on $date").isEqualTo(ids.size)
         }
     }
 
@@ -282,7 +284,7 @@ class CountedDayIntervalsTest {
                 tasks = listOf(task(intervals = listOf(interval("2026-09-08T09:00:00Z", minutes = 0)))),
             ).countedDayIntervals(TimeZone.UTC)
 
-        assertEquals(1, counted.size)
-        assertEquals(0L, counted.single().durationMillis)
+        assertThat(counted.size).isEqualTo(1)
+        assertThat(counted.single().durationMillis).isEqualTo(0L)
     }
 }
