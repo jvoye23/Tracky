@@ -108,18 +108,39 @@ def line_coverage(xml_path):
     return 100.0 * covered / total
 
 
+# Kotlin Multiplatform source sets. A KMP module has no src/main or src/test:
+# its production code sits in <target>Main and its tests in <target>Test, and
+# before these were recognised a KMP module read as "no sources" -- so the one
+# module holding an app's code was the one the coverage gate never looked at.
+KMP_UNIT_TEST_DIRS = ("commonTest", "jvmTest", "androidHostTest", "androidUnitTest")
+KMP_DEVICE_TEST_DIRS = ("androidDeviceTest", "androidInstrumentedTest")
+
+
+def _production_dirs(module_dir, root):
+    base = os.path.join(root, module_dir, "src")
+    dirs = [os.path.join(base, "main")]
+    if os.path.isdir(base):
+        dirs += [
+            os.path.join(base, name)
+            for name in sorted(os.listdir(base))
+            if name.endswith("Main") and os.path.isdir(os.path.join(base, name))
+        ]
+    return dirs
+
+
 def has_sources(module_dir, root):
-    """True when the module's src/main contains any Kotlin file.
+    """True when the module's production source (src/main, or any KMP
+    <target>Main) contains any Kotlin file.
 
     Used to tell a module that genuinely has no source (pure config, e.g.
     version catalog wiring) apart from one with production code but zero
     tests of any kind — the latter must deny the push, not pass silently.
     """
-    base = os.path.join(root, module_dir, "src", "main")
-    for _current, _dirs, filenames in os.walk(base):
-        for filename in filenames:
-            if filename.endswith(".kt"):
-                return True
+    for base in _production_dirs(module_dir, root):
+        for _current, _dirs, filenames in os.walk(base):
+            for filename in filenames:
+                if filename.endswith(".kt"):
+                    return True
     return False
 
 
@@ -257,8 +278,12 @@ def has_jacoco(module_dir, root):
 def report_kind(module_dir, root):
     """Which coverage report suits this module's source sets."""
     base = os.path.join(root, module_dir, "src")
-    unit = os.path.isdir(os.path.join(base, "test"))
-    instrumentation = os.path.isdir(os.path.join(base, "androidTest"))
+    unit = any(
+        os.path.isdir(os.path.join(base, name)) for name in ("test",) + KMP_UNIT_TEST_DIRS
+    )
+    instrumentation = any(
+        os.path.isdir(os.path.join(base, name)) for name in ("androidTest",) + KMP_DEVICE_TEST_DIRS
+    )
     if unit and instrumentation:
         return "combined"
     if unit:
