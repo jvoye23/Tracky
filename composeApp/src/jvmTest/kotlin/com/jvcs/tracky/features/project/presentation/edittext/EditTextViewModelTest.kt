@@ -403,24 +403,7 @@ private class FakeEditTextProjectRepository(project: Project) : ProjectRepositor
 
     override fun getActiveProjects(): Flow<List<Project>> = projectFlow.map { listOf(it) }
 
-    override fun getArchivedProjects(): Flow<List<Project>> = flowOf(emptyList())
-
-    override fun getTrashedProjects(): Flow<List<Project>> = flowOf(emptyList())
-
     override suspend fun fetchProjects(): EmptyResult<DataError> = Result.Success(Unit)
-
-    override suspend fun reorderProjects(orderedProjectIds: List<String>): EmptyResult<DataError> = Result.Success(Unit)
-
-    override suspend fun setProjectsPinned(projectIds: List<String>, isPinned: Boolean): EmptyResult<DataError> =
-        Result.Success(Unit)
-
-    override suspend fun setProjectArchived(projectId: String, isArchived: Boolean): EmptyResult<DataError> =
-        Result.Success(Unit)
-
-    override suspend fun setProjectTrashed(projectId: String, trashedAt: Instant?): EmptyResult<DataError> =
-        Result.Success(Unit)
-
-    override suspend fun purgeExpiredTrashedProjects(cutoff: Instant): EmptyResult<DataError> = Result.Success(Unit)
 
     override suspend fun deleteProject(projectId: String): EmptyResult<DataError> = Result.Success(Unit)
 

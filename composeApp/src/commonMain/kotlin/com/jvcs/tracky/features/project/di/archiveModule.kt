@@ -9,6 +9,7 @@ val archiveModule =
         viewModel {
             ProjectArchiveViewModel(
                 projectRepository = get(),
+                projectOrganizationRepository = get(),
             )
         }
     }

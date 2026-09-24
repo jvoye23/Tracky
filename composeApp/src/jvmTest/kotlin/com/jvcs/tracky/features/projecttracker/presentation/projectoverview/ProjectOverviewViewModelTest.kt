@@ -20,6 +20,7 @@ import com.jvcs.tracky.core.domain.util.testTimeManager
 import com.jvcs.tracky.designsystem.util.UiText
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
+import com.jvcs.tracky.features.project.domain.project.ProjectOrganizationRepository
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
 import com.jvcs.tracky.features.project.presentation.projectoverview.ProjectOverviewAction
 import com.jvcs.tracky.features.project.presentation.projectoverview.ProjectOverviewEvent
@@ -92,6 +93,7 @@ class ProjectOverviewViewModelTest {
     ): ProjectOverviewViewModel =
         ProjectOverviewViewModel(
             projectRepository = repository,
+            projectOrganizationRepository = repository,
             timeManager = testTimeManager(),
             timeProvider = FakeTimeProvider(),
             sessionStorage = sessionStorage,
@@ -371,7 +373,9 @@ class ProjectOverviewViewModelTest {
 
 // --- Fake -----------------------------------------------------------------------------------------
 
-private class FakeProjectRepository(initial: List<Project>) : ProjectRepository {
+private class FakeProjectRepository(initial: List<Project>) :
+    ProjectRepository,
+    ProjectOrganizationRepository {
     private val projectsFlow = MutableStateFlow(initial)
     var reorderResult: EmptyResult<DataError> = Result.Success(Unit)
     var fetchResult: EmptyResult<DataError> = Result.Success(Unit)

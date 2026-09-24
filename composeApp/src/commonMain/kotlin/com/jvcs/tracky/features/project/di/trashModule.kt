@@ -9,6 +9,7 @@ val trashModule =
         viewModel {
             ProjectTrashViewModel(
                 projectRepository = get(),
+                projectOrganizationRepository = get(),
             )
         }
     }

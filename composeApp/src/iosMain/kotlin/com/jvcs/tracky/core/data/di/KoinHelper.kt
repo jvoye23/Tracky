@@ -12,7 +12,7 @@ import com.jvcs.tracky.core.domain.sync.TrashRetention
 import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.di.initKoin
 import com.jvcs.tracky.features.project.data.timer.StrandedTimerReconciler
-import com.jvcs.tracky.features.project.domain.project.ProjectRepository
+import com.jvcs.tracky.features.project.domain.project.ProjectOrganizationRepository
 import com.jvcs.tracky.navigation.DeepLinkRouter
 import com.jvcs.tracky.navigation.Route
 import kotlinx.coroutines.CancellationException
@@ -99,7 +99,7 @@ fun runTrashCleanup(onComplete: (Boolean) -> Unit) {
         val success =
             try {
                 koin
-                    .get<ProjectRepository>()
+                    .get<ProjectOrganizationRepository>()
                     .purgeExpiredTrashedProjects(TrashRetention.cutoff(koin.get<TimeProvider>().nowInstant))
                 true
             } catch (exception: SQLiteException) {

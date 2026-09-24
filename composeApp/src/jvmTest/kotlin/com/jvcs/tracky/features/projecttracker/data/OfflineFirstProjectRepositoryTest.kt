@@ -12,6 +12,7 @@ import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
 import com.jvcs.tracky.core.domain.util.Result
+import com.jvcs.tracky.features.project.data.project.OfflineFirstProjectOrganizationRepository
 import com.jvcs.tracky.features.project.data.project.OfflineFirstProjectRepository
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
@@ -36,6 +37,23 @@ class OfflineFirstProjectRepositoryTest {
         localProjectDataSource = local,
         localProjectOrganizationDataSource = local,
         localServerTreeDataSource = local,
+        remoteProjectDataSource = remote,
+        pendingSyncDataSource = queue,
+        syncScheduler = scheduler,
+        applicationScope = CoroutineScope(Dispatchers.Unconfined),
+        timeProvider = time,
+    )
+
+    private fun organization(
+        local: FakeLocalProjectDataSource,
+        remote: FakeRemoteProjectDataSource,
+        queue: FakePendingSyncDataSource,
+        scheduler: FakeSyncScheduler,
+        time: FakeTimeProvider = FakeTimeProvider(),
+    ) = OfflineFirstProjectOrganizationRepository(
+        projectRepository = repo(local, remote, queue, scheduler, time),
+        localProjectDataSource = local,
+        localProjectOrganizationDataSource = local,
         remoteProjectDataSource = remote,
         pendingSyncDataSource = queue,
         syncScheduler = scheduler,
@@ -112,7 +130,7 @@ class OfflineFirstProjectRepositoryTest {
 
             // Move p3 to the middle -> new order p1, p3, p2.
             val result =
-                repo(local, remote, queue, scheduler)
+                organization(local, remote, queue, scheduler)
                     .reorderProjects(listOf("p1", "p3", "p2"))
 
             assertThat(result is Result.Success).isTrue()
@@ -133,7 +151,7 @@ class OfflineFirstProjectRepositoryTest {
             val scheduler = FakeSyncScheduler()
             local.seedOrderedProjects()
 
-            repo(local, remote, queue, scheduler).reorderProjects(listOf("p1", "p3", "p2"))
+            organization(local, remote, queue, scheduler).reorderProjects(listOf("p1", "p3", "p2"))
 
             // One drag must not fan out into one PUT per shifted card.
             assertThat(remote.reorderCalls.size).isEqualTo(1)
@@ -151,7 +169,7 @@ class OfflineFirstProjectRepositoryTest {
             local.seedOrderedProjects()
 
             val result =
-                repo(local, remote, queue, scheduler)
+                organization(local, remote, queue, scheduler)
                     .reorderProjects(listOf("p1", "p2", "p3")) // already the stored order
 
             assertThat(result is Result.Success).isTrue()
@@ -169,7 +187,7 @@ class OfflineFirstProjectRepositoryTest {
             local.seedOrderedProjects()
 
             val result =
-                repo(local, remote, queue, scheduler)
+                organization(local, remote, queue, scheduler)
                     .reorderProjects(listOf("p1", "p3", "p2"))
 
             assertThat(result is Result.Error).isTrue()
@@ -190,7 +208,7 @@ class OfflineFirstProjectRepositoryTest {
             local.seedOrderedProjects()
 
             val result =
-                repo(local, remote, queue, scheduler)
+                organization(local, remote, queue, scheduler)
                     .reorderProjects(listOf("p1", "p3", "p2"))
 
             // User sees success because the local write succeeded.
@@ -212,10 +230,10 @@ class OfflineFirstProjectRepositoryTest {
             val queue = FakePendingSyncDataSource()
             val scheduler = FakeSyncScheduler()
             local.seedOrderedProjects()
-            val repository = repo(local, remote, queue, scheduler)
+            val organization = organization(local, remote, queue, scheduler)
 
-            repository.reorderProjects(listOf("p1", "p3", "p2"))
-            repository.reorderProjects(listOf("p3", "p2", "p1"))
+            organization.reorderProjects(listOf("p1", "p3", "p2"))
+            organization.reorderProjects(listOf("p3", "p2", "p1"))
 
             // The order is a single piece of state — two drags collapse into one queued push.
             assertThat(queue.all().size).isEqualTo(1)
@@ -231,7 +249,8 @@ class OfflineFirstProjectRepositoryTest {
             local.seedOrderedProjects()
             val repository = repo(local, remote, queue, scheduler)
 
-            repository.reorderProjects(listOf("p1", "p3", "p2")) // queued while offline
+            // Queued while offline.
+            organization(local, remote, queue, scheduler).reorderProjects(listOf("p1", "p3", "p2"))
             remote.failWith = null // back online
             remote.reorderCalls.clear()
 
@@ -254,7 +273,7 @@ class OfflineFirstProjectRepositoryTest {
 
             // "ghost" was deleted on another device but is still in the mirror list the UI committed.
             val result =
-                repo(local, remote, queue, scheduler)
+                organization(local, remote, queue, scheduler)
                     .reorderProjects(listOf("ghost", "p1", "p2", "p3"))
 
             assertThat(result is Result.Success).isTrue()
@@ -288,7 +307,7 @@ class OfflineFirstProjectRepositoryTest {
 
             // p4 sits at index 1 in Other, where p2 already sits at 1 in Pinned. Flipping the flag alone
             // would leave them sharing an index and let the creation date decide the order.
-            val result = repo(local, remote, queue, scheduler).setProjectsPinned(listOf("p4"), isPinned = true)
+            val result = organization(local, remote, queue, scheduler).setProjectsPinned(listOf("p4"), isPinned = true)
 
             assertThat(result is Result.Success).isTrue()
             assertThat(local.projects["p4"]!!.isPinned).isTrue()
@@ -307,7 +326,7 @@ class OfflineFirstProjectRepositoryTest {
 
             // Selection order is a Set's, so the repository must fall back on the stored order: p3 (0)
             // before p5 (2).
-            repo(local, remote, queue, scheduler).setProjectsPinned(listOf("p5", "p3"), isPinned = true)
+            organization(local, remote, queue, scheduler).setProjectsPinned(listOf("p5", "p3"), isPinned = true)
 
             assertThat(local.sectionOrder(isPinned = true)).isEqualTo(listOf("p3", "p5", "p1", "p2"))
         }
@@ -321,7 +340,7 @@ class OfflineFirstProjectRepositoryTest {
             val scheduler = FakeSyncScheduler()
             local.seedTwoSections()
 
-            repo(local, remote, queue, scheduler).setProjectsPinned(listOf("p1"), isPinned = false)
+            organization(local, remote, queue, scheduler).setProjectsPinned(listOf("p1"), isPinned = false)
 
             assertThat(local.projects["p1"]!!.isPinned).isFalse()
             assertThat(local.sectionOrder(isPinned = false)).isEqualTo(listOf("p1", "p3", "p4", "p5"))
@@ -337,7 +356,7 @@ class OfflineFirstProjectRepositoryTest {
             val scheduler = FakeSyncScheduler()
             local.seedTwoSections()
 
-            repo(local, remote, queue, scheduler).setProjectsPinned(listOf("p5", "p3"), isPinned = true)
+            organization(local, remote, queue, scheduler).setProjectsPinned(listOf("p5", "p3"), isPinned = true)
 
             // One gesture, one /sort request — not one per shifted card. p3 already sat at 0 and stays
             // there, so it is not part of the write.
@@ -356,7 +375,7 @@ class OfflineFirstProjectRepositoryTest {
             local.seedTwoSections()
 
             val result =
-                repo(local, remote, queue, scheduler)
+                organization(local, remote, queue, scheduler)
                     .setProjectsPinned(listOf("ghost"), isPinned = true)
 
             assertThat(result is Result.Success).isTrue()
@@ -406,7 +425,7 @@ class OfflineFirstProjectRepositoryTest {
             val time = FakeTimeProvider(now = Instant.fromEpochMilliseconds(1_000), advanceOnReadMillis = 1)
             local.seedTwoSections()
 
-            repo(local, remote, queue, scheduler, time).reorderProjects(listOf("p2", "p1"))
+            organization(local, remote, queue, scheduler, time).reorderProjects(listOf("p2", "p1"))
 
             assertThat(local.sortIndexWriteTimestamps.single()).isEqualTo(Instant.fromEpochMilliseconds(1_000))
             assertThat(remote.reorderTimestamps.single()).isEqualTo(Instant.fromEpochMilliseconds(1_000))

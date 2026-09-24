@@ -3,6 +3,7 @@ package com.jvcs.tracky.features.project.presentation.projecttrash
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jvcs.tracky.core.domain.util.onFailure
+import com.jvcs.tracky.features.project.domain.project.ProjectOrganizationRepository
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
 import com.jvcs.tracky.features.project.presentation.mappers.toProjectUi
 import kotlinx.coroutines.async
@@ -16,7 +17,10 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class ProjectTrashViewModel(private val projectRepository: ProjectRepository) : ViewModel() {
+class ProjectTrashViewModel(
+    private val projectRepository: ProjectRepository,
+    private val projectOrganizationRepository: ProjectOrganizationRepository,
+) : ViewModel() {
 
     private val _state = MutableStateFlow(ProjectTrashState())
     private var hasLoadedInitialData = false
@@ -116,7 +120,7 @@ class ProjectTrashViewModel(private val projectRepository: ProjectRepository) : 
             val results =
                 ids
                     .map { id ->
-                        async { projectRepository.setProjectTrashed(projectId = id, trashedAt = null) }
+                        async { projectOrganizationRepository.setProjectTrashed(projectId = id, trashedAt = null) }
                     }.awaitAll()
             results.forEach {
                 it.onFailure {
@@ -158,7 +162,7 @@ class ProjectTrashViewModel(private val projectRepository: ProjectRepository) : 
 
     private fun getTrashedProjects() {
         viewModelScope.launch {
-            projectRepository.getTrashedProjects().collect { projectList ->
+            projectOrganizationRepository.getTrashedProjects().collect { projectList ->
                 val trashed = projectList.map { it.toProjectUi() }
                 _state.update { state ->
                     state.copy(
