@@ -28,8 +28,19 @@ complexity:
     excludes: ['**/test/**', '**/*Test/**', '**/androidTest/**']
   LongMethod:
     excludes: ['**/test/**', '**/*Test/**', '**/androidTest/**', '**/presentation/**', '**/designsystem/**']
+  # Constructors are Koin's injection points in Tracky: a class's collaborators
+  # arrive there, and the repositories and realtime/sync coordinators legitimately
+  # take 7-14 of them. The owner chose to treat that as the injection shape rather
+  # than regroup dependencies, so up to 15 are allowed, just above the largest
+  # (14). Plain functions keep the default.
   LongParameterList:
+    allowedConstructorParameters: 15
     excludes: ['**/test/**', '**/*Test/**', '**/androidTest/**', '**/presentation/**', '**/designsystem/**']
+  # A test class grows with the behaviour it pins, and splitting it only to fit a
+  # size limit scatters one subject's tests. Same test exclusion as the size
+  # rules above.
+  LargeClass:
+    excludes: ['**/test/**', '**/*Test/**', '**/androidTest/**']
   # A DTO mapper file is one private function per payload type, which is cohesion
   # rather than a file doing too much; the internal surface is what the threshold
   # is really about.
