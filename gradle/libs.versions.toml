@@ -1,23 +1,23 @@
 [versions]
-agp = "9.3.2"
+agp = "9.4.1"
 android-compileSdk = "37"
 android-minSdk = "33"
-android-targetSdk = "36"
-ktor = "3.5.2"
+android-targetSdk = "37"
+ktor = "3.6.0"
 androidx-activity = "1.13.0"
 androidx-appcompat = "1.8.0"
 androidx-core = "1.19.0"
 androidx-espresso = "3.7.0"
 androidx-lifecycle = "2.11.0"
 androidx-testExt = "1.3.0"
-composeMultiplatform = "1.12.0"
+composeMultiplatform = "1.12.1"
 junit = "4.13.2"
-kotlin = "2.4.10"
+kotlin = "2.4.20"
 material3 = "1.4.0"
 kotlinx-coroutines = "1.11.0"
-coilCompose = "3.6.1"
+coilCompose = "3.6.3"
 koin = "4.2.2"
-kermit = "2.1.0"
+kermit = "2.2.0"
 datastore = "1.2.1"
 ksp = "2.3.11"
 kotlinxDatetime = "0.8.0"
@@ -27,12 +27,12 @@ navigationCompose = "2.9.2"
 navigationEvent = "1.1.1"
 materialIconsExtended = "1.7.3"
 coreSplashscreen = "1.2.0"
-room = "2.8.4"
-uiToolingPreview = "1.12.0"
+room = "2.8.5"
+uiToolingPreview = "1.12.1"
 uuid = "0.8.4"
-sqlite = "2.7.0"
+sqlite = "2.7.1"
 adaptive = "1.2.0"
-work = "2.11.2"
+work = "2.12.0"
 lifecycleProcess = "2.11.0"
 turbine = "1.2.1"
 # Android + iOS only - there is no jvm artifact, so these stay out of commonMain.
@@ -40,6 +40,16 @@ mokoPermissions = "0.20.1"
 
 # For Compose Multiplatform
 cmpNavigation3 = "1.1.1"
+
+# PRISM (verification tooling)
+assertk = "0.28.1"
+composeRules = "0.6.4"
+coroutines = "1.10.2"
+detekt = "2.0.0-alpha.6"
+jacoco = "0.8.13"
+junit5 = "5.11.3"
+konsist = "0.17.3"
+ktlint = "1.8.0"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -108,6 +118,22 @@ androidx-lifecycle-process = { module = "androidx.lifecycle:lifecycle-process", 
 # iOS Specific:
 ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
 
+# PRISM (verification tooling)
+assertk-jvm = { group = "com.willowtreeapps.assertk", name = "assertk-jvm", version.ref = "assertk" }
+compose-rules-detekt = { group = "io.nlopez.compose.rules", name = "detekt", version.ref = "composeRules" }
+detekt-api = { group = "dev.detekt", name = "detekt-api", version.ref = "detekt" }
+detekt-gradle-plugin = { group = "dev.detekt", name = "detekt-gradle-plugin", version.ref = "detekt" }
+detekt-test = { group = "dev.detekt", name = "detekt-test", version.ref = "detekt" }
+detekt-test-junit = { group = "dev.detekt", name = "detekt-test-junit", version.ref = "detekt" }
+detekt-test-utils = { group = "dev.detekt", name = "detekt-test-utils", version.ref = "detekt" }
+detekt-utils = { group = "dev.detekt", name = "detekt-utils", version.ref = "detekt" }
+junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter", version.ref = "junit5" }
+junit-jupiter-engine = { group = "org.junit.jupiter", name = "junit-jupiter-engine", version.ref = "junit5" }
+junit-platform-launcher = { group = "org.junit.platform", name = "junit-platform-launcher" }
+konsist = { group = "com.lemonappdev", name = "konsist", version.ref = "konsist" }
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
+ktlint-cli = { group = "com.pinterest.ktlint", name = "ktlint-cli", version.ref = "ktlint" }
+
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
@@ -119,3 +145,6 @@ androidKmpLibrary = { id = "com.android.kotlin.multiplatform.library", version.r
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 room = { id = "androidx.room", version.ref = "room" }
+
+# PRISM (verification tooling)
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

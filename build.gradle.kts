@@ -10,4 +10,6 @@ plugins {
     alias(libs.plugins.androidKmpLibrary) apply false
     alias(libs.plugins.ksp) apply false
     alias(libs.plugins.room) apply false
+    alias(libs.plugins.kotlin.jvm) apply false
+    id("prism.static-analysis")
 }

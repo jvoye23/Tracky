@@ -9,12 +9,16 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.room)
+    id("prism.ktlint")
+    id("prism.detekt")
+    id("prism.jacoco")
 }
 
-val localProperties = Properties().apply {
-    val file = rootProject.file("local.properties")
-    if (file.exists()) load(file.inputStream())
-}
+val localProperties =
+    Properties().apply {
+        val file = rootProject.file("local.properties")
+        if (file.exists()) load(file.inputStream())
+    }
 
 val generateApiConfig by tasks.registering {
     val outputDir = layout.buildDirectory.dir("generated/apiConfig/kotlin")
@@ -30,7 +34,7 @@ val generateApiConfig by tasks.registering {
             |internal object ApiConfig {
             |    const val BASE_URL = "$baseUrl"
             |}
-            """.trimMargin()
+            """.trimMargin(),
         )
     }
 }
@@ -45,25 +49,22 @@ kotlin {
 
     listOf(
         iosArm64(),
-        iosSimulatorArm64()
+        iosSimulatorArm64(),
     ).forEach { iosTarget ->
         iosTarget.binaries.framework {
             baseName = "ComposeApp"
             isStatic = true
         }
     }
-    
-    jvm()
-    
 
-    
+    jvm()
+
     sourceSets {
         commonMain {
             kotlin.srcDir(tasks.named("generateApiConfig").map { it.outputs.files.singleFile })
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
-
         }
         androidMain.dependencies {
             implementation(compose.preview)
@@ -76,16 +77,15 @@ kotlin {
             implementation(libs.ktor.client.okhttp)
             implementation(libs.androidx.work.runtime)
             implementation(libs.androidx.lifecycle.process)
-        implementation(libs.androidx.core.ktx)
+            implementation(libs.androidx.core.ktx)
             // Android-only on purpose: moko-permissions publishes no jvm artifact, and
             // PermissionsController is an `expect interface`, so it cannot be named in a
             // commonMain that is shared with the jvm() target.
             implementation(libs.moko.permissions)
             implementation(libs.moko.permissions.notifications)
-
         }
         commonMain.dependencies {
-            //implementation(compose.ui)
+            // implementation(compose.ui)
             implementation(libs.datastore)
             implementation(libs.datastore.preferences)
             implementation(libs.room.runtime)
@@ -94,7 +94,7 @@ kotlin {
             implementation(compose.foundation)
             implementation(compose.material3)
             implementation(compose.ui)
-            //implementation("org.jetbrains.compose.ui:ui-backhandler:${libs.versions.composeMultiplatform.get()}")
+            // implementation("org.jetbrains.compose.ui:ui-backhandler:${libs.versions.composeMultiplatform.get()}")
             implementation(libs.compose.ui.backhandler)
             implementation(compose.components.resources)
             implementation(compose.preview)
@@ -155,8 +155,8 @@ configurations.configureEach {
     exclude(group = "org.jetbrains.androidx.navigationevent", module = "navigationevent-compose")
 }
 
-room{
-    schemaDirectory("${projectDir}/schemas")
+room {
+    schemaDirectory("$projectDir/schemas")
 }
 
 dependencies {
@@ -167,7 +167,6 @@ dependencies {
     add("kspIosArm64", libs.room.compiler)
     add("kspIosSimulatorArm64", libs.room.compiler)
 }
-
 
 compose.desktop {
     application {
