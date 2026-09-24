@@ -52,7 +52,7 @@ internal class StrandedTimerReconcilerTest {
                 .build()
         reconciler =
             StrandedTimerReconciler(
-                db.projectDao,
+                db.subTaskDao,
                 db.taskDao,
                 db.subTaskIntervalDao,
                 db.taskIntervalDao,
@@ -101,7 +101,7 @@ internal class StrandedTimerReconcilerTest {
             ),
         )
         if (withSubTask) {
-            db.projectDao.upsertProjectSubTask(
+            db.subTaskDao.upsertProjectSubTask(
                 ProjectSubTaskEntity(
                     projectSubTaskId = "s1",
                     parentProjectTaskId = "t1",
@@ -276,7 +276,7 @@ internal class StrandedTimerReconcilerTest {
             // One clock read for the whole pass, so the child's proposed span can never outrun its
             // parent's.
             assertThat(parkedChild.detectedAtEpochMs).isEqualTo(parkedParent.detectedAtEpochMs)
-            assertThat(db.projectDao.getSubTaskById("s1")!!.isTimerRunning).isFalse()
+            assertThat(db.subTaskDao.getSubTaskById("s1")!!.isTimerRunning).isFalse()
             assertThat(db.taskDao.getTaskById("t1")!!.isTimerRunning).isFalse()
         }
 
@@ -346,7 +346,7 @@ internal class StrandedTimerReconcilerTest {
 
             assertThat(db.strandedIntervalDao.getStrandedInterval("si1")).isNull()
             assertThat(db.strandedIntervalDao.getStrandedInterval("i1")).isNull()
-            assertThat(db.projectDao.getSubTaskById("s1")!!.isTimerRunning).isTrue()
+            assertThat(db.subTaskDao.getSubTaskById("s1")!!.isTimerRunning).isTrue()
         }
 
     @Test

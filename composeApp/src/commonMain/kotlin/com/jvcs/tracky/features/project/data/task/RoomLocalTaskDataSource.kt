@@ -3,6 +3,7 @@ package com.jvcs.tracky.features.project.data.task
 import androidx.sqlite.SQLiteException
 import co.touchlab.kermit.Logger
 import com.jvcs.tracky.core.database.dao.ProjectDao
+import com.jvcs.tracky.core.database.dao.SubTaskDao
 import com.jvcs.tracky.core.database.dao.SubTaskIntervalDao
 import com.jvcs.tracky.core.database.dao.TaskDao
 import com.jvcs.tracky.core.database.dao.TaskIntervalDao
@@ -33,6 +34,7 @@ import kotlin.uuid.Uuid
 class RoomLocalTaskDataSource(
     private val projectDao: ProjectDao,
     private val taskDao: TaskDao,
+    private val subTaskDao: SubTaskDao,
     private val subTaskIntervalDao: SubTaskIntervalDao,
     private val taskIntervalDao: TaskIntervalDao,
     private val deviceIdProvider: DeviceIdProvider,
@@ -156,7 +158,7 @@ class RoomLocalTaskDataSource(
                             // but nothing could ever reconcile. It closes at the same instant the task does.
                             subTaskIntervalDao
                                 .getOpenSubTaskIntervalForTask(taskId)
-                                ?.let { subTaskIntervalDao.closeSubTaskInterval(it, now, projectDao) }
+                                ?.let { subTaskIntervalDao.closeSubTaskInterval(it, now, subTaskDao) }
 
                             taskIntervalDao.closeTaskInterval(openInterval, now, taskDao)
                         } else {

@@ -71,6 +71,7 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
         repository =
             OfflineFirstStrandedTimerRepository(
                 projectDao = db.projectDao,
+                subTaskDao = db.subTaskDao,
                 taskDao = db.taskDao,
                 subTaskIntervalDao = db.subTaskIntervalDao,
                 taskIntervalDao = db.taskIntervalDao,
@@ -130,7 +131,7 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
             ),
         )
         if (withSubTask) {
-            db.projectDao.upsertProjectSubTask(
+            db.subTaskDao.upsertProjectSubTask(
                 ProjectSubTaskEntity(
                     projectSubTaskId = "s1",
                     parentProjectTaskId = "t1",
@@ -160,7 +161,7 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
         }
         timeProvider.now = Instant.fromEpochMilliseconds(detectedAt)
         StrandedTimerReconciler(
-            db.projectDao,
+            db.subTaskDao,
             db.taskDao,
             db.subTaskIntervalDao,
             db.taskIntervalDao,
@@ -266,7 +267,7 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
         runBlocking {
             seedParkedTaskInterval()
             // The subtask arrives after the parking, so the pair is not formed but the warning applies.
-            db.projectDao.upsertProjectSubTask(
+            db.subTaskDao.upsertProjectSubTask(
                 ProjectSubTaskEntity(
                     projectSubTaskId = "s1",
                     parentProjectTaskId = "t1",

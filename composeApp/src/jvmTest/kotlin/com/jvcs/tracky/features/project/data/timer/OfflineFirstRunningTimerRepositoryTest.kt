@@ -50,6 +50,7 @@ internal class OfflineFirstRunningTimerRepositoryTest {
         repository =
             OfflineFirstRunningTimerRepository(
                 db.projectDao,
+                db.subTaskDao,
                 db.taskDao,
                 db.subTaskIntervalDao,
                 db.taskIntervalDao,
@@ -111,7 +112,7 @@ internal class OfflineFirstRunningTimerRepositoryTest {
     }
 
     private suspend fun openSubTaskInterval() {
-        db.projectDao.upsertProjectSubTask(
+        db.subTaskDao.upsertProjectSubTask(
             ProjectSubTaskEntity(
                 projectSubTaskId = "s1",
                 parentProjectTaskId = "t1",

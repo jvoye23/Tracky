@@ -40,8 +40,6 @@ interface SubTaskIntervalDao {
     )
     suspend fun getOpenSubTaskIntervalForTask(taskId: String): SubTaskIntervalEntity?
 
-    // Backs the parent task's play button, which resumes whatever was worked on last rather than
-    // opening a task-level interval of its own. Same join as above; ordered instead of filtered.
     // The subtask half of the running timer's inputs; see TaskIntervalDao.observeOpenTaskInterval.
     @Query(
         "SELECT * FROM sub_task_intervals WHERE endDateTimeEpochMs IS NULL " +

@@ -100,7 +100,7 @@ internal class RoomLocalProjectDataSourceTombstoneTest {
                 startedByDeviceId = null,
             ),
         )
-        db.projectDao.upsertProjectSubTask(
+        db.subTaskDao.upsertProjectSubTask(
             ProjectSubTaskEntity(
                 projectSubTaskId = "s1",
                 parentProjectTaskId = "t1",
@@ -170,7 +170,7 @@ internal class RoomLocalProjectDataSourceTombstoneTest {
 
             applyTombstones(Tombstone("sub_task", "s1"))
 
-            assertThat(db.projectDao.getSubTaskById("s1"), name = "the subtask row survived its tombstone").isNull()
+            assertThat(db.subTaskDao.getSubTaskById("s1"), name = "the subtask row survived its tombstone").isNull()
             assertThat(
                 db.subTaskIntervalDao.getSubTaskIntervalById("si1"),
                 name = "the subtask's interval was left orphaned",
@@ -209,7 +209,7 @@ internal class RoomLocalProjectDataSourceTombstoneTest {
             applyTombstones(Tombstone("sub_task_interval", "si1"))
 
             assertThat(db.subTaskIntervalDao.getSubTaskIntervalById("si1")).isNull()
-            assertThat(db.projectDao.getSubTaskById("s1")).isNotNull()
+            assertThat(db.subTaskDao.getSubTaskById("s1")).isNotNull()
         }
 
     /** A project delete cascades on the server, so all five arrive together. */
@@ -229,7 +229,7 @@ internal class RoomLocalProjectDataSourceTombstoneTest {
             assertThat(db.projectDao.getProjectById("p1")).isNull()
             assertThat(db.taskDao.getTaskById("t1")).isNull()
             assertThat(db.taskIntervalDao.getIntervalById("i1")).isNull()
-            assertThat(db.projectDao.getSubTaskById("s1")).isNull()
+            assertThat(db.subTaskDao.getSubTaskById("s1")).isNull()
             assertThat(db.subTaskIntervalDao.getSubTaskIntervalById("si1")).isNull()
         }
 

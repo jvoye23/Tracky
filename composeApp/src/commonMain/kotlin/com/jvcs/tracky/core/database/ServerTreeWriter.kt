@@ -154,10 +154,10 @@ class ServerTreeWriter(private val database: TrackyDatabase) {
     private suspend fun mergeSubTasks(subTasks: List<ProjectSubTaskEntity>) {
         subTasks.forEach { incoming ->
             if (database.taskDao.getTaskById(incoming.parentProjectTaskId) == null) return@forEach
-            val local = database.projectDao.getSubTaskById(incoming.projectSubTaskId)
+            val local = database.subTaskDao.getSubTaskById(incoming.projectSubTaskId)
             // A real stamp, exactly like a task's: subtasks are edited by hand.
             if (serverWinsOnPull(local?.updatedAtEpochMs, incoming.updatedAtEpochMs)) {
-                database.projectDao.upsertProjectSubTask(incoming)
+                database.subTaskDao.upsertProjectSubTask(incoming)
             }
         }
     }
@@ -168,7 +168,7 @@ class ServerTreeWriter(private val database: TrackyDatabase) {
     ) {
         subTaskIntervals.forEach { incoming ->
             // Two cascading parents, so two ways to dangle.
-            if (database.projectDao.getSubTaskById(incoming.parentSubTaskId) == null) return@forEach
+            if (database.subTaskDao.getSubTaskById(incoming.parentSubTaskId) == null) return@forEach
             if (database.taskIntervalDao.getIntervalById(incoming.parentTaskIntervalId) == null) return@forEach
             val local = database.subTaskIntervalDao.getSubTaskIntervalById(incoming.subTaskIntervalId)
             val serverWins =
@@ -200,7 +200,7 @@ class ServerTreeWriter(private val database: TrackyDatabase) {
         deletions.projectIds.forEach { if (it !in pending) database.projectDao.deleteProject(it) }
         deletions.taskIds.forEach { if (it !in pending) database.taskDao.deleteProjectTask(it) }
         deletions.intervalIds.forEach { if (it !in pending) database.taskIntervalDao.deleteTaskInterval(it) }
-        deletions.subTaskIds.forEach { if (it !in pending) database.projectDao.deleteProjectSubTask(it) }
+        deletions.subTaskIds.forEach { if (it !in pending) database.subTaskDao.deleteProjectSubTask(it) }
         deletions.subTaskIntervalIds.forEach {
             if (it !in
                 pending
