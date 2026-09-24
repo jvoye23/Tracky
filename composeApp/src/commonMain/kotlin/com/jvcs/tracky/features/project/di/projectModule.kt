@@ -1,13 +1,13 @@
 package com.jvcs.tracky.features.project.di
 
-import com.jvcs.tracky.features.project.presentation.daily_overview.DailyOverviewViewModel
-import com.jvcs.tracky.features.project.presentation.edit_text.EditTextTarget
-import com.jvcs.tracky.features.project.presentation.edit_text.EditTextViewModel
-import com.jvcs.tracky.features.project.presentation.project_detail.ProjectDetailViewModel
-import com.jvcs.tracky.features.project.presentation.project_overview.ProjectOverviewViewModel
-import com.jvcs.tracky.features.project.presentation.stranded_timer.StrandedTimerViewModel
-import com.jvcs.tracky.features.project.presentation.task_detail.TaskDetailViewModel
-import com.jvcs.tracky.features.project.presentation.timer_permission.TimerNotificationPermissionViewModel
+import com.jvcs.tracky.features.project.presentation.dailyoverview.DailyOverviewViewModel
+import com.jvcs.tracky.features.project.presentation.edittext.EditTextTarget
+import com.jvcs.tracky.features.project.presentation.edittext.EditTextViewModel
+import com.jvcs.tracky.features.project.presentation.projectdetail.ProjectDetailViewModel
+import com.jvcs.tracky.features.project.presentation.projectoverview.ProjectOverviewViewModel
+import com.jvcs.tracky.features.project.presentation.strandedtimer.StrandedTimerViewModel
+import com.jvcs.tracky.features.project.presentation.taskdetail.TaskDetailViewModel
+import com.jvcs.tracky.features.project.presentation.timerpermission.TimerNotificationPermissionViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

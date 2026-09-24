@@ -9,8 +9,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.rememberNavBackStack
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.designsystem.util.ObserveAsEvents
-import com.jvcs.tracky.features.project.presentation.stranded_timer.StrandedTimerDialogHost
-import com.jvcs.tracky.features.project.presentation.timer_permission.TimerNotificationPermissionDialogHost
+import com.jvcs.tracky.features.project.presentation.strandedtimer.StrandedTimerDialogHost
+import com.jvcs.tracky.features.project.presentation.timerpermission.TimerNotificationPermissionDialogHost
 import com.jvcs.tracky.navigation.DeepLinkListener
 import com.jvcs.tracky.navigation.NavigationRoot
 import com.jvcs.tracky.navigation.Route

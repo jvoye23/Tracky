@@ -6,7 +6,7 @@ import androidx.savedstate.serialization.encodeToSavedState
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
-import com.jvcs.tracky.features.project.presentation.edit_text.EditTextTarget
+import com.jvcs.tracky.features.project.presentation.edittext.EditTextTarget
 import kotlinx.serialization.PolymorphicSerializer
 import kotlin.test.Test
 
