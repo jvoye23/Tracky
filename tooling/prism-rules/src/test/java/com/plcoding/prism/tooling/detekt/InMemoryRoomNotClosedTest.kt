@@ -92,6 +92,26 @@ class InMemoryRoomNotClosedTest {
     }
 
     @Test
+    fun `does not report when a kotlin test AfterTest teardown closes the database`() {
+        val code =
+            """
+            class ProjectDaoTest {
+                @BeforeTest
+                fun setUp() {
+                    database = Room.inMemoryDatabaseBuilder<TrackyDatabase>().build()
+                }
+
+                @AfterTest
+                fun tearDown() {
+                    database.close()
+                }
+            }
+            """.trimIndent()
+
+        assertThat(rule.lint(code)).isEmpty()
+    }
+
+    @Test
     fun `does not report a builder outside any class`() {
         val code =
             """

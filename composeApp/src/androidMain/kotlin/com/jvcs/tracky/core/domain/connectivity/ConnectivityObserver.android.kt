@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 
-actual class ConnectivityObserver(private val context: Context) {
+actual class ConnectivityObserver(context: Context) {
 
     actual val isConnected: Flow<Boolean> =
         callbackFlow {

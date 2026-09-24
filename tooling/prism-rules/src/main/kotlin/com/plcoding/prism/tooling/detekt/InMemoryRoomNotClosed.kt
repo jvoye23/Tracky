@@ -13,7 +13,8 @@ import org.jetbrains.kotlin.psi.psiUtil.getStrictParentOfType
 
 /**
  * Reports a `Room.inMemoryDatabaseBuilder(...)` call in a test class that
- * declares no `@After`/`@AfterEach` teardown calling `close()`.
+ * declares no `@After`/`@AfterEach`/`@AfterTest` teardown calling `close()`. kotlin.test's
+ * `@AfterTest` is the multiplatform spelling of the same teardown.
  *
  * An in-memory Room database holds an open SQLite connection until it is
  * closed; a suite that never closes it leaks a connection per test. The
@@ -23,7 +24,7 @@ import org.jetbrains.kotlin.psi.psiUtil.getStrictParentOfType
 class InMemoryRoomNotClosed(config: Config) :
     Rule(
         config,
-        "A test class that builds an in-memory Room database must close() it in an @After/@AfterEach teardown.",
+        "A test class that builds an in-memory Room database must close() it in an @After/@AfterEach/@AfterTest teardown.",
     ) {
     override fun visitDotQualifiedExpression(expression: KtDotQualifiedExpression) {
         super.visitDotQualifiedExpression(expression)
@@ -37,7 +38,7 @@ class InMemoryRoomNotClosed(config: Config) :
         report(
             Finding(
                 Entity.from(expression),
-                "Add an @After (or @AfterEach) function that calls close() on this database, " +
+                "Add an @After (or @AfterEach / @AfterTest) function that calls close() on this database, " +
                     "so its SQLite connection does not leak across tests.",
             ),
         )
@@ -62,6 +63,6 @@ class InMemoryRoomNotClosed(config: Config) :
         const val ROOM = "Room"
         const val IN_MEMORY_BUILDER = "inMemoryDatabaseBuilder"
         const val CLOSE = "close"
-        val TEARDOWN_ANNOTATIONS = setOf("After", "AfterEach")
+        val TEARDOWN_ANNOTATIONS = setOf("After", "AfterEach", "AfterTest")
     }
 }

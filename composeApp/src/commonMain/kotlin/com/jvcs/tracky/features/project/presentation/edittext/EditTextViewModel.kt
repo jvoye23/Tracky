@@ -50,7 +50,7 @@ import kotlin.uuid.Uuid
  * subtask targets. [subTaskId] is only set for [EditTextTarget.SUBTASK].
  */
 class EditTextViewModel(
-    private val isEditMode: Boolean,
+    isEditMode: Boolean,
     private val projectId: String,
     private val target: EditTextTarget,
     private val taskId: String?,
@@ -83,12 +83,12 @@ class EditTextViewModel(
     // hang off it) survives every state update.
     private val titleState =
         TextFieldState(
-            initialText = restoredTitle ?: "",
+            initialText = restoredTitle.orEmpty(),
             initialSelection = TextRange(restoredTitle?.length ?: 0),
         )
     private val descriptionState =
         TextFieldState(
-            initialText = restoredDescription ?: "",
+            initialText = restoredDescription.orEmpty(),
             initialSelection = TextRange(restoredDescription?.length ?: 0),
         )
 
@@ -220,7 +220,7 @@ class EditTextViewModel(
                 titleState.setTextAndPlaceCursorAtEnd(stored.title)
             }
             if (restoredDescription == null) {
-                descriptionState.setTextAndPlaceCursorAtEnd(stored.description ?: "")
+                descriptionState.setTextAndPlaceCursorAtEnd(stored.description.orEmpty())
             }
         }
     }

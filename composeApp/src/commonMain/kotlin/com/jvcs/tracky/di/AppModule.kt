@@ -31,8 +31,6 @@ val appModule =
         viewModel {
             MainViewModel(
                 sessionStorage = get(),
-                authService = get(),
-                applicationScope = get(qualifier = named("AppScope")),
             )
         }
     }

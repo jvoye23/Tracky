@@ -182,7 +182,7 @@ fun Project.toCreateProjectRequest(): CreateProjectRequest =
     CreateProjectRequest(
         id = projectId,
         title = title,
-        description = description ?: "",
+        description = description.orEmpty(),
         color = colorArgb ?: 0,
         startDateTimeUtc = startDateTimeUtc.toString(),
         useLightTextColor = useLightTextColor,

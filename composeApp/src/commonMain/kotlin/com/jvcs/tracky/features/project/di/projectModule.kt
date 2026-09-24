@@ -48,9 +48,8 @@ val projectModule =
             )
         }
 
-        viewModel { (isEdit: Boolean, projectId: String) ->
+        viewModel { (projectId: String) ->
             ProjectDetailViewModel(
-                isEdit = isEdit,
                 projectId = projectId,
                 projectRepository = get(),
                 projectTaskRepository = get(),

@@ -59,7 +59,7 @@ class ProjectOverviewViewModel(
     private val timeProvider: TimeProvider,
     private val sessionStorage: SessionStorage,
     private val authService: AuthService,
-    private val connectivityObserver: ConnectivityObserver,
+    connectivityObserver: ConnectivityObserver,
     private val syncCursorStore: SyncCursorStore,
     private val deltaSyncApplier: DeltaSyncApplier,
     private val applicationScope: CoroutineScope,
@@ -396,7 +396,10 @@ class ProjectOverviewViewModel(
         val ids = _state.value.selectedProjectIds
         // Smart toggle: if any selected project is currently unpinned, pin all of them;
         // otherwise (all already pinned) unpin all.
-        val selected = _state.value.projects?.filter { it.projectId in ids } ?: emptyList()
+        val selected =
+            _state.value.projects
+                ?.filter { it.projectId in ids }
+                .orEmpty()
         val targetPinned = selected.any { !it.isPinned }
         viewModelScope.launch {
             // One call for the whole selection: the repository flips every flag and then re-indexes

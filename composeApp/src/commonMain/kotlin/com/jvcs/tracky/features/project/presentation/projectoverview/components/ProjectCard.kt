@@ -163,7 +163,7 @@ fun ProjectCard(
 
             // BODY: Description
             Text(
-                text = projectUi.description ?: "",
+                text = projectUi.description.orEmpty(),
                 style = MaterialTheme.typography.bodyMedium,
                 color = contentColor.copy(alpha = 0.7f),
                 maxLines = 2,

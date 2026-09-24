@@ -63,9 +63,13 @@ fun ProjectTask.toProjectTaskUi(): ProjectTaskUi =
                 ).date
                 .format(dateTimeFormat),
         formattedEndDateTimeUtc =
-            endDateTimeUtc?.toLocalDateTime(TimeZone.currentSystemDefault())?.date?.format(dateTimeFormat) ?: "",
+            endDateTimeUtc
+                ?.toLocalDateTime(TimeZone.currentSystemDefault())
+                ?.date
+                ?.format(dateTimeFormat)
+                .orEmpty(),
         isTimerRunning = isTimerRunning,
-        subTasks = subTasks?.map { it.toProjectSubTaskUi() } ?: emptyList(),
+        subTasks = subTasks?.map { it.toProjectSubTaskUi() }.orEmpty(),
         isFinished = isFinished,
     )
 
