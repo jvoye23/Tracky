@@ -28,8 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.jvcs.tracky.designsystem.Icon_ChevronRight
-
-private const val READ_ONLY_CARD_COLOR_ARGB = 0xFFF0F3FA
+import com.jvcs.tracky.designsystem.theme.readOnlyCardSurface
 
 @Composable
 fun ColorInfoCard(
@@ -42,7 +41,7 @@ fun ColorInfoCard(
 ) {
     Surface(
         modifier = modifier.clickable(enabled = isEditMode) { onClick() },
-        color = if (isEditMode) MaterialTheme.colorScheme.surfaceContainerLow else Color(READ_ONLY_CARD_COLOR_ARGB),
+        color = if (isEditMode) MaterialTheme.colorScheme.surfaceContainerLow else readOnlyCardSurface,
         shape = RoundedCornerShape(16.dp),
         border = if (isEditMode) BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant) else null,
     ) {

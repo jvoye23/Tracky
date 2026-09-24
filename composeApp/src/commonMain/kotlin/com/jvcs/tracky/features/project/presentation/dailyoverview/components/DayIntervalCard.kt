@@ -24,6 +24,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
+import com.jvcs.tracky.designsystem.theme.SampleProjectColors
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.designsystem.theme.monoLabelSmall
 import com.jvcs.tracky.designsystem.theme.monoLabelXSmall
@@ -193,7 +194,7 @@ fun DayEmptyState(modifier: Modifier = Modifier) {
 // Previews
 // ---------------------------------------------------------------------------
 
-private val PreviewProjectColor = Color(0xFF475D92)
+private val PreviewProjectColor = SampleProjectColors.Slate
 
 @Suppress("MagicNumber") // preview fixture: sample data is meant to be literal
 private fun previewInterval(
@@ -202,7 +203,7 @@ private fun previewInterval(
     subTask: String? = "Calendar spec",
     range: String = "09:30 – 10:12",
     duration: String = "00:42:11",
-    projectColor: Color = Color(0xFF475D92),
+    projectColor: Color = SampleProjectColors.Slate,
 ) = DayIntervalUi("id-$index", index, task, subTask, range, duration, projectColor)
 
 @Composable

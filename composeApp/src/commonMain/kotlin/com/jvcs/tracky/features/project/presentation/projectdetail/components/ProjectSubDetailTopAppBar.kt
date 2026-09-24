@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
+import com.jvcs.tracky.designsystem.theme.SampleProjectColors
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import org.jetbrains.compose.resources.stringResource
 import tracky.composeapp.generated.resources.Res
@@ -110,7 +111,7 @@ fun ProjectSubDetailTopAppBar(
     )
 }
 
-private val PreviewEditTextProjectColor = Color(0xFF4CAF50)
+private val PreviewEditTextProjectColor = SampleProjectColors.Green
 
 @OptIn(ExperimentalTime::class)
 @Preview

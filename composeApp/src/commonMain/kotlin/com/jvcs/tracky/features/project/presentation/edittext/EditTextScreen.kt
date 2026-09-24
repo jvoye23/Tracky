@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.text.input.TextFieldLineLimits
-import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -33,6 +33,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jvcs.tracky.designsystem.components.TrackyTextField
+import com.jvcs.tracky.designsystem.theme.SampleProjectColors
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.designsystem.theme.projectElevatedLabelStyle
 import com.jvcs.tracky.designsystem.theme.projectLabelStyle
@@ -229,7 +230,7 @@ private const val PREVIEW_DESCRIPTION =
     "Rework the project detail screen so title and description share one continuous document. " +
         "Ship the new top bar together with it."
 
-private val previewProjectColor = Color(0xFF7B61FF)
+private val previewProjectColor = SampleProjectColors.Violet
 
 @Composable
 private fun previewState(
@@ -240,8 +241,8 @@ private fun previewState(
     target: EditTextTarget = EditTextTarget.PROJECT,
 ) = EditTextState(
     target = target,
-    titleState = rememberTextFieldState(title),
-    descriptionState = rememberTextFieldState(description),
+    titleState = TextFieldState(title),
+    descriptionState = TextFieldState(description),
     isEditMode = isEditMode,
     projectColor = projectColor,
 )

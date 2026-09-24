@@ -69,6 +69,7 @@ import com.jvcs.tracky.designsystem.Icon_Delete
 import com.jvcs.tracky.designsystem.components.FullScreenLoadingIndicator
 import com.jvcs.tracky.designsystem.components.MainNavDrawerItem
 import com.jvcs.tracky.designsystem.components.MainNavigationDrawer
+import com.jvcs.tracky.designsystem.theme.SampleProjectColors
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.designsystem.util.DevicePreviews
 import com.jvcs.tracky.designsystem.util.ObserveAsEvents
@@ -687,7 +688,7 @@ private fun previewProjects(): List<ProjectUi> =
             projectId = "1",
             title = "Running Project",
             description = "Currently tracking time",
-            color = Color(0xFF4CAF50),
+            color = SampleProjectColors.Green,
             totalDurationMillis = 9_000_000L,
             startDateTimeUtc = "2025-12-01T10:00",
             isFinished = false,
@@ -711,7 +712,7 @@ private fun previewProjects(): List<ProjectUi> =
             projectId = "2",
             title = "Completed Project",
             description = "All tasks done",
-            color = Color(0xFF2196F3),
+            color = SampleProjectColors.Blue,
             totalDurationMillis = 18_900_000L,
             startDateTimeUtc = "2025-11-20T09:00",
             isFinished = true,
@@ -736,7 +737,7 @@ private fun previewProjects(): List<ProjectUi> =
             projectId = "3",
             title = "Idle Project",
             description = "Not started yet",
-            color = Color(0xFFFFC107),
+            color = SampleProjectColors.Amber,
             totalDurationMillis = 0L,
             startDateTimeUtc = "2025-12-05T08:00",
             isFinished = false,

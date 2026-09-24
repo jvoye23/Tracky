@@ -249,3 +249,11 @@ val customColor1ContainerDarkHighContrast = Color(0xFF96C7F6)
 val onCustomColor1ContainerDarkHighContrast = Color(0xFF000C19)
 
 val defaultProjectColor = Color(0xFF7DA0B7)
+
+/** The read-only colour card's surface on the project detail screen. */
+val readOnlyCardSurface = Color(0xFFF0F3FA)
+
+/** Channel tints for the colour picker's RGB sliders (Material 3 red, green, blue). */
+val rgbSliderRed = Color(0xFFB3261E)
+val rgbSliderGreen = Color(0xFF146C2E)
+val rgbSliderBlue = Color(0xFF0B57D0)

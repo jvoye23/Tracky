@@ -24,7 +24,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.jvcs.tracky.designsystem.theme.SampleProjectColors
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
+import com.jvcs.tracky.designsystem.theme.rgbSliderBlue
+import com.jvcs.tracky.designsystem.theme.rgbSliderGreen
+import com.jvcs.tracky.designsystem.theme.rgbSliderRed
 import org.jetbrains.compose.resources.stringResource
 import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.cancel
@@ -33,9 +37,6 @@ import tracky.composeapp.generated.resources.select_color
 import kotlin.math.roundToInt
 
 private const val CHANNEL_MAX = 255f
-private const val SLIDER_RED_ARGB = 0xFFB3261E // Material 3 Red
-private const val SLIDER_GREEN_ARGB = 0xFF146C2E // Material 3 Green
-private const val SLIDER_BLUE_ARGB = 0xFF0B57D0 // Material 3 Blue
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -343,7 +344,7 @@ private fun SlidersTab(currentColor: Color, onColorChange: (Color) -> Unit) {
         SliderRow(
             label = "R",
             value = redChannel,
-            activeColor = Color(SLIDER_RED_ARGB),
+            activeColor = rgbSliderRed,
             onValueChange = { newVal ->
                 onColorChange(Color(newVal / CHANNEL_MAX, currentColor.green, currentColor.blue, currentColor.alpha))
             },
@@ -351,7 +352,7 @@ private fun SlidersTab(currentColor: Color, onColorChange: (Color) -> Unit) {
         SliderRow(
             label = "G",
             value = greenChannel,
-            activeColor = Color(SLIDER_GREEN_ARGB),
+            activeColor = rgbSliderGreen,
             onValueChange = { newVal ->
                 onColorChange(Color(currentColor.red, newVal / CHANNEL_MAX, currentColor.blue, currentColor.alpha))
             },
@@ -359,7 +360,7 @@ private fun SlidersTab(currentColor: Color, onColorChange: (Color) -> Unit) {
         SliderRow(
             label = "B",
             value = blueChannel,
-            activeColor = Color(SLIDER_BLUE_ARGB),
+            activeColor = rgbSliderBlue,
             onValueChange = { newVal ->
                 onColorChange(Color(currentColor.red, currentColor.green, newVal / CHANNEL_MAX, currentColor.alpha))
             },
@@ -457,7 +458,7 @@ private fun TrackyColorPickerPreview() {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             TrackyColorPicker(
-                currentColor = Color(0xFF475D92),
+                currentColor = SampleProjectColors.Slate,
                 onCancel = {},
                 onSave = {},
             )
