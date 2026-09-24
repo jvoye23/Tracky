@@ -158,6 +158,71 @@ with the rule narrowed to kotlin.test *assertion* functions, since it also banne
 `kotlin.test.Test`/`BeforeTest`/`AfterTest`, which AssertK cannot replace and which
 are the only test annotations available in `commonTest`.
 
+## Burn-down to green (same session, 2026-09-24)
+
+Posture stayed **enforce** throughout: no baseline, no `scope.json`. Every finding
+was fixed or its rule was taught Tracky's convention. Each rule change below was
+the owner's decision, in the order it was made. Work landed as stacked slices of
+400 lines or fewer on `46-*` branches.
+
+**End state:** `./gradlew staticAnalysis` green (detekt 0, ktlint 0, konsist 0
+failing), 698 JVM tests passing, iOS and androidApp compiling, prism-doctor PASS (12).
+
+### Code decisions (owner)
+
+| Finding | Decision |
+|---|---|
+| NonAssertKAssertion | migrate tests to AssertK (rule narrowed, see below) |
+| MagicNumber | previews exempt; named constants and theme tokens elsewhere |
+| PackageNaming | rename the packages (`designsystem`, `projectdetail`, ...) |
+| ClassBodyMissingLeadingBlankLine, SingleLetterIdentifier | fix mechanically / rename all |
+| CrammedBlockBody | fix by hand |
+| SwallowedException, PrintStackTrace | log with Kermit |
+| TooGenericExceptionCaught | narrow the catches (behaviour change accepted) |
+| ScreenStateOnlyInScreenComposable | children take fields, not the screen state |
+| TextFieldState / RawColorLiteral | fixed in previews too |
+| CyclomaticComplexMethod, LongMethod, ReturnCount, LoopWithTooManyJumpStatements, LargeClass | refactor, largest first |
+| TODOs | tracked in GitHub issue #144 |
+| ProjectDao TooManyFunctions (65) | split per table: Project, ProjectTree, SortOrder, Task, SubTask, TaskInterval, SubTaskInterval, StrandedInterval DAOs; the pull merge moved to `ServerTreeWriter` (one writer transaction across DAOs) |
+| Project repository layer TooManyFunctions (18) | split by concern: `ProjectOrganizationRepository` (archive/trash/pin/reorder/purge); `LocalProjectOrganizationDataSource` + `LocalServerTreeDataSource` |
+| konsist typed results (10 functions) | typed results everywhere; the outbox drains report an unreadable queue |
+| konsist framework-free domain | `ConnectivityObserver` / `AppLifecycleObserver` become interfaces; platform implementations in `core.data` |
+| konsist DTO / wire-format / test-package rules | fix the code (move DTOs, move `RealtimeTimerConnection` to `core.data.realtime`, move tests beside their subjects) |
+
+### Rule and config changes (Tracky's files now)
+
+- **NonAssertKAssertion**: bans only kotlin.test `assert*`/`fail`/`expect`/`todo`;
+  `Test`/`BeforeTest`/`AfterTest` stay allowed.
+- **KtorCallMustUseSafeCall**: configurable `safeWrappers` and `safeOverloadArgument` (`'route'`).
+- **RootAndScreenInSameFile**: pairs `XScreenRoot` with `XScreen`; only Roots taking a `*ViewModel`.
+- **InMemoryRoomNotClosed**, **DispatchersSetMainWithoutReset**: accept `@AfterTest`.
+- **ObserveAsEventsRequired**: skips `snapshotFlow` and the `ObserveAsEvents` body.
+- **NonAtomicStateFlowAssignment**: reports read-modify-write only.
+- **KoinViewModelOnlyInRoot**, **ObserveAsEventsOnlyInRoot**: `rootSuffixes = ['Root','DialogHost','App']`.
+- **RoomInJvmUnitTest**: `active: false`, because Tracky's JVM Room tests run a real in-memory database and are deliberate.
+- **MagicNumber**: `ignoreAnnotated: ['Preview','PreviewLightDark']`.
+- **StartKoinOnlyInAppModule**: excludes `**/di/InitKoin.kt`.
+- **InjectDispatcher**: excludes `**/di/**` and `**/PlatformIoDispatcher*.kt`.
+- **ScreenStateOnlyInScreenComposable**: `allowedStateTypes` adds `ReorderableListState`, `SubTaskDragDropState`.
+- **LongParameterList**: `allowedConstructorParameters: 15` (Koin injection points take 7-14).
+- **LargeClass**: test source sets excluded, like the other size rules.
+- **konsist MviContractRules "State is an immutable data class"**: applies only in
+  packages that hold a ViewModel (Compose state holders in `presentation/util` are mutable by design).
+
+### Still open
+
+- **Push gate 3 (coverage).** `:androidApp` has no instrumentation coverage result and
+  its `androidTest` source set does not compile. That was already the case before
+  this work: the Compose BOM line in the catalog is commented out, so
+  `ui-test-junit4` has no version. `:composeApp` reads as "no sources" to the
+  coverage check (KMP layout), so the module holding the tested code is not
+  coverage-gated.
+- Latent issues found along the way, left for the owner:
+  - Unpinning a project re-indexes only the pinned section.
+  - `ProjectDetailScreenRoot` shows `UiText.toString()` in its snackbar.
+  - `DayDetailUiMapper`'s fallback colour differs from `DailyOverviewScreen`'s.
+  - `ColorInfoCard`'s read-only surface is not dark-mode aware.
+
 ## Verification (`.prism/VERIFY.md`)
 
 - Part 2: 70 active / 2 inactive = 72, expected 70 (palette pair off, theme on);
