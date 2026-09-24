@@ -3,6 +3,8 @@ package com.jvcs.tracky.core.data.di
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import com.jvcs.tracky.core.data.connectivity.IosConnectivityObserver
+import com.jvcs.tracky.core.data.lifecycle.IosAppLifecycleObserver
 import com.jvcs.tracky.core.data.notification.IosTimerNotificationController
 import com.jvcs.tracky.core.data.sync.IosSyncScheduler
 import com.jvcs.tracky.core.data.sync.IosTrashCleanupScheduler
@@ -29,8 +31,8 @@ import platform.Foundation.NSUserDomainMask
 actual val platformCoreDataModule =
     module {
         singleOf(::DatabaseFactory)
-        singleOf(::ConnectivityObserver)
-        singleOf(::AppLifecycleObserver)
+        singleOf(::IosConnectivityObserver) bind ConnectivityObserver::class
+        singleOf(::IosAppLifecycleObserver) bind AppLifecycleObserver::class
 
         single { IosSyncScheduler() } bind SyncScheduler::class
         single { IosTrashCleanupScheduler() } bind TrashCleanupScheduler::class

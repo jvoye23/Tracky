@@ -3,6 +3,8 @@ package com.jvcs.tracky.core.data.di
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import com.jvcs.tracky.core.data.connectivity.AndroidConnectivityObserver
+import com.jvcs.tracky.core.data.lifecycle.AndroidAppLifecycleObserver
 import com.jvcs.tracky.core.data.notification.AndroidTimerNotificationController
 import com.jvcs.tracky.core.data.notification.AndroidTimerNotificationPermissionRequester
 import com.jvcs.tracky.core.data.sync.AndroidSyncScheduler
@@ -25,8 +27,8 @@ import org.koin.dsl.module
 actual val platformCoreDataModule =
     module {
         single { DatabaseFactory(androidContext()) }
-        single { ConnectivityObserver(androidContext()) }
-        singleOf(::AppLifecycleObserver)
+        single<ConnectivityObserver> { AndroidConnectivityObserver(androidContext()) }
+        singleOf(::AndroidAppLifecycleObserver) bind AppLifecycleObserver::class
 
         single { AndroidSyncScheduler(androidContext()) } bind SyncScheduler::class
         single { AndroidTrashCleanupScheduler(androidContext()) } bind TrashCleanupScheduler::class

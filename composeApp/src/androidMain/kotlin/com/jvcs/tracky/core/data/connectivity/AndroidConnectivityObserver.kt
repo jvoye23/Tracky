@@ -1,18 +1,19 @@
-package com.jvcs.tracky.core.domain.connectivity
+package com.jvcs.tracky.core.data.connectivity
 
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 
-actual class ConnectivityObserver(context: Context) {
+class AndroidConnectivityObserver(context: Context) : ConnectivityObserver {
 
-    actual val isConnected: Flow<Boolean> =
+    override val isConnected: Flow<Boolean> =
         callbackFlow {
             val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 

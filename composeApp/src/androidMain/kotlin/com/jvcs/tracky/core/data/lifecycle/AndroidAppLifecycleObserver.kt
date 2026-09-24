@@ -1,18 +1,19 @@
-package com.jvcs.tracky.core.domain.lifecycle
+package com.jvcs.tracky.core.data.lifecycle
 
 import android.os.Handler
 import android.os.Looper
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
+import com.jvcs.tracky.core.domain.lifecycle.AppLifecycleObserver
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 
-actual class AppLifecycleObserver {
+class AndroidAppLifecycleObserver : AppLifecycleObserver {
 
-    actual val isInForeground: Flow<Boolean> =
+    override val isInForeground: Flow<Boolean> =
         callbackFlow {
             val observer =
                 object : DefaultLifecycleObserver {
