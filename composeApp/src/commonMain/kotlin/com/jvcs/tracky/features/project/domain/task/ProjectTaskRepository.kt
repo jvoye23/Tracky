@@ -38,5 +38,5 @@ interface ProjectTaskRepository {
      * Drains the queued task writes. Runs after the project drain: a task has no route until its
      * project exists on the server, so ops whose project is still pending stay queued.
      */
-    suspend fun syncPendingTasks()
+    suspend fun syncPendingTasks(): EmptyResult<DataError>
 }

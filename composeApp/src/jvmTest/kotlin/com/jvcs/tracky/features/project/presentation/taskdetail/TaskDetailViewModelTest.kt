@@ -368,7 +368,7 @@ internal class TaskDetailViewModelTest {
         override suspend fun reorderTasks(projectId: String, orderedTaskIds: List<String>): EmptyResult<DataError> =
             Result.Success(Unit)
 
-        override suspend fun syncPendingTasks() = Unit
+        override suspend fun syncPendingTasks(): EmptyResult<DataError> = Result.Success(Unit)
     }
 
     private inner class FakeSubTaskRepository : SubTaskRepository {
@@ -399,6 +399,6 @@ internal class TaskDetailViewModelTest {
         override suspend fun reorderSubTasks(taskId: String, orderedSubTaskIds: List<String>): EmptyResult<DataError> =
             Result.Success(Unit)
 
-        override suspend fun syncPendingSubTasks() = Unit
+        override suspend fun syncPendingSubTasks(): EmptyResult<DataError> = Result.Success(Unit)
     }
 }

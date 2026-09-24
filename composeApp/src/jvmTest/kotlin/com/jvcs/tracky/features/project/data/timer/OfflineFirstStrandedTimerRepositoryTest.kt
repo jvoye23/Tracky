@@ -326,7 +326,7 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
 
         override suspend fun getOpenIntervalByTaskId(taskId: String) = Result.Success(null)
 
-        override suspend fun syncPendingIntervals() = Unit
+        override suspend fun syncPendingIntervals(): EmptyResult<DataError> = Result.Success(Unit)
     }
 
     private inner class FakeSubTaskIntervalRepository : SubTaskIntervalRepository {
@@ -345,7 +345,7 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
 
         override suspend fun getOpenIntervalBySubTaskId(subTaskId: String) = Result.Success(null)
 
-        override suspend fun syncPendingSubTaskIntervals() = Unit
+        override suspend fun syncPendingSubTaskIntervals(): EmptyResult<DataError> = Result.Success(Unit)
     }
 
     private inner class FakeProjectTaskRepository : ProjectTaskRepository {
@@ -380,7 +380,7 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
         override suspend fun reorderTasks(projectId: String, orderedTaskIds: List<String>): EmptyResult<DataError> =
             Result.Success(Unit)
 
-        override suspend fun syncPendingTasks() = Unit
+        override suspend fun syncPendingTasks(): EmptyResult<DataError> = Result.Success(Unit)
     }
 
     private inner class FakeSubTaskRepository : SubTaskRepository {
@@ -399,6 +399,6 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
         override suspend fun reorderSubTasks(taskId: String, orderedSubTaskIds: List<String>): EmptyResult<DataError> =
             Result.Success(Unit)
 
-        override suspend fun syncPendingSubTasks() = Unit
+        override suspend fun syncPendingSubTasks(): EmptyResult<DataError> = Result.Success(Unit)
     }
 }

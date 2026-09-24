@@ -325,7 +325,7 @@ internal class TimerNotificationCoordinatorTest {
 
         override fun getProjectTaskWithIntervalsById(taskId: String): Flow<ProjectTask?> = flowOf(null)
 
-        override suspend fun syncPendingTasks() = Unit
+        override suspend fun syncPendingTasks(): EmptyResult<DataError> = Result.Success(Unit)
     }
 
     private inner class FakeSubTaskRepository : SubTaskRepository {
@@ -345,6 +345,6 @@ internal class TimerNotificationCoordinatorTest {
 
         override suspend fun reorderSubTasks(taskId: String, orderedSubTaskIds: List<String>) = Result.Success(Unit)
 
-        override suspend fun syncPendingSubTasks() = Unit
+        override suspend fun syncPendingSubTasks(): EmptyResult<DataError> = Result.Success(Unit)
     }
 }

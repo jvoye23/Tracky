@@ -9,6 +9,7 @@ import com.jvcs.tracky.core.domain.sync.SyncRepository
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
 import com.jvcs.tracky.core.domain.sync.TrashCleanupScheduler
 import com.jvcs.tracky.core.domain.sync.TrashRetention
+import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.di.initKoin
 import com.jvcs.tracky.features.project.data.timer.StrandedTimerReconciler
@@ -125,8 +126,7 @@ fun runSync(onComplete: (Boolean) -> Unit) {
     koin.get<CoroutineScope>(named("AppScope")).launch {
         val success =
             try {
-                koin.get<SyncRepository>().syncPendingOperations()
-                true
+                koin.get<SyncRepository>().syncPendingOperations() is Result.Success
             } catch (exception: SQLiteException) {
                 Logger.withTag("KoinHelper").e(exception) { "runSync failed (SQLiteException)" }
                 false

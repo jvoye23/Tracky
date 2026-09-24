@@ -62,3 +62,29 @@ suspend fun <T : Any> Result<T?, DataError.Local>.pushQueuedRow(push: suspend (T
         is Result.Success -> data?.let { push(it) } ?: SyncOutcome.DROP
         is Result.Error -> SyncOutcome.RETRY
     }
+
+/**
+ * Runs every queued operation [matching] selects, oldest first, so a CREATE is always pushed
+ * before a later UPDATE of the same row. An operation that succeeded, or never will, leaves the
+ * queue; one that should be retried stays for the next drain.
+ *
+ * Fails only when the queue itself cannot be read. A drain that read nothing is not a drain that
+ * found nothing to do, and the caller has to be able to tell the two apart.
+ */
+suspend fun PendingSyncDataSource.drain(
+    matching: (PendingSyncOperation) -> Boolean,
+    run: suspend (PendingSyncOperation) -> SyncOutcome,
+): EmptyResult<DataError> {
+    val operations =
+        when (val pending = getPendingOperations()) {
+            is Result.Success -> pending.data
+            is Result.Error -> return Result.Error(pending.error)
+        }
+    operations.filter(matching).forEach { op ->
+        when (run(op)) {
+            SyncOutcome.SUCCESS, SyncOutcome.DROP -> deleteOperation(op.operationId)
+            SyncOutcome.RETRY -> Unit // leave queued for the next attempt
+        }
+    }
+    return Result.Success(Unit)
+}

@@ -10,6 +10,7 @@ import kotlinx.io.IOException
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import kotlin.coroutines.cancellation.CancellationException
+import com.jvcs.tracky.core.domain.util.Result as DataResult
 
 /**
  * Drains the pending-sync queue in the background. Resolves the repository from the global Koin
@@ -23,8 +24,16 @@ class SyncWorker(context: Context, params: WorkerParameters) :
 
     override suspend fun doWork(): Result =
         try {
-            syncRepository.syncPendingOperations()
-            Result.success()
+            when (val drained = syncRepository.syncPendingOperations()) {
+                is DataResult.Success -> {
+                    Result.success()
+                }
+
+                is DataResult.Error -> {
+                    Logger.withTag("SyncWorker").w { "doWork could not read the sync queue: ${drained.error}" }
+                    if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()
+                }
+            }
         } catch (exception: SQLiteException) {
             Logger.withTag("SyncWorker").e(exception) { "doWork failed (SQLiteException)" }
             if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()

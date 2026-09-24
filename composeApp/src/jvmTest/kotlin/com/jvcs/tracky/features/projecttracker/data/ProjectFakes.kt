@@ -995,10 +995,13 @@ class FakeRemoteSubTaskIntervalDataSource : RemoteSubTaskIntervalDataSource {
 class FakePendingSyncDataSource : PendingSyncDataSource {
     private val ops = mutableListOf<PendingSyncOperation>()
 
+    /** Makes the drain's read of the whole queue fail, as a Room read error would. */
+    var failQueueReads = false
+
     fun all(): List<PendingSyncOperation> = ops.sortedBy { it.createdAt }
 
     override suspend fun getPendingOperations(): Result<List<PendingSyncOperation>, DataError.Local> =
-        Result.Success(all())
+        if (failQueueReads) Result.Error(DataError.Local.UNKNOWN) else Result.Success(all())
 
     override suspend fun getOperationsByEntityId(
         entityId: String,

@@ -39,5 +39,5 @@ interface ProjectRepository {
      * Runs first of the three drains: every task and interval hangs off a project route, so nothing
      * else can be pushed until the projects exist server-side.
      */
-    suspend fun syncPendingProjects()
+    suspend fun syncPendingProjects(): EmptyResult<DataError>
 }

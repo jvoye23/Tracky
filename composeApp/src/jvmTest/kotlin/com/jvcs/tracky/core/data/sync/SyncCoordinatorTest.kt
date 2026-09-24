@@ -6,6 +6,7 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isTrue
 import com.jvcs.tracky.core.domain.util.DataError
+import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.features.projecttracker.data.RepoFixture
 import kotlinx.coroutines.runBlocking
@@ -75,6 +76,29 @@ internal class SyncCoordinatorTest {
             assertThat(f.remoteSubTask.postedSubTaskIds).isEqualTo(listOf("s1"))
             assertThat(f.remoteSubTaskInterval.postedIntervalIds).isEqualTo(listOf("si1"))
             assertThat(f.queue.all().isEmpty()).isTrue()
+        }
+
+    @Test
+    fun syncPendingOperations_reportsAnUnreadableQueue_andLeavesItForTheNextRun() =
+        runBlocking<Unit> {
+            val f = RepoFixture()
+            f.recordAnOfflineSession()
+            f.goOnline()
+            f.queue.failQueueReads = true
+
+            val unreadable = f.syncCoordinator.syncPendingOperations()
+
+            // Not mistaken for an empty queue: the caller hears about it, and nothing was pushed
+            // or dropped, so the next run still has the whole session to send.
+            assertThat(unreadable).isEqualTo(Result.Error(DataError.Local.UNKNOWN))
+            assertThat(f.remoteProject.postedProjectIds).isEqualTo(emptyList())
+            assertThat(f.queue.all().size).isEqualTo(5)
+
+            f.queue.failQueueReads = false
+            val drained = f.syncCoordinator.syncPendingOperations()
+
+            assertThat(drained).isEqualTo(Result.Success(Unit))
+            assertThat(f.queue.all().isEmpty()).isEqualTo(true)
         }
 
     @Test
