@@ -11,6 +11,7 @@ import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeManager
 import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.core.domain.util.TimerState
+import com.jvcs.tracky.core.domain.util.getOrDefault
 import com.jvcs.tracky.core.domain.util.onFailure
 import com.jvcs.tracky.core.domain.util.platformIoDispatcher
 import com.jvcs.tracky.designsystem.util.UiText
@@ -358,7 +359,8 @@ class ProjectDetailViewModel(
         }
 
         viewModelScope.launch {
-            val lastStartedId = subTaskRepository.lastStartedSubTaskId(task.projectTaskId)
+            // Unreadable history is treated as no history: the first unfinished subtask starts.
+            val lastStartedId = subTaskRepository.lastStartedSubTaskId(task.projectTaskId).getOrDefault(null)
             val target =
                 task.subTasks.find { it.projectSubTaskId == lastStartedId && !it.isFinished }
                     ?: task.subTasks.firstOrNull { !it.isFinished }
@@ -420,7 +422,17 @@ class ProjectDetailViewModel(
 
     private fun getProject(projectId: String) {
         viewModelScope.launch(ioDispatcher) {
-            val newProject = projectRepository.getProjectWithTasksByProjectId(projectId)
+            val newProject =
+                when (val result = projectRepository.getProjectWithTasksByProjectId(projectId)) {
+                    is Result.Success -> {
+                        result.data
+                    }
+
+                    is Result.Error -> {
+                        eventChannel.send(ProjectDetailEvent.Error(result.error.toUiText()))
+                        return@launch
+                    }
+                }
             val color = if (newProject?.colorArgb != null) Color(newProject.colorArgb) else null
             _state.update {
                 it.copy(
@@ -448,8 +460,9 @@ class ProjectDetailViewModel(
      */
     private suspend fun refreshPerDayStrip() {
         val projectId = projectId ?: return
-        val strip = projectRepository.getProjectWithTasksByProjectId(projectId)?.perDayStrip()
-        _state.update { it.copy(perDayStrip = strip) }
+        // A failed read keeps the strip already on screen rather than blanking it.
+        val project = projectRepository.getProjectWithTasksByProjectId(projectId) as? Result.Success ?: return
+        _state.update { it.copy(perDayStrip = project.data?.perDayStrip()) }
     }
 
     /** The zone the strip buckets its intervals by. */
@@ -467,7 +480,17 @@ class ProjectDetailViewModel(
             // Start from the stored row, not the UI model. Rebuilding the project from ProjectUi used
             // to drop what the UI does not carry, above all sortIndex: a null index sorts first under
             // Custom, so leaving edit mode after a task reorder moved the project on the overview.
-            val stored = projectRepository.getProjectById(projectId) ?: return@launch
+            val stored =
+                when (val result = projectRepository.getProjectById(projectId)) {
+                    is Result.Success -> {
+                        result.data ?: return@launch
+                    }
+
+                    is Result.Error -> {
+                        eventChannel.send(ProjectDetailEvent.Error(result.error.toUiText()))
+                        return@launch
+                    }
+                }
             val edited =
                 stored.copy(
                     colorArgb = newColorArgb,

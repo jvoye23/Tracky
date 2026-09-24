@@ -402,18 +402,16 @@ private class FakeProjectRepository(initial: List<Project>) :
 
     override fun getTrashedProjects(): Flow<List<Project>> = flowOf(emptyList())
 
-    override suspend fun getProjectById(projectId: String): Project? =
-        projectsFlow.value.find {
-            it.projectId ==
-                projectId
-        }
+    override suspend fun getProjectById(projectId: String): Result<Project?, DataError> =
+        Result.Success(projectsFlow.value.find { it.projectId == projectId })
 
     override fun observeProjectById(projectId: String): Flow<Project?> =
         projectsFlow.map { projects -> projects.find { it.projectId == projectId } }
 
     override fun observeProjectWithTaskTreeById(projectId: String): Flow<Project?> = observeProjectById(projectId)
 
-    override suspend fun getProjectWithTasksByProjectId(projectId: String): Project? = getProjectById(projectId)
+    override suspend fun getProjectWithTasksByProjectId(projectId: String): Result<Project?, DataError> =
+        getProjectById(projectId)
 
     override suspend fun upsertProject(project: Project): EmptyResult<DataError> = Result.Success(Unit)
 
@@ -427,7 +425,7 @@ private class FakeProjectRepository(initial: List<Project>) :
 
     override suspend fun deleteProject(projectId: String): EmptyResult<DataError> = Result.Success(Unit)
 
-    override suspend fun deleteAllProjects() = Unit
+    override suspend fun deleteAllProjects(): EmptyResult<DataError> = Result.Success(Unit)
 
     override suspend fun syncPendingProjects(): EmptyResult<DataError> = Result.Success(Unit)
 }

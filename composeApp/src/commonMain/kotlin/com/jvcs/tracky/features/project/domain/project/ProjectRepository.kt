@@ -2,6 +2,7 @@ package com.jvcs.tracky.features.project.domain.project
 
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
+import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.features.project.domain.models.Project
 import kotlinx.coroutines.flow.Flow
 import kotlin.time.Instant
@@ -14,7 +15,7 @@ interface ProjectRepository {
 
     suspend fun fetchProjects(): EmptyResult<DataError>
 
-    suspend fun getProjectById(projectId: String): Project?
+    suspend fun getProjectById(projectId: String): Result<Project?, DataError>
 
     /**
      * The project row as a live stream, without its task tree. Lets a screen stay current with
@@ -23,7 +24,7 @@ interface ProjectRepository {
      */
     fun observeProjectById(projectId: String): Flow<Project?>
 
-    suspend fun getProjectWithTasksByProjectId(projectId: String): Project?
+    suspend fun getProjectWithTasksByProjectId(projectId: String): Result<Project?, DataError>
 
     fun observeProjectWithTaskTreeById(projectId: String): Flow<Project?>
 
@@ -31,7 +32,7 @@ interface ProjectRepository {
 
     suspend fun deleteProject(projectId: String): EmptyResult<DataError>
 
-    suspend fun deleteAllProjects()
+    suspend fun deleteAllProjects(): EmptyResult<DataError>
 
     /**
      * Drains the queued project writes (including the manual sort order).

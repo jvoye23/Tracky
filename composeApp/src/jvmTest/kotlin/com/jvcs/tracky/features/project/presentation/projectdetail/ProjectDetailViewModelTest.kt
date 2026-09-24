@@ -1260,9 +1260,11 @@ private class FakeDetailProjectRepository(project: Project) : ProjectRepository 
         projectFlow.value = project
     }
 
-    override suspend fun getProjectWithTasksByProjectId(projectId: String): Project? = projectFlow.value
+    override suspend fun getProjectWithTasksByProjectId(projectId: String): Result<Project?, DataError> =
+        Result.Success(projectFlow.value)
 
-    override suspend fun getProjectById(projectId: String): Project? = projectFlow.value
+    override suspend fun getProjectById(projectId: String): Result<Project?, DataError> =
+        Result.Success(projectFlow.value)
 
     override fun observeProjectById(projectId: String): Flow<Project?> = projectFlow
 
@@ -1284,7 +1286,7 @@ private class FakeDetailProjectRepository(project: Project) : ProjectRepository 
 
     override suspend fun deleteProject(projectId: String): EmptyResult<DataError> = Result.Success(Unit)
 
-    override suspend fun deleteAllProjects() = Unit
+    override suspend fun deleteAllProjects(): EmptyResult<DataError> = Result.Success(Unit)
 
     override suspend fun syncPendingProjects(): EmptyResult<DataError> = Result.Success(Unit)
 }
@@ -1408,7 +1410,7 @@ private class FakeSubTaskRepository(initial: List<ProjectSubTask> = emptyList())
             }
     }
 
-    override suspend fun lastStartedSubTaskId(taskId: String): String? = lastStarted
+    override suspend fun lastStartedSubTaskId(taskId: String): Result<String?, DataError> = Result.Success(lastStarted)
 
     /** The settled order handed to each reorder call, so a test can assert it ran exactly once. */
     val reorderCalls = mutableListOf<Pair<String, List<String>>>()

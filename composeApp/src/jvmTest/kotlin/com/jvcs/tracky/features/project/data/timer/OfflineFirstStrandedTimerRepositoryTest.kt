@@ -394,7 +394,7 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
 
         override suspend fun stopSubTask(subTaskId: String): EmptyResult<DataError> = Result.Success(Unit)
 
-        override suspend fun lastStartedSubTaskId(taskId: String): String? = null
+        override suspend fun lastStartedSubTaskId(taskId: String): Result<String?, DataError> = Result.Success(null)
 
         override suspend fun reorderSubTasks(taskId: String, orderedSubTaskIds: List<String>): EmptyResult<DataError> =
             Result.Success(Unit)

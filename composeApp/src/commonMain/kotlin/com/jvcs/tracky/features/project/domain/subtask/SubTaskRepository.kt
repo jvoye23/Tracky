@@ -2,6 +2,7 @@ package com.jvcs.tracky.features.project.domain.subtask
 
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
+import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import kotlinx.coroutines.flow.Flow
 
@@ -31,7 +32,7 @@ interface SubTaskRepository {
      * Id of the subtask under [taskId] whose timer ran most recently, or null if none ever has.
      * Local-only: it answers "what was I working on", which the pending queue has no bearing on.
      */
-    suspend fun lastStartedSubTaskId(taskId: String): String?
+    suspend fun lastStartedSubTaskId(taskId: String): Result<String?, DataError>
 
     /**
      * Persists the manual order of one task's subtasks. A subtask only ever reorders among its

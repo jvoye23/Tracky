@@ -341,7 +341,7 @@ internal class TimerNotificationCoordinatorTest {
 
         override suspend fun deleteSubTask(subTaskId: String) = Result.Success(Unit)
 
-        override suspend fun lastStartedSubTaskId(taskId: String): String? = null
+        override suspend fun lastStartedSubTaskId(taskId: String): Result<String?, DataError> = Result.Success(null)
 
         override suspend fun reorderSubTasks(taskId: String, orderedSubTaskIds: List<String>) = Result.Success(Unit)
 
