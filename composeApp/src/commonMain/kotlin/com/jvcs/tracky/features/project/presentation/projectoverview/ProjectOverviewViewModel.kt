@@ -20,6 +20,7 @@ import com.jvcs.tracky.core.domain.util.onFailure
 import com.jvcs.tracky.core.domain.util.onSuccess
 import com.jvcs.tracky.designsystem.theme.defaultProjectColor
 import com.jvcs.tracky.features.project.domain.models.Project
+import com.jvcs.tracky.features.project.domain.project.ProjectOrganizationRepository
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
 import com.jvcs.tracky.features.project.domain.project.sortedByCustomOrder
 import com.jvcs.tracky.features.project.presentation.mappers.toProjectUi
@@ -55,6 +56,7 @@ import kotlin.uuid.Uuid
 @OptIn(FlowPreview::class)
 class ProjectOverviewViewModel(
     private val projectRepository: ProjectRepository,
+    private val projectOrganizationRepository: ProjectOrganizationRepository,
     private val timeManager: TimeManager,
     private val timeProvider: TimeProvider,
     private val sessionStorage: SessionStorage,
@@ -270,7 +272,7 @@ class ProjectOverviewViewModel(
                 else -> return
             }
         viewModelScope.launch {
-            projectRepository
+            projectOrganizationRepository
                 .reorderProjects(section.map { it.projectId })
                 .onFailure { dataError ->
                     // Don't leave the user looking at an order that says it saved while the snackbar
@@ -380,7 +382,7 @@ class ProjectOverviewViewModel(
         viewModelScope.launch {
             val errors =
                 ids.mapNotNull { id ->
-                    (projectRepository.setProjectArchived(id, isArchived = true) as? Result.Error)?.error
+                    (projectOrganizationRepository.setProjectArchived(id, isArchived = true) as? Result.Error)?.error
                 }
             _state.update {
                 it.copy(
@@ -403,7 +405,7 @@ class ProjectOverviewViewModel(
         viewModelScope.launch {
             // One call for the whole selection: the repository flips every flag and then re-indexes
             // the target section once, so the pinned projects land on top of it.
-            val result = projectRepository.setProjectsPinned(ids.toList(), isPinned = targetPinned)
+            val result = projectOrganizationRepository.setProjectsPinned(ids.toList(), isPinned = targetPinned)
             _state.update {
                 it.copy(
                     isEditModeActive = false,
@@ -424,7 +426,7 @@ class ProjectOverviewViewModel(
             val results =
                 ids
                     .map { id ->
-                        async { projectRepository.setProjectTrashed(id, trashedAt) }
+                        async { projectOrganizationRepository.setProjectTrashed(id, trashedAt) }
                     }.awaitAll()
             results
                 .filterIsInstance<Result.Error<DataError>>()

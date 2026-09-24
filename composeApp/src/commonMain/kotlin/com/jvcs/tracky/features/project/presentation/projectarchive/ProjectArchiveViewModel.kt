@@ -3,6 +3,7 @@ package com.jvcs.tracky.features.project.presentation.projectarchive
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jvcs.tracky.core.domain.util.Result
+import com.jvcs.tracky.features.project.domain.project.ProjectOrganizationRepository
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
 import com.jvcs.tracky.features.project.presentation.mappers.toProjectUi
 import kotlinx.coroutines.channels.Channel
@@ -14,7 +15,10 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class ProjectArchiveViewModel(private val projectRepository: ProjectRepository) : ViewModel() {
+class ProjectArchiveViewModel(
+    private val projectRepository: ProjectRepository,
+    private val projectOrganizationRepository: ProjectOrganizationRepository,
+) : ViewModel() {
 
     private val _state = MutableStateFlow(ProjectArchiveState())
     private var hasLoadedInitialData = false
@@ -112,7 +116,7 @@ class ProjectArchiveViewModel(private val projectRepository: ProjectRepository) 
         viewModelScope.launch {
             val errors =
                 ids.mapNotNull { id ->
-                    (projectRepository.setProjectArchived(id, isArchived = false) as? Result.Error)?.error
+                    (projectOrganizationRepository.setProjectArchived(id, isArchived = false) as? Result.Error)?.error
                 }
             _state.update {
                 it.copy(
@@ -140,7 +144,7 @@ class ProjectArchiveViewModel(private val projectRepository: ProjectRepository) 
 
     private fun getArchivedProjects() {
         viewModelScope.launch {
-            projectRepository.getArchivedProjects().collect { projectList ->
+            projectOrganizationRepository.getArchivedProjects().collect { projectList ->
                 val archived = projectList.map { it.toProjectUi() }
                 _state.update { state ->
                     state.copy(

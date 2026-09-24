@@ -7,7 +7,7 @@ import androidx.work.WorkerParameters
 import co.touchlab.kermit.Logger
 import com.jvcs.tracky.core.domain.sync.TrashRetention
 import com.jvcs.tracky.core.domain.util.TimeProvider
-import com.jvcs.tracky.features.project.domain.project.ProjectRepository
+import com.jvcs.tracky.features.project.domain.project.ProjectOrganizationRepository
 import kotlinx.io.IOException
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -22,12 +22,12 @@ class TrashCleanupWorker(context: Context, params: WorkerParameters) :
     CoroutineWorker(context, params),
     KoinComponent {
 
-    private val projectRepository: ProjectRepository by inject()
+    private val projectOrganizationRepository: ProjectOrganizationRepository by inject()
     private val timeProvider: TimeProvider by inject()
 
     override suspend fun doWork(): Result =
         try {
-            projectRepository.purgeExpiredTrashedProjects(TrashRetention.cutoff(timeProvider.nowInstant))
+            projectOrganizationRepository.purgeExpiredTrashedProjects(TrashRetention.cutoff(timeProvider.nowInstant))
             Result.success()
         } catch (exception: SQLiteException) {
             Logger.withTag("TrashCleanupWorker").e(exception) { "doWork failed (SQLiteException)" }

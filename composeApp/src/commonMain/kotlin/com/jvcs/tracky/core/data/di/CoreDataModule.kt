@@ -48,6 +48,7 @@ import com.jvcs.tracky.features.project.data.interval.KtorRemoteIntervalDataSour
 import com.jvcs.tracky.features.project.data.interval.OfflineFirstIntervalRepository
 import com.jvcs.tracky.features.project.data.interval.RoomLocalIntervalDataSource
 import com.jvcs.tracky.features.project.data.project.KtorRemoteProjectDataSource
+import com.jvcs.tracky.features.project.data.project.OfflineFirstProjectOrganizationRepository
 import com.jvcs.tracky.features.project.data.project.OfflineFirstProjectRepository
 import com.jvcs.tracky.features.project.data.project.RoomLocalProjectDataSource
 import com.jvcs.tracky.features.project.data.project.RoomLocalProjectOrganizationDataSource
@@ -70,6 +71,7 @@ import com.jvcs.tracky.features.project.domain.interval.RemoteIntervalDataSource
 import com.jvcs.tracky.features.project.domain.project.LocalProjectDataSource
 import com.jvcs.tracky.features.project.domain.project.LocalProjectOrganizationDataSource
 import com.jvcs.tracky.features.project.domain.project.LocalServerTreeDataSource
+import com.jvcs.tracky.features.project.domain.project.ProjectOrganizationRepository
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
 import com.jvcs.tracky.features.project.domain.project.RemoteProjectDataSource
 import com.jvcs.tracky.features.project.domain.subtask.LocalSubTaskDataSource
@@ -145,6 +147,19 @@ val coreDataModule =
                 timeProvider = get(),
             )
         } bind ProjectRepository::class
+
+        single {
+            OfflineFirstProjectOrganizationRepository(
+                projectRepository = get(),
+                localProjectDataSource = get(),
+                localProjectOrganizationDataSource = get(),
+                remoteProjectDataSource = get(),
+                pendingSyncDataSource = get(),
+                syncScheduler = get(),
+                applicationScope = get(qualifier = named("AppScope")),
+                timeProvider = get(),
+            )
+        } bind ProjectOrganizationRepository::class
 
         // Intervals before tasks: the task repository pushes the timer's interval through this one.
         // No cycle — the interval repository reads tasks through LocalTaskDataSource, not through the

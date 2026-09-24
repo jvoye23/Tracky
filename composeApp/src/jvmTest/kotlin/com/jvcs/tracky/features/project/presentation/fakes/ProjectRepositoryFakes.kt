@@ -37,10 +37,6 @@ class FakeProjectRepository(private val project: Project?) : ProjectRepository {
 
     override suspend fun fetchProjects(): EmptyResult<DataError> = Result.Success(Unit)
 
-    override fun getArchivedProjects(): Flow<List<Project>> = flowOf(emptyList())
-
-    override fun getTrashedProjects(): Flow<List<Project>> = flowOf(emptyList())
-
     override suspend fun getProjectById(projectId: String): Project? = project
 
     override fun observeProjectById(projectId: String): Flow<Project?> = flowOf(project)
@@ -48,19 +44,6 @@ class FakeProjectRepository(private val project: Project?) : ProjectRepository {
     override fun observeProjectWithTaskTreeById(projectId: String): Flow<Project?> = flowOf(project)
 
     override suspend fun upsertProject(project: Project): EmptyResult<DataError> = Result.Success(Unit)
-
-    override suspend fun setProjectArchived(projectId: String, isArchived: Boolean): EmptyResult<DataError> =
-        Result.Success(Unit)
-
-    override suspend fun setProjectTrashed(projectId: String, trashedAt: Instant?): EmptyResult<DataError> =
-        Result.Success(Unit)
-
-    override suspend fun purgeExpiredTrashedProjects(cutoff: Instant): EmptyResult<DataError> = Result.Success(Unit)
-
-    override suspend fun setProjectsPinned(projectIds: List<String>, isPinned: Boolean): EmptyResult<DataError> =
-        Result.Success(Unit)
-
-    override suspend fun reorderProjects(orderedProjectIds: List<String>): EmptyResult<DataError> = Result.Success(Unit)
 
     override suspend fun deleteProject(projectId: String): EmptyResult<DataError> = Result.Success(Unit)
 

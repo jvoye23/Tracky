@@ -37,6 +37,7 @@ val projectModule =
         viewModel {
             ProjectOverviewViewModel(
                 projectRepository = get(),
+                projectOrganizationRepository = get(),
                 timeManager = get(),
                 timeProvider = get(),
                 sessionStorage = get(),
