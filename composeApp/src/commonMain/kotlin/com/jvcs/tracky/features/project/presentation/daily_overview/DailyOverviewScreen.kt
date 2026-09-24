@@ -29,10 +29,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.jvcs.tracky.design_system.components.InfoCard
-import com.jvcs.tracky.design_system.theme.TrackyTheme
-import com.jvcs.tracky.design_system.theme.defaultProjectColor
-import com.jvcs.tracky.design_system.util.ObserveAsEvents
+import com.jvcs.tracky.designsystem.components.InfoCard
+import com.jvcs.tracky.designsystem.theme.TrackyTheme
+import com.jvcs.tracky.designsystem.theme.defaultProjectColor
+import com.jvcs.tracky.designsystem.util.ObserveAsEvents
 import com.jvcs.tracky.features.project.presentation.daily_overview.components.CalendarMonthCard
 import com.jvcs.tracky.features.project.presentation.daily_overview.components.DayEmptyState
 import com.jvcs.tracky.features.project.presentation.daily_overview.components.DayHeaderRow

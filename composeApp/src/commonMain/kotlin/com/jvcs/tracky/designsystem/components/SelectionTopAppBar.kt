@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalMaterial3Api::class)
 
-package com.jvcs.tracky.design_system.components
+package com.jvcs.tracky.designsystem.components
 
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material.icons.Icons
@@ -17,11 +17,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
-import com.jvcs.tracky.design_system.Icon_Archive
-import com.jvcs.tracky.design_system.Icon_Delete
-import com.jvcs.tracky.design_system.Icon_File_Export
-import com.jvcs.tracky.design_system.Icon_Pin
-import com.jvcs.tracky.design_system.theme.TrackyTheme
+import com.jvcs.tracky.designsystem.Icon_Archive
+import com.jvcs.tracky.designsystem.Icon_Delete
+import com.jvcs.tracky.designsystem.Icon_File_Export
+import com.jvcs.tracky.designsystem.Icon_Pin
+import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import org.jetbrains.compose.resources.stringResource
 import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.archive_selected

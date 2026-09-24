@@ -1,4 +1,4 @@
-package com.jvcs.tracky.design_system.theme
+package com.jvcs.tracky.designsystem.theme
 
 import androidx.compose.ui.graphics.Color
 

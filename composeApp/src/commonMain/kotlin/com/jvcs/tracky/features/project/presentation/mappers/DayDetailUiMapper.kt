@@ -2,7 +2,7 @@ package com.jvcs.tracky.features.project.presentation.mappers
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.graphics.Color
-import com.jvcs.tracky.design_system.util.formatDurationHoursMinutesSeconds
+import com.jvcs.tracky.designsystem.util.formatDurationHoursMinutesSeconds
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.presentation.models.DayDetailUi
 import com.jvcs.tracky.features.project.presentation.models.DayIntervalUi

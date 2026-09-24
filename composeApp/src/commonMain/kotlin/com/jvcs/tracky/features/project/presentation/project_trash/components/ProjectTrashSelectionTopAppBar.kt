@@ -13,10 +13,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
-import com.jvcs.tracky.design_system.Icon_Archive
-import com.jvcs.tracky.design_system.Icon_Delete
-import com.jvcs.tracky.design_system.components.SelectionTopAppBar
-import com.jvcs.tracky.design_system.theme.TrackyTheme
+import com.jvcs.tracky.designsystem.Icon_Archive
+import com.jvcs.tracky.designsystem.Icon_Delete
+import com.jvcs.tracky.designsystem.components.SelectionTopAppBar
+import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.features.project.presentation.project_trash.ProjectTrashAction
 import com.jvcs.tracky.features.project.presentation.project_trash.ProjectTrashState
 import org.jetbrains.compose.resources.stringResource

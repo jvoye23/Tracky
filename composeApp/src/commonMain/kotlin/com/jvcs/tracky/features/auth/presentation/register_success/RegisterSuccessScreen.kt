@@ -27,10 +27,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.jvcs.tracky.design_system.Icon_Mail
-import com.jvcs.tracky.design_system.components.AuthHeaderIcon
-import com.jvcs.tracky.design_system.components.TrackyPrimaryButton
-import com.jvcs.tracky.design_system.util.ObserveAsEvents
+import com.jvcs.tracky.designsystem.Icon_Mail
+import com.jvcs.tracky.designsystem.components.AuthHeaderIcon
+import com.jvcs.tracky.designsystem.components.TrackyPrimaryButton
+import com.jvcs.tracky.designsystem.util.ObserveAsEvents
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel

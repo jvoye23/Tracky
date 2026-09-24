@@ -1,6 +1,6 @@
 package com.jvcs.tracky.features.project.presentation.mappers
 
-import com.jvcs.tracky.design_system.util.formatDurationHoursMinutes
+import com.jvcs.tracky.designsystem.util.formatDurationHoursMinutes
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.presentation.models.CalendarDayUi
 import com.jvcs.tracky.features.project.presentation.models.CalendarMonthUi

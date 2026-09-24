@@ -13,8 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.jvcs.tracky.design_system.theme.TrackyTheme
-import com.jvcs.tracky.design_system.util.formatDurationHoursMinutes
+import com.jvcs.tracky.designsystem.theme.TrackyTheme
+import com.jvcs.tracky.designsystem.util.formatDurationHoursMinutes
 import com.jvcs.tracky.features.project.domain.timer.StrandedTimer
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone

@@ -9,7 +9,7 @@ import com.jvcs.tracky.core.domain.auth.SocialAuthProvider
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.onFailure
 import com.jvcs.tracky.core.domain.util.onSuccess
-import com.jvcs.tracky.design_system.util.UiText
+import com.jvcs.tracky.designsystem.util.UiText
 import com.jvcs.tracky.features.auth.domain.EmailValidator
 import com.jvcs.tracky.features.project.presentation.util.toUiText
 import kotlinx.coroutines.channels.Channel

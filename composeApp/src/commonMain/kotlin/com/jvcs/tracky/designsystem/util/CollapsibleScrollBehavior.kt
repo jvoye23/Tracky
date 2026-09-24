@@ -1,4 +1,4 @@
-package com.jvcs.tracky.design_system.util
+package com.jvcs.tracky.designsystem.util
 
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api

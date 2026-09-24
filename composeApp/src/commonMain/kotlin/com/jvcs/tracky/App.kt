@@ -7,8 +7,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.rememberNavBackStack
-import com.jvcs.tracky.design_system.theme.TrackyTheme
-import com.jvcs.tracky.design_system.util.ObserveAsEvents
+import com.jvcs.tracky.designsystem.theme.TrackyTheme
+import com.jvcs.tracky.designsystem.util.ObserveAsEvents
 import com.jvcs.tracky.features.project.presentation.stranded_timer.StrandedTimerDialogHost
 import com.jvcs.tracky.features.project.presentation.timer_permission.TimerNotificationPermissionDialogHost
 import com.jvcs.tracky.navigation.DeepLinkListener

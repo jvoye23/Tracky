@@ -16,8 +16,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
-import com.jvcs.tracky.design_system.components.SearchTopAppBar
-import com.jvcs.tracky.design_system.theme.TrackyTheme
+import com.jvcs.tracky.designsystem.components.SearchTopAppBar
+import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.features.project.presentation.project_trash.ProjectTrashAction
 import com.jvcs.tracky.features.project.presentation.project_trash.ProjectTrashState
 import org.jetbrains.compose.resources.stringResource

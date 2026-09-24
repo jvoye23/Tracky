@@ -19,10 +19,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.jvcs.tracky.design_system.Icon_CheckCircle
-import com.jvcs.tracky.design_system.Icon_ErrorCircle
-import com.jvcs.tracky.design_system.components.AuthHeaderIcon
-import com.jvcs.tracky.design_system.components.TrackyPrimaryButton
+import com.jvcs.tracky.designsystem.Icon_CheckCircle
+import com.jvcs.tracky.designsystem.Icon_ErrorCircle
+import com.jvcs.tracky.designsystem.components.AuthHeaderIcon
+import com.jvcs.tracky.designsystem.components.TrackyPrimaryButton
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import tracky.composeapp.generated.resources.Res

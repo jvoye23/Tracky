@@ -1,4 +1,4 @@
-package com.jvcs.tracky.design_system.components
+package com.jvcs.tracky.designsystem.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -9,7 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
-import com.jvcs.tracky.design_system.theme.backgroundDarkMediumContrast
+import com.jvcs.tracky.designsystem.theme.backgroundDarkMediumContrast
 
 @Composable
 fun FullScreenLoadingIndicator(modifier: Modifier = Modifier) {

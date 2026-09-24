@@ -4,7 +4,7 @@ package com.jvcs.tracky.core.data.notification
 
 import androidx.compose.ui.graphics.toArgb
 import com.jvcs.tracky.core.domain.notification.TimerNotificationSession
-import com.jvcs.tracky.design_system.theme.defaultProjectColor
+import com.jvcs.tracky.designsystem.theme.defaultProjectColor
 import com.jvcs.tracky.features.project.domain.timer.ProjectRef
 import com.jvcs.tracky.features.project.domain.timer.TaskRef
 import kotlinx.coroutines.Dispatchers

@@ -3,7 +3,7 @@ package com.jvcs.tracky.core.data.notification
 import androidx.compose.ui.graphics.toArgb
 import com.jvcs.tracky.core.domain.notification.TimerNotificationController
 import com.jvcs.tracky.core.domain.notification.TimerNotificationSession
-import com.jvcs.tracky.design_system.theme.defaultProjectColor
+import com.jvcs.tracky.designsystem.theme.defaultProjectColor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 

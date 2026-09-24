@@ -1,7 +1,7 @@
 package com.jvcs.tracky.features.auth.presentation.reset_password
 
 import androidx.compose.foundation.text.input.TextFieldState
-import com.jvcs.tracky.design_system.util.UiText
+import com.jvcs.tracky.designsystem.util.UiText
 
 data class ResetPasswordState(
     val passwordTextState: TextFieldState = TextFieldState(),
