@@ -140,7 +140,7 @@ class ProjectDaoTaskTreeTest {
         runBlocking {
             seedTree()
 
-            val tree = checkNotNull(dao.getProjectWithTaskTreeById("p1"))
+            val tree = checkNotNull(db.projectTreeDao.getProjectWithTaskTreeById("p1"))
 
             assertThat(tree.project.projectId).isEqualTo("p1")
             assertThat(tree.projectTasks.size).isEqualTo(2)
@@ -160,7 +160,7 @@ class ProjectDaoTaskTreeTest {
         runBlocking {
             seedTree()
 
-            val tree = checkNotNull(dao.getProjectWithTaskTreeById("p1"))
+            val tree = checkNotNull(db.projectTreeDao.getProjectWithTaskTreeById("p1"))
             val task = checkNotNull(tree.projectTasks.find { it.task.projectTaskId == "t2" })
 
             assertThat(task.subTasks.isEmpty()).isTrue()

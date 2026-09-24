@@ -50,7 +50,7 @@ internal class RoomLocalSubTaskDataSourceStopTest {
                 .build()
         subTasks =
             RoomLocalSubTaskDataSource(
-                db.projectDao,
+                db.sortOrderDao,
                 db.subTaskDao,
                 db.taskDao,
                 db.subTaskIntervalDao,
@@ -61,7 +61,7 @@ internal class RoomLocalSubTaskDataSourceStopTest {
             )
         tasks =
             RoomLocalTaskDataSource(
-                db.projectDao,
+                db.sortOrderDao,
                 db.taskDao,
                 db.subTaskDao,
                 db.subTaskIntervalDao,
