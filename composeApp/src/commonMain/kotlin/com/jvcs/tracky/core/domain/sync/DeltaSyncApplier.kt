@@ -5,7 +5,6 @@ import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.ServerClock
 import com.jvcs.tracky.core.domain.util.TimeProvider
-import com.jvcs.tracky.core.domain.util.isTransient
 import com.jvcs.tracky.features.project.domain.project.LocalProjectDataSource
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
 import kotlin.time.Instant
@@ -56,55 +55,67 @@ class DeltaSyncApplier(
     }
 
     private suspend fun pull(): EmptyResult<DataError> {
-        var pagesApplied = 0
-        while (true) {
-            val since = syncCursorStore.cursor()
+        var result: EmptyResult<DataError>? = null
+        while (result == null) {
+            result = applyNextPage()
+        }
+        return result
+    }
 
-            val sentAt = timeProvider.nowInstant
-            val changes =
-                when (val result = remoteSyncDataSource.getChanges(since)) {
-                    is Result.Success -> result.data
+    /**
+     * Fetches and applies the page after the stored cursor.
+     *
+     * Null means there is another page to fetch. Anything else is the result of the whole pull.
+     */
+    private suspend fun applyNextPage(): EmptyResult<DataError>? {
+        val since = syncCursorStore.cursor()
 
-                    is Result.Error -> return when {
-                        // The endpoint is not deployed yet. The full pull is still correct, just
-                        // more expensive, so this degrades rather than fails.
-                        result.error == DataError.Remote.NOT_FOUND -> fullPull()
+        val sentAt = timeProvider.nowInstant
+        val changes =
+            when (val result = remoteSyncDataSource.getChanges(since)) {
+                is Result.Success -> result.data
 
-                        result.error.isTransient() -> Result.Error(result.error)
-
-                        else -> Result.Error(result.error)
-                    }
+                // A NOT_FOUND means the endpoint is not deployed yet. The full pull is still
+                // correct, just more expensive, so this degrades rather than fails.
+                is Result.Error -> return if (result.error == DataError.Remote.NOT_FOUND) {
+                    fullPull()
+                } else {
+                    Result.Error(result.error)
                 }
-
-            // Every response is a clock sample, including one that asks for a full resync — the
-            // timer wants the offset whatever else happened.
-            //
-            // Halfway through the round trip, not the moment the response arrived: the server's
-            // instant was true somewhere in the middle, and crediting the whole latency to skew
-            // would bias the offset by however slow the network was. That mattered little while
-            // the offset only moved a rendered number; it matters now that interval timestamps
-            // are written on it.
-            changes.serverNow?.let { serverClock.observe(it, midpoint(sentAt, timeProvider.nowInstant)) }
-
-            // The server cannot prove what was deleted since our cursor, so carrying on from it
-            // would leave this device quietly diverged.
-            if (changes.fullResyncRequired) return fullPull()
-
-            if (!changes.isEmpty) {
-                val applied = localProjectDataSource.applyDelta(changes)
-                if (applied is Result.Error) return Result.Error(applied.error)
             }
 
-            // Only now, and never before: the page is in Room.
-            syncCursorStore.setCursor(changes.cursor)
-            pagesApplied++
+        // Every response is a clock sample, including one that asks for a full resync — the
+        // timer wants the offset whatever else happened.
+        //
+        // Halfway through the round trip, not the moment the response arrived: the server's
+        // instant was true somewhere in the middle, and crediting the whole latency to skew
+        // would bias the offset by however slow the network was. That mattered little while
+        // the offset only moved a rendered number; it matters now that interval timestamps
+        // are written on it.
+        changes.serverNow?.let { serverClock.observe(it, midpoint(sentAt, timeProvider.nowInstant)) }
 
-            if (!changes.hasMore) break
-            // A server that sets hasMore without advancing the cursor would spin here forever.
-            if (since != null && changes.cursor <= since) break
-        }
-        return Result.Success(Unit)
+        // The server cannot prove what was deleted since our cursor, so carrying on from it
+        // would leave this device quietly diverged.
+        return if (changes.fullResyncRequired) fullPull() else storePage(changes, since)
     }
+
+    /** Applies one page and advances the cursor past it. Null means there is another page. */
+    private suspend fun storePage(changes: SyncChanges, since: Long?): EmptyResult<DataError>? {
+        if (!changes.isEmpty) {
+            val applied = localProjectDataSource.applyDelta(changes)
+            if (applied is Result.Error) return Result.Error(applied.error)
+        }
+
+        // Only now, and never before: the page is in Room.
+        syncCursorStore.setCursor(changes.cursor)
+
+        // A server that sets hasMore without advancing the cursor would spin here forever.
+        val hasNextPage = changes.hasMore && (since == null || changes.cursor > since)
+        return if (hasNextPage) null else Result.Success(Unit)
+    }
+
+    /** The instant halfway between a request leaving and its answer arriving. */
+    private fun midpoint(sentAt: Instant, receivedAt: Instant): Instant = sentAt + (receivedAt - sentAt) / 2
 
     /**
      * Re-reads the whole tree and forgets the cursor.
@@ -113,10 +124,6 @@ class DeltaSyncApplier(
      * what we could not trust. The next delta starts from scratch, which is correct if wasteful;
      * keeping a cursor the server has disowned is neither.
      */
-
-    /** The instant halfway between a request leaving and its answer arriving. */
-    private fun midpoint(sentAt: Instant, receivedAt: Instant): Instant = sentAt + (receivedAt - sentAt) / 2
-
     private suspend fun fullPull(): EmptyResult<DataError> {
         syncCursorStore.clear()
         return projectRepository.fetchProjects()

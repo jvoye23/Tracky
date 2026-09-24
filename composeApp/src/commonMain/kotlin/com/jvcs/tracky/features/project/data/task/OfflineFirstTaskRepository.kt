@@ -6,6 +6,7 @@ import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
 import com.jvcs.tracky.core.domain.sync.SyncOutcome
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
+import com.jvcs.tracky.core.domain.sync.pushQueuedRow
 import com.jvcs.tracky.core.domain.sync.toSyncOutcome
 import com.jvcs.tracky.core.domain.timer.ActiveTimerKind
 import com.jvcs.tracky.core.domain.timer.ActiveTimerRepository
@@ -209,12 +210,13 @@ class OfflineFirstTaskRepository(
         // A task that exists only on this device has no server-side row for the timer resource to
         // hang off, so do not spend a request learning that. The interval queue already knows how
         // to wait for the parent, and the drain pushes tasks before intervals.
-        if (pendingSyncDataSource.hasPendingCreate(taskId).getOrDefault(false)) {
-            return intervalRepository.createTaskInterval(openedInterval)
+        return if (pendingSyncDataSource.hasPendingCreate(taskId).getOrDefault(false)) {
+            intervalRepository.createTaskInterval(openedInterval)
+        } else {
+            // Otherwise the start goes through the server, which closes whatever was running on the
+            // user's other devices and hands back the rows it touched.
+            activeTimerRepository.start(openedInterval)
         }
-        // Otherwise the start goes through the server, which closes whatever was running on the
-        // user's other devices and hands back the rows it touched.
-        return activeTimerRepository.start(openedInterval)
     }
 
     override suspend fun stopProjectTask(taskId: String): EmptyResult<DataError> {
@@ -353,42 +355,43 @@ class OfflineFirstTaskRepository(
         }
         return when (op.operationType) {
             PendingSyncOperation.OP_CREATE, PendingSyncOperation.OP_UPDATE -> {
-                val task =
-                    when (val result = localTaskDataSource.getTaskById(op.entityId)) {
-                        is Result.Success -> result.data ?: return SyncOutcome.DROP
-
-                        // deleted meanwhile
-                        is Result.Error -> return SyncOutcome.RETRY
-                    }
-                // The project drain runs before this one, so a still-pending CREATE means that push
-                // failed too. Stay queued rather than burning a request that cannot succeed.
-                if (pendingSyncDataSource.hasPendingCreate(task.parentProjectId).getOrDefault(false)) {
-                    return SyncOutcome.RETRY
-                }
-                val result =
-                    if (op.operationType == PendingSyncOperation.OP_CREATE) {
-                        remoteTaskDataSource.postTaskByProjectId(task.parentProjectId, task)
-                    } else {
-                        remoteTaskDataSource.updateTaskByProjectId(task.parentProjectId, task)
-                    }
-                result.toSyncOutcome(
-                    onSuccess = { localTaskDataSource.upsertProjectTask(it.withLocalSortIndexFallback(task)) },
-                    onConflict = { resolveTaskConflict(task) },
-                )
+                localTaskDataSource.getTaskById(op.entityId).pushQueuedRow { pushTask(op, it) }
             }
 
             PendingSyncOperation.OP_DELETE -> {
-                val parentProjectId = op.parentEntityId ?: return SyncOutcome.DROP
-                if (pendingSyncDataSource.hasPendingCreate(parentProjectId).getOrDefault(false)) {
-                    return SyncOutcome.RETRY
-                }
-                remoteTaskDataSource.deleteTask(parentProjectId, op.entityId).toSyncOutcome()
+                deleteRemoteTask(op)
             }
 
             else -> {
                 SyncOutcome.DROP
             }
         }
+    }
+
+    private suspend fun pushTask(op: PendingSyncOperation, task: ProjectTask): SyncOutcome {
+        // The project drain runs before this one, so a still-pending CREATE means that push
+        // failed too. Stay queued rather than burning a request that cannot succeed.
+        if (pendingSyncDataSource.hasPendingCreate(task.parentProjectId).getOrDefault(false)) {
+            return SyncOutcome.RETRY
+        }
+        val result =
+            if (op.operationType == PendingSyncOperation.OP_CREATE) {
+                remoteTaskDataSource.postTaskByProjectId(task.parentProjectId, task)
+            } else {
+                remoteTaskDataSource.updateTaskByProjectId(task.parentProjectId, task)
+            }
+        return result.toSyncOutcome(
+            onSuccess = { localTaskDataSource.upsertProjectTask(it.withLocalSortIndexFallback(task)) },
+            onConflict = { resolveTaskConflict(task) },
+        )
+    }
+
+    private suspend fun deleteRemoteTask(op: PendingSyncOperation): SyncOutcome {
+        val parentProjectId = op.parentEntityId ?: return SyncOutcome.DROP
+        if (pendingSyncDataSource.hasPendingCreate(parentProjectId).getOrDefault(false)) {
+            return SyncOutcome.RETRY
+        }
+        return remoteTaskDataSource.deleteTask(parentProjectId, op.entityId).toSyncOutcome()
     }
 
     // ---------------------------------------------------------------------------------------------

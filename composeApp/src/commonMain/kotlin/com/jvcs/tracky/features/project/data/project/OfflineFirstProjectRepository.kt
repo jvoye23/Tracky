@@ -4,6 +4,7 @@ import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
 import com.jvcs.tracky.core.domain.sync.SyncOutcome
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
+import com.jvcs.tracky.core.domain.sync.pushQueuedRow
 import com.jvcs.tracky.core.domain.sync.toSyncOutcome
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
@@ -13,6 +14,7 @@ import com.jvcs.tracky.core.domain.util.asEmptyDataResult
 import com.jvcs.tracky.core.domain.util.getOrDefault
 import com.jvcs.tracky.core.domain.util.isMissingOrForbidden
 import com.jvcs.tracky.core.domain.util.isTransient
+import com.jvcs.tracky.core.domain.util.map
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.project.LocalProjectDataSource
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
@@ -177,32 +179,33 @@ class OfflineFirstProjectRepository(
         val moved = mutableListOf<String>()
         var firstError: EmptyResult<DataError>? = null
         for (projectId in projectIds) {
-            val project =
-                when (val existing = localProjectDataSource.getProjectById(projectId)) {
-                    is Result.Success -> {
-                        existing.data ?: continue
-                    }
-
-                    // nothing to pin
-                    is Result.Error -> {
-                        firstError = firstError ?: existing.asEmptyDataResult()
-                        continue
-                    }
-                }
-            when (val flipped = upsertProject(project.copy(isPinned = isPinned))) {
-                is Result.Success -> moved += projectId
+            when (val flipped = flipPinned(projectId, isPinned)) {
+                is Result.Success -> if (flipped.data) moved += projectId
                 is Result.Error -> firstError = firstError ?: flipped
             }
         }
         if (moved.isEmpty()) return firstError ?: Result.Success(Unit)
+        return firstError ?: moveToFrontOfPinnedSection(moved)
+    }
 
-        // The moved projects go first, keeping the relative order they already had; everyone else in
-        // the target section keeps its order behind them. reorderProjects then numbers the whole
-        // section from 0 in one transaction and one request.
+    /** Flips one project's pin flag. `Success(false)` means the project is gone: nothing to pin. */
+    private suspend fun flipPinned(projectId: String, isPinned: Boolean): Result<Boolean, DataError> {
+        val project =
+            when (val existing = localProjectDataSource.getProjectById(projectId)) {
+                is Result.Success -> existing.data ?: return Result.Success(false)
+                is Result.Error -> return existing
+            }
+        return upsertProject(project.copy(isPinned = isPinned)).map { true }
+    }
+
+    // The moved projects go first, keeping the relative order they already had; everyone else in
+    // the target section keeps its order behind them. reorderProjects then numbers the whole
+    // section from 0 in one transaction and one request.
+    private suspend fun moveToFrontOfPinnedSection(moved: List<String>): EmptyResult<DataError> {
         val section =
             when (val allPinnedProjects = localProjectDataSource.getPinnedProjects()) {
                 is Result.Success -> allPinnedProjects.data
-                is Result.Error -> return firstError ?: allPinnedProjects.asEmptyDataResult()
+                is Result.Error -> return allPinnedProjects.asEmptyDataResult()
             }
         val movedIds = moved.toSet()
         val (front, rest) =
@@ -211,8 +214,7 @@ class OfflineFirstProjectRepository(
                 .map { it.projectId }
                 .partition { it in movedIds }
 
-        val reordered = reorderProjects(front + rest)
-        return firstError ?: reordered
+        return reorderProjects(front + rest)
     }
 
     // REORDER: persist the manual order shown under the Custom sort filter. orderedProjectIds is the
@@ -338,30 +340,12 @@ class OfflineFirstProjectRepository(
             }
     }
 
-    private suspend fun runProjectOperation(op: PendingSyncOperation): SyncOutcome {
-        return when (op.entityType) {
+    private suspend fun runProjectOperation(op: PendingSyncOperation): SyncOutcome =
+        when (op.entityType) {
             PendingSyncOperation.ENTITY_PROJECT -> {
                 when (op.operationType) {
                     PendingSyncOperation.OP_CREATE, PendingSyncOperation.OP_UPDATE -> {
-                        val project =
-                            when (val result = localProjectDataSource.getProjectById(op.entityId)) {
-                                is Result.Success -> result.data ?: return SyncOutcome.DROP
-                                is Result.Error -> return SyncOutcome.RETRY
-                            }
-                        val result =
-                            if (op.operationType == PendingSyncOperation.OP_CREATE) {
-                                remoteProjectDataSource.postProject(project)
-                            } else {
-                                remoteProjectDataSource.updateProject(project)
-                            }
-                        result.toSyncOutcome(
-                            onSuccess = {
-                                localProjectDataSource.upsertProject(
-                                    it.withLocalSortIndexFallback(project),
-                                )
-                            },
-                            onConflict = { resolveProjectConflict(project) },
-                        )
+                        localProjectDataSource.getProjectById(op.entityId).pushQueuedRow { pushProject(op, it) }
                     }
 
                     PendingSyncOperation.OP_DELETE -> {
@@ -374,22 +358,42 @@ class OfflineFirstProjectRepository(
                 }
             }
 
-            // The queued row is just a marker: the order itself is rebuilt from current local state,
-            // so projects deleted meanwhile drop out and repeated offline reorders collapse into one push.
             PendingSyncOperation.ENTITY_PROJECT_ORDER -> {
-                val indices =
-                    when (val result = localProjectDataSource.getSortIndices()) {
-                        is Result.Success -> result.data.mapNotNull { (id, index) -> index?.let { id to it } }.toMap()
-                        is Result.Error -> return SyncOutcome.RETRY
-                    }
-                if (indices.isEmpty()) return SyncOutcome.DROP
-                remoteProjectDataSource.reorderProjects(indices, timeProvider.nowInstant).toSyncOutcome()
+                pushProjectOrder()
             }
 
             else -> {
                 SyncOutcome.DROP
             }
         }
+
+    private suspend fun pushProject(op: PendingSyncOperation, project: Project): SyncOutcome {
+        val result =
+            if (op.operationType == PendingSyncOperation.OP_CREATE) {
+                remoteProjectDataSource.postProject(project)
+            } else {
+                remoteProjectDataSource.updateProject(project)
+            }
+        return result.toSyncOutcome(
+            onSuccess = {
+                localProjectDataSource.upsertProject(
+                    it.withLocalSortIndexFallback(project),
+                )
+            },
+            onConflict = { resolveProjectConflict(project) },
+        )
+    }
+
+    // The queued row is just a marker: the order itself is rebuilt from current local state,
+    // so projects deleted meanwhile drop out and repeated offline reorders collapse into one push.
+    private suspend fun pushProjectOrder(): SyncOutcome {
+        val indices =
+            when (val result = localProjectDataSource.getSortIndices()) {
+                is Result.Success -> result.data.mapNotNull { (id, index) -> index?.let { id to it } }.toMap()
+                is Result.Error -> return SyncOutcome.RETRY
+            }
+        if (indices.isEmpty()) return SyncOutcome.DROP
+        return remoteProjectDataSource.reorderProjects(indices, timeProvider.nowInstant).toSyncOutcome()
     }
 
     // ---------------------------------------------------------------------------------------------

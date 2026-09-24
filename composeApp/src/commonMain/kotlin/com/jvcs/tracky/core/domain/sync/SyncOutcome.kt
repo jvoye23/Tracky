@@ -50,3 +50,15 @@ fun EmptyResult<DataError.Remote>.toSyncOutcome(): SyncOutcome =
         is Result.Success -> SyncOutcome.SUCCESS
         is Result.Error -> if (error.isTransient()) SyncOutcome.RETRY else SyncOutcome.DROP
     }
+
+/**
+ * Pushes a queued operation's local row with [push].
+ *
+ * A row that is gone was deleted after the operation was queued, so there is nothing left to push
+ * (DROP). A failed read may well succeed on the next drain (RETRY).
+ */
+suspend fun <T : Any> Result<T?, DataError.Local>.pushQueuedRow(push: suspend (T) -> SyncOutcome): SyncOutcome =
+    when (this) {
+        is Result.Success -> data?.let { push(it) } ?: SyncOutcome.DROP
+        is Result.Error -> SyncOutcome.RETRY
+    }

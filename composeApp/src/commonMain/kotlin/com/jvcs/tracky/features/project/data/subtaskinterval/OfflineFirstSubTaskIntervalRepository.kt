@@ -4,6 +4,7 @@ import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
 import com.jvcs.tracky.core.domain.sync.SyncOutcome
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
+import com.jvcs.tracky.core.domain.sync.pushQueuedRow
 import com.jvcs.tracky.core.domain.sync.toSyncOutcome
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
@@ -233,63 +234,65 @@ class OfflineFirstSubTaskIntervalRepository(
             }
     }
 
-    private suspend fun runIntervalOperation(op: PendingSyncOperation): SyncOutcome {
-        return when (op.operationType) {
+    private suspend fun runIntervalOperation(op: PendingSyncOperation): SyncOutcome =
+        when (op.operationType) {
             PendingSyncOperation.OP_CREATE, PendingSyncOperation.OP_UPDATE -> {
-                val interval =
-                    when (val result = localSubTaskIntervalDataSource.getSubTaskIntervalById(op.entityId)) {
-                        is Result.Success -> result.data ?: return SyncOutcome.DROP
-
-                        // deleted meanwhile
-                        is Result.Error -> return SyncOutcome.RETRY
-                    }
-                // The subtask drain runs before this one, so a still-pending CREATE means that push
-                // failed too. Stay queued rather than burning a request that cannot succeed.
-                if (pendingSyncDataSource.hasPendingCreate(interval.parentSubTaskId).getOrDefault(false)) {
-                    return SyncOutcome.RETRY
-                }
-                // A missing subtask means it was deleted, and the server cascades that to its
-                // intervals — so this op has nothing left to do, and no route to build either.
-                val subTask = parentSubTaskOf(interval.parentSubTaskId) ?: return SyncOutcome.DROP
-                val result =
-                    if (op.operationType == PendingSyncOperation.OP_CREATE) {
-                        remoteSubTaskIntervalDataSource.postInterval(
-                            subTask.parentProjectId,
-                            subTask.parentProjectTaskId,
-                            interval,
-                        )
-                    } else {
-                        remoteSubTaskIntervalDataSource.updateInterval(
-                            subTask.parentProjectId,
-                            subTask.parentProjectTaskId,
-                            interval,
-                        )
-                    }
-                result.toSyncOutcome(
-                    onSuccess = { localSubTaskIntervalDataSource.upsertSubTaskInterval(it) },
-                    onConflict = { resolveIntervalConflict(interval, subTask) },
-                )
+                localSubTaskIntervalDataSource
+                    .getSubTaskIntervalById(op.entityId)
+                    .pushQueuedRow { pushInterval(op, it) }
             }
 
             PendingSyncOperation.OP_DELETE -> {
-                val subTaskId = op.parentEntityId ?: return SyncOutcome.DROP
-                if (pendingSyncDataSource.hasPendingCreate(subTaskId).getOrDefault(false)) {
-                    return SyncOutcome.RETRY
-                }
-                val subTask = parentSubTaskOf(subTaskId) ?: return SyncOutcome.DROP
-                remoteSubTaskIntervalDataSource
-                    .deleteInterval(
-                        projectId = subTask.parentProjectId,
-                        taskId = subTask.parentProjectTaskId,
-                        subTaskId = subTaskId,
-                        intervalId = op.entityId,
-                    ).toSyncOutcome()
+                deleteRemoteInterval(op)
             }
 
             else -> {
                 SyncOutcome.DROP
             }
         }
+
+    private suspend fun pushInterval(op: PendingSyncOperation, interval: SubTaskInterval): SyncOutcome {
+        // The subtask drain runs before this one, so a still-pending CREATE means that push
+        // failed too. Stay queued rather than burning a request that cannot succeed.
+        if (pendingSyncDataSource.hasPendingCreate(interval.parentSubTaskId).getOrDefault(false)) {
+            return SyncOutcome.RETRY
+        }
+        // A missing subtask means it was deleted, and the server cascades that to its
+        // intervals — so this op has nothing left to do, and no route to build either.
+        val subTask = parentSubTaskOf(interval.parentSubTaskId) ?: return SyncOutcome.DROP
+        val result =
+            if (op.operationType == PendingSyncOperation.OP_CREATE) {
+                remoteSubTaskIntervalDataSource.postInterval(
+                    subTask.parentProjectId,
+                    subTask.parentProjectTaskId,
+                    interval,
+                )
+            } else {
+                remoteSubTaskIntervalDataSource.updateInterval(
+                    subTask.parentProjectId,
+                    subTask.parentProjectTaskId,
+                    interval,
+                )
+            }
+        return result.toSyncOutcome(
+            onSuccess = { localSubTaskIntervalDataSource.upsertSubTaskInterval(it) },
+            onConflict = { resolveIntervalConflict(interval, subTask) },
+        )
+    }
+
+    private suspend fun deleteRemoteInterval(op: PendingSyncOperation): SyncOutcome {
+        val subTaskId = op.parentEntityId ?: return SyncOutcome.DROP
+        if (pendingSyncDataSource.hasPendingCreate(subTaskId).getOrDefault(false)) {
+            return SyncOutcome.RETRY
+        }
+        val subTask = parentSubTaskOf(subTaskId) ?: return SyncOutcome.DROP
+        return remoteSubTaskIntervalDataSource
+            .deleteInterval(
+                projectId = subTask.parentProjectId,
+                taskId = subTask.parentProjectTaskId,
+                subTaskId = subTaskId,
+                intervalId = op.entityId,
+            ).toSyncOutcome()
     }
 
     /**

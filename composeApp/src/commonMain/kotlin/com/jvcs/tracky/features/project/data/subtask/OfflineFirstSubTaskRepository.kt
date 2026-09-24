@@ -6,6 +6,7 @@ import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
 import com.jvcs.tracky.core.domain.sync.SyncOutcome
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
+import com.jvcs.tracky.core.domain.sync.pushQueuedRow
 import com.jvcs.tracky.core.domain.sync.toSyncOutcome
 import com.jvcs.tracky.core.domain.timer.ActiveTimerKind
 import com.jvcs.tracky.core.domain.timer.ActiveTimerRepository
@@ -462,48 +463,50 @@ class OfflineFirstSubTaskRepository(
         }
         return when (op.operationType) {
             PendingSyncOperation.OP_CREATE, PendingSyncOperation.OP_UPDATE -> {
-                val subTask =
-                    when (val result = localSubTaskDataSource.getSubTaskById(op.entityId)) {
-                        is Result.Success -> result.data ?: return SyncOutcome.DROP
-
-                        // deleted meanwhile
-                        is Result.Error -> return SyncOutcome.RETRY
-                    }
-                // The task drain runs before this one, so a still-pending CREATE means that push
-                // failed too. Stay queued rather than burning a request that cannot succeed.
-                if (pendingSyncDataSource.hasPendingCreate(subTask.parentProjectTaskId).getOrDefault(false)) {
-                    return SyncOutcome.RETRY
-                }
-
-                val projectId = subTask.parentProjectId
-                val taskId = subTask.parentProjectTaskId
-                val result =
-                    if (op.operationType == PendingSyncOperation.OP_CREATE) {
-                        remoteSubTaskDataSource.postSubTask(projectId, taskId, subTask)
-                    } else {
-                        remoteSubTaskDataSource.updateSubTask(projectId, taskId, subTask)
-                    }
-                result.toSyncOutcome(
-                    onSuccess = { localSubTaskDataSource.upsertSubTask(it.withLocalSortIndexFallback(subTask)) },
-                    onConflict = { resolveSubTaskConflict(subTask) },
-                )
+                localSubTaskDataSource.getSubTaskById(op.entityId).pushQueuedRow { pushSubTask(op, it) }
             }
 
             PendingSyncOperation.OP_DELETE -> {
-                val taskId = op.parentEntityId ?: return SyncOutcome.DROP
-                if (pendingSyncDataSource.hasPendingCreate(taskId).getOrDefault(false)) {
-                    return SyncOutcome.RETRY
-                }
-                // A missing task row means the task was deleted, and the server cascades that to
-                // its subtasks — so this delete has nothing left to do. Retrying would never end.
-                val projectId = parentProjectIdOf(taskId) ?: return SyncOutcome.DROP
-                remoteSubTaskDataSource.deleteSubTask(projectId, taskId, op.entityId).toSyncOutcome()
+                deleteRemoteSubTask(op)
             }
 
             else -> {
                 SyncOutcome.DROP
             }
         }
+    }
+
+    private suspend fun pushSubTask(op: PendingSyncOperation, subTask: ProjectSubTask): SyncOutcome {
+        // The task drain runs before this one, so a still-pending CREATE means that push
+        // failed too. Stay queued rather than burning a request that cannot succeed.
+        if (pendingSyncDataSource.hasPendingCreate(subTask.parentProjectTaskId).getOrDefault(false)) {
+            return SyncOutcome.RETRY
+        }
+
+        val projectId = subTask.parentProjectId
+        val taskId = subTask.parentProjectTaskId
+        val result =
+            if (op.operationType == PendingSyncOperation.OP_CREATE) {
+                remoteSubTaskDataSource.postSubTask(projectId, taskId, subTask)
+            } else {
+                remoteSubTaskDataSource.updateSubTask(projectId, taskId, subTask)
+            }
+        return result.toSyncOutcome(
+            onSuccess = { localSubTaskDataSource.upsertSubTask(it.withLocalSortIndexFallback(subTask)) },
+            onConflict = { resolveSubTaskConflict(subTask) },
+        )
+    }
+
+    private suspend fun deleteRemoteSubTask(op: PendingSyncOperation): SyncOutcome {
+        val taskId = op.parentEntityId ?: return SyncOutcome.DROP
+        if (pendingSyncDataSource.hasPendingCreate(taskId).getOrDefault(false)) {
+            return SyncOutcome.RETRY
+        }
+        // A missing task row means the task was deleted, and the server cascades that to
+        // its subtasks — so this delete has nothing left to do. Retrying would never end.
+        return parentProjectIdOf(taskId)
+            ?.let { projectId -> remoteSubTaskDataSource.deleteSubTask(projectId, taskId, op.entityId).toSyncOutcome() }
+            ?: SyncOutcome.DROP
     }
 
     /**
