@@ -29,7 +29,8 @@ import tracky.composeapp.generated.resources.trash_title
 @Composable
 fun ProjectTrashSearchTopAppBar(
     title: String?,
-    state: ProjectTrashState,
+    isSearchActive: Boolean,
+    searchQuery: String,
     onAction: (ProjectTrashAction) -> Unit,
     onMenuClick: () -> Unit,
     scrollBehavior: TopAppBarScrollBehavior,
@@ -37,9 +38,9 @@ fun ProjectTrashSearchTopAppBar(
 ) {
     SearchTopAppBar(
         title = title,
-        isSearchBoxExpanded = state.isSearchActive,
+        isSearchBoxExpanded = isSearchActive,
         searchHint = stringResource(Res.string.search_in_trash),
-        searchQuery = state.searchQuery,
+        searchQuery = searchQuery,
         onQueryChange = { onAction(ProjectTrashAction.OnSearchQueryChange(it)) },
         navigationIcon = {
             IconButton(onClick = onMenuClick) {
@@ -54,7 +55,7 @@ fun ProjectTrashSearchTopAppBar(
         actions = {
             IconButton(onClick = { onAction(ProjectTrashAction.OnToggleSearch) }) {
                 Icon(
-                    imageVector = if (state.isSearchActive) Icons.Default.Close else Icons.Default.Search,
+                    imageVector = if (isSearchActive) Icons.Default.Close else Icons.Default.Search,
                     contentDescription = stringResource(Res.string.search_in_trash),
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
@@ -73,7 +74,8 @@ private fun SearchTopBarPreview() {
         ProjectTrashSearchTopAppBar(
             title = stringResource(Res.string.trash_title),
             onAction = {},
-            state = ProjectTrashState(),
+            isSearchActive = false,
+            searchQuery = "",
             onMenuClick = {},
             scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(),
         )
@@ -87,10 +89,8 @@ private fun SearchActivePreview() {
         ProjectTrashSearchTopAppBar(
             title = stringResource(Res.string.trash_title),
             onAction = {},
-            state =
-                ProjectTrashState(
-                    isSearchActive = true,
-                ),
+            isSearchActive = true,
+            searchQuery = "",
             onMenuClick = {},
             scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(),
         )

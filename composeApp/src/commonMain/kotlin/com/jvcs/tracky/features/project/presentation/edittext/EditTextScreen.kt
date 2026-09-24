@@ -247,6 +247,7 @@ private fun previewState(
     projectColor = projectColor,
 )
 
+@Suppress("ScreenStateOnlyInScreenComposable") // preview wrapper: hands the whole state to the Screen
 @Composable
 private fun EditTextScreenPreviewContainer(state: EditTextState, darkTheme: Boolean = false) {
     TrackyTheme(darkTheme = darkTheme) {

@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Add
@@ -76,6 +77,7 @@ import com.jvcs.tracky.designsystem.util.ObserveAsEvents
 import com.jvcs.tracky.designsystem.util.rememberCollapsibleScrollBehavior
 import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
 import com.jvcs.tracky.features.project.presentation.models.ProjectUi
+import com.jvcs.tracky.features.project.presentation.projectoverview.SortOption
 import com.jvcs.tracky.features.project.presentation.projectoverview.components.AddNewProjectBottomSheet
 import com.jvcs.tracky.features.project.presentation.projectoverview.components.EmptySection
 import com.jvcs.tracky.features.project.presentation.projectoverview.components.ProjectCard
@@ -304,14 +306,15 @@ fun ProjectOverviewScreen(
                 ) { editMode ->
                     if (editMode) {
                         ProjectOverviewSelectionTopAppBar(
-                            state = state,
+                            selectedCount = state.selectedProjectIds.size,
                             onAction = onAction,
                             scrollBehavior = scrollBehavior,
                         )
                     } else {
                         ProjectOverviewSearchTopAppBar(
                             onAction = onAction,
-                            state = state,
+                            searchQuery = state.searchQuery,
+                            sortOption = state.sortOption,
                             onMenuClick = { drawerScope.launch { drawerState.open() } },
                             username = state.localUser?.username,
                             email = state.localUser?.email,
@@ -418,7 +421,9 @@ fun ProjectOverviewScreen(
                                 ) { item ->
                                     ProjectListCard(
                                         item = item,
-                                        state = state,
+                                        isEditModeActive = state.isEditModeActive,
+                                        isSelected =
+                                            item.projectId in state.selectedProjectIds,
                                         onAction = onAction,
                                         reorderEnabled = reorderEnabled,
                                         dragDropState = dragDropState,
@@ -447,7 +452,9 @@ fun ProjectOverviewScreen(
                             ) { item ->
                                 ProjectListCard(
                                     item = item,
-                                    state = state,
+                                    isEditModeActive = state.isEditModeActive,
+                                    isSelected =
+                                        item.projectId in state.selectedProjectIds,
                                     onAction = onAction,
                                     reorderEnabled = reorderEnabled,
                                     dragDropState = dragDropState,
@@ -460,7 +467,7 @@ fun ProjectOverviewScreen(
 
             if (state.isAddNewProjectBottomSheetVisible) {
                 AddNewProjectBottomSheet(
-                    state = state,
+                    textFieldState = state.addProjectTextFieldState,
                     onAction = onAction,
                 )
             }
@@ -608,7 +615,8 @@ private fun ProjectSectionHeader(text: String) {
 @Composable
 private fun LazyItemScope.ProjectListCard(
     item: ProjectUi,
-    state: ProjectOverviewState,
+    isEditModeActive: Boolean,
+    isSelected: Boolean,
     onAction: (ProjectOverviewAction) -> Unit,
     reorderEnabled: Boolean,
     dragDropState: ReorderableListState,
@@ -639,8 +647,8 @@ private fun LazyItemScope.ProjectListCard(
         onClick = { onAction(ProjectOverviewAction.OnProjectCardClick(item.projectId)) },
         onLongClick = { onAction(ProjectOverviewAction.OnProjectCardLongPress(item.projectId)) },
         onToggleSelection = { onAction(ProjectOverviewAction.OnProjectCardToggleSelection(item.projectId)) },
-        isEditModeActive = state.isEditModeActive,
-        isSelected = item.projectId in state.selectedProjectIds,
+        isEditModeActive = isEditModeActive,
+        isSelected = isSelected,
         isReorderable = reorderEnabled,
         onReorderDragStart = {
             // Long-press enters edit mode (as before) and arms the drag.

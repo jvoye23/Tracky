@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -39,7 +40,7 @@ import tracky.composeapp.generated.resources.enter_new_title
 @Composable
 fun AddNewProjectTaskBottomSheet(
     modifier: Modifier = Modifier,
-    state: ProjectDetailState,
+    textFieldState: TextFieldState,
     onAction: (ProjectDetailAction) -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState()
@@ -51,7 +52,7 @@ fun AddNewProjectTaskBottomSheet(
         containerColor = MaterialTheme.colorScheme.surface,
     ) {
         SheetContent(
-            state = state,
+            textFieldState = textFieldState,
             onAction = onAction,
         )
     }
@@ -60,7 +61,7 @@ fun AddNewProjectTaskBottomSheet(
 @Composable
 private fun SheetContent(
     modifier: Modifier = Modifier,
-    state: ProjectDetailState,
+    textFieldState: TextFieldState,
     onAction: (ProjectDetailAction) -> Unit,
 ) {
     Column(
@@ -71,7 +72,7 @@ private fun SheetContent(
                 .padding(horizontal = 16.dp),
     ) {
         TextField(
-            state = state.addProjectTaskTextFieldState,
+            state = textFieldState,
             modifier =
                 modifier
                     .fillMaxWidth()
@@ -124,7 +125,7 @@ private fun SheetContent(
                 onClick = {
                     onAction(
                         ProjectDetailAction.OnCreateProjectSession(
-                            projectSessionTitle = state.addProjectTaskTextFieldState.text as String,
+                            projectSessionTitle = textFieldState.text as String,
                         ),
                     )
                 },
@@ -153,7 +154,7 @@ private fun SheetContentPreview() {
             SheetContent(
                 modifier = Modifier,
                 onAction = {},
-                state = ProjectDetailState(),
+                textFieldState = TextFieldState(),
             )
         }
     }

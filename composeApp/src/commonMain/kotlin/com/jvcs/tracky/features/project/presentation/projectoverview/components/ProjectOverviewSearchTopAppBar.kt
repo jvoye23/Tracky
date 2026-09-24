@@ -21,6 +21,7 @@ import com.jvcs.tracky.designsystem.components.UserProfileButton
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.features.project.presentation.projectoverview.ProjectOverviewAction
 import com.jvcs.tracky.features.project.presentation.projectoverview.ProjectOverviewState
+import com.jvcs.tracky.features.project.presentation.projectoverview.SortOption
 import org.jetbrains.compose.resources.stringResource
 import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.search_in_projects
@@ -30,7 +31,8 @@ import tracky.composeapp.generated.resources.search_in_projects
 fun ProjectOverviewSearchTopAppBar(
     modifier: Modifier = Modifier,
     onAction: (ProjectOverviewAction) -> Unit,
-    state: ProjectOverviewState,
+    searchQuery: String,
+    sortOption: SortOption,
     scrollBehavior: TopAppBarScrollBehavior,
     onMenuClick: () -> Unit,
     username: String?,
@@ -39,7 +41,7 @@ fun ProjectOverviewSearchTopAppBar(
     SearchTopAppBar(
         isSearchBoxExpanded = true,
         searchHint = stringResource(Res.string.search_in_projects),
-        searchQuery = state.searchQuery,
+        searchQuery = searchQuery,
         onQueryChange = { onAction(ProjectOverviewAction.OnSearchQueryChange(it)) },
         navigationIcon = {
             IconButton(onClick = onMenuClick) {
@@ -50,7 +52,7 @@ fun ProjectOverviewSearchTopAppBar(
                 )
             }
         },
-        sortOption = state.sortOption,
+        sortOption = sortOption,
         onToggleSortBottomSheet = { onAction(ProjectOverviewAction.OnToggleSortBottomSheet) },
         scrollBehavior = scrollBehavior,
         actions = {
@@ -75,7 +77,8 @@ private fun ProjectOverviewTopBarPreview() {
     TrackyTheme {
         ProjectOverviewSearchTopAppBar(
             onAction = {},
-            state = ProjectOverviewState(),
+            searchQuery = "",
+            sortOption = SortOption.CUSTOM,
             scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(),
             onMenuClick = {},
             username = "Jörg Voyé",

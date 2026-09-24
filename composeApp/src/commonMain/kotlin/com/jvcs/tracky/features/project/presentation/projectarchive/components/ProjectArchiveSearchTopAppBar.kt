@@ -31,16 +31,17 @@ import tracky.composeapp.generated.resources.trash_title
 fun ProjectArchiveSearchTopAppBar(
     title: String?,
     modifier: Modifier = Modifier,
-    state: ProjectArchiveState,
+    isSearchActive: Boolean,
+    searchQuery: String,
     onAction: (ProjectArchiveAction) -> Unit,
     onMenuClick: () -> Unit,
     scrollBehavior: TopAppBarScrollBehavior,
 ) {
     SearchTopAppBar(
         title = title,
-        isSearchBoxExpanded = state.isSearchActive,
+        isSearchBoxExpanded = isSearchActive,
         searchHint = stringResource(Res.string.search_in_archive),
-        searchQuery = state.searchQuery,
+        searchQuery = searchQuery,
         onQueryChange = { onAction(ProjectArchiveAction.OnSearchQueryChange(it)) },
         navigationIcon = {
             IconButton(onClick = onMenuClick) {
@@ -55,7 +56,7 @@ fun ProjectArchiveSearchTopAppBar(
         actions = {
             IconButton(onClick = { onAction(ProjectArchiveAction.OnToggleSearch) }) {
                 Icon(
-                    imageVector = if (state.isSearchActive) Icons.Default.Close else Icons.Default.Search,
+                    imageVector = if (isSearchActive) Icons.Default.Close else Icons.Default.Search,
                     contentDescription = stringResource(Res.string.search_in_trash),
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
@@ -76,7 +77,8 @@ private fun SearchTopBarPreview() {
         ProjectArchiveSearchTopAppBar(
             title = stringResource(Res.string.trash_title),
             onAction = {},
-            state = ProjectArchiveState(),
+            isSearchActive = false,
+            searchQuery = "",
             onMenuClick = {},
             scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(),
         )
@@ -90,10 +92,8 @@ private fun SearchActivePreview() {
         ProjectArchiveSearchTopAppBar(
             title = stringResource(Res.string.trash_title),
             onAction = {},
-            state =
-                ProjectArchiveState(
-                    isSearchActive = true,
-                ),
+            isSearchActive = true,
+            searchQuery = "",
             onMenuClick = {},
             scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(),
         )

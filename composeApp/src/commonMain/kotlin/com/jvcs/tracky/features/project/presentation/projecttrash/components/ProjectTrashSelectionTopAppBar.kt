@@ -29,12 +29,12 @@ private const val UPSIDE_DOWN_DEGREES = 180f
 @Composable
 fun ProjectTrashSelectionTopAppBar(
     modifier: Modifier = Modifier,
-    state: ProjectTrashState,
+    selectedCount: Int,
     onAction: (ProjectTrashAction) -> Unit,
     scrollBehavior: TopAppBarScrollBehavior,
 ) {
     SelectionTopAppBar(
-        selectedCount = state.selectedProjectIds.size,
+        selectedCount = selectedCount,
         onExit = { onAction(ProjectTrashAction.OnExitEditMode) },
         scrollBehavior = scrollBehavior,
         actions = {
@@ -63,10 +63,7 @@ fun ProjectTrashSelectionTopAppBar(
 private fun ProjectTrashSelectionTopAppBarPreview() {
     TrackyTheme {
         ProjectTrashSelectionTopAppBar(
-            state =
-                ProjectTrashState(
-                    isEditModeActive = true,
-                ),
+            selectedCount = 0,
             onAction = {},
             scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(),
         )

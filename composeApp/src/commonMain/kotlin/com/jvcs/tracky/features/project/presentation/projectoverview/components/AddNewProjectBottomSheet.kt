@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -41,7 +42,7 @@ import tracky.composeapp.generated.resources.enter_new_title
 @Composable
 fun AddNewProjectBottomSheet(
     modifier: Modifier = Modifier,
-    state: ProjectOverviewState,
+    textFieldState: TextFieldState,
     onAction: (ProjectOverviewAction) -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState()
@@ -53,7 +54,7 @@ fun AddNewProjectBottomSheet(
         containerColor = MaterialTheme.colorScheme.surface,
     ) {
         SheetContent(
-            state = state,
+            textFieldState = textFieldState,
             onAction = onAction,
         )
     }
@@ -62,7 +63,7 @@ fun AddNewProjectBottomSheet(
 @Composable
 private fun SheetContent(
     modifier: Modifier = Modifier,
-    state: ProjectOverviewState,
+    textFieldState: TextFieldState,
     onAction: (ProjectOverviewAction) -> Unit,
 ) {
     Column(
@@ -81,7 +82,7 @@ private fun SheetContent(
             color = MaterialTheme.colorScheme.onSurface,
         )
         TextField(
-            state = state.addProjectTextFieldState,
+            state = textFieldState,
             modifier =
                 modifier
                     .fillMaxWidth()
@@ -124,13 +125,13 @@ private fun SheetContent(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Button(
-                enabled = state.addProjectTextFieldState.text != "",
+                enabled = textFieldState.text != "",
                 modifier = Modifier.fillMaxWidth(),
                 contentPadding = PaddingValues(16.dp),
                 onClick = {
                     onAction(
                         ProjectOverviewAction.OnAddProjectClick(
-                            projectTitle = state.addProjectTextFieldState.text as String,
+                            projectTitle = textFieldState.text as String,
                         ),
                     )
                 },
@@ -160,7 +161,7 @@ private fun SheetContentPreview() {
             verticalArrangement = Arrangement.Center,
         ) {
             AddNewProjectBottomSheet(
-                state = ProjectOverviewState(),
+                textFieldState = TextFieldState(),
                 onAction = {},
             )
         }
