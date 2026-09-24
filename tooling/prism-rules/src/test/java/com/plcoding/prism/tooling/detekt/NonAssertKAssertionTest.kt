@@ -23,6 +23,35 @@ class NonAssertKAssertionTest {
     }
 
     @Test
+    fun `reports kotlin test assertion functions`() {
+        val snippet =
+            """
+            import kotlin.test.assertFailsWith
+            import kotlin.test.assertNull
+            import kotlin.test.assertTrue
+            import kotlin.test.fail
+
+            class Sample
+            """.trimIndent()
+
+        assertThat(rule.lint(snippet)).hasSize(4)
+    }
+
+    @Test
+    fun `does not report the kotlin test annotations`() {
+        val snippet =
+            """
+            import kotlin.test.AfterTest
+            import kotlin.test.BeforeTest
+            import kotlin.test.Test
+
+            class Sample
+            """.trimIndent()
+
+        assertThat(rule.lint(snippet)).isEmpty()
+    }
+
+    @Test
     fun `reports a JUnit4 Assert import`() {
         assertThat(rule.lint("import org.junit.Assert.assertEquals\n\nclass Sample")).hasSize(1)
     }
