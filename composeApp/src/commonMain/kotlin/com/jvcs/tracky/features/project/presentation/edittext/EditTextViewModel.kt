@@ -13,6 +13,7 @@ import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeProvider
+import com.jvcs.tracky.core.domain.util.asEmptyDataResult
 import com.jvcs.tracky.designsystem.util.UiText
 import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
@@ -175,7 +176,17 @@ class EditTextViewModel(
     private fun loadInitialData() {
         viewModelScope.launch {
             // The project is loaded for every target: the top bar is tinted with its colour.
-            val project = projectRepository.getProjectById(projectId)
+            val project =
+                when (val result = projectRepository.getProjectById(projectId)) {
+                    is Result.Success -> {
+                        result.data
+                    }
+
+                    is Result.Error -> {
+                        eventChannel.send(EditTextEvent.Error(result.error.toUiText()))
+                        return@launch
+                    }
+                }
             if (project == null) {
                 sendError(Res.string.project_cannot_be_found)
                 return@launch
@@ -271,11 +282,12 @@ class EditTextViewModel(
     // saving one back would move the row to the top of its manual order.
 
     private suspend fun saveProject(title: String, description: String): EmptyResult<DataError>? {
-        val editedProject =
-            projectRepository.getProjectById(projectId)?.copy(
-                title = title,
-                description = description,
-            ) ?: return null
+        val stored =
+            when (val result = projectRepository.getProjectById(projectId)) {
+                is Result.Success -> result.data ?: return null
+                is Result.Error -> return result.asEmptyDataResult()
+            }
+        val editedProject = stored.copy(title = title, description = description)
         return projectRepository.upsertProject(editedProject)
     }
 

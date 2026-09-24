@@ -385,9 +385,11 @@ private class FakeEditTextProjectRepository(project: Project) : ProjectRepositor
 
     val upserted = mutableListOf<Project>()
 
-    override suspend fun getProjectById(projectId: String): Project? = projectFlow.value
+    override suspend fun getProjectById(projectId: String): Result<Project?, DataError> =
+        Result.Success(projectFlow.value)
 
-    override suspend fun getProjectWithTasksByProjectId(projectId: String): Project? = projectFlow.value
+    override suspend fun getProjectWithTasksByProjectId(projectId: String): Result<Project?, DataError> =
+        Result.Success(projectFlow.value)
 
     override fun observeProjectById(projectId: String): Flow<Project?> = projectFlow
 
@@ -407,7 +409,7 @@ private class FakeEditTextProjectRepository(project: Project) : ProjectRepositor
 
     override suspend fun deleteProject(projectId: String): EmptyResult<DataError> = Result.Success(Unit)
 
-    override suspend fun deleteAllProjects() = Unit
+    override suspend fun deleteAllProjects(): EmptyResult<DataError> = Result.Success(Unit)
 
     override suspend fun syncPendingProjects(): EmptyResult<DataError> = Result.Success(Unit)
 }
@@ -470,7 +472,7 @@ private class FakeEditTextSubTaskRepository(private val subTasks: List<ProjectSu
 
     override suspend fun stopSubTask(subTaskId: String): EmptyResult<DataError> = Result.Success(Unit)
 
-    override suspend fun lastStartedSubTaskId(taskId: String): String? = null
+    override suspend fun lastStartedSubTaskId(taskId: String): Result<String?, DataError> = Result.Success(null)
 
     override suspend fun reorderSubTasks(taskId: String, orderedSubTaskIds: List<String>): EmptyResult<DataError> =
         Result.Success(Unit)

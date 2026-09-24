@@ -4,6 +4,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.core.domain.util.platformIoDispatcher
 import com.jvcs.tracky.designsystem.util.UiText
@@ -12,6 +13,7 @@ import com.jvcs.tracky.features.project.domain.project.ProjectRepository
 import com.jvcs.tracky.features.project.presentation.mappers.toCalendarMonthsUi
 import com.jvcs.tracky.features.project.presentation.mappers.toDayDetailUi
 import com.jvcs.tracky.features.project.presentation.models.CalendarMonthUi
+import com.jvcs.tracky.features.project.presentation.util.toUiText
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -85,14 +87,16 @@ class DailyOverviewViewModel(
 
     private fun loadProject() =
         viewModelScope.launch {
-            val loaded =
+            val result =
                 withContext(ioDispatcher) {
                     projectRepository.getProjectWithTasksByProjectId(projectId)
                 }
+            val loaded = (result as? Result.Success)?.data
 
             if (loaded == null) {
                 _state.update { it.copy(isLoading = false) }
-                eventChannel.send(DailyOverviewEvent.Error(UiText.Resource(Res.string.error_unknown)))
+                val error = (result as? Result.Error)?.error?.toUiText() ?: UiText.Resource(Res.string.error_unknown)
+                eventChannel.send(DailyOverviewEvent.Error(error))
                 return@launch
             }
 

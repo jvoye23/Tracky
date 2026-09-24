@@ -25,9 +25,9 @@ class FakeProjectRepository(private val project: Project?) : ProjectRepository {
     var treeReads = 0
         private set
 
-    override suspend fun getProjectWithTasksByProjectId(projectId: String): Project? {
+    override suspend fun getProjectWithTasksByProjectId(projectId: String): Result<Project?, DataError> {
         treeReads++
-        return project
+        return Result.Success(project)
     }
 
     // Unused by this screen; stubbed rather than implemented.
@@ -37,7 +37,7 @@ class FakeProjectRepository(private val project: Project?) : ProjectRepository {
 
     override suspend fun fetchProjects(): EmptyResult<DataError> = Result.Success(Unit)
 
-    override suspend fun getProjectById(projectId: String): Project? = project
+    override suspend fun getProjectById(projectId: String): Result<Project?, DataError> = Result.Success(project)
 
     override fun observeProjectById(projectId: String): Flow<Project?> = flowOf(project)
 
@@ -47,7 +47,7 @@ class FakeProjectRepository(private val project: Project?) : ProjectRepository {
 
     override suspend fun deleteProject(projectId: String): EmptyResult<DataError> = Result.Success(Unit)
 
-    override suspend fun deleteAllProjects() = Unit
+    override suspend fun deleteAllProjects(): EmptyResult<DataError> = Result.Success(Unit)
 
     override suspend fun syncPendingProjects(): EmptyResult<DataError> = Result.Success(Unit)
 }

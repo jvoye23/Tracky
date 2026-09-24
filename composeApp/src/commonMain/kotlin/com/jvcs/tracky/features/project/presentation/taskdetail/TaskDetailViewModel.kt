@@ -2,8 +2,10 @@ package com.jvcs.tracky.features.project.presentation.taskdetail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeManager
 import com.jvcs.tracky.core.domain.util.TimerState
+import com.jvcs.tracky.core.domain.util.getOrDefault
 import com.jvcs.tracky.designsystem.util.formatDurationHoursMinutesSeconds
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
@@ -126,7 +128,13 @@ class TaskDetailViewModel(
     private suspend fun loadProjectColors(projectId: String) {
         if (loadedProjectId == projectId) return
         loadedProjectId = projectId
-        val project = projectRepository.getProjectById(projectId)?.toProjectUi() ?: return
+        val project =
+            when (val result = projectRepository.getProjectById(projectId)) {
+                is Result.Success -> result.data?.toProjectUi() ?: return
+
+                // The header keeps the theme's colours; the screen works without the tint.
+                is Result.Error -> return
+            }
         _state.update {
             it.copy(
                 projectColor = project.color,
@@ -199,7 +207,8 @@ class TaskDetailViewModel(
                     subTaskRepository.stopSubTask(running.projectSubTaskId)
                     return@launch
                 }
-                val lastStartedId = subTaskRepository.lastStartedSubTaskId(taskId)
+                // Unreadable history is treated as no history: the first unfinished subtask starts.
+                val lastStartedId = subTaskRepository.lastStartedSubTaskId(taskId).getOrDefault(null)
                 val target =
                     task.subTasks.find { it.projectSubTaskId == lastStartedId && !it.isFinished }
                         ?: task.subTasks.firstOrNull { !it.isFinished }

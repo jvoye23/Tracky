@@ -60,16 +60,16 @@ class OfflineFirstProjectRepository(
 
     override fun getActiveProjects(): Flow<List<Project>> = localProjectDataSource.getActiveProjects()
 
-    override suspend fun getProjectById(projectId: String): Project? =
-        localProjectDataSource.getProjectById(projectId).getOrDefault(null)
+    override suspend fun getProjectById(projectId: String): Result<Project?, DataError> =
+        localProjectDataSource.getProjectById(projectId)
 
     // Local only: Room is the source of truth, and every remote change reaches it through a sync
     // pull, so the stream picks those up without a call of its own.
     override fun observeProjectById(projectId: String): Flow<Project?> =
         localProjectDataSource.observeProjectById(projectId)
 
-    override suspend fun getProjectWithTasksByProjectId(projectId: String): Project? =
-        localProjectDataSource.getProjectWithTasksByProjectId(projectId).getOrDefault(null)
+    override suspend fun getProjectWithTasksByProjectId(projectId: String): Result<Project?, DataError> =
+        localProjectDataSource.getProjectWithTasksByProjectId(projectId)
 
     // Local only, for the same reason as observeProjectById: Room is the source of truth and a
     // sync pull is what puts another device's rows into it.
@@ -176,9 +176,7 @@ class OfflineFirstProjectRepository(
         }
     }
 
-    override suspend fun deleteAllProjects() {
-        localProjectDataSource.deleteAllProjects()
-    }
+    override suspend fun deleteAllProjects(): EmptyResult<DataError> = localProjectDataSource.deleteAllProjects()
 
     // ---------------------------------------------------------------------------------------------
     // Pending-sync queue draining

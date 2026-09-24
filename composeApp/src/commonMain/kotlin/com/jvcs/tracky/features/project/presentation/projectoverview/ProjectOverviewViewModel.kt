@@ -6,6 +6,7 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import co.touchlab.kermit.Logger
 import com.jvcs.tracky.core.domain.auth.AuthService
 import com.jvcs.tracky.core.domain.auth.SessionStorage
 import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
@@ -606,7 +607,10 @@ class ProjectOverviewViewModel(
         applicationScope.launch {
             sessionStorage.set(null)
             authService.clearTokenCache()
-            projectRepository.deleteAllProjects()
+            projectRepository.deleteAllProjects().onFailure { error ->
+                // Nothing to show it on: the screen is already on its way to sign-in.
+                Logger.withTag("ProjectOverviewViewModel").e { "local data not cleared on logout: $error" }
+            }
             // The next account to sign in here has its own change feed; a cursor carried across
             // would silently skip everything below that sequence number.
             syncCursorStore.clear()

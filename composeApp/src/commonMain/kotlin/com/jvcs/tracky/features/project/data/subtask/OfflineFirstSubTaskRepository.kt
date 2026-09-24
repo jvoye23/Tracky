@@ -158,10 +158,10 @@ class OfflineFirstSubTaskRepository(
         return pushTimerChange(subTaskId, change, isCreate = true)
     }
 
-    /** Stops the subtask's timer. Pushes the same four rows [startSubTask] does — see its KDoc. */
-    override suspend fun lastStartedSubTaskId(taskId: String): String? =
-        localSubTaskDataSource.lastStartedSubTaskId(taskId).getOrDefault(null)
+    override suspend fun lastStartedSubTaskId(taskId: String): Result<String?, DataError> =
+        localSubTaskDataSource.lastStartedSubTaskId(taskId)
 
+    /** Stops the subtask's timer. Pushes the same four rows [startSubTask] does — see its KDoc. */
     override suspend fun stopSubTask(subTaskId: String): EmptyResult<DataError> {
         val open = subTaskIntervalRepository.getOpenIntervalBySubTaskId(subTaskId).getOrDefault(null)
         if (open != null && isForeignTimer(open.startedByDeviceId, deviceIdProvider.deviceId())) {
