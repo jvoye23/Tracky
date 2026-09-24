@@ -74,11 +74,13 @@ class HttpClientFactory(private val sessionStorage: SessionStorage) {
                         ) {
                             return@refreshTokens null
                         }
+
                         val authInfo = sessionStorage.observeAuthInfo().firstOrNull()
                         if (authInfo?.refreshToken.isNullOrBlank()) {
                             sessionStorage.set(null)
                             return@refreshTokens null
                         }
+
                         var bearerTokens: BearerTokens? = null
                         client
                             .post<RefreshRequest, AuthInfoSerializable>(

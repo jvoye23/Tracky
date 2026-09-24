@@ -319,10 +319,12 @@ private fun IntensityLegend(projectColor: Color, modifier: Modifier = Modifier) 
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.outline,
         )
+
         LegendSwatch(MaterialTheme.colorScheme.surfaceVariant)
         LegendSwatch(projectColor.copy(alpha = MIN_INTENSITY))
         LegendSwatch(projectColor.copy(alpha = 0.40f))
         LegendSwatch(projectColor)
+
         Text(
             text = stringResource(Res.string.calendar_intensity_more),
             style = MaterialTheme.typography.labelSmall,

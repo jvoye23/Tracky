@@ -33,6 +33,7 @@ class MainActivity : ComponentActivity() {
                 shouldShowSplashScreen
             }
         }
+
         super.onCreate(savedInstanceState)
         timerNotificationPermissionRequester.bind(this)
         enableEdgeToEdge()

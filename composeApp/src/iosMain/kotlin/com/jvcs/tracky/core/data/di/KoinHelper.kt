@@ -24,6 +24,7 @@ fun startKoinIos() {
     // initKoin already loads every module, including appModule, coreDataModule and projectModule.
     initKoin()
     val koin = KoinPlatform.getKoin()
+
     // Before the sync manager: a pull must not land on intervals the pass has not parked yet.
     koin.get<StrandedTimerReconciler>().start()
     koin.get<ProjectSyncManager>().start()

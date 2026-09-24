@@ -474,6 +474,7 @@ class OfflineFirstSubTaskRepository(
                 if (pendingSyncDataSource.hasPendingCreate(subTask.parentProjectTaskId).getOrDefault(false)) {
                     return SyncOutcome.RETRY
                 }
+
                 val projectId = subTask.parentProjectId
                 val taskId = subTask.parentProjectTaskId
                 val result =
@@ -549,6 +550,7 @@ class OfflineFirstSubTaskRepository(
         if (pendingSyncDataSource.hasPendingCreate(taskId).getOrDefault(false)) {
             return SyncOutcome.RETRY
         }
+
         // A missing task row means the task was deleted and the server cascaded that to its
         // subtasks, so there is no order left to push.
         val projectId = parentProjectIdOf(taskId) ?: return SyncOutcome.DROP

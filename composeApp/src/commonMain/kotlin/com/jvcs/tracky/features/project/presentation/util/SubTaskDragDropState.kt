@@ -110,6 +110,7 @@ class SubTaskDragDropState internal constructor(
             reset()
             return
         }
+
         val from = draggingItemOffset
         // Hand off to the settling state before clearing the dragging key, so the row never renders
         // one frame back in its old slot between the two.
@@ -117,6 +118,7 @@ class SubTaskDragDropState internal constructor(
         draggingItemKey = null
         draggedDelta = 0f
         hasMoved = false
+
         scope.launch {
             settleOffset.snapTo(from)
             settleOffset.animateTo(targetValue = 0f, animationSpec = tween(durationMillis = 220))

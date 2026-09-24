@@ -23,6 +23,7 @@ internal suspend fun ProjectDao.closeTaskInterval(interval: TaskIntervalEntity, 
     val duration = interval.elapsedAt(now)
     val closed =
         interval.copy(endDateTimeEpochMs = now.toEpochMilliseconds(), durationMillis = duration)
+
     upsertTaskInterval(closed)
     addTaskDuration(interval.parentTaskId, duration)
     updateSessionTimerStatus(interval.parentTaskId, false)
@@ -37,6 +38,7 @@ internal suspend fun ProjectDao.closeSubTaskInterval(
     val duration = interval.elapsedAt(now)
     val closed =
         interval.copy(endDateTimeEpochMs = now.toEpochMilliseconds(), durationMillis = duration)
+
     upsertSubTaskInterval(closed)
     addSubTaskDuration(interval.parentSubTaskId, duration)
     updateSubTaskTimerStatus(interval.parentSubTaskId, false)

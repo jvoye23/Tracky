@@ -43,6 +43,7 @@ private val startedAtFormat =
         monthName(MonthNames.ENGLISH_ABBREVIATED)
         chars(" ")
         day(Padding.NONE)
+
         chars(", ")
         hour()
         chars(":")

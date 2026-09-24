@@ -30,12 +30,15 @@ actual val platformCoreDataModule =
         single { DatabaseFactory() }
         single { ConnectivityObserver() }
         single { AppLifecycleObserver() }
+
         single { IosSyncScheduler() } bind SyncScheduler::class
         single { IosTrashCleanupScheduler() } bind TrashCleanupScheduler::class
+
         single { IosTimerNotificationController() } bind TimerNotificationController::class
         // Live Activities are governed by a Settings toggle, not a runtime prompt, so there is still
         // nothing to ask for even now that the Live Activity has landed.
         single { NoOpTimerNotificationPermissionRequester() } bind TimerNotificationPermissionRequester::class
+
         single<HttpClientEngine> { Darwin.create() }
         single<DataStore<Preferences>> {
             PreferenceDataStoreFactory.createWithPath(

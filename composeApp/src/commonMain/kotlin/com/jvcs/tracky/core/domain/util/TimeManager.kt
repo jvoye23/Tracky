@@ -86,10 +86,12 @@ class TimeManager(
                             // a wrong duration.
                             val now = serverClock.now()
                             val lastSync = syncRecency.lastSuccessfulSync.value
+
                             // Only a foreign timer can go stale. One this device started is running
                             // because this device is running it — there is nothing to confirm.
                             val stale = timer.isForeign && lastSync != null && now - lastSync > STALE_AFTER
                             val elapsed = timer.elapsedAt(if (stale) lastSync else now)
+
                             emit(RunningTimerTick(timer, elapsed, isStale = stale))
                             if (stale) {
                                 // Nothing to animate, but keep looking: the next pull un-freezes it.

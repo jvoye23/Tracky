@@ -14,6 +14,7 @@ val authPresentationModule =
         viewModelOf(::LoginViewModel)
         viewModelOf(::RegisterViewModel)
         viewModelOf(::RegisterSuccessViewModel)
+
         viewModelOf(::EmailVerificationViewModel)
         viewModelOf(::ForgotPasswordViewModel)
         viewModelOf(::ResetPasswordViewModel)

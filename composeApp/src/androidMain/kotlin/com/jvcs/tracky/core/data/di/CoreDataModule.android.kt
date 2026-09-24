@@ -26,8 +26,10 @@ actual val platformCoreDataModule =
         single { DatabaseFactory(androidContext()) }
         single { ConnectivityObserver(androidContext()) }
         single { AppLifecycleObserver() }
+
         single { AndroidSyncScheduler(androidContext()) } bind SyncScheduler::class
         single { AndroidTrashCleanupScheduler(androidContext()) } bind TrashCleanupScheduler::class
+
         single { AndroidTimerNotificationController(androidContext()) } bind TimerNotificationController::class
         single {
             AndroidTimerNotificationPermissionRequester(
@@ -35,6 +37,7 @@ actual val platformCoreDataModule =
                 notificationController = get(),
             )
         } bind TimerNotificationPermissionRequester::class
+
         single<HttpClientEngine> { OkHttp.create() }
         single<DataStore<Preferences>> {
             PreferenceDataStoreFactory.createWithPath(

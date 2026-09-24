@@ -103,15 +103,16 @@ val coreDataModule =
         singleOf(::RoomPendingSyncDataSource) bind PendingSyncDataSource::class
 
         singleOf(::RoomLocalProjectDataSource) bind LocalProjectDataSource::class
-        singleOf(::KtorRemoteProjectDataSource) bind RemoteProjectDataSource::class
         singleOf(::RoomLocalTaskDataSource) bind LocalTaskDataSource::class
         singleOf(::RoomLocalSubTaskDataSource) bind LocalSubTaskDataSource::class
-        singleOf(::KtorRemoteSubTaskDataSource) bind RemoteSubTaskDataSource::class
-        singleOf(::RoomLocalSubTaskIntervalDataSource) bind LocalSubTaskIntervalDataSource::class
-        singleOf(::KtorRemoteSubTaskIntervalDataSource) bind RemoteSubTaskIntervalDataSource::class
-        singleOf(::KtorRemoteTaskDataSource) bind RemoteTaskDataSource::class
         singleOf(::RoomLocalIntervalDataSource) bind LocalIntervalDataSource::class
+        singleOf(::RoomLocalSubTaskIntervalDataSource) bind LocalSubTaskIntervalDataSource::class
+
+        singleOf(::KtorRemoteProjectDataSource) bind RemoteProjectDataSource::class
+        singleOf(::KtorRemoteTaskDataSource) bind RemoteTaskDataSource::class
+        singleOf(::KtorRemoteSubTaskDataSource) bind RemoteSubTaskDataSource::class
         singleOf(::KtorRemoteIntervalDataSource) bind RemoteIntervalDataSource::class
+        singleOf(::KtorRemoteSubTaskIntervalDataSource) bind RemoteSubTaskIntervalDataSource::class
 
         single {
             OfflineFirstProjectRepository(
@@ -292,6 +293,7 @@ val coreDataModule =
 
         // How far this device has read the server's change feed. Cleared on logout.
         singleOf(::DataStoreSyncCursorStore) bind SyncCursorStore::class
+
         single<RealtimeChannel> {
             KtorRealtimeChannel(
                 httpClient = get(),
@@ -323,6 +325,7 @@ val coreDataModule =
                 applicationScope = get(qualifier = named("AppScope")),
             )
         }
+
         single {
             SyncPullCoordinator(
                 deltaSyncApplier = get(),

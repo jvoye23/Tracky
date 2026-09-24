@@ -17,9 +17,11 @@ val routeSavedStateConfiguration: SavedStateConfiguration =
                     subclass(Route.AuthRoute.Login::class, Route.AuthRoute.Login.serializer())
                     subclass(Route.AuthRoute.Register::class, Route.AuthRoute.Register.serializer())
                     subclass(Route.AuthRoute.RegisterSuccess::class, Route.AuthRoute.RegisterSuccess.serializer())
+
                     subclass(Route.AuthRoute.EmailVerification::class, Route.AuthRoute.EmailVerification.serializer())
                     subclass(Route.AuthRoute.ForgotPassword::class, Route.AuthRoute.ForgotPassword.serializer())
                     subclass(Route.AuthRoute.ResetPassword::class, Route.AuthRoute.ResetPassword.serializer())
+
                     subclass(Route.ProjectRoute.ProjectOverview::class, Route.ProjectRoute.ProjectOverview.serializer())
                     subclass(Route.ProjectRoute.ProjectArchive::class, Route.ProjectRoute.ProjectArchive.serializer())
                     subclass(
@@ -27,6 +29,7 @@ val routeSavedStateConfiguration: SavedStateConfiguration =
                         Route.ProjectRoute.ProjectArchiveDetail.serializer(),
                     )
                     subclass(Route.ProjectRoute.ProjectTrash::class, Route.ProjectRoute.ProjectTrash.serializer())
+
                     subclass(Route.ProjectRoute.ProjectDetail::class, Route.ProjectRoute.ProjectDetail.serializer())
                     subclass(Route.ProjectRoute.EditTextNavKey::class, Route.ProjectRoute.EditTextNavKey.serializer())
                     subclass(Route.ProjectRoute.TaskDetail::class, Route.ProjectRoute.TaskDetail.serializer())

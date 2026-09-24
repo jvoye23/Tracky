@@ -120,8 +120,10 @@ class RoomLocalTaskDataSource(
                             durationMillis = 0L,
                             startedByDeviceId = deviceId,
                         )
+
                     projectDao.upsertTaskInterval(interval)
                     projectDao.updateSessionTimerStatus(taskId, true)
+
                     val domain = interval.toTaskInterval()
                     TaskTimerStart(domain, openedInterval = domain)
                 } ?: return Result.Error(DataError.Local.NOT_FOUND)
