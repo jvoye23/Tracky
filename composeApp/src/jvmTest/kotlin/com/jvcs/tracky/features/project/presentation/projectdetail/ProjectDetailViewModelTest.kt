@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalTime::class, ExperimentalCoroutinesApi::class)
 
-package com.jvcs.tracky.features.projecttracker.presentation.projectdetail
+package com.jvcs.tracky.features.project.presentation.projectdetail
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -22,9 +22,6 @@ import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
 import com.jvcs.tracky.features.project.domain.subtask.SubTaskRepository
 import com.jvcs.tracky.features.project.domain.task.ProjectTaskRepository
-import com.jvcs.tracky.features.project.presentation.projectdetail.ProjectDetailAction
-import com.jvcs.tracky.features.project.presentation.projectdetail.ProjectDetailEvent
-import com.jvcs.tracky.features.project.presentation.projectdetail.ProjectDetailViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow

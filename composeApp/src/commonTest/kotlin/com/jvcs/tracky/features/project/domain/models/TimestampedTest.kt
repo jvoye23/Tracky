@@ -1,14 +1,10 @@
 @file:OptIn(ExperimentalTime::class)
 
-package com.jvcs.tracky.core.domain.model
+package com.jvcs.tracky.features.project.domain.models
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
-import com.jvcs.tracky.features.project.domain.models.Project
-import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
-import com.jvcs.tracky.features.project.domain.models.ProjectTask
-import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import kotlin.test.Test
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
