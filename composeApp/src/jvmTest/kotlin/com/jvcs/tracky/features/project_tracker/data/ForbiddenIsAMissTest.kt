@@ -2,6 +2,10 @@
 
 package com.jvcs.tracky.features.project_tracker.data
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.Result
@@ -9,9 +13,6 @@ import com.jvcs.tracky.core.domain.util.isMissingOrForbidden
 import com.jvcs.tracky.core.domain.util.isTransient
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 import kotlin.time.ExperimentalTime
 
 /**
@@ -28,12 +29,12 @@ internal class ForbiddenIsAMissTest {
 
     @Test
     fun bothStatusesCountAsAMiss() {
-        assertTrue(DataError.Remote.FORBIDDEN.isMissingOrForbidden())
-        assertTrue(DataError.Remote.NOT_FOUND.isMissingOrForbidden())
+        assertThat(DataError.Remote.FORBIDDEN.isMissingOrForbidden()).isTrue()
+        assertThat(DataError.Remote.NOT_FOUND.isMissingOrForbidden()).isTrue()
         // A miss is not a reason to retry — the drain still drops it rather than looping.
-        assertFalse(DataError.Remote.FORBIDDEN.isTransient())
-        assertFalse(DataError.Remote.CONFLICT.isMissingOrForbidden())
-        assertFalse(DataError.Remote.BAD_REQUEST.isMissingOrForbidden())
+        assertThat(DataError.Remote.FORBIDDEN.isTransient()).isFalse()
+        assertThat(DataError.Remote.CONFLICT.isMissingOrForbidden()).isFalse()
+        assertThat(DataError.Remote.BAD_REQUEST.isMissingOrForbidden()).isFalse()
     }
 
     @Test
@@ -46,13 +47,12 @@ internal class ForbiddenIsAMissTest {
             f.taskRepository.upsertProjectTask(f.db.newTask("t1", "p1"))
 
             // Before the fix this fell through to the permanent-error branch and the task was lost.
-            assertEquals(
-                PendingSyncOperation.OP_CREATE,
+            assertThat(
                 f.queue
                     .all()
                     .single()
                     .operationType,
-            )
+            ).isEqualTo(PendingSyncOperation.OP_CREATE)
         }
 
     @Test
@@ -64,13 +64,12 @@ internal class ForbiddenIsAMissTest {
 
             f.subTaskRepository.upsertSubTask(f.db.newSubTask("s1", "t1", "p1"))
 
-            assertEquals(
-                "s1",
+            assertThat(
                 f.queue
                     .all()
                     .single()
                     .entityId,
-            )
+            ).isEqualTo("s1")
         }
 
     @Test
@@ -85,13 +84,12 @@ internal class ForbiddenIsAMissTest {
             )
 
             // Tracked time is exactly what must never be dropped on a miss.
-            assertEquals(
-                "si1",
+            assertThat(
                 f.queue
                     .all()
                     .single()
                     .entityId,
-            )
+            ).isEqualTo("si1")
         }
 
     @Test
@@ -104,8 +102,8 @@ internal class ForbiddenIsAMissTest {
             val result = f.subTaskRepository.deleteSubTask("s1")
 
             // The local delete stands and there is nothing left to push, so this is not a failure.
-            assertTrue(result is Result.Success, "was $result")
-            assertTrue(f.queue.all().isEmpty())
+            assertThat(result is Result.Success, name = "was $result").isTrue()
+            assertThat(f.queue.all().isEmpty()).isTrue()
         }
 
     @Test
@@ -117,7 +115,7 @@ internal class ForbiddenIsAMissTest {
 
             val result = f.taskRepository.deleteProjectTask("p1", "t1")
 
-            assertTrue(result is Result.Success, "was $result")
-            assertTrue(f.queue.all().isEmpty())
+            assertThat(result is Result.Success, name = "was $result").isTrue()
+            assertThat(f.queue.all().isEmpty()).isTrue()
         }
 }

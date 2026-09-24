@@ -2,14 +2,15 @@
 
 package com.jvcs.tracky.features.project_tracker.data
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
 import com.jvcs.tracky.core.domain.util.Result
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
@@ -42,8 +43,8 @@ internal class ReorderTasksTest {
             // Move "c" to the front: every id shifts, so all three are written.
             f.taskRepository.reorderTasks("p1", listOf("c", "a", "b"))
 
-            assertEquals(1, f.localTask.sortIndexWrites.size, "a drag is one local write")
-            assertEquals(mapOf("c" to 0L, "a" to 1L, "b" to 2L), f.localTask.sortIndexWrites.single())
+            assertThat(f.localTask.sortIndexWrites.size, name = "a drag is one local write").isEqualTo(1)
+            assertThat(f.localTask.sortIndexWrites.single()).isEqualTo(mapOf("c" to 0L, "a" to 1L, "b" to 2L))
         }
 
     @Test
@@ -56,7 +57,7 @@ internal class ReorderTasksTest {
             // Swapping the last two leaves "a" at index 0, so it must not be rewritten.
             f.taskRepository.reorderTasks("p1", listOf("a", "c", "b"))
 
-            assertEquals(mapOf("c" to 1L, "b" to 2L), f.localTask.sortIndexWrites.single())
+            assertThat(f.localTask.sortIndexWrites.single()).isEqualTo(mapOf("c" to 1L, "b" to 2L))
         }
 
     @Test
@@ -69,9 +70,9 @@ internal class ReorderTasksTest {
 
             val result = f.taskRepository.reorderTasks("p1", listOf("a", "b"))
 
-            assertTrue(result is Result.Success)
-            assertTrue(f.localTask.sortIndexWrites.isEmpty(), "an unchanged order costs no write")
-            assertTrue(f.remoteTask.reorderCalls.isEmpty(), "an unchanged order costs no request")
+            assertThat(result is Result.Success).isTrue()
+            assertThat(f.localTask.sortIndexWrites.isEmpty(), name = "an unchanged order costs no write").isTrue()
+            assertThat(f.remoteTask.reorderCalls.isEmpty(), name = "an unchanged order costs no request").isTrue()
         }
 
     @Test
@@ -82,7 +83,7 @@ internal class ReorderTasksTest {
 
             f.taskRepository.reorderTasks("p1", listOf("ghost", "a", "b"))
 
-            assertEquals(mapOf("a" to 1L, "b" to 2L), f.localTask.sortIndexWrites.single())
+            assertThat(f.localTask.sortIndexWrites.single()).isEqualTo(mapOf("a" to 1L, "b" to 2L))
         }
 
     @Test
@@ -92,9 +93,9 @@ internal class ReorderTasksTest {
 
             f.taskRepository.reorderTasks("p1", listOf("c", "b", "a"))
 
-            assertEquals(1, f.remoteTask.reorderCalls.size)
-            assertEquals(mapOf("c" to 0L, "b" to 1L, "a" to 2L), f.remoteTask.reorderCalls.single())
-            assertTrue(f.remoteTask.taskRoutes.contains("p1/sort"))
+            assertThat(f.remoteTask.reorderCalls.size).isEqualTo(1)
+            assertThat(f.remoteTask.reorderCalls.single()).isEqualTo(mapOf("c" to 0L, "b" to 1L, "a" to 2L))
+            assertThat(f.remoteTask.taskRoutes.contains("p1/sort")).isTrue()
         }
 
     @Test
@@ -107,8 +108,8 @@ internal class ReorderTasksTest {
 
             f.taskRepository.reorderTasks("p1", listOf("b", "a"))
 
-            assertEquals(1, f.localTask.sortIndexWrites.size)
-            assertEquals(1, f.remoteTask.reorderCalls.size)
+            assertThat(f.localTask.sortIndexWrites.size).isEqualTo(1)
+            assertThat(f.remoteTask.reorderCalls.size).isEqualTo(1)
         }
 
     @Test
@@ -119,8 +120,8 @@ internal class ReorderTasksTest {
 
             val result = f.taskRepository.reorderTasks("p1", listOf("b", "a"))
 
-            assertTrue(result is Result.Error)
-            assertTrue(f.remoteTask.reorderCalls.isEmpty(), "nothing was persisted, so nothing to push")
+            assertThat(result is Result.Error).isTrue()
+            assertThat(f.remoteTask.reorderCalls.isEmpty(), name = "nothing was persisted, so nothing to push").isTrue()
         }
 
     @Test
@@ -132,11 +133,11 @@ internal class ReorderTasksTest {
             // The user sees success: the local write landed and the push is queued.
             val result = f.taskRepository.reorderTasks("p1", listOf("b", "a"))
 
-            assertTrue(result is Result.Success)
+            assertThat(result is Result.Success).isTrue()
             val ops = f.queue.all().filter { it.entityType == PendingSyncOperation.ENTITY_TASK_ORDER }
-            assertEquals(1, ops.size)
-            assertEquals("p1", ops.single().parentEntityId)
-            assertTrue(f.scheduler.scheduleCount > 0)
+            assertThat(ops.size).isEqualTo(1)
+            assertThat(ops.single().parentEntityId).isEqualTo("p1")
+            assertThat(f.scheduler.scheduleCount > 0).isTrue()
         }
 
     @Test
@@ -149,7 +150,7 @@ internal class ReorderTasksTest {
             f.taskRepository.reorderTasks("p1", listOf("c", "b", "a"))
 
             val ops = f.queue.all().filter { it.entityType == PendingSyncOperation.ENTITY_TASK_ORDER }
-            assertEquals(1, ops.size, "the queue row is a marker, not a payload")
+            assertThat(ops.size, name = "the queue row is a marker, not a payload").isEqualTo(1)
         }
 
     @Test
@@ -169,7 +170,7 @@ internal class ReorderTasksTest {
             f.taskRepository.reorderTasks("p1", listOf("b", "a"))
 
             val orderOps = f.queue.all().filter { it.entityType == PendingSyncOperation.ENTITY_TASK_ORDER }
-            assertEquals(1, orderOps.size, "the reorder must survive alongside the project's own op")
+            assertThat(orderOps.size, name = "the reorder must survive alongside the project's own op").isEqualTo(1)
         }
 
     @Test
@@ -183,11 +184,13 @@ internal class ReorderTasksTest {
 
             f.taskRepository.syncPendingTasks()
 
-            assertEquals(mapOf("c" to 0L, "b" to 1L, "a" to 2L), f.remoteTask.reorderCalls.single())
-            assertTrue(
-                f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_TASK_ORDER },
-                "a drained marker should be removed",
-            )
+            assertThat(f.remoteTask.reorderCalls.single()).isEqualTo(mapOf("c" to 0L, "b" to 1L, "a" to 2L))
+            assertThat(
+                f.queue.all().none {
+                    it.entityType == PendingSyncOperation.ENTITY_TASK_ORDER
+                },
+                name = "a drained marker should be removed",
+            ).isTrue()
         }
 
     @Test
@@ -202,6 +205,6 @@ internal class ReorderTasksTest {
 
             f.taskRepository.syncPendingTasks()
 
-            assertEquals(mapOf("c" to 0L, "a" to 2L), f.remoteTask.reorderCalls.single())
+            assertThat(f.remoteTask.reorderCalls.single()).isEqualTo(mapOf("c" to 0L, "a" to 2L))
         }
 }

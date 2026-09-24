@@ -2,12 +2,13 @@
 
 package com.jvcs.tracky.features.project_tracker.data
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
@@ -67,12 +68,12 @@ internal class SyncCoordinatorTest {
 
             f.syncCoordinator.syncPendingOperations()
 
-            assertEquals(listOf("p1"), f.remoteProject.postedProjectIds)
-            assertEquals(listOf("t1"), f.remoteTask.postedTaskIds)
-            assertEquals(listOf("i1"), f.remoteInterval.postedIntervalIds)
-            assertEquals(listOf("s1"), f.remoteSubTask.postedSubTaskIds)
-            assertEquals(listOf("si1"), f.remoteSubTaskInterval.postedIntervalIds)
-            assertTrue(f.queue.all().isEmpty())
+            assertThat(f.remoteProject.postedProjectIds).isEqualTo(listOf("p1"))
+            assertThat(f.remoteTask.postedTaskIds).isEqualTo(listOf("t1"))
+            assertThat(f.remoteInterval.postedIntervalIds).isEqualTo(listOf("i1"))
+            assertThat(f.remoteSubTask.postedSubTaskIds).isEqualTo(listOf("s1"))
+            assertThat(f.remoteSubTaskInterval.postedIntervalIds).isEqualTo(listOf("si1"))
+            assertThat(f.queue.all().isEmpty()).isTrue()
         }
 
     @Test
@@ -88,14 +89,14 @@ internal class SyncCoordinatorTest {
 
             f.syncCoordinator.syncPendingOperations()
 
-            assertTrue(f.remoteTask.postedTaskIds.isEmpty())
-            assertTrue(f.remoteInterval.postedIntervalIds.isEmpty())
+            assertThat(f.remoteTask.postedTaskIds.isEmpty()).isTrue()
+            assertThat(f.remoteInterval.postedIntervalIds.isEmpty()).isTrue()
             // A subtask is two levels below the project, so it is held back just as far.
-            assertTrue(f.remoteSubTask.postedSubTaskIds.isEmpty())
+            assertThat(f.remoteSubTask.postedSubTaskIds.isEmpty()).isTrue()
             // Three levels below the project, and held back just as far.
-            assertTrue(f.remoteSubTaskInterval.postedIntervalIds.isEmpty())
+            assertThat(f.remoteSubTaskInterval.postedIntervalIds.isEmpty()).isTrue()
             // Nothing was dropped — all five are still queued for the next attempt.
-            assertEquals(5, f.queue.all().size)
+            assertThat(f.queue.all().size).isEqualTo(5)
         }
 
     @Test
@@ -108,13 +109,13 @@ internal class SyncCoordinatorTest {
 
             f.syncCoordinator.syncPendingOperations()
 
-            assertEquals(listOf("p1"), f.remoteProject.postedProjectIds)
-            assertTrue(f.remoteInterval.postedIntervalIds.isEmpty())
+            assertThat(f.remoteProject.postedProjectIds).isEqualTo(listOf("p1"))
+            assertThat(f.remoteInterval.postedIntervalIds.isEmpty()).isTrue()
             // The subtask hangs off the same failing task.
-            assertTrue(f.remoteSubTask.postedSubTaskIds.isEmpty())
-            assertTrue(f.remoteSubTaskInterval.postedIntervalIds.isEmpty())
+            assertThat(f.remoteSubTask.postedSubTaskIds.isEmpty()).isTrue()
+            assertThat(f.remoteSubTaskInterval.postedIntervalIds.isEmpty()).isTrue()
             // Project drained; task, interval, subtask and subtask interval remain.
-            assertEquals(4, f.queue.all().size)
+            assertThat(f.queue.all().size).isEqualTo(4)
         }
 
     @Test
@@ -131,11 +132,11 @@ internal class SyncCoordinatorTest {
             f.goOnline()
             f.syncCoordinator.syncPendingOperations()
 
-            assertEquals(listOf("p1"), f.remoteProject.postedProjectIds)
-            assertEquals(listOf("t1"), f.remoteTask.postedTaskIds)
-            assertEquals(listOf("i1"), f.remoteInterval.postedIntervalIds)
-            assertEquals(listOf("s1"), f.remoteSubTask.postedSubTaskIds)
-            assertEquals(listOf("si1"), f.remoteSubTaskInterval.postedIntervalIds)
-            assertTrue(f.queue.all().isEmpty())
+            assertThat(f.remoteProject.postedProjectIds).isEqualTo(listOf("p1"))
+            assertThat(f.remoteTask.postedTaskIds).isEqualTo(listOf("t1"))
+            assertThat(f.remoteInterval.postedIntervalIds).isEqualTo(listOf("i1"))
+            assertThat(f.remoteSubTask.postedSubTaskIds).isEqualTo(listOf("s1"))
+            assertThat(f.remoteSubTaskInterval.postedIntervalIds).isEqualTo(listOf("si1"))
+            assertThat(f.queue.all().isEmpty()).isTrue()
         }
 }
