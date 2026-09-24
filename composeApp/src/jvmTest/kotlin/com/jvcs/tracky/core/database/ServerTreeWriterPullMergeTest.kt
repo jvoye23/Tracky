@@ -1,4 +1,4 @@
-package com.jvcs.tracky.core.database.dao
+package com.jvcs.tracky.core.database
 
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
@@ -6,7 +6,7 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import com.jvcs.tracky.core.database.TrackyDatabase
+import com.jvcs.tracky.core.database.dao.ProjectDao
 import com.jvcs.tracky.core.database.entity.PendingSyncEntity
 import com.jvcs.tracky.core.database.entity.ProjectEntity
 import com.jvcs.tracky.core.database.entity.ProjectSubTaskEntity
@@ -20,16 +20,17 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 
 /**
- * Exercises [ProjectDao.upsertServerTree] against a real (in-memory) database.
+ * Exercises [ServerTreeWriter.upsertServerTree] against a real (in-memory) database.
  *
  * The repository-level tests run against a fake that reimplements the same merge rules, so this is
  * the only place the production transaction itself — the flattening, the per-row decisions and the
  * fact that nothing gets deleted — is actually executed.
  */
-class ProjectDaoPullMergeTest {
+class ServerTreeWriterPullMergeTest {
 
     private lateinit var db: TrackyDatabase
     private lateinit var dao: ProjectDao
+    private lateinit var writer: ServerTreeWriter
 
     @BeforeTest
     fun setUp() {
@@ -40,6 +41,7 @@ class ProjectDaoPullMergeTest {
                 .setQueryCoroutineContext(Dispatchers.IO)
                 .build()
         dao = db.projectDao
+        writer = ServerTreeWriter(db)
     }
 
     @AfterTest
@@ -100,7 +102,7 @@ class ProjectDaoPullMergeTest {
     @Test
     fun writesTheWholeTree() =
         runBlocking {
-            dao.upsertServerTree(
+            writer.upsertServerTree(
                 projects = listOf(projectEntity("p1", updatedAt = 100)),
                 tasks = listOf(taskEntity("t1", "p1", "from server", updatedAt = 100)),
                 intervals = listOf(intervalEntity("i1", "t1", end = 60_000)),
@@ -144,7 +146,7 @@ class ProjectDaoPullMergeTest {
             seedProject()
             dao.upsertProjectTask(taskEntity("t1", "p1", "edited offline", updatedAt = 500))
 
-            dao.upsertServerTree(
+            writer.upsertServerTree(
                 projects = emptyList(),
                 tasks = listOf(taskEntity("t1", "p1", "stale server copy", updatedAt = 100)),
                 intervals = emptyList(),
@@ -159,7 +161,7 @@ class ProjectDaoPullMergeTest {
             seedProject()
             dao.upsertProjectTask(taskEntity("t1", "p1", "old local copy", updatedAt = 100))
 
-            dao.upsertServerTree(
+            writer.upsertServerTree(
                 projects = emptyList(),
                 tasks = listOf(taskEntity("t1", "p1", "fresh from server", updatedAt = 500)),
                 intervals = emptyList(),
@@ -174,7 +176,7 @@ class ProjectDaoPullMergeTest {
             seedTask()
             dao.upsertTaskInterval(intervalEntity("i1", "t1", end = null)) // still ticking here
 
-            dao.upsertServerTree(
+            writer.upsertServerTree(
                 projects = emptyList(),
                 tasks = emptyList(),
                 intervals = listOf(intervalEntity("i1", "t1", end = 60_000)),
@@ -192,7 +194,7 @@ class ProjectDaoPullMergeTest {
             dao.upsertTaskInterval(intervalEntity("i1", "t1", end = null))
             queuePush("i1")
 
-            dao.upsertServerTree(
+            writer.upsertServerTree(
                 projects = emptyList(),
                 tasks = emptyList(),
                 intervals = listOf(intervalEntity("i1", "t1", end = 60_000)),
@@ -207,7 +209,7 @@ class ProjectDaoPullMergeTest {
             seedTask()
             dao.upsertTaskInterval(intervalEntity("i1", "t1", end = 60_000))
 
-            dao.upsertServerTree(
+            writer.upsertServerTree(
                 projects = emptyList(),
                 tasks = emptyList(),
                 intervals = listOf(intervalEntity("i1", "t1", end = null)),
@@ -226,7 +228,7 @@ class ProjectDaoPullMergeTest {
                 intervalEntity("i1", "t1", end = null).copy(startedByDeviceId = "device-a"),
             )
 
-            dao.upsertServerTree(
+            writer.upsertServerTree(
                 projects = emptyList(),
                 tasks = emptyList(),
                 intervals = listOf(intervalEntity("i1", "t1", end = 60_000)),
@@ -243,7 +245,7 @@ class ProjectDaoPullMergeTest {
         runBlocking {
             seedTask()
 
-            dao.upsertServerTree(
+            writer.upsertServerTree(
                 projects = emptyList(),
                 tasks = emptyList(),
                 intervals =
@@ -266,7 +268,7 @@ class ProjectDaoPullMergeTest {
             dao.upsertProjectTask(taskEntity("local-only", "p1", "created offline", updatedAt = null))
             dao.upsertTaskInterval(intervalEntity("i-local", "local-only", end = 1_000))
 
-            dao.upsertServerTree(projects = emptyList(), tasks = emptyList(), intervals = emptyList())
+            writer.upsertServerTree(projects = emptyList(), tasks = emptyList(), intervals = emptyList())
 
             assertThat(dao.getTaskById("local-only")).isNotNull()
             assertThat(dao.getIntervalById("i-local")).isNotNull()
@@ -296,7 +298,7 @@ class ProjectDaoPullMergeTest {
     @Test
     fun writesSubTasksNestedTwoLevelsDown() =
         runBlocking {
-            dao.upsertServerTree(
+            writer.upsertServerTree(
                 projects = listOf(projectEntity("p1", updatedAt = 100)),
                 tasks = listOf(taskEntity("t1", "p1", "from server", updatedAt = 100)),
                 intervals = emptyList(),
@@ -312,7 +314,7 @@ class ProjectDaoPullMergeTest {
             seedTask()
             dao.upsertProjectSubTask(subTaskEntity("s1", "t1", "edited offline", updatedAt = 500))
 
-            dao.upsertServerTree(
+            writer.upsertServerTree(
                 projects = emptyList(),
                 tasks = emptyList(),
                 intervals = emptyList(),
@@ -328,7 +330,7 @@ class ProjectDaoPullMergeTest {
             seedTask()
             dao.upsertProjectSubTask(subTaskEntity("s1", "t1", "old local copy", updatedAt = 100))
 
-            dao.upsertServerTree(
+            writer.upsertServerTree(
                 projects = emptyList(),
                 tasks = emptyList(),
                 intervals = emptyList(),
@@ -344,7 +346,7 @@ class ProjectDaoPullMergeTest {
             seedTask()
             dao.upsertProjectSubTask(subTaskEntity("local-only", "t1", "created offline", updatedAt = null))
 
-            dao.upsertServerTree(
+            writer.upsertServerTree(
                 projects = emptyList(),
                 tasks = emptyList(),
                 intervals = emptyList(),
@@ -361,7 +363,7 @@ class ProjectDaoPullMergeTest {
             // project_sub_tasks has a CASCADE foreign key onto project_tasks. Without the filter this
             // row throws inside the transaction and takes the project and task rows down with it — the
             // whole pull, not just the bad row.
-            dao.upsertServerTree(
+            writer.upsertServerTree(
                 projects = listOf(projectEntity("p1", updatedAt = 100)),
                 tasks = listOf(taskEntity("t1", "p1", "from server", updatedAt = 100)),
                 intervals = emptyList(),
@@ -407,7 +409,7 @@ class ProjectDaoPullMergeTest {
     @Test
     fun writesSubTaskIntervalsNestedThreeLevelsDown() =
         runBlocking {
-            dao.upsertServerTree(
+            writer.upsertServerTree(
                 projects = listOf(projectEntity("p1", updatedAt = 100)),
                 tasks = listOf(taskEntity("t1", "p1", "from server", updatedAt = 100)),
                 intervals = listOf(intervalEntity("ti1", "t1", end = 60_000)),
@@ -427,7 +429,7 @@ class ProjectDaoPullMergeTest {
                 subTaskIntervalEntity("si1", "s1", "ti1", end = 600, startedParentTimer = true),
             )
 
-            dao.upsertServerTree(
+            writer.upsertServerTree(
                 projects = emptyList(),
                 tasks = emptyList(),
                 intervals = emptyList(),
@@ -447,7 +449,7 @@ class ProjectDaoPullMergeTest {
             seedSubTask()
             dao.upsertSubTaskInterval(subTaskIntervalEntity("si1", "s1", "ti1", end = null))
 
-            dao.upsertServerTree(
+            writer.upsertServerTree(
                 projects = emptyList(),
                 tasks = emptyList(),
                 intervals = emptyList(),
@@ -465,7 +467,7 @@ class ProjectDaoPullMergeTest {
             dao.upsertSubTaskInterval(subTaskIntervalEntity("si1", "s1", "ti1", end = null))
             queuePush("si1", entityType = "sub_task_interval")
 
-            dao.upsertServerTree(
+            writer.upsertServerTree(
                 projects = emptyList(),
                 tasks = emptyList(),
                 intervals = emptyList(),
@@ -484,7 +486,7 @@ class ProjectDaoPullMergeTest {
             // Same id space, different level: the guard is per id, and these must not collide.
             queuePush("unrelated")
 
-            dao.upsertServerTree(
+            writer.upsertServerTree(
                 projects = emptyList(),
                 tasks = emptyList(),
                 intervals = emptyList(),
@@ -500,7 +502,7 @@ class ProjectDaoPullMergeTest {
         runBlocking<Unit> {
             seedSubTask()
 
-            dao.upsertServerTree(
+            writer.upsertServerTree(
                 projects = emptyList(),
                 tasks = emptyList(),
                 intervals = emptyList(),
@@ -525,7 +527,7 @@ class ProjectDaoPullMergeTest {
             seedSubTask()
             dao.upsertSubTaskInterval(subTaskIntervalEntity("local-only", "s1", "ti1", end = 1))
 
-            dao.upsertServerTree(
+            writer.upsertServerTree(
                 projects = emptyList(),
                 tasks = emptyList(),
                 intervals = emptyList(),

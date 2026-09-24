@@ -273,7 +273,7 @@ class FakeLocalProjectDataSource(private val db: FakeDb = FakeDb()) : LocalProje
     }
 
     /**
-     * Stands in for ProjectDao.upsertServerTree: writes the whole tree and applies the same merge
+     * Stands in for ServerTreeWriter.upsertServerTree: writes the whole tree and applies the same merge
      * rules, so a pull in a test can clobber (or refuse to clobber) local state the way it would
      * against a real database.
      */

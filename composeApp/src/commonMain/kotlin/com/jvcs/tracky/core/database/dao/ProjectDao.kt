@@ -18,8 +18,6 @@ import com.jvcs.tracky.core.database.relation.SubTaskWithIntervals
 import com.jvcs.tracky.core.database.relation.TaskSortIndexEntity
 import com.jvcs.tracky.core.database.relation.TaskWithIntervals
 import com.jvcs.tracky.core.database.relation.TaskWithSubTasks
-import com.jvcs.tracky.core.domain.sync.serverWinsOnPull
-import com.jvcs.tracky.core.domain.sync.serverWinsOnPullForInterval
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -30,160 +28,6 @@ interface ProjectDao {
 
     @Upsert
     suspend fun upsertProject(project: ProjectEntity)
-
-    /**
-     * Writes a whole server tree (projects, their tasks, those tasks' intervals and subtasks) in
-     * one transaction.
-     *
-     * `GET /api/projects` returns everything the user owns, so this is what rehydrates a fresh
-     * install. Rows are merged rather than blindly overwritten — see [serverWinsOnPull] — and
-     * nothing is ever deleted: a local row the server does not know about is either still queued
-     * for upload or was created offline, and must survive the pull either way.
-     *
-     * Interval rows additionally consult the outbox: [serverWinsOnPullForInterval] lets the server
-     * close a locally-open interval, which is how a timer stopped on another device stops here,
-     * unless this device still owes the server a change for that exact row. The pending ids are
-     * read once up front rather than per row — this runs inside the transaction, and it is five
-     * levels deep.
-     *
-     * Rows are written parents-first because Room enforces the foreign keys, and a row whose parent
-     * is absent is skipped rather than inserted: one dangling reference throws inside the
-     * transaction and would lose the *entire* pull, not just that row. The three oldest levels need
-     * no such filter only because their parent is always in the same payload; subtasks and their
-     * intervals do, and a subtask interval has to clear *both* of its parents.
-     */
-    @Transaction
-    suspend fun upsertServerTree(
-        projects: List<ProjectEntity>,
-        tasks: List<ProjectTaskEntity>,
-        intervals: List<TaskIntervalEntity>,
-        subTasks: List<ProjectSubTaskEntity> = emptyList(),
-        subTaskIntervals: List<SubTaskIntervalEntity> = emptyList(),
-    ) {
-        val pendingIntervalIds = getPendingIntervalIds().toSet()
-
-        projects.forEach { incoming ->
-            val local = getProjectById(incoming.projectId)
-            if (serverWinsOnPull(local?.updatedAtEpochMs, incoming.updatedAtEpochMs)) {
-                upsertProject(incoming)
-            }
-        }
-        tasks.forEach { incoming ->
-            val local = getTaskById(incoming.projectTaskId)
-            if (serverWinsOnPull(local?.updatedAtEpochMs, incoming.updatedAtEpochMs)) {
-                upsertProjectTask(incoming)
-            }
-        }
-        intervals.forEach { incoming ->
-            val local = getIntervalById(incoming.intervalId)
-            val serverWins =
-                local == null ||
-                    serverWinsOnPullForInterval(
-                        localEndDateTimeEpochMs = local.endDateTimeEpochMs,
-                        serverEndDateTimeEpochMs = incoming.endDateTimeEpochMs,
-                        hasPendingLocalPush = incoming.intervalId in pendingIntervalIds,
-                    )
-            if (serverWins) {
-                // The server does carry startedByDeviceId, so the incoming value is preferred: a
-                // row this device has never seen must keep the provenance of the device that
-                // opened it, or an adopted foreign timer reads as one this device started.
-                // Falling back to the local value covers a row the server still has null for -
-                // every row predating the column - and stops a pull from making this device's own
-                // open interval look foreign and unrecoverable.
-                upsertTaskInterval(
-                    incoming.copy(
-                        startedByDeviceId = incoming.startedByDeviceId ?: local?.startedByDeviceId,
-                    ),
-                )
-            }
-        }
-        subTasks.forEach { incoming ->
-            if (getTaskById(incoming.parentProjectTaskId) == null) return@forEach
-            val local = getSubTaskById(incoming.projectSubTaskId)
-            // A real stamp, exactly like a task's: subtasks are edited by hand.
-            if (serverWinsOnPull(local?.updatedAtEpochMs, incoming.updatedAtEpochMs)) {
-                upsertProjectSubTask(incoming)
-            }
-        }
-        subTaskIntervals.forEach { incoming ->
-            // Two cascading parents, so two ways to dangle.
-            if (getSubTaskById(incoming.parentSubTaskId) == null) return@forEach
-            if (getIntervalById(incoming.parentTaskIntervalId) == null) return@forEach
-            val local = getSubTaskIntervalById(incoming.subTaskIntervalId)
-            val serverWins =
-                local == null ||
-                    serverWinsOnPullForInterval(
-                        localEndDateTimeEpochMs = local.endDateTimeEpochMs,
-                        serverEndDateTimeEpochMs = incoming.endDateTimeEpochMs,
-                        hasPendingLocalPush = incoming.subTaskIntervalId in pendingIntervalIds,
-                    )
-            if (serverWins) {
-                // startedParentTimer has no wire counterpart, so the local value is kept to
-                // preserve "stopping this subtask also stops its parent task"; a row this device
-                // has never seen gets false, which is what it should have. startedByDeviceId does
-                // travel, so the incoming value wins and only falls back to the local one for a
-                // row the server still has null for.
-                upsertSubTaskInterval(
-                    incoming.copy(
-                        startedParentTimer = local?.startedParentTimer ?: false,
-                        startedByDeviceId = incoming.startedByDeviceId ?: local?.startedByDeviceId,
-                    ),
-                )
-            }
-        }
-    }
-
-    /**
-     * Applies one page of the change feed: the upserts, then the deletions, in one transaction.
-     *
-     * Deletions are the reason this exists rather than a second call to [upsertServerTree].
-     * That method promises never to delete, because in a full-tree pull an absent row is
-     * ambiguous — it may have been created here and not pushed yet. A tombstone is not ambiguous,
-     * it is the server stating a fact, so the promise can be kept in one place and broken in
-     * another, deliberately.
-     *
-     * But only for rows this device does not still owe the server. A row recreated or edited
-     * offline must outlive a tombstone the server emitted before it heard about the edit —
-     * otherwise the pull destroys work the outbox is still carrying. The guard is the same set
-     * [upsertServerTree] uses.
-     *
-     * Deleting a project cascades to its whole subtree locally, so a tombstone for a child that
-     * arrives in the same page as its parent's is a no-op by the time it runs. That is fine and
-     * is why the levels are deleted parents-first.
-     */
-    @Transaction
-    suspend fun applyDelta(
-        projects: List<ProjectEntity>,
-        tasks: List<ProjectTaskEntity>,
-        intervals: List<TaskIntervalEntity>,
-        subTasks: List<ProjectSubTaskEntity>,
-        subTaskIntervals: List<SubTaskIntervalEntity>,
-        deletedProjectIds: List<String>,
-        deletedTaskIds: List<String>,
-        deletedIntervalIds: List<String>,
-        deletedSubTaskIds: List<String>,
-        deletedSubTaskIntervalIds: List<String>,
-    ) {
-        upsertServerTree(projects, tasks, intervals, subTasks, subTaskIntervals)
-
-        val pending = getAllPendingEntityIds().toSet()
-
-        deletedProjectIds.forEach { if (it !in pending) deleteProject(it) }
-        deletedTaskIds.forEach { if (it !in pending) deleteProjectTask(it) }
-        deletedIntervalIds.forEach { if (it !in pending) deleteTaskInterval(it) }
-        deletedSubTaskIds.forEach { if (it !in pending) deleteProjectSubTask(it) }
-        deletedSubTaskIntervalIds.forEach { if (it !in pending) deleteSubTaskInterval(it) }
-    }
-
-    /**
-     * Every id the outbox is still carrying, at any level.
-     *
-     * Broader than [getPendingIntervalIds] because a tombstone can name any kind of row. Reached
-     * into directly for the same reason: the decision has to happen inside the transaction that
-     * does the deleting.
-     */
-    @Query("SELECT entityId FROM pending_sync_operations")
-    suspend fun getAllPendingEntityIds(): List<String>
 
     @Query("SELECT * FROM projects ORDER BY projectId ASC")
     fun getProjects(): Flow<List<ProjectEntity>>
@@ -468,21 +312,6 @@ interface ProjectDao {
             "ORDER BY startDateTimeEpochMs DESC LIMIT 1",
     )
     fun observeOpenSubTaskInterval(): Flow<SubTaskIntervalEntity?>
-
-    /**
-     * The interval ids this device still owes the server, at either level.
-     *
-     * Read by [upsertServerTree] so a pull cannot overwrite a row whose change has not drained.
-     * It reaches into `pending_sync_operations` rather than going through `PendingSyncDao` on
-     * purpose: the decision has to be made inside the same transaction as the writes it guards,
-     * and the literals are the persisted `PendingSyncOperation.ENTITY_INTERVAL` and
-     * `ENTITY_SUBTASK_INTERVAL` values, which that file documents as un-renameable.
-     */
-    @Query(
-        "SELECT entityId FROM pending_sync_operations " +
-            "WHERE entityType IN ('task_interval', 'sub_task_interval')",
-    )
-    suspend fun getPendingIntervalIds(): List<String>
 
     // The reconciler's two inputs.
     //

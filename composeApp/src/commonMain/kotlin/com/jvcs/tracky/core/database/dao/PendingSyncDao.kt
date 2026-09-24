@@ -57,4 +57,25 @@ interface PendingSyncDao {
 
     @Query("DELETE FROM pending_sync_operations")
     suspend fun clear()
+
+    /**
+     * The interval ids this device still owes the server, at either level.
+     *
+     * Read by ServerTreeWriter so a pull cannot overwrite a row whose change has not drained. The
+     * literals are the persisted `PendingSyncOperation.ENTITY_INTERVAL` and
+     * `ENTITY_SUBTASK_INTERVAL` values, which that file documents as un-renameable.
+     */
+    @Query(
+        "SELECT entityId FROM pending_sync_operations " +
+            "WHERE entityType IN ('task_interval', 'sub_task_interval')",
+    )
+    suspend fun getPendingIntervalIds(): List<String>
+
+    /**
+     * Every id the outbox is still carrying, at any level.
+     *
+     * Broader than [getPendingIntervalIds] because a tombstone can name any kind of row.
+     */
+    @Query("SELECT entityId FROM pending_sync_operations")
+    suspend fun getAllPendingEntityIds(): List<String>
 }

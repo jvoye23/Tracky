@@ -5,6 +5,7 @@ import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import assertk.assertThat
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
+import com.jvcs.tracky.core.database.ServerTreeWriter
 import com.jvcs.tracky.core.database.TrackyDatabase
 import com.jvcs.tracky.core.database.entity.PendingSyncEntity
 import com.jvcs.tracky.core.database.entity.ProjectEntity
@@ -48,7 +49,7 @@ internal class RoomLocalProjectDataSourceTombstoneTest {
                 .setDriver(BundledSQLiteDriver())
                 .setQueryCoroutineContext(Dispatchers.IO)
                 .build()
-        dataSource = RoomLocalProjectDataSource(db.projectDao)
+        dataSource = RoomLocalProjectDataSource(db.projectDao, ServerTreeWriter(db))
     }
 
     @AfterTest
