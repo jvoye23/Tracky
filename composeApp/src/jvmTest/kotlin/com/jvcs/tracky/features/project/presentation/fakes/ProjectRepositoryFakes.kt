@@ -7,6 +7,7 @@ import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.features.project.domain.models.Project
+import com.jvcs.tracky.features.project.domain.project.ProjectOrganizationRepository
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -45,9 +46,46 @@ class FakeProjectRepository(private val project: Project?) : ProjectRepository {
 
     override suspend fun upsertProject(project: Project): EmptyResult<DataError> = Result.Success(Unit)
 
-    override suspend fun deleteProject(projectId: String): EmptyResult<DataError> = Result.Success(Unit)
+    var deleteResult: EmptyResult<DataError> = Result.Success(Unit)
+    val deletedIds = mutableListOf<String>()
+
+    override suspend fun deleteProject(projectId: String): EmptyResult<DataError> {
+        deletedIds += projectId
+        return deleteResult
+    }
 
     override suspend fun deleteAllProjects(): EmptyResult<DataError> = Result.Success(Unit)
 
     override suspend fun syncPendingProjects(): EmptyResult<DataError> = Result.Success(Unit)
+}
+
+/** Serves fixed archived and trashed lists and records the organisation writes. */
+class FakeProjectOrganizationRepository(
+    private val archived: List<Project> = emptyList(),
+    private val trashed: List<Project> = emptyList(),
+) : ProjectOrganizationRepository {
+    var writeResult: EmptyResult<DataError> = Result.Success(Unit)
+    val archivedCalls = mutableListOf<Pair<String, Boolean>>()
+    val trashedCalls = mutableListOf<Pair<String, Instant?>>()
+
+    override fun getArchivedProjects(): Flow<List<Project>> = flowOf(archived)
+
+    override fun getTrashedProjects(): Flow<List<Project>> = flowOf(trashed)
+
+    override suspend fun setProjectArchived(projectId: String, isArchived: Boolean): EmptyResult<DataError> {
+        archivedCalls += projectId to isArchived
+        return writeResult
+    }
+
+    override suspend fun setProjectTrashed(projectId: String, trashedAt: Instant?): EmptyResult<DataError> {
+        trashedCalls += projectId to trashedAt
+        return writeResult
+    }
+
+    override suspend fun purgeExpiredTrashedProjects(cutoff: Instant): EmptyResult<DataError> = Result.Success(Unit)
+
+    override suspend fun setProjectsPinned(projectIds: List<String>, isPinned: Boolean): EmptyResult<DataError> =
+        Result.Success(Unit)
+
+    override suspend fun reorderProjects(orderedProjectIds: List<String>): EmptyResult<DataError> = Result.Success(Unit)
 }
