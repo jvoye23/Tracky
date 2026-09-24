@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
+import co.touchlab.kermit.Logger
 import com.jvcs.tracky.core.domain.notification.TimerNotificationPermission
 import com.jvcs.tracky.core.domain.notification.TimerNotificationPermissionRequester
 import dev.icerock.moko.permissions.DeniedAlwaysException
@@ -94,10 +95,19 @@ class AndroidTimerNotificationPermissionRequester(
             notificationController.repost()
             TimerNotificationPermission.Granted
         } catch (exception: DeniedAlwaysException) {
+            Logger.withTag("AndroidTimerNotificationPermissionRequester").i(exception) {
+                "request: permission request ended with DeniedAlwaysException"
+            }
             refused(TimerNotificationPermission.DeniedAlways)
         } catch (exception: DeniedException) {
+            Logger.withTag("AndroidTimerNotificationPermissionRequester").i(exception) {
+                "request: permission request ended with DeniedException"
+            }
             refused(TimerNotificationPermission.Denied)
         } catch (exception: RequestCanceledException) {
+            Logger.withTag("AndroidTimerNotificationPermissionRequester").i(exception) {
+                "request: permission request ended with RequestCanceledException"
+            }
             // Dismissed without an answer. Counted as a decline: the timer still runs, it just has
             // nowhere to show itself, which is what the dialog says either way.
             refused(TimerNotificationPermission.Denied)

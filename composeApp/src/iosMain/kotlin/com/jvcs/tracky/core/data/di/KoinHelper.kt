@@ -1,6 +1,7 @@
 package com.jvcs.tracky.core.data.di
 
 import androidx.sqlite.SQLiteException
+import co.touchlab.kermit.Logger
 import com.jvcs.tracky.core.domain.notification.TimerNotificationCoordinator
 import com.jvcs.tracky.core.domain.realtime.RealtimeTimerConnection
 import com.jvcs.tracky.core.domain.sync.ProjectSyncManager
@@ -102,8 +103,10 @@ fun runTrashCleanup(onComplete: (Boolean) -> Unit) {
                     .purgeExpiredTrashedProjects(TrashRetention.cutoff(koin.get<TimeProvider>().nowInstant))
                 true
             } catch (exception: SQLiteException) {
+                Logger.withTag("KoinHelper").e(exception) { "runTrashCleanup failed (SQLiteException)" }
                 false
             } catch (exception: IOException) {
+                Logger.withTag("KoinHelper").e(exception) { "runTrashCleanup failed (IOException)" }
                 false
             }
         // BGProcessingTask requests are one-shot; queue the next run.
@@ -125,8 +128,10 @@ fun runSync(onComplete: (Boolean) -> Unit) {
                 koin.get<SyncRepository>().syncPendingOperations()
                 true
             } catch (exception: SQLiteException) {
+                Logger.withTag("KoinHelper").e(exception) { "runSync failed (SQLiteException)" }
                 false
             } catch (exception: IOException) {
+                Logger.withTag("KoinHelper").e(exception) { "runSync failed (IOException)" }
                 false
             }
         // BGAppRefreshTask requests are one-shot; queue the next run.

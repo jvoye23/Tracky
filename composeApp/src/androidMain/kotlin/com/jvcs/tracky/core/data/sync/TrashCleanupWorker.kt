@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.sqlite.SQLiteException
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import co.touchlab.kermit.Logger
 import com.jvcs.tracky.core.domain.sync.TrashRetention
 import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
@@ -29,8 +30,10 @@ class TrashCleanupWorker(context: Context, params: WorkerParameters) :
             projectRepository.purgeExpiredTrashedProjects(TrashRetention.cutoff(timeProvider.nowInstant))
             Result.success()
         } catch (exception: SQLiteException) {
+            Logger.withTag("TrashCleanupWorker").e(exception) { "doWork failed (SQLiteException)" }
             if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()
         } catch (exception: IOException) {
+            Logger.withTag("TrashCleanupWorker").e(exception) { "doWork failed (IOException)" }
             if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()
         }
 

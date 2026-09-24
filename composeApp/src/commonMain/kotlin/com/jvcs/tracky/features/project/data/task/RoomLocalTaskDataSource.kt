@@ -1,6 +1,7 @@
 package com.jvcs.tracky.features.project.data.task
 
 import androidx.sqlite.SQLiteException
+import co.touchlab.kermit.Logger
 import com.jvcs.tracky.core.database.dao.ProjectDao
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 import com.jvcs.tracky.core.domain.device.DeviceIdProvider
@@ -130,6 +131,7 @@ class RoomLocalTaskDataSource(
                 } ?: return Result.Error(DataError.Local.NOT_FOUND)
             Result.Success(start)
         } catch (exception: SQLiteException) {
+            Logger.withTag("RoomLocalTaskDataSource").e(exception) { "startTask failed (SQLiteException)" }
             Result.Error(DataError.Local.DISK_FULL)
         }
     }
@@ -159,6 +161,7 @@ class RoomLocalTaskDataSource(
                 }
             Result.Success(closedInterval?.toTaskInterval())
         } catch (exception: SQLiteException) {
+            Logger.withTag("RoomLocalTaskDataSource").e(exception) { "stopTask failed (SQLiteException)" }
             Result.Error(DataError.Local.DISK_FULL)
         }
 
@@ -166,6 +169,7 @@ class RoomLocalTaskDataSource(
         try {
             Result.Success(block())
         } catch (exception: SQLiteException) {
+            Logger.withTag("RoomLocalTaskDataSource").e(exception) { "read failed (SQLiteException)" }
             Result.Error(DataError.Local.UNKNOWN)
         }
 
@@ -174,6 +178,7 @@ class RoomLocalTaskDataSource(
             withContext(dbWriteDispatcher) { block() }
             Result.Success(Unit)
         } catch (exception: SQLiteException) {
+            Logger.withTag("RoomLocalTaskDataSource").e(exception) { "write failed (SQLiteException)" }
             Result.Error(DataError.Local.DISK_FULL)
         }
 }

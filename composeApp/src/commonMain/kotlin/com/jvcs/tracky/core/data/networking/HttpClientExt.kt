@@ -1,5 +1,6 @@
 package com.jvcs.tracky.core.data.networking
 
+import co.touchlab.kermit.Logger
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.Result
 import io.ktor.client.HttpClient
@@ -44,10 +45,21 @@ suspend inline fun <reified T> responseToResult(response: HttpResponse): Result<
             try {
                 Result.Success(response.body<T>())
             } catch (exception: SerializationException) {
+                Logger
+                    .withTag(
+                        "HttpClientExt",
+                    ).w(exception) { "responseToResult: ignored unreadable input (SerializationException)" }
                 Result.Error(DataError.Remote.SERIALIZATION)
             } catch (exception: ContentConvertException) {
+                Logger
+                    .withTag(
+                        "HttpClientExt",
+                    ).w(exception) { "responseToResult: ignored unreadable input (ContentConvertException)" }
                 Result.Error(DataError.Remote.SERIALIZATION)
             } catch (exception: NoTransformationFoundException) {
+                Logger.withTag("HttpClientExt").w(exception) {
+                    "responseToResult: ignored unreadable input (NoTransformationFoundException)"
+                }
                 Result.Error(DataError.Remote.SERIALIZATION)
             }
         }
