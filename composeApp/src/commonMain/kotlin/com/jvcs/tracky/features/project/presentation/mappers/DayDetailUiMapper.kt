@@ -2,6 +2,7 @@ package com.jvcs.tracky.features.project.presentation.mappers
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.graphics.Color
+import com.jvcs.tracky.designsystem.theme.primaryLight
 import com.jvcs.tracky.designsystem.util.formatDurationHoursMinutesSeconds
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.presentation.models.DayDetailUi
@@ -15,8 +16,6 @@ import kotlinx.datetime.format.MonthNames
 import kotlinx.datetime.format.Padding
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.ExperimentalTime
-
-private const val DEFAULT_PROJECT_COLOR_ARGB = 0xFF475D92
 
 /** "Tue, Sep 08" — the day list's heading. */
 private val dateLabelFormat =
@@ -100,7 +99,7 @@ fun Project.toDayDetailUi(date: LocalDate, timeZone: TimeZone): DayDetailUi {
                             RANGE_SEPARATOR +
                             if (interval.endsAtMidnight) END_OF_DAY else interval.end.format(clockFormat),
                     formattedDuration = formatDurationHoursMinutesSeconds(interval.durationMillis.milliseconds),
-                    projectColor = if (this.colorArgb != null) Color(colorArgb) else Color(DEFAULT_PROJECT_COLOR_ARGB),
+                    projectColor = if (this.colorArgb != null) Color(colorArgb) else primaryLight,
                 )
             },
         // Distinct parent tasks: two intervals of the same task, or of two of its subtasks, are

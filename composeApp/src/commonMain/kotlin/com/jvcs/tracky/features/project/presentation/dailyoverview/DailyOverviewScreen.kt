@@ -30,6 +30,7 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jvcs.tracky.designsystem.components.InfoCard
+import com.jvcs.tracky.designsystem.theme.SampleProjectColors
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.designsystem.theme.defaultProjectColor
 import com.jvcs.tracky.designsystem.util.ObserveAsEvents
@@ -183,7 +184,7 @@ private fun previewInterval(
     subTask: String?,
     range: String,
     duration: String,
-) = DayIntervalUi("id-$index", index, task, subTask, range, duration, Color(0xFF475D92))
+) = DayIntervalUi("id-$index", index, task, subTask, range, duration, SampleProjectColors.Slate)
 
 @Suppress("MagicNumber") // preview fixture: sample data is meant to be literal
 private fun previewState(dayDetail: DayDetailUi) =

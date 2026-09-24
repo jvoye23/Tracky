@@ -49,6 +49,7 @@ import androidx.navigationevent.compose.rememberNavigationEventState
 import com.jvcs.tracky.designsystem.Icon_Trash
 import com.jvcs.tracky.designsystem.components.MainNavDrawerItem
 import com.jvcs.tracky.designsystem.components.MainNavigationDrawer
+import com.jvcs.tracky.designsystem.theme.SampleProjectColors
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.designsystem.util.DevicePreviews
 import com.jvcs.tracky.designsystem.util.ObserveAsEvents
@@ -286,7 +287,7 @@ private fun previewArchivedProjects(): List<ProjectUi> =
             projectId = "1",
             title = "Old Marketing Site",
             description = "Archived after launch",
-            color = Color(0xFF9C27B0),
+            color = SampleProjectColors.Purple,
             totalDurationMillis = 43_200_000L,
             startDateTimeUtc = "Jan, 5, 2025",
             isFinished = true,
@@ -297,7 +298,7 @@ private fun previewArchivedProjects(): List<ProjectUi> =
             projectId = "2",
             title = "Legacy API",
             description = "No longer maintained",
-            color = Color(0xFF607D8B),
+            color = SampleProjectColors.BlueGrey,
             totalDurationMillis = 145_800_000L,
             startDateTimeUtc = "Feb, 2, 2024",
             isFinished = true,

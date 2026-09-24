@@ -70,6 +70,7 @@ import com.jvcs.tracky.designsystem.Icon_Plus
 import com.jvcs.tracky.designsystem.Icon_Timer
 import com.jvcs.tracky.designsystem.Icon_Trash
 import com.jvcs.tracky.designsystem.components.TrackyCheckbox
+import com.jvcs.tracky.designsystem.theme.SampleProjectColors
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.features.project.presentation.models.ProjectSubTaskUi
 import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
@@ -698,7 +699,7 @@ fun TaskItemCard(
     }
 }
 
-private val PreviewProjectColor = Color(0xFF475D92)
+private val PreviewProjectColor = SampleProjectColors.Slate
 
 private fun previewTask(
     title: String = "Wireframe the settings screen",

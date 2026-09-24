@@ -48,6 +48,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jvcs.tracky.designsystem.components.DurationHeroCard
+import com.jvcs.tracky.designsystem.theme.SampleProjectColors
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
 import com.jvcs.tracky.features.project.presentation.taskdetail.model.DailyStatistic
@@ -390,7 +391,7 @@ private val previewState =
                 isFinished = false,
             ),
         projectId = "project-1",
-        projectColor = Color(0xFF3F51B5),
+        projectColor = SampleProjectColors.Indigo,
         useLightTextColor = true,
         dailyStatistics =
             listOf(

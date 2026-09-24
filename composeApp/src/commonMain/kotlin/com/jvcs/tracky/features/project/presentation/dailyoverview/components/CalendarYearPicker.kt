@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
+import com.jvcs.tracky.designsystem.theme.SampleProjectColors
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
 
 /** Three across, the way Material 3's own year picker lays its grid out. */
@@ -113,7 +114,7 @@ private fun YearCell(
 // Previews
 // ---------------------------------------------------------------------------
 
-private val PreviewProjectColor = Color(0xFFF39B19)
+private val PreviewProjectColor = SampleProjectColors.Orange
 
 @Composable
 private fun YearPickerPreviewContainer(content: @Composable () -> Unit) {

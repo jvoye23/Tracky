@@ -27,7 +27,6 @@ import androidx.compose.foundation.text.input.KeyboardActionHandler
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.TextObfuscationMode
-import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material3.Icon
@@ -332,7 +331,7 @@ private fun TrackyTextFieldPreviewContainer(content: @Composable ColumnScope.() 
 private fun TrackyTextFieldEmptyPreview() {
     TrackyTextFieldPreviewContainer {
         TrackyTextField(
-            state = rememberTextFieldState(),
+            state = TextFieldState(),
             label = "Email",
             modifier = Modifier.fillMaxWidth(),
         )
@@ -344,7 +343,7 @@ private fun TrackyTextFieldEmptyPreview() {
 private fun TrackyTextFieldFilledPreview() {
     TrackyTextFieldPreviewContainer {
         TrackyTextField(
-            state = rememberTextFieldState("jane.doe@tracky.app"),
+            state = TextFieldState("jane.doe@tracky.app"),
             label = "Email",
             modifier = Modifier.fillMaxWidth(),
         )
@@ -356,13 +355,13 @@ private fun TrackyTextFieldFilledPreview() {
 private fun TrackyTextFieldLeadingIconPreview() {
     TrackyTextFieldPreviewContainer {
         TrackyTextField(
-            state = rememberTextFieldState(),
+            state = TextFieldState(),
             label = "Email",
             leadingIcon = Icon_Mail,
             modifier = Modifier.fillMaxWidth(),
         )
         TrackyTextField(
-            state = rememberTextFieldState("jane.doe@tracky.app"),
+            state = TextFieldState("jane.doe@tracky.app"),
             label = "Email",
             leadingIcon = Icon_Mail,
             modifier = Modifier.fillMaxWidth(),
@@ -375,14 +374,14 @@ private fun TrackyTextFieldLeadingIconPreview() {
 private fun TrackyTextFieldHintPreview() {
     TrackyTextFieldPreviewContainer {
         TrackyTextField(
-            state = rememberTextFieldState(),
+            state = TextFieldState(),
             label = "Full name",
             leadingIcon = Icon_User,
             hint = "At least 3 characters",
             modifier = Modifier.fillMaxWidth(),
         )
         TrackyTextField(
-            state = rememberTextFieldState("Jane Doe"),
+            state = TextFieldState("Jane Doe"),
             label = "Full name",
             leadingIcon = Icon_User,
             hint = "At least 3 characters",
@@ -396,14 +395,14 @@ private fun TrackyTextFieldHintPreview() {
 private fun TrackyTextFieldErrorPreview() {
     TrackyTextFieldPreviewContainer {
         TrackyTextField(
-            state = rememberTextFieldState(),
+            state = TextFieldState(),
             label = "Email",
             leadingIcon = Icon_Mail,
             error = "Email is required",
             modifier = Modifier.fillMaxWidth(),
         )
         TrackyTextField(
-            state = rememberTextFieldState("jane.doe@"),
+            state = TextFieldState("jane.doe@"),
             label = "Email",
             leadingIcon = Icon_Mail,
             error = "That doesn't look like a valid email address",
@@ -417,7 +416,7 @@ private fun TrackyTextFieldErrorPreview() {
 private fun TrackyTextFieldPasswordEmptyPreview() {
     TrackyTextFieldPreviewContainer {
         TrackyTextField(
-            state = rememberTextFieldState(),
+            state = TextFieldState(),
             label = "Password",
             leadingIcon = Icon_Lock,
             isPassword = true,
@@ -431,7 +430,7 @@ private fun TrackyTextFieldPasswordEmptyPreview() {
 private fun TrackyTextFieldPasswordFilledPreview() {
     TrackyTextFieldPreviewContainer {
         TrackyTextField(
-            state = rememberTextFieldState("sup3r-s3cret"),
+            state = TextFieldState("sup3r-s3cret"),
             label = "Password",
             leadingIcon = Icon_Lock,
             isPassword = true,
@@ -446,7 +445,7 @@ private fun TrackyTextFieldPasswordFilledPreview() {
 private fun TrackyTextFieldPasswordErrorPreview() {
     TrackyTextFieldPreviewContainer {
         TrackyTextField(
-            state = rememberTextFieldState("short"),
+            state = TextFieldState("short"),
             label = "Password",
             leadingIcon = Icon_Lock,
             isPassword = true,
@@ -461,14 +460,14 @@ private fun TrackyTextFieldPasswordErrorPreview() {
 private fun TrackyTextFieldDisabledPreview() {
     TrackyTextFieldPreviewContainer {
         TrackyTextField(
-            state = rememberTextFieldState("jane.doe@tracky.app"),
+            state = TextFieldState("jane.doe@tracky.app"),
             label = "Email",
             leadingIcon = Icon_Mail,
             enabled = false,
             modifier = Modifier.fillMaxWidth(),
         )
         TrackyTextField(
-            state = rememberTextFieldState("sup3r-s3cret"),
+            state = TextFieldState("sup3r-s3cret"),
             label = "Password",
             leadingIcon = Icon_Lock,
             isPassword = true,
@@ -484,7 +483,7 @@ private fun TrackyTextFieldLongContentPreview() {
     TrackyTextFieldPreviewContainer {
         TrackyTextField(
             state =
-                rememberTextFieldState(
+                TextFieldState(
                     "A really long single-line value that runs well past the right edge of the field",
                 ),
             label = "Work email address used for account recovery",
@@ -503,7 +502,7 @@ private fun TrackyTextFieldMultiLinePreview() {
     TrackyTextFieldPreviewContainer {
         TrackyTextField(
             state =
-                rememberTextFieldState(
+                TextFieldState(
                     "Rebuild the onboarding flow so new users land on the project list " +
                         "instead of the empty timer screen.",
                 ),
@@ -522,7 +521,7 @@ private fun TrackyTextFieldMultiLinePreview() {
 private fun TrackyTextFieldAuthStylesPreview() {
     TrackyTextFieldPreviewContainer {
         TrackyTextField(
-            state = rememberTextFieldState("Jane Doe"),
+            state = TextFieldState("Jane Doe"),
             label = "Full name",
             leadingIcon = Icon_User,
             labelStyle = MaterialTheme.typography.authLabelStyle,
@@ -531,7 +530,7 @@ private fun TrackyTextFieldAuthStylesPreview() {
             modifier = Modifier.fillMaxWidth(),
         )
         TrackyTextField(
-            state = rememberTextFieldState("jane.doe@tracky.app"),
+            state = TextFieldState("jane.doe@tracky.app"),
             label = "Email",
             leadingIcon = Icon_Mail,
             keyboardType = KeyboardType.Email,
@@ -541,7 +540,7 @@ private fun TrackyTextFieldAuthStylesPreview() {
             modifier = Modifier.fillMaxWidth(),
         )
         TrackyTextField(
-            state = rememberTextFieldState("sup3r-s3cret"),
+            state = TextFieldState("sup3r-s3cret"),
             label = "Password",
             leadingIcon = Icon_Lock,
             isPassword = true,
@@ -552,7 +551,7 @@ private fun TrackyTextFieldAuthStylesPreview() {
             modifier = Modifier.fillMaxWidth(),
         )
         TrackyTextField(
-            state = rememberTextFieldState(),
+            state = TextFieldState(),
             label = "Confirm password",
             leadingIcon = Icon_Lock,
             isPassword = true,
@@ -571,7 +570,7 @@ private fun TrackyTextFieldAuthStylesPreview() {
 private fun TrackyTextFieldProjectStylesPreview() {
     TrackyTextFieldPreviewContainer {
         TrackyTextField(
-            state = rememberTextFieldState(),
+            state = TextFieldState(),
             label = "Title",
             imeAction = ImeAction.Done,
             labelStyle = MaterialTheme.typography.projectLabelStyle,
@@ -580,7 +579,7 @@ private fun TrackyTextFieldProjectStylesPreview() {
             modifier = Modifier.fillMaxWidth(),
         )
         TrackyTextField(
-            state = rememberTextFieldState("Tracky redesign"),
+            state = TextFieldState("Tracky redesign"),
             label = "Title",
             imeAction = ImeAction.Done,
             labelStyle = MaterialTheme.typography.projectLabelStyle,
@@ -596,7 +595,7 @@ private fun TrackyTextFieldProjectStylesPreview() {
 private fun TrackyTextFieldFontScalePreview() {
     TrackyTextFieldPreviewContainer {
         TrackyTextField(
-            state = rememberTextFieldState("jane.doe@tracky.app"),
+            state = TextFieldState("jane.doe@tracky.app"),
             label = "Email",
             leadingIcon = Icon_Mail,
             hint = "We'll send a confirmation link",
@@ -606,7 +605,7 @@ private fun TrackyTextFieldFontScalePreview() {
             modifier = Modifier.fillMaxWidth(),
         )
         TrackyTextField(
-            state = rememberTextFieldState("sup3r-s3cret"),
+            state = TextFieldState("sup3r-s3cret"),
             label = "Password",
             leadingIcon = Icon_Lock,
             isPassword = true,
@@ -624,7 +623,7 @@ private fun TrackyTextFieldFontScalePreview() {
 private fun TrackyTextFieldCompactPreview() {
     TrackyTextFieldPreviewContainer {
         TrackyTextField(
-            state = rememberTextFieldState("jane.doe@tracky.app"),
+            state = TextFieldState("jane.doe@tracky.app"),
             label = "Work email address used for account recovery",
             leadingIcon = Icon_Mail,
             error = "This address is already registered to another Tracky account",
@@ -634,7 +633,7 @@ private fun TrackyTextFieldCompactPreview() {
             modifier = Modifier.fillMaxWidth(),
         )
         TrackyTextField(
-            state = rememberTextFieldState("Tracky redesign"),
+            state = TextFieldState("Tracky redesign"),
             label = "Title",
             labelStyle = MaterialTheme.typography.projectLabelStyle,
             elevatedLabelStyle = MaterialTheme.typography.projectElevatedLabelStyle,
@@ -652,7 +651,7 @@ private fun TrackyTextFieldFillHeightPreview() {
         Surface(color = MaterialTheme.colorScheme.surface) {
             Column(modifier = Modifier.padding(16.dp)) {
                 TrackyTextField(
-                    state = rememberTextFieldState(),
+                    state = TextFieldState(),
                     label = "Description",
                     labelStyle = MaterialTheme.typography.projectLabelStyle,
                     elevatedLabelStyle = MaterialTheme.typography.projectElevatedLabelStyle,
