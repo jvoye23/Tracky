@@ -19,7 +19,7 @@ class KtorRemoteSyncDataSource(private val httpClient: HttpClient) : RemoteSyncD
                 // Omitted rather than sent as 0 when this device has never pulled: the server reads a
                 // missing `since` as "everything, and no tombstones", which is what a fresh install
                 // wants. Sending 0 means the same thing today, but only by coincidence.
-                queryParams = since?.let { mapOf("since" to it) } ?: emptyMap(),
+                queryParams = since?.let { mapOf("since" to it) }.orEmpty(),
             ).map { it.toSyncChanges() }
 
     private companion object {

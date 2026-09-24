@@ -213,7 +213,7 @@ fun ProjectArchiveScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(
-                    items = state.filteredProjects ?: emptyList(),
+                    items = state.filteredProjects.orEmpty(),
                     key = { it.projectId },
                 ) { item ->
                     ProjectCard(

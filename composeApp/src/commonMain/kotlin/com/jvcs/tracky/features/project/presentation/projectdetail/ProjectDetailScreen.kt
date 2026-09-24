@@ -443,7 +443,7 @@ fun ProjectDetailScreen(
 
                 // 5. Session Items
                 itemsIndexed(
-                    items = state.project.projectTasks ?: emptyList(),
+                    items = state.project.projectTasks.orEmpty(),
                     // Stable String keys: the reorder state hit-tests on them, and every item above
                     // this one is keyed by position, which is what keeps a drag inside the task list.
                     key = { _, task -> task.projectTaskId },

@@ -18,11 +18,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class MainViewModel(
-    private val sessionStorage: SessionStorage,
-    private val authService: AuthService,
-    private val applicationScope: CoroutineScope,
-) : ViewModel() {
+class MainViewModel(private val sessionStorage: SessionStorage) : ViewModel() {
 
     private val eventChannel = Channel<MainEvent>()
     val events = eventChannel.receiveAsFlow()

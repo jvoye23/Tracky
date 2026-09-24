@@ -66,9 +66,9 @@ data class RunningTimerTick(
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class TimeManager(
-    private val runningTimerRepository: RunningTimerRepository,
-    private val serverClock: ServerClock,
-    private val syncRecency: SyncRecency,
+    runningTimerRepository: RunningTimerRepository,
+    serverClock: ServerClock,
+    syncRecency: SyncRecency,
     scope: CoroutineScope,
 ) {
 

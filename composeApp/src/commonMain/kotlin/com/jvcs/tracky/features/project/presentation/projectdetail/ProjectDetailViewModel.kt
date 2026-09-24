@@ -48,7 +48,6 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 class ProjectDetailViewModel(
-    private val isEdit: Boolean,
     private val projectId: String?,
     private val projectRepository: ProjectRepository,
     private val projectTaskRepository: ProjectTaskRepository,
@@ -416,8 +415,8 @@ class ProjectDetailViewModel(
             _state.update {
                 it.copy(
                     project = newProject?.toProjectUi(),
-                    titleText = newProject?.title ?: "",
-                    descriptionText = newProject?.description ?: "",
+                    titleText = newProject?.title.orEmpty(),
+                    descriptionText = newProject?.description.orEmpty(),
                     projectColor = color,
                     selectedColorHex = color?.toHex() ?: "#00FFFF",
                     useLightTextColor = newProject?.useLightTextColor ?: true,
@@ -905,7 +904,7 @@ private fun ProjectDetailState.withProjectRow(row: Project?): ProjectDetailState
     val color = row.colorArgb?.let { Color(it) }
     return copy(
         titleText = row.title,
-        descriptionText = row.description ?: "",
+        descriptionText = row.description.orEmpty(),
         // copy, not replace: the row carries no tasks.
         project = project?.copy(title = row.title, description = row.description),
         // Edit mode owns the colour picker's uncommitted selection, so a row change arriving

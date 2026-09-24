@@ -125,7 +125,6 @@ class ProjectDetailViewModelTest {
         taskRepository.running = running
         val vm =
             ProjectDetailViewModel(
-                isEdit = false,
                 projectId = PROJECT_ID,
                 projectRepository = projectRepository,
                 projectTaskRepository = taskRepository,

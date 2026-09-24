@@ -189,7 +189,7 @@ fun NavigationRoot(backStack: NavBackStack<NavKey>) {
                 entry<Route.ProjectRoute.ProjectDetail> { key ->
                     val detailVm: ProjectDetailViewModel =
                         koinViewModel {
-                            parametersOf(key.isEditMode, key.projectId)
+                            parametersOf(key.projectId)
                         }
                     ProjectDetailScreenRoot(
                         navigateBack = {
