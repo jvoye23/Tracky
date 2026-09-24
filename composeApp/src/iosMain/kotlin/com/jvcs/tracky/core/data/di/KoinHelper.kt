@@ -1,5 +1,6 @@
 package com.jvcs.tracky.core.data.di
 
+import androidx.sqlite.SQLiteException
 import com.jvcs.tracky.core.domain.notification.TimerNotificationCoordinator
 import com.jvcs.tracky.core.domain.realtime.RealtimeTimerConnection
 import com.jvcs.tracky.core.domain.sync.ProjectSyncManager
@@ -17,6 +18,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.io.IOException
 import org.koin.core.qualifier.named
 import org.koin.mp.KoinPlatform
 
@@ -99,9 +101,9 @@ fun runTrashCleanup(onComplete: (Boolean) -> Unit) {
                     .get<ProjectRepository>()
                     .purgeExpiredTrashedProjects(TrashRetention.cutoff(koin.get<TimeProvider>().nowInstant))
                 true
-            } catch (exception: CancellationException) {
-                throw exception
-            } catch (exception: Throwable) {
+            } catch (exception: SQLiteException) {
+                false
+            } catch (exception: IOException) {
                 false
             }
         // BGProcessingTask requests are one-shot; queue the next run.
@@ -122,9 +124,9 @@ fun runSync(onComplete: (Boolean) -> Unit) {
             try {
                 koin.get<SyncRepository>().syncPendingOperations()
                 true
-            } catch (exception: CancellationException) {
-                throw exception
-            } catch (exception: Throwable) {
+            } catch (exception: SQLiteException) {
+                false
+            } catch (exception: IOException) {
                 false
             }
         // BGAppRefreshTask requests are one-shot; queue the next run.

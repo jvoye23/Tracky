@@ -1,5 +1,6 @@
 package com.jvcs.tracky.features.project.data.task
 
+import androidx.sqlite.SQLiteException
 import com.jvcs.tracky.core.database.dao.ProjectDao
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 import com.jvcs.tracky.core.domain.device.DeviceIdProvider
@@ -128,8 +129,7 @@ class RoomLocalTaskDataSource(
                     TaskTimerStart(domain, openedInterval = domain)
                 } ?: return Result.Error(DataError.Local.NOT_FOUND)
             Result.Success(start)
-        } catch (exception: Exception) {
-            if (exception is CancellationException) throw exception
+        } catch (exception: SQLiteException) {
             Result.Error(DataError.Local.DISK_FULL)
         }
     }
@@ -158,17 +158,14 @@ class RoomLocalTaskDataSource(
                     updatedInterval
                 }
             Result.Success(closedInterval?.toTaskInterval())
-        } catch (exception: Exception) {
-            if (exception is CancellationException) throw exception
+        } catch (exception: SQLiteException) {
             Result.Error(DataError.Local.DISK_FULL)
         }
 
     private inline fun <T> read(block: () -> T): Result<T, DataError.Local> =
         try {
             Result.Success(block())
-        } catch (exception: CancellationException) {
-            throw exception
-        } catch (exception: Exception) {
+        } catch (exception: SQLiteException) {
             Result.Error(DataError.Local.UNKNOWN)
         }
 
@@ -176,9 +173,7 @@ class RoomLocalTaskDataSource(
         try {
             withContext(dbWriteDispatcher) { block() }
             Result.Success(Unit)
-        } catch (exception: CancellationException) {
-            throw exception
-        } catch (exception: Exception) {
+        } catch (exception: SQLiteException) {
             Result.Error(DataError.Local.DISK_FULL)
         }
 }

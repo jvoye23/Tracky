@@ -1,9 +1,11 @@
 package com.jvcs.tracky.core.data.sync
 
 import android.content.Context
+import androidx.sqlite.SQLiteException
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.jvcs.tracky.core.domain.sync.SyncRepository
+import kotlinx.io.IOException
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import kotlin.coroutines.cancellation.CancellationException
@@ -22,9 +24,9 @@ class SyncWorker(context: Context, params: WorkerParameters) :
         try {
             syncRepository.syncPendingOperations()
             Result.success()
-        } catch (exception: CancellationException) {
-            throw exception
-        } catch (exception: Exception) {
+        } catch (exception: SQLiteException) {
+            if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()
+        } catch (exception: IOException) {
             if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()
         }
 

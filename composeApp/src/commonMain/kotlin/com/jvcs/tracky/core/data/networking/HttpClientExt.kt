@@ -3,6 +3,7 @@ package com.jvcs.tracky.core.data.networking
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.Result
 import io.ktor.client.HttpClient
+import io.ktor.client.call.NoTransformationFoundException
 import io.ktor.client.call.body
 import io.ktor.client.network.sockets.ConnectTimeoutException
 import io.ktor.client.network.sockets.SocketTimeoutException
@@ -20,8 +21,10 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
+import io.ktor.serialization.ContentConvertException
 import io.ktor.util.network.UnresolvedAddressException
 import kotlinx.coroutines.CancellationException
+import kotlinx.io.IOException
 import kotlinx.serialization.SerializationException
 
 private const val FIRST_SERVER_ERROR = 500
@@ -40,7 +43,11 @@ suspend inline fun <reified T> responseToResult(response: HttpResponse): Result<
         response.status.isSuccess() -> {
             try {
                 Result.Success(response.body<T>())
-            } catch (exception: Exception) {
+            } catch (exception: SerializationException) {
+                Result.Error(DataError.Remote.SERIALIZATION)
+            } catch (exception: ContentConvertException) {
+                Result.Error(DataError.Remote.SERIALIZATION)
+            } catch (exception: NoTransformationFoundException) {
                 Result.Error(DataError.Remote.SERIALIZATION)
             }
         }
@@ -110,8 +117,7 @@ suspend inline fun safeResponse(execute: () -> HttpResponse): Result<HttpRespons
         } catch (exception: SerializationException) {
             exception.printStackTrace()
             return Result.Error(DataError.Remote.SERIALIZATION)
-        } catch (exception: Exception) {
-            if (exception is CancellationException) throw exception
+        } catch (exception: IOException) {
             exception.printStackTrace()
             return Result.Error(exception.toRemoteDataError())
         }

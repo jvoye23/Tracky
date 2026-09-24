@@ -1,5 +1,6 @@
 package com.jvcs.tracky.core.data.sync
 
+import androidx.sqlite.SQLiteException
 import com.jvcs.tracky.core.database.dao.PendingSyncDao
 import com.jvcs.tracky.core.database.entity.PendingSyncEntity
 import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource
@@ -64,9 +65,7 @@ class RoomPendingSyncDataSource(private val pendingSyncDao: PendingSyncDao) : Pe
     private inline fun <T> dbRead(block: () -> T): Result<T, DataError.Local> =
         try {
             Result.Success(block())
-        } catch (exception: CancellationException) {
-            throw exception
-        } catch (exception: Exception) {
+        } catch (exception: SQLiteException) {
             Result.Error(DataError.Local.UNKNOWN)
         }
 }

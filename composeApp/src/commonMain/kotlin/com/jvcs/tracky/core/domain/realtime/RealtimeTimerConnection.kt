@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.withContext
+import kotlinx.io.IOException
 import kotlinx.serialization.json.Json
 import kotlin.math.pow
 import kotlin.random.Random
@@ -147,9 +148,7 @@ class RealtimeTimerConnection(
                                     authRetries = 0
                                 }
                             }
-                        } catch (exception: CancellationException) {
-                            throw exception
-                        } catch (exception: Exception) {
+                        } catch (exception: IOException) {
                             // A socket that died under us is the ordinary case, not an error worth
                             // surfacing. Reconnect.
                             exception.printStackTrace()

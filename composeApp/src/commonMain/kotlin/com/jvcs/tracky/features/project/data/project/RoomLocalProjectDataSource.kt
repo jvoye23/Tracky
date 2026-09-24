@@ -1,5 +1,6 @@
 package com.jvcs.tracky.features.project.data.project
 
+import androidx.sqlite.SQLiteException
 import com.jvcs.tracky.core.database.dao.ProjectDao
 import com.jvcs.tracky.core.domain.sync.SyncChanges
 import com.jvcs.tracky.core.domain.sync.Tombstone
@@ -174,9 +175,7 @@ class RoomLocalProjectDataSource(private val projectDao: ProjectDao) : LocalProj
     private inline fun <T> read(block: () -> T): Result<T, DataError.Local> =
         try {
             Result.Success(block())
-        } catch (exception: CancellationException) {
-            throw exception
-        } catch (exception: Exception) {
+        } catch (exception: SQLiteException) {
             Result.Error(DataError.Local.UNKNOWN)
         }
 
@@ -189,9 +188,7 @@ class RoomLocalProjectDataSource(private val projectDao: ProjectDao) : LocalProj
         try {
             withContext(dbWriteDispatcher) { block() }
             Result.Success(Unit)
-        } catch (exception: CancellationException) {
-            throw exception
-        } catch (exception: Exception) {
+        } catch (exception: SQLiteException) {
             Result.Error(DataError.Local.DISK_FULL)
         }
 }

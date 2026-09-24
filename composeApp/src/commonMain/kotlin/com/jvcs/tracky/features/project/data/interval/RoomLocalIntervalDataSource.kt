@@ -1,5 +1,6 @@
 package com.jvcs.tracky.features.project.data.interval
 
+import androidx.sqlite.SQLiteException
 import com.jvcs.tracky.core.database.dao.ProjectDao
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
@@ -40,9 +41,7 @@ class RoomLocalIntervalDataSource(private val projectDao: ProjectDao) : LocalInt
     private inline fun <T> read(block: () -> T): Result<T, DataError.Local> =
         try {
             Result.Success(block())
-        } catch (exception: CancellationException) {
-            throw exception
-        } catch (exception: Exception) {
+        } catch (exception: SQLiteException) {
             Result.Error(DataError.Local.UNKNOWN)
         }
 
@@ -50,9 +49,7 @@ class RoomLocalIntervalDataSource(private val projectDao: ProjectDao) : LocalInt
         try {
             withContext(dbWriteDispatcher) { block() }
             Result.Success(Unit)
-        } catch (exception: CancellationException) {
-            throw exception
-        } catch (exception: Exception) {
+        } catch (exception: SQLiteException) {
             Result.Error(DataError.Local.DISK_FULL)
         }
 }
