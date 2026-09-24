@@ -31,7 +31,7 @@ class RootAndScreenInSameFileTest {
             rule.lint(
                 """
                 @Composable
-                fun LoginRoot() {}
+                fun LoginRoot(viewModel: LoginViewModel = koinViewModel()) {}
 
                 fun LoginScreen() {}
                 """.trimIndent(),
@@ -46,7 +46,7 @@ class RootAndScreenInSameFileTest {
             rule.lint(
                 """
                 @Composable
-                fun LoginRoot() {}
+                fun LoginRoot(viewModel: LoginViewModel = koinViewModel()) {}
 
                 @Composable
                 fun SignInScreen(state: SignInState, onAction: (SignInAction) -> Unit) {}
@@ -68,6 +68,49 @@ class RootAndScreenInSameFileTest {
 
                 @Composable
                 fun LoginScreen(state: LoginState, onAction: (LoginAction) -> Unit) {}
+                """.trimIndent(),
+            )
+
+        assertThat(findings).isEmpty()
+    }
+
+    @Test
+    fun `pairs a ScreenRoot with the Screen of the same base name`() {
+        val findings =
+            rule.lint(
+                """
+                @Composable
+                fun LoginScreenRoot(viewModel: LoginViewModel = koinViewModel()) {}
+
+                @Composable
+                fun LoginScreen(state: LoginState, onAction: (LoginAction) -> Unit) {}
+                """.trimIndent(),
+            )
+
+        assertThat(findings).isEmpty()
+    }
+
+    @Test
+    fun `reports a ScreenRoot without its Screen, naming the right one`() {
+        val findings =
+            rule.lint(
+                """
+                @Composable
+                fun LoginScreenRoot(viewModel: LoginViewModel = koinViewModel()) {}
+                """.trimIndent(),
+            )
+
+        assertThat(findings).hasSize(1)
+        assertThat(findings.first().message).contains("'LoginScreen'")
+    }
+
+    @Test
+    fun `does not check a Root that takes no ViewModel`() {
+        val findings =
+            rule.lint(
+                """
+                @Composable
+                fun NavigationRoot(modifier: Modifier = Modifier) {}
                 """.trimIndent(),
             )
 

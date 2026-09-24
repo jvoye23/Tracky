@@ -13,6 +13,12 @@ import org.jetbrains.kotlin.psi.psiUtil.collectDescendantsOfType
  * The Root wires the ViewModel and the Screen renders the state; keeping the
  * pair in one file is what makes the split navigable. A Root without its
  * Screen next to it either lost the split or scattered it across files.
+ *
+ * Two naming shapes pair up: `LoginRoot` with `LoginScreen`, and `LoginScreenRoot`
+ * with `LoginScreen` — a project that names its screens `*Screen` and suffixes the
+ * Root must not be asked for a `LoginScreenScreen`. Only a Root that takes a
+ * `*ViewModel` parameter is checked: that is what makes it the MVI Root, and it
+ * keeps a navigation host named `NavigationRoot` out of the rule.
  */
 class RootAndScreenInSameFile(config: Config) :
     Rule(
@@ -24,7 +30,9 @@ class RootAndScreenInSameFile(config: Config) :
         if (!function.isComposable()) return
         val functionName = function.name ?: return
         if (!functionName.endsWith(ROOT)) return
-        val screenName = functionName.removeSuffix(ROOT) + SCREEN
+        if (function.valueParameters.none { it.typeReference?.text?.endsWith(VIEW_MODEL) == true }) return
+        val base = functionName.removeSuffix(ROOT)
+        val screenName = if (base.endsWith(SCREEN)) base else base + SCREEN
 
         val screenExists =
             function.containingKtFile
@@ -48,5 +56,6 @@ class RootAndScreenInSameFile(config: Config) :
         const val COMPOSABLE = "Composable"
         const val ROOT = "Root"
         const val SCREEN = "Screen"
+        const val VIEW_MODEL = "ViewModel"
     }
 }

@@ -702,6 +702,10 @@ prism:
   JvmComposeTestRule:
     active: true
     includes: ['**/test/**', '**/commonTest/**', '**/jvmTest/**', '**/androidHostTest/**', '**/androidUnitTest/**', '**/androidTest/**', '**/androidDeviceTest/**', '**/androidInstrumentedTest/**']
+  # OFF, deliberately (burn-down, 2026-09-24). Tracky's Room tests are KMP jvmTest
+  # tests against the real Room runtime with the bundled SQLite driver: that is the
+  # project's test strategy, not a shortcut. Moving them to androidTest would lose the
+  # JVM runs and need a device for every one.
   RoomInJvmUnitTest:
-    active: true
+    active: false
     includes: ['**/test/**', '**/commonTest/**', '**/jvmTest/**', '**/androidHostTest/**', '**/androidUnitTest/**']
