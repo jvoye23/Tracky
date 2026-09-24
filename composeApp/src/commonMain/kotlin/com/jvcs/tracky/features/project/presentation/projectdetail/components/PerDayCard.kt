@@ -166,7 +166,6 @@ private fun DayCell(
         } else {
             MaterialTheme.colorScheme.surfaceVariant
         }
-    val outlineVariant = MaterialTheme.colorScheme.outlineVariant
 
     // A tinted tile is filled with the project colour, so its content colour cannot come
     // from the theme — a bright project colour stays bright in dark mode. Composite the

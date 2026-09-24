@@ -51,7 +51,10 @@ actual val platformCoreDataModule =
                             create = false,
                             error = null,
                         )
-                    (documentDirectory!!.path + "/tracky_prefs.preferences_pb").toPath()
+                    (
+                        requireNotNull(documentDirectory) { "no documents directory" }.path +
+                            "/tracky_prefs.preferences_pb"
+                    ).toPath()
                 },
             )
         }

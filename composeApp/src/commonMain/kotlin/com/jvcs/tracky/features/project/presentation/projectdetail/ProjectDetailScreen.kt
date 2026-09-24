@@ -358,7 +358,7 @@ fun ProjectDetailScreen(
                             description = state.descriptionText ?: stringResource(Res.string.description),
                             onAction = onAction,
                             isEditMode = state.isEditMode,
-                            projectId = state.project?.projectId,
+                            projectId = state.project.projectId,
                         )
                         if (state.isEditMode) {
                             ColorInfoCard(
@@ -386,7 +386,7 @@ fun ProjectDetailScreen(
                                     .padding(horizontal = 16.dp)
                                     .padding(bottom = 16.dp),
                             label = stringResource(Res.string.project_duration),
-                            totalDuration = state.project.totalProjectDuration ?: "00:00:00",
+                            totalDuration = state.project.totalProjectDuration,
                             projectColor = state.projectColor ?: MaterialTheme.colorScheme.onSurface,
                             useLightTextColor = state.useLightTextColor,
                             onStartStopClick = {
@@ -424,10 +424,10 @@ fun ProjectDetailScreen(
                         lastActive = state.project.startDateTimeUtc,
                         perDayStrip = state.perDayStrip,
                         projectColor = state.projectColor ?: MaterialTheme.colorScheme.primary,
-                        doneTaskCount = state.project?.doneTaskCount ?: 0,
+                        doneTaskCount = state.project.doneTaskCount,
                         taskCount =
-                            state.project?.projectTasks?.size ?: 0,
-                        taskProgress = { state.project?.taskProgress ?: 0f },
+                            state.project.projectTasks?.size ?: 0,
+                        taskProgress = { state.project.taskProgress },
                         onAction = onAction,
                     )
                 }

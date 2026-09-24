@@ -79,7 +79,7 @@ class ResetPasswordViewModel(private val authService: AuthService, private val t
                         state.value.passwordTextState.text
                             .toString(),
                     token = token,
-                ).onSuccess {
+                ).onSuccess { _ ->
                     _state.update { it.copy(isLoading = false, isResetSuccessful = true) }
                 }.onFailure { error ->
                     val errorMessage =

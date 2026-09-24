@@ -28,10 +28,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         var shouldShowSplashScreen = true
 
-        installSplashScreen().apply {
-            setKeepOnScreenCondition {
-                shouldShowSplashScreen
-            }
+        installSplashScreen().setKeepOnScreenCondition {
+            shouldShowSplashScreen
         }
 
         super.onCreate(savedInstanceState)

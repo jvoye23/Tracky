@@ -44,7 +44,7 @@ class RegisterSuccessViewModel(private val authService: AuthService, private val
             _state.update { it.copy(isResendingVerificationEmail = true, resendVerificationError = null) }
             authService
                 .resendVerificationEmail(email)
-                .onSuccess {
+                .onSuccess { _ ->
                     _state.update { it.copy(isResendingVerificationEmail = false) }
                     eventChannel.send(RegisterSuccessEvent.ResendVerificationEmailSuccess)
                 }.onFailure { error ->

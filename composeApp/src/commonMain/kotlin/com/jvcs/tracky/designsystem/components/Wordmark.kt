@@ -27,7 +27,6 @@ enum class WordmarkSize { Md, Lg }
 @Composable
 fun Wordmark(size: WordmarkSize = WordmarkSize.Md, modifier: Modifier = Modifier) {
     val iconBoxSize: Dp = if (size == WordmarkSize.Lg) 44.dp else 32.dp
-    val iconSize: Dp = iconBoxSize * 0.55f
     val textStyle: TextStyle =
         if (size == WordmarkSize.Lg) {
             MaterialTheme.typography.headlineLarge.copy(

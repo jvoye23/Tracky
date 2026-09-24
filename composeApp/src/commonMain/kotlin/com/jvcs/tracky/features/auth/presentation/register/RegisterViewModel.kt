@@ -209,7 +209,7 @@ class RegisterViewModel(
                     password =
                         state.value.passwordTextState.text
                             .toString(),
-                ).onSuccess {
+                ).onSuccess { _ ->
                     _state.update { it.copy(isRegistering = false) }
                     eventChannel.send(RegisterEvent.Success(email))
                 }.onFailure { error ->

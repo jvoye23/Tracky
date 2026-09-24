@@ -51,7 +51,7 @@ fun ProjectSessionCard(
             if (isEditMode) {
                 IconButton(
                     onClick = {
-                        onAction(ProjectDetailAction.OnDeleteSessionClick(projectTaskUi.projectTaskId!!))
+                        onAction(ProjectDetailAction.OnDeleteSessionClick(projectTaskUi.projectTaskId))
                     },
                 ) {
                     Icon(
@@ -74,7 +74,7 @@ fun ProjectSessionCard(
                     Modifier
                         .size(40.dp)
                         .clickable {
-                            onAction(ProjectDetailAction.OnToggleSessionTimer(projectTaskUi.projectTaskId!!))
+                            onAction(ProjectDetailAction.OnToggleSessionTimer(projectTaskUi.projectTaskId))
                         }.background(
                             color =
                                 if (projectTaskUi.isTimerRunning) {

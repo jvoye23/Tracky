@@ -60,13 +60,13 @@ val projectModule =
         }
 
         // Same rule as below: this list must match parametersOf(...) at the edit-text nav entry.
-        viewModel { (isEditMode: Boolean, projectId: String, target: EditTextTarget, taskId: String?, subTaskId: String?) ->
+        viewModel { params ->
             EditTextViewModel(
-                isEditMode = isEditMode,
-                projectId = projectId,
-                target = target,
-                taskId = taskId,
-                subTaskId = subTaskId,
+                isEditMode = params[0],
+                projectId = params[1],
+                target = params[2],
+                taskId = params[3],
+                subTaskId = params[4],
                 projectRepository = get(),
                 projectTaskRepository = get(),
                 subTaskRepository = get(),

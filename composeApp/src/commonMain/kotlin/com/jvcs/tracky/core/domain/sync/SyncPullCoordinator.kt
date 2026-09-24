@@ -4,6 +4,7 @@ import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -46,7 +47,7 @@ class SyncPullCoordinator(
         // Self-starting rather than start()-driven: the JVM target has no start() call site for
         // anything, and coalescing silently not running there would be a hard bug to see.
         applicationScope.launch {
-            for (unused in requests) {
+            requests.consumeEach {
                 // A nudge can land fractionally before the change it announces is visible, and a
                 // burst of them should cost one pull. Both are answered by waiting a moment.
                 delay(coalesceWindow)

@@ -156,16 +156,6 @@ class ProjectTrashViewModel(private val projectRepository: ProjectRepository) : 
         }
     }
 
-    private fun filterProjects(query: String) {
-        val projects = _state.value.projects ?: return
-        val filtered =
-            if (query.isEmpty()) {
-                projects
-            } else {
-                projects.filter { it.title.contains(query, ignoreCase = true) }
-            }
-    }
-
     private fun getTrashedProjects() {
         viewModelScope.launch {
             projectRepository.getTrashedProjects().collect { projectList ->

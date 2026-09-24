@@ -354,7 +354,7 @@ class ProjectOverviewViewModel(
      * reorder that failed to save.
      */
     private fun ProjectOverviewState.withSectionsFromProjects(): ProjectOverviewState {
-        val visible = projects.orEmpty().filterBySearchQuery(searchQuery)
+        val visible = projects.filterBySearchQuery(searchQuery)
         return copy(
             pinnedProjects = visible.filter { it.isPinned },
             otherProjects = visible.filterNot { it.isPinned },
