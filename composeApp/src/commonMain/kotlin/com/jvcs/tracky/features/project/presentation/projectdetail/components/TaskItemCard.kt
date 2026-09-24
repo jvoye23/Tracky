@@ -346,193 +346,36 @@ fun TaskItemCard(
                     .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // Main Task
             if (isEditMode) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-
-                ) {
-                    // In edit mode the grip moves the whole card, so it sits outside the outline that
-                    // wraps the title - unlike a subtask's grip, which moves only its own row.
-                    DragHandle(
-                        isReorderable = isReorderable,
-                        onDragStart = onReorderDragStart,
-                        onDrag = onReorderDrag,
-                        onDragEnd = onReorderDragEnd,
-                        onDragCancel = onReorderDragCancel,
-                    )
-                    DeleteTaskButton(onClick = onDeleteClick)
-                }
+                TaskEditHeaderRow(
+                    isReorderable = isReorderable,
+                    onReorderDragStart = onReorderDragStart,
+                    onReorderDrag = onReorderDrag,
+                    onReorderDragEnd = onReorderDragEnd,
+                    onReorderDragCancel = onReorderDragCancel,
+                    onDeleteClick = onDeleteClick,
+                )
             }
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                val textDecoration = if (task.isFinished) TextDecoration.LineThrough else null
-                val contentAlpha = if (task.isFinished) 0.4f else 1f
-
-                if (!isEditMode) {
-                    TimerToggleButton(
-                        isTimerRunning = task.isTimerRunning,
-                        isFinished = task.isFinished,
-                        projectColor = projectColor,
-                        pulseAlpha = { pulseAlpha },
-                        buttonSize = 48.dp,
-                        onClick = onToggleTimer,
-                    )
-                }
-
-                Row(
-                    modifier =
-                        Modifier
-                            .weight(1f)
-                            .editModeRowBorder(isEditMode, taskBorder(task.isTimerRunning, projectColor))
-                            .then(if (isEditMode) Modifier.padding(8.dp) else Modifier),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Column(
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            // The design drops the ordinal in edit mode, where the row is handle + title only.
-                            if (!isEditMode) {
-                                Text(
-                                    text = index.toString().padStart(2, '0'),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    textDecoration = textDecoration,
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(4.dp))
-
-                            Text(
-                                modifier =
-                                    Modifier
-                                        .weight(1f)
-                                        .then(
-                                            if (isEditMode) {
-                                                Modifier
-                                                    .padding(12.dp)
-                                                    .clickable { onTaskTitleClick() }
-                                            } else {
-                                                Modifier
-                                            },
-                                        ),
-                                text = task.title,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                textDecoration = textDecoration,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-                        if (!isEditMode) {
-                            Text(
-                                // Subtask sum once there are subtasks; its own time otherwise.
-                                text = task.displayDuration,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontFamily = FontFamily.Monospace,
-                                fontWeight = FontWeight.Bold,
-                                color =
-                                    if (task.isTimerRunning) {
-                                        projectColor
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha)
-                                    },
-                                letterSpacing = (-0.5).sp,
-                            )
-                        }
-                    }
-                    if (!isEditMode) {
-                        TrackyCheckbox(
-                            checked = task.isFinished,
-                            onCheckedChange = { onCheckedChange() },
-                        )
-                    }
-                }
-            }
+            TaskMainRow(
+                index = index,
+                task = task,
+                projectColor = projectColor,
+                isEditMode = isEditMode,
+                pulseAlpha = { pulseAlpha },
+                onToggleTimer = onToggleTimer,
+                onCheckedChange = onCheckedChange,
+                onTitleClick = onTaskTitleClick,
+            )
 
             // Progress over the subtasks, with the chevron that collapses them. Edit mode drops
             // the whole row — the design shows only handles, titles and delete buttons there.
             if (task.subTasks.isNotEmpty() && !isEditMode) {
-                Column(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth(),
-                ) {
-                    Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        LinearProgressIndicator(
-                            // Lambda overload: the progress is read in the draw phase, so animating it
-                            // later will not recompose the card.
-                            progress = { task.subTaskProgress },
-                            modifier =
-                                Modifier
-                                    .weight(1f)
-                                    .height(6.dp),
-                            color = projectColor,
-                            trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                            strokeCap = StrokeCap.Round,
-                            gapSize = 0.dp,
-                            drawStopIndicator = {},
-                        )
-                        Text(
-                            text =
-                                stringResource(
-                                    Res.string.subtask_progress,
-                                    task.doneSubTaskCount,
-                                    task.subTasks.size,
-                                ),
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.outline,
-                        )
-                    }
-                    Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text =
-                                if (isExpanded) {
-                                    stringResource(Res.string.hide_subtasks)
-                                } else {
-                                    stringResource(Res.string.show_subtasks)
-                                },
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.outline,
-                        )
-                        IconButton(
-                            onClick = onToggleExpand,
-                            modifier = Modifier,
-                        ) {
-                            Icon(
-                                imageVector = if (isExpanded) Icon_ChevronUp else Icon_ChevronDown,
-                                contentDescription =
-                                    stringResource(
-                                        if (isExpanded) Res.string.hide_subtasks else Res.string.show_subtasks,
-                                    ),
-                                tint = MaterialTheme.colorScheme.outline,
-                                modifier = Modifier.size(18.dp),
-                            )
-                        }
-                    }
-                }
+                SubTaskProgressSection(
+                    task = task,
+                    projectColor = projectColor,
+                    isExpanded = isExpanded,
+                    onToggleExpand = onToggleExpand,
+                )
             }
 
             // optional SubTasks — the design groups them on a tinted band rather than
@@ -578,6 +421,241 @@ fun TaskItemCard(
                         modifier = Modifier.padding(start = 40.dp, top = 16.dp, bottom = 16.dp),
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TaskEditHeaderRow(
+    isReorderable: Boolean,
+    onReorderDragStart: () -> Unit,
+    onReorderDrag: (dragAmountY: Float) -> Unit,
+    onReorderDragEnd: () -> Unit,
+    onReorderDragCancel: () -> Unit,
+    onDeleteClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        // In edit mode the grip moves the whole card, so it sits outside the outline that
+        // wraps the title - unlike a subtask's grip, which moves only its own row.
+        DragHandle(
+            isReorderable = isReorderable,
+            onDragStart = onReorderDragStart,
+            onDrag = onReorderDrag,
+            onDragEnd = onReorderDragEnd,
+            onDragCancel = onReorderDragCancel,
+        )
+        DeleteTaskButton(onClick = onDeleteClick)
+    }
+}
+
+@Composable
+private fun TaskMainRow(
+    index: Int,
+    task: ProjectTaskUi,
+    projectColor: Color,
+    isEditMode: Boolean,
+    pulseAlpha: () -> Float,
+    onToggleTimer: () -> Unit,
+    onCheckedChange: () -> Unit,
+    onTitleClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        if (!isEditMode) {
+            TimerToggleButton(
+                isTimerRunning = task.isTimerRunning,
+                isFinished = task.isFinished,
+                projectColor = projectColor,
+                pulseAlpha = pulseAlpha,
+                buttonSize = 48.dp,
+                onClick = onToggleTimer,
+            )
+        }
+
+        Row(
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .editModeRowBorder(isEditMode, taskBorder(task.isTimerRunning, projectColor))
+                    .then(if (isEditMode) Modifier.padding(8.dp) else Modifier),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            TaskTitleColumn(
+                index = index,
+                task = task,
+                projectColor = projectColor,
+                isEditMode = isEditMode,
+                onTitleClick = onTitleClick,
+                modifier = Modifier.weight(1f),
+            )
+            if (!isEditMode) {
+                TrackyCheckbox(
+                    checked = task.isFinished,
+                    onCheckedChange = { onCheckedChange() },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TaskTitleColumn(
+    index: Int,
+    task: ProjectTaskUi,
+    projectColor: Color,
+    isEditMode: Boolean,
+    onTitleClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val textDecoration = if (task.isFinished) TextDecoration.LineThrough else null
+    val contentAlpha = if (task.isFinished) 0.4f else 1f
+
+    Column(
+        modifier = modifier,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // The design drops the ordinal in edit mode, where the row is handle + title only.
+            if (!isEditMode) {
+                Text(
+                    text = index.toString().padStart(2, '0'),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textDecoration = textDecoration,
+                )
+            }
+            Spacer(modifier = Modifier.width(4.dp))
+
+            Text(
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .then(
+                            if (isEditMode) {
+                                Modifier
+                                    .padding(12.dp)
+                                    .clickable { onTitleClick() }
+                            } else {
+                                Modifier
+                            },
+                        ),
+                text = task.title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                textDecoration = textDecoration,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        if (!isEditMode) {
+            Text(
+                // Subtask sum once there are subtasks; its own time otherwise.
+                text = task.displayDuration,
+                style = MaterialTheme.typography.titleLarge,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                color =
+                    if (task.isTimerRunning) {
+                        projectColor
+                    } else {
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha)
+                    },
+                letterSpacing = (-0.5).sp,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SubTaskProgressSection(
+    task: ProjectTaskUi,
+    projectColor: Color,
+    isExpanded: Boolean,
+    onToggleExpand: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier =
+            modifier
+                .fillMaxWidth(),
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            LinearProgressIndicator(
+                // Lambda overload: the progress is read in the draw phase, so animating it
+                // later will not recompose the card.
+                progress = { task.subTaskProgress },
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .height(6.dp),
+                color = projectColor,
+                trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                strokeCap = StrokeCap.Round,
+                gapSize = 0.dp,
+                drawStopIndicator = {},
+            )
+            Text(
+                text =
+                    stringResource(
+                        Res.string.subtask_progress,
+                        task.doneSubTaskCount,
+                        task.subTasks.size,
+                    ),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.outline,
+            )
+        }
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text =
+                    if (isExpanded) {
+                        stringResource(Res.string.hide_subtasks)
+                    } else {
+                        stringResource(Res.string.show_subtasks)
+                    },
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.outline,
+            )
+            IconButton(
+                onClick = onToggleExpand,
+                modifier = Modifier,
+            ) {
+                Icon(
+                    imageVector = if (isExpanded) Icon_ChevronUp else Icon_ChevronDown,
+                    contentDescription =
+                        stringResource(
+                            if (isExpanded) Res.string.hide_subtasks else Res.string.show_subtasks,
+                        ),
+                    tint = MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.size(18.dp),
+                )
             }
         }
     }
