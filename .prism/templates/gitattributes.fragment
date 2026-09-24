@@ -1,0 +1,45 @@
+# --- PRISM ------------------------------------------------------------------
+# Appended by setup. Every line is here because PRISM puts a file in your
+# repository that something EXECUTES, and an executed file cannot survive a
+# line-ending rewrite.
+
+# THE SHEBANG IS THE WHOLE REASON. `core.autocrlf=true` is what several Windows
+# git installers set, and it rewrites LF to CRLF on checkout. A `#!/bin/sh`
+# whose first line ends in \r is not a shebang: the kernel looks for an
+# interpreter named `/bin/sh\r` and reports `bad interpreter: /bin/sh^M`. The
+# file most exposed to this is .git/hooks/pre-push -- so the failure lands on
+# the one path that cannot be bypassed, at the moment it is meant to be
+# protecting something.
+#
+# PRISM writes these files with newline="\n" itself (lib/render.py's
+# write_atomically, and place.py through it). That covers the install. It does
+# nothing about the NEXT person to clone the repository, which is what these
+# lines are for.
+prism                               text eol=lf
+gradlew                             text eol=lf
+*.sh                                text eol=lf
+*.py                                text eol=lf
+
+# Extensionless and executable, so no glob above reaches them.
+.prism/verify/prism-doctor          text eol=lf
+.prism/adapters/lib/prism-hook      text eol=lf
+.prism/adapters/git/pre-push        text eol=lf
+
+# Read by Gradle and rewritten by every promotion. Not executed, so a CRLF here
+# breaks nothing -- but it would make the file churn in git between a Windows
+# and a macOS contributor, on the one file that records what blocks.
+.prism/scope.json                   text eol=lf
+.prism/prism.json                   text eol=lf
+detekt.yml                          text eol=lf
+.editorconfig                       text eol=lf
+
+# The other direction, and it is not symmetry for its own sake: cmd.exe is
+# genuinely sensitive to line endings inside a multi-line construct, so a batch
+# file normalised to LF can fail in ways that are hard to read.
+*.bat                               text eol=crlf
+*.cmd                               text eol=crlf
+
+# NOT LISTED, DELIBERATELY: the detekt and ktlint baselines. They are generated
+# XML that PRISM rewrites, they are never executed, and `text` on a file a tool
+# regenerates wholesale buys nothing. They must still be COMMITTED -- see the
+# .gitignore fragment, which says so at more length.
