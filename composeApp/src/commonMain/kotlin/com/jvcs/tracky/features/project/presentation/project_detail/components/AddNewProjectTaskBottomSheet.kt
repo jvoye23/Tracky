@@ -27,7 +27,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.jvcs.tracky.design_system.theme.TrackyTheme
+import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.features.project.presentation.project_detail.ProjectDetailAction
 import com.jvcs.tracky.features.project.presentation.project_detail.ProjectDetailState
 import org.jetbrains.compose.resources.stringResource

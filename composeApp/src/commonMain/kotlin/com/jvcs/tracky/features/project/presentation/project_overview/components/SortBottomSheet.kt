@@ -27,8 +27,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.jvcs.tracky.design_system.Icon_Check
-import com.jvcs.tracky.design_system.theme.TrackyTheme
+import com.jvcs.tracky.designsystem.Icon_Check
+import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.features.project.presentation.project_overview.ProjectOverviewAction
 import com.jvcs.tracky.features.project.presentation.project_overview.SortOption
 import kotlinx.coroutines.launch

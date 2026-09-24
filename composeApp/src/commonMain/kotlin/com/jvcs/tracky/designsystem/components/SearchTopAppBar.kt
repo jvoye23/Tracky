@@ -1,4 +1,4 @@
-package com.jvcs.tracky.design_system.components
+package com.jvcs.tracky.designsystem.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -28,8 +28,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
-import com.jvcs.tracky.design_system.Icon_Swap_Vert_Down
-import com.jvcs.tracky.design_system.Icon_Swap_Vert_Up
+import com.jvcs.tracky.designsystem.Icon_Swap_Vert_Down
+import com.jvcs.tracky.designsystem.Icon_Swap_Vert_Up
 import com.jvcs.tracky.features.project.presentation.project_overview.SortOption
 import org.jetbrains.compose.resources.stringResource
 import tracky.composeapp.generated.resources.Res

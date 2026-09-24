@@ -18,7 +18,7 @@ import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.core.domain.util.TimerState
 import com.jvcs.tracky.core.domain.util.onFailure
 import com.jvcs.tracky.core.domain.util.onSuccess
-import com.jvcs.tracky.design_system.theme.defaultProjectColor
+import com.jvcs.tracky.designsystem.theme.defaultProjectColor
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
 import com.jvcs.tracky.features.project.domain.project.sortedByCustomOrder

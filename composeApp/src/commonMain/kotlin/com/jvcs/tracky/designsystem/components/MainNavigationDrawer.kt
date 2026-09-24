@@ -1,4 +1,4 @@
-package com.jvcs.tracky.design_system.components
+package com.jvcs.tracky.designsystem.components
 
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -22,11 +22,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.jvcs.tracky.design_system.Icon_Archive
-import com.jvcs.tracky.design_system.Icon_Delete
-import com.jvcs.tracky.design_system.Icon_Help
-import com.jvcs.tracky.design_system.Icon_Settings
-import com.jvcs.tracky.design_system.theme.TrackyTheme
+import com.jvcs.tracky.designsystem.Icon_Archive
+import com.jvcs.tracky.designsystem.Icon_Delete
+import com.jvcs.tracky.designsystem.Icon_Help
+import com.jvcs.tracky.designsystem.Icon_Settings
+import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource

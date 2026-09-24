@@ -1,4 +1,4 @@
-package com.jvcs.tracky.design_system.util
+package com.jvcs.tracky.designsystem.util
 
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours

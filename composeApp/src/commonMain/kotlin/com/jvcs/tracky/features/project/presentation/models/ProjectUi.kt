@@ -1,7 +1,7 @@
 package com.jvcs.tracky.features.project.presentation.models
 
 import androidx.compose.ui.graphics.Color
-import com.jvcs.tracky.design_system.util.formatDuration
+import com.jvcs.tracky.designsystem.util.formatDuration
 import kotlin.time.Duration.Companion.milliseconds
 
 data class ProjectUi(

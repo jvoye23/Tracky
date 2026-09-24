@@ -1,7 +1,7 @@
 package com.jvcs.tracky.features.project.presentation.util
 
 import com.jvcs.tracky.core.domain.util.DataError
-import com.jvcs.tracky.design_system.util.UiText
+import com.jvcs.tracky.designsystem.util.UiText
 import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.error_bad_request
 import tracky.composeapp.generated.resources.error_conflict

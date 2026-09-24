@@ -27,7 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.jvcs.tracky.design_system.Icon_ChevronRight
+import com.jvcs.tracky.designsystem.Icon_ChevronRight
 
 private const val READ_ONLY_CARD_COLOR_ARGB = 0xFFF0F3FA
 

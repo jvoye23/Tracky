@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jvcs.tracky.core.domain.util.TimeManager
 import com.jvcs.tracky.core.domain.util.TimerState
-import com.jvcs.tracky.design_system.util.formatDurationHoursMinutesSeconds
+import com.jvcs.tracky.designsystem.util.formatDurationHoursMinutesSeconds
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
 import com.jvcs.tracky.features.project.domain.subtask.SubTaskRepository

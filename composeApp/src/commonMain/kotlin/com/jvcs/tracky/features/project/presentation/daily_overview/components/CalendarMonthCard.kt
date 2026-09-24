@@ -44,7 +44,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
-import com.jvcs.tracky.design_system.theme.TrackyTheme
+import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.features.project.presentation.models.CalendarMonthUi
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.YearMonth

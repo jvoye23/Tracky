@@ -1,4 +1,4 @@
-package com.jvcs.tracky.design_system.components
+package com.jvcs.tracky.designsystem.components
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
@@ -40,7 +40,7 @@ import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.jvcs.tracky.design_system.theme.TrackyTheme
+import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.features.auth.presentation.register.RegisterScreen
 import com.jvcs.tracky.features.auth.presentation.register.RegisterState
 

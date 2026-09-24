@@ -16,9 +16,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.jvcs.tracky.design_system.components.SearchTopAppBar
-import com.jvcs.tracky.design_system.components.UserProfileButton
-import com.jvcs.tracky.design_system.theme.TrackyTheme
+import com.jvcs.tracky.designsystem.components.SearchTopAppBar
+import com.jvcs.tracky.designsystem.components.UserProfileButton
+import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.features.project.presentation.project_overview.ProjectOverviewAction
 import com.jvcs.tracky.features.project.presentation.project_overview.ProjectOverviewState
 import org.jetbrains.compose.resources.stringResource

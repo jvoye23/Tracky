@@ -1,4 +1,4 @@
-package com.jvcs.tracky.design_system.components
+package com.jvcs.tracky.designsystem.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
@@ -60,17 +60,17 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.jvcs.tracky.design_system.Icon_Eye
-import com.jvcs.tracky.design_system.Icon_EyeOff
-import com.jvcs.tracky.design_system.Icon_Lock
-import com.jvcs.tracky.design_system.Icon_Mail
-import com.jvcs.tracky.design_system.Icon_User
-import com.jvcs.tracky.design_system.theme.TrackyTheme
-import com.jvcs.tracky.design_system.theme.authElevatedLabelStyle
-import com.jvcs.tracky.design_system.theme.authLabelStyle
-import com.jvcs.tracky.design_system.theme.authTextStyle
-import com.jvcs.tracky.design_system.theme.projectElevatedLabelStyle
-import com.jvcs.tracky.design_system.theme.projectLabelStyle
+import com.jvcs.tracky.designsystem.Icon_Eye
+import com.jvcs.tracky.designsystem.Icon_EyeOff
+import com.jvcs.tracky.designsystem.Icon_Lock
+import com.jvcs.tracky.designsystem.Icon_Mail
+import com.jvcs.tracky.designsystem.Icon_User
+import com.jvcs.tracky.designsystem.theme.TrackyTheme
+import com.jvcs.tracky.designsystem.theme.authElevatedLabelStyle
+import com.jvcs.tracky.designsystem.theme.authLabelStyle
+import com.jvcs.tracky.designsystem.theme.authTextStyle
+import com.jvcs.tracky.designsystem.theme.projectElevatedLabelStyle
+import com.jvcs.tracky.designsystem.theme.projectLabelStyle
 
 private val LabelToTextSpacing = 4.dp
 

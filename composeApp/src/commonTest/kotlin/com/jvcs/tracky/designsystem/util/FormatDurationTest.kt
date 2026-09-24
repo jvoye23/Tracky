@@ -1,4 +1,4 @@
-package com.jvcs.tracky.design_system.util
+package com.jvcs.tracky.designsystem.util
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo

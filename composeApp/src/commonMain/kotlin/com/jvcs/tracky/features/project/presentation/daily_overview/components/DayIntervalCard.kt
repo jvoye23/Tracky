@@ -24,9 +24,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
-import com.jvcs.tracky.design_system.theme.TrackyTheme
-import com.jvcs.tracky.design_system.theme.monoLabelSmall
-import com.jvcs.tracky.design_system.theme.monoLabelXSmall
+import com.jvcs.tracky.designsystem.theme.TrackyTheme
+import com.jvcs.tracky.designsystem.theme.monoLabelSmall
+import com.jvcs.tracky.designsystem.theme.monoLabelXSmall
 import com.jvcs.tracky.features.project.presentation.models.DayDetailUi
 import com.jvcs.tracky.features.project.presentation.models.DayIntervalUi
 import org.jetbrains.compose.resources.stringResource

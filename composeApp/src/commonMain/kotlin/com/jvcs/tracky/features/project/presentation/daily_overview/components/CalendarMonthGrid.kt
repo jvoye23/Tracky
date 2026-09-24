@@ -29,8 +29,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
-import com.jvcs.tracky.design_system.theme.TrackyTheme
-import com.jvcs.tracky.design_system.util.formatDurationHoursMinutes
+import com.jvcs.tracky.designsystem.theme.TrackyTheme
+import com.jvcs.tracky.designsystem.util.formatDurationHoursMinutes
 import com.jvcs.tracky.features.project.presentation.models.CalendarDayUi
 import com.jvcs.tracky.features.project.presentation.models.CalendarMonthUi
 import kotlinx.datetime.LocalDate

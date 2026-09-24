@@ -1,4 +1,4 @@
-package com.jvcs.tracky.design_system.util
+package com.jvcs.tracky.designsystem.util
 
 import androidx.compose.runtime.Composable
 import org.jetbrains.compose.resources.StringResource

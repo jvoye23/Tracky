@@ -1,4 +1,4 @@
-package com.jvcs.tracky.design_system
+package com.jvcs.tracky.designsystem
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector

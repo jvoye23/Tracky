@@ -1,4 +1,4 @@
-package com.jvcs.tracky.design_system.theme
+package com.jvcs.tracky.designsystem.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable

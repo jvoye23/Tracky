@@ -24,7 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.jvcs.tracky.design_system.theme.TrackyTheme
+import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import org.jetbrains.compose.resources.stringResource
 import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.cancel

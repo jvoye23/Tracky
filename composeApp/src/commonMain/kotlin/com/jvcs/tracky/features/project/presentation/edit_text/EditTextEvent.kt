@@ -1,6 +1,6 @@
 package com.jvcs.tracky.features.project.presentation.edit_text
 
-import com.jvcs.tracky.design_system.util.UiText
+import com.jvcs.tracky.designsystem.util.UiText
 
 sealed interface EditTextEvent {
     data object OnSavedSuccess : EditTextEvent

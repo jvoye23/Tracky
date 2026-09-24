@@ -1,7 +1,7 @@
 package com.jvcs.tracky.core.domain.util
 
 import com.jvcs.tracky.core.domain.sync.SyncRecency
-import com.jvcs.tracky.design_system.util.formatDuration
+import com.jvcs.tracky.designsystem.util.formatDuration
 import com.jvcs.tracky.features.project.domain.timer.RunningTimer
 import com.jvcs.tracky.features.project.domain.timer.RunningTimerRepository
 import kotlinx.coroutines.CoroutineScope

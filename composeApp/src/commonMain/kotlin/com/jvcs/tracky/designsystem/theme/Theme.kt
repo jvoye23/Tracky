@@ -1,4 +1,4 @@
-package com.jvcs.tracky.design_system.theme
+package com.jvcs.tracky.designsystem.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme

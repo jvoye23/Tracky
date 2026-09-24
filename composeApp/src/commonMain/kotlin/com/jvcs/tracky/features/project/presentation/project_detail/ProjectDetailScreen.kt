@@ -69,11 +69,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.jvcs.tracky.design_system.components.DurationHeroCard
-import com.jvcs.tracky.design_system.components.InfoCard
-import com.jvcs.tracky.design_system.theme.TrackyTheme
-import com.jvcs.tracky.design_system.util.ObserveAsEvents
-import com.jvcs.tracky.design_system.util.rememberCollapsibleScrollBehavior
+import com.jvcs.tracky.designsystem.components.DurationHeroCard
+import com.jvcs.tracky.designsystem.components.InfoCard
+import com.jvcs.tracky.designsystem.theme.TrackyTheme
+import com.jvcs.tracky.designsystem.util.ObserveAsEvents
+import com.jvcs.tracky.designsystem.util.rememberCollapsibleScrollBehavior
 import com.jvcs.tracky.features.project.presentation.edit_text.EditTextTarget
 import com.jvcs.tracky.features.project.presentation.models.PerDayStripUi
 import com.jvcs.tracky.features.project.presentation.models.ProjectSubTaskUi
