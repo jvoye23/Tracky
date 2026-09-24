@@ -52,6 +52,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -133,96 +134,100 @@ fun ProjectDetailScreenRoot(
     val coroutineScope = rememberCoroutineScope()
 
     ObserveAsEvents(viewModel.events) { event ->
-        when (event) {
-            is ProjectDetailEvent.Error -> {
-                coroutineScope.launch {
-                    snackbarHostState.showSnackbar(
-                        message = event.error.toString(),
-                        duration = SnackbarDuration.Short,
-                    )
-                }
+        val message =
+            when (event) {
+                is ProjectDetailEvent.Error -> event.error.toString()
+                is ProjectDetailEvent.ReorderError -> event.error.toString()
+                is ProjectDetailEvent.NewProjectSessionSaved -> "Task saved successfully!"
             }
-
-            is ProjectDetailEvent.ReorderError -> {
-                coroutineScope.launch {
-                    snackbarHostState.showSnackbar(
-                        message = event.error.toString(),
-                        duration = SnackbarDuration.Short,
-                    )
-                }
-            }
-
-            is ProjectDetailEvent.NewProjectSessionSaved -> {
-                coroutineScope.launch {
-                    snackbarHostState.showSnackbar(
-                        message = "Task saved successfully!",
-                        duration = SnackbarDuration.Short,
-                    )
-                }
-            }
+        coroutineScope.launch {
+            snackbarHostState.showSnackbar(
+                message = message,
+                duration = SnackbarDuration.Short,
+            )
         }
     }
 
     ProjectDetailScreen(
         state = state,
         onAction = { action ->
-            when (action) {
-                ProjectDetailAction.OnBackClick -> {
-                    navigateBack()
-                }
-
-                is ProjectDetailAction.OnDailyOverviewClick -> {
-                    onDailyOverviewClick(action.epochDay)
-                }
-
-                is ProjectDetailAction.OnProjectEditTextClick -> {
-                    onEditTextClick(
-                        action.isEditMode,
-                        action.projectId,
-                        EditTextTarget.PROJECT,
-                        null,
-                        null,
-                    )
-                }
-
-                // The three task-level taps below only exist in edit mode, so the editor opens
-                // straight into editing.
-                is ProjectDetailAction.OnTaskTitleClick -> {
-                    state.project?.let {
-                        onEditTextClick(true, it.projectId, EditTextTarget.TASK, action.taskId, null)
-                    }
-                }
-
-                is ProjectDetailAction.OnSubTaskClick -> {
-                    state.project?.let {
-                        onEditTextClick(
-                            true,
-                            it.projectId,
-                            EditTextTarget.SUBTASK,
-                            action.taskId,
-                            action.subTaskId,
-                        )
-                    }
-                }
-
-                is ProjectDetailAction.OnAddSubTaskClick -> {
-                    state.project?.let {
-                        onEditTextClick(true, it.projectId, EditTextTarget.NEW_SUBTASK, action.taskId, null)
-                    }
-                }
-
-                is ProjectDetailAction.OnProjectSessionCardClick -> {
-                    onProjectTaskClick(action.projectSessionId)
-                }
-
-                else -> {
-                    Unit
-                }
-            }
+            navigateFor(
+                action = action,
+                projectId = state.project?.projectId,
+                navigateBack = navigateBack,
+                onEditTextClick = onEditTextClick,
+                onProjectTaskClick = onProjectTaskClick,
+                onDailyOverviewClick = onDailyOverviewClick,
+            )
             viewModel.onAction(action)
         },
         snackbarHostState = snackbarHostState,
     )
+}
+
+/** The part of [action] that leaves this screen. The view model still sees every action. */
+private fun navigateFor(
+    action: ProjectDetailAction,
+    projectId: String?,
+    navigateBack: () -> Unit,
+    onEditTextClick: (
+        isEditMode: Boolean,
+        projectId: String,
+        target: EditTextTarget,
+        taskId: String?,
+        subTaskId: String?,
+    ) -> Unit,
+    onProjectTaskClick: (String) -> Unit,
+    onDailyOverviewClick: (epochDay: Long) -> Unit,
+) {
+    when (action) {
+        ProjectDetailAction.OnBackClick -> {
+            navigateBack()
+        }
+
+        is ProjectDetailAction.OnDailyOverviewClick -> {
+            onDailyOverviewClick(action.epochDay)
+        }
+
+        is ProjectDetailAction.OnProjectEditTextClick -> {
+            onEditTextClick(
+                action.isEditMode,
+                action.projectId,
+                EditTextTarget.PROJECT,
+                null,
+                null,
+            )
+        }
+
+        // The three task-level taps below only exist in edit mode, so the editor opens
+        // straight into editing.
+        is ProjectDetailAction.OnTaskTitleClick -> {
+            projectId?.let {
+                onEditTextClick(true, it, EditTextTarget.TASK, action.taskId, null)
+            }
+        }
+
+        is ProjectDetailAction.OnSubTaskClick -> {
+            projectId?.let {
+                onEditTextClick(true, it, EditTextTarget.SUBTASK, action.taskId, action.subTaskId)
+            }
+        }
+
+        is ProjectDetailAction.OnAddSubTaskClick -> {
+            projectId?.let {
+                onEditTextClick(true, it, EditTextTarget.NEW_SUBTASK, action.taskId, null)
+            }
+        }
+
+        is ProjectDetailAction.OnProjectSessionCardClick -> {
+            onProjectTaskClick(action.projectSessionId)
+        }
+
+        // Everything else stays on this screen.
+        else -> {
+            Unit
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -274,62 +279,11 @@ fun ProjectDetailScreen(
                 .fillMaxSize()
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        if (state.isEditMode) "EDIT PROJECT" else "PROJECT DETAILS",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = {
-                        if (state.isEditMode) {
-                            onAction(ProjectDetailAction.OnCloseAndCancelClick)
-                        } else {
-                            onAction(ProjectDetailAction.OnBackClick)
-                        }
-                    }) {
-                        Icon(
-                            if (state.isEditMode) Icons.Default.Close else Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = if (state.isEditMode) "Cancel" else "Back",
-                        )
-                    }
-                },
-                actions = {
-                    // Hidden in edit mode: leaving the screen mid-edit would drop the changes.
-                    if (!state.isEditMode) {
-                        IconButton(onClick = {
-                            onAction(ProjectDetailAction.OnDailyOverviewClick(OPEN_ON_TODAY))
-                        }) {
-                            Icon(
-                                imageVector = Icons.Outlined.CalendarMonth,
-                                contentDescription = stringResource(Res.string.daily_overview_title),
-                            )
-                        }
-                    }
-                    IconButton(onClick = {
-                        if (state.isEditMode) {
-                            onAction(ProjectDetailAction.OnSaveClick)
-                        } else {
-                            onAction(ProjectDetailAction.OnEditModeClick)
-                        }
-                    }) {
-                        Icon(
-                            if (state.isEditMode) Icons.Default.Check else Icons.Default.Edit,
-                            contentDescription =
-                                stringResource(
-                                    if (state.isEditMode) Res.string.save else Res.string.edit,
-                                ),
-                        )
-                    }
-                },
-                colors =
-                    TopAppBarDefaults.topAppBarColors(
-                        containerColor = headerColor,
-                        scrolledContainerColor = headerColor,
-                    ),
+            ProjectDetailTopBar(
+                isEditMode = state.isEditMode,
+                headerColor = headerColor,
                 scrollBehavior = scrollBehavior,
+                onAction = onAction,
             )
         },
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -556,21 +510,110 @@ fun ProjectDetailScreen(
             }
         }
     }
-    if (state.isAddNewProjectTaskBottomSheetVisible) {
+    ProjectDetailDialogs(
+        isAddTaskSheetVisible = state.isAddNewProjectTaskBottomSheetVisible,
+        addTaskTextFieldState = state.addProjectTaskTextFieldState,
+        isColorPickerVisible = state.isColorPickerVisible,
+        projectColor = state.projectColor,
+        isUncheckTaskBlockedDialogVisible = state.isUncheckTaskBlockedDialogVisible,
+        onAction = onAction,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ProjectDetailTopBar(
+    isEditMode: Boolean,
+    headerColor: Color,
+    scrollBehavior: TopAppBarScrollBehavior,
+    onAction: (ProjectDetailAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    CenterAlignedTopAppBar(
+        modifier = modifier,
+        title = {
+            Text(
+                if (isEditMode) "EDIT PROJECT" else "PROJECT DETAILS",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        },
+        navigationIcon = {
+            IconButton(onClick = {
+                if (isEditMode) {
+                    onAction(ProjectDetailAction.OnCloseAndCancelClick)
+                } else {
+                    onAction(ProjectDetailAction.OnBackClick)
+                }
+            }) {
+                Icon(
+                    if (isEditMode) Icons.Default.Close else Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = if (isEditMode) "Cancel" else "Back",
+                )
+            }
+        },
+        actions = {
+            // Hidden in edit mode: leaving the screen mid-edit would drop the changes.
+            if (!isEditMode) {
+                IconButton(onClick = {
+                    onAction(ProjectDetailAction.OnDailyOverviewClick(OPEN_ON_TODAY))
+                }) {
+                    Icon(
+                        imageVector = Icons.Outlined.CalendarMonth,
+                        contentDescription = stringResource(Res.string.daily_overview_title),
+                    )
+                }
+            }
+            IconButton(onClick = {
+                if (isEditMode) {
+                    onAction(ProjectDetailAction.OnSaveClick)
+                } else {
+                    onAction(ProjectDetailAction.OnEditModeClick)
+                }
+            }) {
+                Icon(
+                    if (isEditMode) Icons.Default.Check else Icons.Default.Edit,
+                    contentDescription =
+                        stringResource(
+                            if (isEditMode) Res.string.save else Res.string.edit,
+                        ),
+                )
+            }
+        },
+        colors =
+            TopAppBarDefaults.topAppBarColors(
+                containerColor = headerColor,
+                scrolledContainerColor = headerColor,
+            ),
+        scrollBehavior = scrollBehavior,
+    )
+}
+
+/** The sheet and dialogs that open over the screen; at most one is up at a time. */
+@Composable
+private fun ProjectDetailDialogs(
+    isAddTaskSheetVisible: Boolean,
+    addTaskTextFieldState: TextFieldState,
+    isColorPickerVisible: Boolean,
+    projectColor: Color?,
+    isUncheckTaskBlockedDialogVisible: Boolean,
+    onAction: (ProjectDetailAction) -> Unit,
+) {
+    if (isAddTaskSheetVisible) {
         AddNewProjectTaskBottomSheet(
-            textFieldState = state.addProjectTaskTextFieldState,
+            textFieldState = addTaskTextFieldState,
             onAction = onAction,
         )
     }
-    if (state.isColorPickerVisible) {
+    if (isColorPickerVisible) {
         TrackyColorPicker(
-            currentColor = state.projectColor ?: Color.Cyan,
+            currentColor = projectColor ?: Color.Cyan,
             onCancel = { onAction(ProjectDetailAction.OnToggleColorPicker) },
             onSave = { onAction(ProjectDetailAction.OnColorChanged(it)) },
         )
     }
     // Purely informational — there is nothing to confirm, so it gets one OK and no dismiss button.
-    if (state.isUncheckTaskBlockedDialogVisible) {
+    if (isUncheckTaskBlockedDialogVisible) {
         AlertDialog(
             onDismissRequest = { onAction(ProjectDetailAction.OnDismissUncheckTaskDialog) },
             title = { Text(text = stringResource(Res.string.uncheck_task_blocked_title)) },
