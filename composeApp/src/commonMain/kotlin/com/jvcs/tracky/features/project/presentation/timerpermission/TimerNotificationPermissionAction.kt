@@ -1,6 +1,7 @@
 package com.jvcs.tracky.features.project.presentation.timerpermission
 
 sealed interface TimerNotificationPermissionAction {
+
     /** Acknowledges the explanation and carries on without the notification. */
     data object OnConfirm : TimerNotificationPermissionAction
 

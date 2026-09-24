@@ -3,6 +3,7 @@ package com.jvcs.tracky.features.project.presentation.projectdetail
 import androidx.compose.ui.graphics.Color
 
 sealed interface ProjectDetailAction {
+
     /**
      * Open the daily overview. [epochDay] is the day to preselect, or -1 to open on today -
      * the top-bar icon sends -1, a tapped "Per day" tile sends its own date.

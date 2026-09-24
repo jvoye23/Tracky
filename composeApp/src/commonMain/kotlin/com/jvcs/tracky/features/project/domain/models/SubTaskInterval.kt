@@ -25,6 +25,7 @@ data class SubTaskInterval(
     // See TaskInterval.startedByDeviceId.
     val startedByDeviceId: String? = null,
 ) : Timestamped {
+
     // No stamp of its own, for the same reason TaskInterval has none: an interval is written by a
     // device's timer rather than edited by hand, so there is nothing to compare and nothing to
     // stamp. Staying null also keeps it out of the lastUpdatedAt roll-up.

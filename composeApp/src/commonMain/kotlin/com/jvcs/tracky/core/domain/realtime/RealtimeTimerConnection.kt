@@ -63,6 +63,7 @@ class RealtimeTimerConnection(
     private val applicationScope: CoroutineScope,
     private val random: Random = Random.Default,
 ) {
+
     private var started = false
     private var job: Job? = null
 

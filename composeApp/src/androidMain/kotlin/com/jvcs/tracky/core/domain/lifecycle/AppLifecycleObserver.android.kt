@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 actual class AppLifecycleObserver {
+
     actual val isInForeground: Flow<Boolean> =
         callbackFlow {
             val observer =

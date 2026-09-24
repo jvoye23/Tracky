@@ -12,6 +12,7 @@ import kotlin.time.Instant
  * of dedup rules and one place where a database failure becomes a [DataError.Local].
  */
 interface PendingSyncDataSource {
+
     /** Oldest first — the drain order is what keeps a CREATE ahead of a later UPDATE. */
     suspend fun getPendingOperations(): Result<List<PendingSyncOperation>, DataError.Local>
 

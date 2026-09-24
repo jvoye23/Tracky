@@ -9,6 +9,7 @@ import platform.UIKit.UIApplicationDidBecomeActiveNotification
 import platform.UIKit.UIApplicationDidEnterBackgroundNotification
 
 actual class AppLifecycleObserver {
+
     actual val isInForeground: Flow<Boolean> =
         callbackFlow {
             val center = NSNotificationCenter.defaultCenter

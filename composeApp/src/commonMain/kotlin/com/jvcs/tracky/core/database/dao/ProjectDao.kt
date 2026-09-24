@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ProjectDao {
+
     @Upsert
     suspend fun upsertProjects(products: List<ProjectEntity>)
 

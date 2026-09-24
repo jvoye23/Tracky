@@ -1,6 +1,7 @@
 package com.jvcs.tracky.features.auth.domain
 
 object PasswordValidator {
+
     private const val MIN_PASSWORD_LENGTH = 8
     private const val SPECIAL_CHARS = "!@#\$%^&*()_+-=[]{}|;':\",./<>?"
 

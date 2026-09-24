@@ -22,6 +22,7 @@ import kotlin.time.Instant
  * Everything else keeps using [TimeProvider] directly.
  */
 class ServerClock(private val timeProvider: TimeProvider, private val offsetStore: ServerClockOffsetStore) {
+
     // Read once into memory: the tick reads this every second, and a DataStore round trip per
     // tick would be absurd. Seeded lazily on first read so a cold start with no network is still
     // corrected by whatever the last session measured.
@@ -55,6 +56,7 @@ class ServerClock(private val timeProvider: TimeProvider, private val offsetStor
 
 /** Where the measured offset survives a process restart. */
 interface ServerClockOffsetStore {
+
     suspend fun offsetMillis(): Long?
 
     suspend fun setOffsetMillis(millis: Long)

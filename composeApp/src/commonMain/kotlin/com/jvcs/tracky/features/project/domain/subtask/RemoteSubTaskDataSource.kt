@@ -15,6 +15,7 @@ import kotlin.time.Instant
  * the server's copy to compare against. Same reason RemoteTaskDataSource keeps its list method.
  */
 interface RemoteSubTaskDataSource {
+
     suspend fun getSubTasksByTaskId(projectId: String, taskId: String): Result<List<ProjectSubTask>, DataError.Remote>
 
     suspend fun postSubTask(

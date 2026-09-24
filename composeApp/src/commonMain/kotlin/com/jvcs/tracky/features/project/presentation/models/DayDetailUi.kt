@@ -42,6 +42,7 @@ data class DayDetailUi(
     /** Distinct parent tasks represented, not distinct intervals and not subtasks. */
     val taskCount: Int,
 ) {
+
     val intervalCount: Int get() = intervals.size
 
     val isEmpty: Boolean get() = intervals.isEmpty()

@@ -32,6 +32,7 @@ data class TimerNotificationSession(
     val isRunning: Boolean,
     val isForeign: Boolean = false,
 ) {
+
     /**
      * What the clock reads at [now]. A running session keeps counting past the instant it was
      * built, so a renderer that cannot tick can re-read it; a paused one stays frozen.

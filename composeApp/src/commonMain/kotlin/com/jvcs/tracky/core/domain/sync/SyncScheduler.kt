@@ -6,6 +6,7 @@ package com.jvcs.tracky.core.domain.sync
  * with WorkManager, iOS with BGTaskScheduler, JVM with a no-op.
  */
 interface SyncScheduler {
+
     suspend fun schedulePeriodicSync()
 
     /** Registers a tight-cadence periodic background drain, called once on app start. */

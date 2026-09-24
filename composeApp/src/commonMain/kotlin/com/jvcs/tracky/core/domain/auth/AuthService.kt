@@ -5,6 +5,7 @@ import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
 
 interface AuthService {
+
     suspend fun login(email: String, password: String): Result<AuthInfo, DataError.Remote>
 
     suspend fun register(

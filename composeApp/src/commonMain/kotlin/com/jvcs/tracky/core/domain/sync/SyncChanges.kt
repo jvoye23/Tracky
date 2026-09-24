@@ -31,6 +31,7 @@ data class SyncChanges(
     val subTaskIntervals: List<SubTaskInterval>,
     val tombstones: List<Tombstone>,
 ) {
+
     /** True when there is nothing to write — the common case on a quiet poll. */
     val isEmpty: Boolean
         get() =
@@ -50,6 +51,7 @@ data class SyncChanges(
  * device.
  */
 data class Tombstone(val entityType: String, val entityId: String) {
+
     /**
      * The server's vocabulary for [entityType], transcribed from `backend-delta-sync-api.md` §3.
      *

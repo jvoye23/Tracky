@@ -3,6 +3,7 @@ package com.jvcs.tracky.features.project.presentation.projectdetail
 import com.jvcs.tracky.designsystem.util.UiText
 
 sealed interface ProjectDetailEvent {
+
     data class NewProjectSessionSaved(val projectSessionTitle: String) : ProjectDetailEvent
 
     data class Error(val error: UiText) : ProjectDetailEvent

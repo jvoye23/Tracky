@@ -30,6 +30,7 @@ import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 )
 @ConstructedBy(TrackyDatabaseConstructor::class)
 abstract class TrackyDatabase : RoomDatabase() {
+
     abstract val projectDao: ProjectDao
     abstract val pendingSyncDao: PendingSyncDao
 

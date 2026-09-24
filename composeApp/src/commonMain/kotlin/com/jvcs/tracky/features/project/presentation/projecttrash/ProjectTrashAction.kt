@@ -1,6 +1,7 @@
 package com.jvcs.tracky.features.project.presentation.projecttrash
 
 sealed interface ProjectTrashAction {
+
     data class OnProjectCardClick(val projectId: String) : ProjectTrashAction
 
     data object OnMenuClick : ProjectTrashAction

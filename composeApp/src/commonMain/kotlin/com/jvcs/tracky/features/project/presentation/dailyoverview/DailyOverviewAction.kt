@@ -3,6 +3,7 @@ package com.jvcs.tracky.features.project.presentation.dailyoverview
 import kotlinx.datetime.LocalDate
 
 sealed interface DailyOverviewAction {
+
     data object OnBackClick : DailyOverviewAction
 
     data class OnDateSelected(val date: LocalDate) : DailyOverviewAction

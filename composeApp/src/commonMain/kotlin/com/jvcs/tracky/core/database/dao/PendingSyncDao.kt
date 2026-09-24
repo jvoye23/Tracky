@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface PendingSyncDao {
+
     @Upsert
     suspend fun upsertOperation(operation: PendingSyncEntity)
 

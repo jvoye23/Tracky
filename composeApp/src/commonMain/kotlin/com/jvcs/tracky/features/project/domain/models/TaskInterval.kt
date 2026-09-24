@@ -17,6 +17,7 @@ data class TaskInterval(
     // "this device", which is what those rows have always meant.
     val startedByDeviceId: String? = null,
 ) : Timestamped {
+
     // Intervals do sync remotely, but they carry no timestamp of their own. They are written by
     // one device's timer rather than edited by hand, so a duplicate CREATE is retried as an UPDATE
     // instead of being resolved by last-write-wins — which means there is nothing to compare and

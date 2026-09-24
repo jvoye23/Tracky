@@ -7,5 +7,6 @@ import kotlinx.coroutines.flow.Flow
  * ProcessLifecycleOwner, iOS UIApplication notifications, JVM always-foreground stub).
  */
 expect class AppLifecycleObserver {
+
     val isInForeground: Flow<Boolean>
 }

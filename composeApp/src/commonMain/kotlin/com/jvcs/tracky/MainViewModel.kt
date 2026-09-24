@@ -23,6 +23,7 @@ class MainViewModel(
     private val authService: AuthService,
     private val applicationScope: CoroutineScope,
 ) : ViewModel() {
+
     private val eventChannel = Channel<MainEvent>()
     val events = eventChannel.receiveAsFlow()
 

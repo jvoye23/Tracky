@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlin.time.Instant
 
 interface LocalSubTaskDataSource {
+
     /** The stream the task detail screen observes, each subtask carrying its intervals. */
     fun getSubTasksForTask(taskId: String): Flow<List<ProjectSubTask>>
 

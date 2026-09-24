@@ -34,6 +34,7 @@ data class StrandedTimer(
      */
     val keepingWouldNotBeCounted: Boolean = false,
 ) {
+
     /** What [proposedEndAt] is worth. Never negative: a clock that went backwards yields zero. */
     val proposedDuration: Duration
         get() = (proposedEndAt - startedAt).coerceAtLeast(Duration.ZERO)

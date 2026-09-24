@@ -6,5 +6,6 @@ package com.jvcs.tracky.core.data.notification
  * a link anything outside the app can form, so there is no intent filter to match against.
  */
 object TimerNotificationIntents {
+
     const val EXTRA_PROJECT_ID = "com.jvcs.tracky.extra.PROJECT_ID"
 }

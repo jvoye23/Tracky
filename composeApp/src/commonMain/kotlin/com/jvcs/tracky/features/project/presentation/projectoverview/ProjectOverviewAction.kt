@@ -1,6 +1,7 @@
 package com.jvcs.tracky.features.project.presentation.projectoverview
 
 sealed interface ProjectOverviewAction {
+
     data object OnStartTrackerClick : ProjectOverviewAction
 
     data class OnProjectCardClick(val projectId: String) : ProjectOverviewAction

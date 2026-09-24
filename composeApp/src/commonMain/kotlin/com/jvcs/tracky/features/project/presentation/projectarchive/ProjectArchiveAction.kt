@@ -1,6 +1,7 @@
 package com.jvcs.tracky.features.project.presentation.projectarchive
 
 sealed interface ProjectArchiveAction {
+
     data class OnProjectCardClick(val projectId: String) : ProjectArchiveAction
 
     data object OnMenuClick : ProjectArchiveAction

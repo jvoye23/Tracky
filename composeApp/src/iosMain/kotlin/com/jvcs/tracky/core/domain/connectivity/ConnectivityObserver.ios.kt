@@ -17,6 +17,7 @@ import platform.Network.nw_path_status_satisfied
 import platform.darwin.dispatch_queue_create
 
 actual class ConnectivityObserver {
+
     actual val isConnected: Flow<Boolean> =
         callbackFlow {
             val monitor = nw_path_monitor_create()

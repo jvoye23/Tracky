@@ -6,6 +6,7 @@ import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.features.project.domain.models.SubTaskInterval
 
 interface LocalSubTaskIntervalDataSource {
+
     suspend fun upsertSubTaskInterval(interval: SubTaskInterval): EmptyResult<DataError.Local>
 
     /**

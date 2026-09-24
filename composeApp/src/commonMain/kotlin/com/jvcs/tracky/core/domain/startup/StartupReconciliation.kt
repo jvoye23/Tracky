@@ -9,6 +9,7 @@ package com.jvcs.tracky.core.domain.startup
  * that row opened. One await at each start path closes the window.
  */
 interface StartupReconciliation {
+
     /** Suspends until the start-up pass has finished. Returns immediately once it has. */
     suspend fun awaitReconciled()
 }

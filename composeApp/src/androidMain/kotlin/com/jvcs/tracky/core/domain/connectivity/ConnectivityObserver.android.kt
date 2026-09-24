@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 actual class ConnectivityObserver(private val context: Context) {
+
     actual val isConnected: Flow<Boolean> =
         callbackFlow {
             val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
