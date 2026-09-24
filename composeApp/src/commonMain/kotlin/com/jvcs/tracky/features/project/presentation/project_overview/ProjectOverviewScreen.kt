@@ -679,6 +679,7 @@ private fun ProjectOverviewState.withPreviewSections(): ProjectOverviewState {
     )
 }
 
+@Suppress("MagicNumber") // preview fixture: sample data is meant to be literal
 private fun previewProjects(): List<ProjectUi> =
     listOf(
         ProjectUi(

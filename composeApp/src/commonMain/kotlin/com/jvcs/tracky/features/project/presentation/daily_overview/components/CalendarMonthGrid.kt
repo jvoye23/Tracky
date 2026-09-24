@@ -193,6 +193,7 @@ private val PreviewAlternateProjectColor = Color(0xFF3E8E8A)
  */
 
 /** Shared with [CalendarMonthCard]'s previews, so the fixture is written once. */
+@Suppress("MagicNumber") // preview fixture: sample data is meant to be literal
 internal fun previewCalendarMonth(
     tracked: Map<Int, Long> =
         mapOf(

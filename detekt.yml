@@ -144,7 +144,10 @@ style:
   # definition site, and a glob that matches nothing excludes nothing. In a
   # repository with no design system the rule is still correct, so switching it
   # off through a knob named "theme" would remove a check nobody asked to lose.
+  # Preview sample data is meant to be literal: a calendar with "42 minutes on
+  # the 1st" reads better than SAMPLE_MINUTES_DAY_ONE. Real code still counts.
   MagicNumber:
+    ignoreAnnotated: ['Preview', 'PreviewLightDark']
     excludes:
       - '**/test/**'
       - '**/*Test/**'

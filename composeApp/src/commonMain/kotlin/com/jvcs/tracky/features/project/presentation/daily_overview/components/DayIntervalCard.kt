@@ -195,6 +195,7 @@ fun DayEmptyState(modifier: Modifier = Modifier) {
 
 private val PreviewProjectColor = Color(0xFF475D92)
 
+@Suppress("MagicNumber") // preview fixture: sample data is meant to be literal
 private fun previewInterval(
     index: String = "01",
     task: String = "Design review",

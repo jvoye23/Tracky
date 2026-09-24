@@ -176,6 +176,7 @@ private fun DailyOverviewScreen(
 // Previews
 // ---------------------------------------------------------------------------
 
+@Suppress("MagicNumber") // preview fixture: sample data is meant to be literal
 private fun previewInterval(
     index: String,
     task: String,
@@ -184,6 +185,7 @@ private fun previewInterval(
     duration: String,
 ) = DayIntervalUi("id-$index", index, task, subTask, range, duration, Color(0xFF475D92))
 
+@Suppress("MagicNumber") // preview fixture: sample data is meant to be literal
 private fun previewState(dayDetail: DayDetailUi) =
     DailyOverviewState(
         projectTitle = "Tracky",

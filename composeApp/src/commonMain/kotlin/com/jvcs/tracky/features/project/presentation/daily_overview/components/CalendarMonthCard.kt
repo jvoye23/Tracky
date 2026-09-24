@@ -352,6 +352,7 @@ private fun CardPreviewContainer(content: @Composable () -> Unit) {
 }
 
 /** August and September 2026, so the pager and the year picker both have somewhere to go. */
+@Suppress("MagicNumber") // preview fixture: sample data is meant to be literal
 private fun previewMonths(): List<CalendarMonthUi> =
     listOf(
         previewCalendarMonth().copy(
@@ -363,6 +364,7 @@ private fun previewMonths(): List<CalendarMonthUi> =
         previewCalendarMonth(),
     )
 
+@Suppress("MagicNumber") // preview fixture: sample data is meant to be literal
 @Composable
 private fun PreviewCard(
     months: List<CalendarMonthUi> = previewMonths(),

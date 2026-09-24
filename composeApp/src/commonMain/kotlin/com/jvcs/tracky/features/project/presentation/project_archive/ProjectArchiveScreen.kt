@@ -279,6 +279,7 @@ fun ProjectArchiveScreen(
     }
 }
 
+@Suppress("MagicNumber") // preview fixture: sample data is meant to be literal
 private fun previewArchivedProjects(): List<ProjectUi> =
     listOf(
         ProjectUi(
