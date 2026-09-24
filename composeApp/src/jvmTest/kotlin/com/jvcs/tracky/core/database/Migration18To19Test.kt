@@ -3,12 +3,13 @@ package com.jvcs.tracky.core.database
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.sqlite.execSQL
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 /**
  * Exercises [TrackyDatabase.MIGRATION_18_19], which adds a nullable `startedByDeviceId` to
@@ -164,8 +165,8 @@ class Migration18To19Test {
 
         TrackyDatabase.MIGRATION_18_19.migrate(connection)
 
-        assertTrue(columnExists("task_intervals", "startedByDeviceId"))
-        assertTrue(columnExists("sub_task_intervals", "startedByDeviceId"))
+        assertThat(columnExists("task_intervals", "startedByDeviceId")).isTrue()
+        assertThat(columnExists("sub_task_intervals", "startedByDeviceId")).isTrue()
     }
 
     @Test
@@ -176,21 +177,19 @@ class Migration18To19Test {
 
         // Nullable is the whole point: NULL reads as "this device", which is what a row written
         // before sync existed actually means. A NOT NULL column would need a value invented for it.
-        assertEquals(
-            0L,
+        assertThat(
             queryLong("SELECT \"notnull\" FROM pragma_table_info('task_intervals') WHERE name = 'startedByDeviceId'"),
-        )
-        assertEquals(
-            0L,
+        ).isEqualTo(0L)
+        assertThat(
             queryLong(
                 "SELECT \"notnull\" FROM pragma_table_info('sub_task_intervals') " +
                     "WHERE name = 'startedByDeviceId'",
             ),
-        )
-        assertNull(queryText("SELECT startedByDeviceId FROM task_intervals WHERE intervalId = 'i-open'"))
-        assertNull(
+        ).isEqualTo(0L)
+        assertThat(queryText("SELECT startedByDeviceId FROM task_intervals WHERE intervalId = 'i-open'")).isNull()
+        assertThat(
             queryText("SELECT startedByDeviceId FROM sub_task_intervals WHERE subTaskIntervalId = 'si-open'"),
-        )
+        ).isNull()
     }
 
     @Test
@@ -199,14 +198,17 @@ class Migration18To19Test {
 
         TrackyDatabase.MIGRATION_18_19.migrate(connection)
 
-        assertEquals(90000L, queryLong("SELECT durationMillis FROM task_intervals WHERE intervalId = 'i-closed'"))
-        assertEquals(91000L, queryLong("SELECT endDateTimeEpochMs FROM task_intervals WHERE intervalId = 'i-closed'"))
-        assertNull(queryLong("SELECT endDateTimeEpochMs FROM task_intervals WHERE intervalId = 'i-open'"))
+        assertThat(
+            queryLong("SELECT durationMillis FROM task_intervals WHERE intervalId = 'i-closed'"),
+        ).isEqualTo(90000L)
+        assertThat(
+            queryLong("SELECT endDateTimeEpochMs FROM task_intervals WHERE intervalId = 'i-closed'"),
+        ).isEqualTo(91000L)
+        assertThat(queryLong("SELECT endDateTimeEpochMs FROM task_intervals WHERE intervalId = 'i-open'")).isNull()
         // startedParentTimer is the other local-only column on this table; a rewrite would lose it.
-        assertEquals(
-            1L,
+        assertThat(
             queryLong("SELECT startedParentTimer FROM sub_task_intervals WHERE subTaskIntervalId = 'si-open'"),
-        )
+        ).isEqualTo(1L)
     }
 
     @Test
@@ -219,11 +221,12 @@ class Migration18To19Test {
             "UPDATE sub_task_intervals SET startedByDeviceId = 'device-a' WHERE subTaskIntervalId = 'si-open'",
         )
 
-        assertEquals("device-a", queryText("SELECT startedByDeviceId FROM task_intervals WHERE intervalId = 'i-open'"))
-        assertEquals(
-            "device-a",
+        assertThat(
+            queryText("SELECT startedByDeviceId FROM task_intervals WHERE intervalId = 'i-open'"),
+        ).isEqualTo("device-a")
+        assertThat(
             queryText("SELECT startedByDeviceId FROM sub_task_intervals WHERE subTaskIntervalId = 'si-open'"),
-        )
+        ).isEqualTo("device-a")
     }
 
     @Test
@@ -235,19 +238,17 @@ class Migration18To19Test {
 
         // The query shape the stranded-timer pass will use: own rows and legacy NULLs, never
         // another device's live timer.
-        assertEquals(
-            0L,
+        assertThat(
             queryLong(
                 "SELECT count(*) FROM task_intervals WHERE endDateTimeEpochMs IS NULL " +
                     "AND (startedByDeviceId IS NULL OR startedByDeviceId = 'device-a')",
             ),
-        )
-        assertEquals(
-            1L,
+        ).isEqualTo(0L)
+        assertThat(
             queryLong(
                 "SELECT count(*) FROM task_intervals WHERE endDateTimeEpochMs IS NULL " +
                     "AND (startedByDeviceId IS NULL OR startedByDeviceId = 'device-b')",
             ),
-        )
+        ).isEqualTo(1L)
     }
 }

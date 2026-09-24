@@ -3,10 +3,11 @@ package com.jvcs.tracky.core.database
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.sqlite.execSQL
+import assertk.assertThat
+import assertk.assertions.isEqualTo
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
 
 /**
  * Exercises [TrackyDatabase.MIGRATION_14_15], which adds `startedParentTimer`.
@@ -69,15 +70,13 @@ class Migration14To15Test {
 
         TrackyDatabase.MIGRATION_14_15.migrate(connection)
 
-        assertEquals(
-            0L,
+        assertThat(
             queryLong("SELECT startedParentTimer FROM sub_task_intervals WHERE subTaskIntervalId = 'si1'"),
-        )
+        ).isEqualTo(0L)
         // The tracked time itself must survive untouched.
-        assertEquals(
-            60_000L,
+        assertThat(
             queryLong("SELECT durationMillis FROM sub_task_intervals WHERE subTaskIntervalId = 'si1'"),
-        )
+        ).isEqualTo(60_000L)
     }
 
     @Test
@@ -89,6 +88,6 @@ class Migration14To15Test {
                 "SELECT \"notnull\" FROM pragma_table_info('sub_task_intervals') " +
                     "WHERE name = 'startedParentTimer'",
             )
-        assertEquals(1L, notNull)
+        assertThat(notNull).isEqualTo(1L)
     }
 }

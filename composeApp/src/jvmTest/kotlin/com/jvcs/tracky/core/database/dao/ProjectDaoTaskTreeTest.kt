@@ -2,6 +2,10 @@ package com.jvcs.tracky.core.database.dao
 
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNotNull
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.database.TrackyDatabase
 import com.jvcs.tracky.core.database.entity.ProjectEntity
 import com.jvcs.tracky.core.database.entity.ProjectSubTaskEntity
@@ -13,9 +17,6 @@ import kotlinx.coroutines.runBlocking
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 
 /**
  * Pins the read shape the project detail screen depends on.
@@ -139,24 +140,19 @@ class ProjectDaoTaskTreeTest {
         runBlocking {
             seedTree()
 
-            val tree = assertNotNull(dao.getProjectWithTaskTreeById("p1"))
+            val tree = checkNotNull(dao.getProjectWithTaskTreeById("p1"))
 
-            assertEquals("p1", tree.project.projectId)
-            assertEquals(2, tree.projectTasks.size)
+            assertThat(tree.project.projectId).isEqualTo("p1")
+            assertThat(tree.projectTasks.size).isEqualTo(2)
 
-            val task = assertNotNull(tree.projectTasks.find { it.task.projectTaskId == "t1" })
-            assertEquals(
-                listOf("s1", "s2"),
-                task.subTasks.map { it.subTask.projectSubTaskId }.sorted(),
-            )
-            assertEquals(listOf("ti1"), task.intervals.map { it.intervalId })
+            val task = checkNotNull(tree.projectTasks.find { it.task.projectTaskId == "t1" })
+            assertThat(task.subTasks.map { it.subTask.projectSubTaskId }.sorted()).isEqualTo(listOf("s1", "s2"))
+            assertThat(task.intervals.map { it.intervalId }).isEqualTo(listOf("ti1"))
 
             val subTaskWithIntervals =
-                assertNotNull(
-                    task.subTasks.find { it.subTask.projectSubTaskId == "s1" },
-                )
-            assertEquals(listOf("si1"), subTaskWithIntervals.intervals.map { it.subTaskIntervalId })
-            assertTrue(subTaskWithIntervals.intervals.single().durationMillis > 0)
+                checkNotNull(task.subTasks.find { it.subTask.projectSubTaskId == "s1" })
+            assertThat(subTaskWithIntervals.intervals.map { it.subTaskIntervalId }).isEqualTo(listOf("si1"))
+            assertThat(subTaskWithIntervals.intervals.single().durationMillis > 0).isTrue()
         }
 
     @Test
@@ -164,10 +160,10 @@ class ProjectDaoTaskTreeTest {
         runBlocking {
             seedTree()
 
-            val tree = assertNotNull(dao.getProjectWithTaskTreeById("p1"))
-            val task = assertNotNull(tree.projectTasks.find { it.task.projectTaskId == "t2" })
+            val tree = checkNotNull(dao.getProjectWithTaskTreeById("p1"))
+            val task = checkNotNull(tree.projectTasks.find { it.task.projectTaskId == "t2" })
 
-            assertTrue(task.subTasks.isEmpty())
-            assertTrue(task.intervals.isEmpty())
+            assertThat(task.subTasks.isEmpty()).isTrue()
+            assertThat(task.intervals.isEmpty()).isTrue()
         }
 }

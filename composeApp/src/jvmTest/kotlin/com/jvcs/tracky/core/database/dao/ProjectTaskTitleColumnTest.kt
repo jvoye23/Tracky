@@ -2,6 +2,9 @@ package com.jvcs.tracky.core.database.dao
 
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
 import com.jvcs.tracky.core.database.TrackyDatabase
 import com.jvcs.tracky.core.database.entity.ProjectEntity
 import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
@@ -10,8 +13,6 @@ import kotlinx.coroutines.runBlocking
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
 
 /**
  * Pins the split between a task's title and its description on a real (in-memory) database.
@@ -89,8 +90,8 @@ class ProjectTaskTitleColumnTest {
             dao.upsertProjectTask(task(title = "Write the report", description = "Quarterly, due Friday"))
 
             val stored = dao.getTaskById("t1")
-            assertEquals("Write the report", stored?.title)
-            assertEquals("Quarterly, due Friday", stored?.description)
+            assertThat(stored?.title).isEqualTo("Write the report")
+            assertThat(stored?.description).isEqualTo("Quarterly, due Friday")
         }
 
     @Test
@@ -100,8 +101,8 @@ class ProjectTaskTitleColumnTest {
 
             dao.upsertProjectTask(task(title = "Write the report", description = null))
 
-            assertEquals("Write the report", dao.getTaskById("t1")?.title)
-            assertNull(dao.getTaskById("t1")?.description)
+            assertThat(dao.getTaskById("t1")?.title).isEqualTo("Write the report")
+            assertThat(dao.getTaskById("t1")?.description).isNull()
         }
 
     @Test
@@ -113,8 +114,8 @@ class ProjectTaskTitleColumnTest {
             dao.updateTaskTitle(taskId = "t1", title = "Write the summary")
 
             val stored = dao.getTaskById("t1")
-            assertEquals("Write the summary", stored?.title)
+            assertThat(stored?.title).isEqualTo("Write the summary")
             // The rename used to overwrite this column, because it *was* the title column.
-            assertEquals("Quarterly, due Friday", stored?.description)
+            assertThat(stored?.description).isEqualTo("Quarterly, due Friday")
         }
 }

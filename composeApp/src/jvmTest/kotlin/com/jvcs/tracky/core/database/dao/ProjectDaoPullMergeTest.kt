@@ -2,6 +2,10 @@ package com.jvcs.tracky.core.database.dao
 
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNotNull
+import assertk.assertions.isNull
 import com.jvcs.tracky.core.database.TrackyDatabase
 import com.jvcs.tracky.core.database.entity.PendingSyncEntity
 import com.jvcs.tracky.core.database.entity.ProjectEntity
@@ -14,10 +18,6 @@ import kotlinx.coroutines.runBlocking
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 /**
  * Exercises [ProjectDao.upsertServerTree] against a real (in-memory) database.
@@ -106,10 +106,10 @@ class ProjectDaoPullMergeTest {
                 intervals = listOf(intervalEntity("i1", "t1", end = 60_000)),
             )
 
-            assertNotNull(dao.getProjectById("p1"))
-            assertNotNull(dao.getTaskById("t1"))
+            assertThat(dao.getProjectById("p1")).isNotNull()
+            assertThat(dao.getTaskById("t1")).isNotNull()
             // Intervals are the whole point: this is what a fresh install could not recover before.
-            assertEquals(60_000L, dao.getIntervalById("i1")?.durationMillis)
+            assertThat(dao.getIntervalById("i1")?.durationMillis).isEqualTo(60_000L)
         }
 
     /** project_tasks has a CASCADE foreign key onto projects, so the parent must exist first. */
@@ -150,7 +150,7 @@ class ProjectDaoPullMergeTest {
                 intervals = emptyList(),
             )
 
-            assertEquals("edited offline", dao.getTaskById("t1")?.title)
+            assertThat(dao.getTaskById("t1")?.title).isEqualTo("edited offline")
         }
 
     @Test
@@ -165,7 +165,7 @@ class ProjectDaoPullMergeTest {
                 intervals = emptyList(),
             )
 
-            assertEquals("fresh from server", dao.getTaskById("t1")?.title)
+            assertThat(dao.getTaskById("t1")?.title).isEqualTo("fresh from server")
         }
 
     @Test
@@ -182,7 +182,7 @@ class ProjectDaoPullMergeTest {
 
             // The user stopped it on their other device. Nothing is queued here, so this device has
             // no unsent change to defend and the server is canonical.
-            assertEquals(60_000L, dao.getIntervalById("i1")?.endDateTimeEpochMs)
+            assertThat(dao.getIntervalById("i1")?.endDateTimeEpochMs).isEqualTo(60_000L)
         }
 
     @Test
@@ -198,7 +198,7 @@ class ProjectDaoPullMergeTest {
                 intervals = listOf(intervalEntity("i1", "t1", end = 60_000)),
             )
 
-            assertNull(dao.getIntervalById("i1")?.endDateTimeEpochMs)
+            assertThat(dao.getIntervalById("i1")?.endDateTimeEpochMs).isNull()
         }
 
     @Test
@@ -215,7 +215,7 @@ class ProjectDaoPullMergeTest {
 
             // Reopening would discard the banked duration; a server copy still open is just the
             // server not having heard the stop yet.
-            assertEquals(60_000L, dao.getIntervalById("i1")?.endDateTimeEpochMs)
+            assertThat(dao.getIntervalById("i1")?.endDateTimeEpochMs).isEqualTo(60_000L)
         }
 
     @Test
@@ -235,7 +235,7 @@ class ProjectDaoPullMergeTest {
             // Every row written before the column existed comes back with a null, so a blind
             // overwrite would blank it and the next start-up would read this device's own rows as
             // foreign.
-            assertEquals("device-a", dao.getIntervalById("i1")?.startedByDeviceId)
+            assertThat(dao.getIntervalById("i1")?.startedByDeviceId).isEqualTo("device-a")
         }
 
     @Test
@@ -256,7 +256,7 @@ class ProjectDaoPullMergeTest {
             // The timer another device is running right now. Storing null instead would read as "this
             // device", so StrandedTimerReconciler would park a live timer and ask the user to reclaim
             // it, and phase 2's isForeign would be false for every foreign timer.
-            assertEquals("device-b", dao.getIntervalById("i-foreign")?.startedByDeviceId)
+            assertThat(dao.getIntervalById("i-foreign")?.startedByDeviceId).isEqualTo("device-b")
         }
 
     @Test
@@ -268,8 +268,8 @@ class ProjectDaoPullMergeTest {
 
             dao.upsertServerTree(projects = emptyList(), tasks = emptyList(), intervals = emptyList())
 
-            assertNotNull(dao.getTaskById("local-only"))
-            assertNotNull(dao.getIntervalById("i-local"))
+            assertThat(dao.getTaskById("local-only")).isNotNull()
+            assertThat(dao.getIntervalById("i-local")).isNotNull()
             Unit
         }
 
@@ -303,7 +303,7 @@ class ProjectDaoPullMergeTest {
                 subTasks = listOf(subTaskEntity("s1", "t1", "from server", updatedAt = 100)),
             )
 
-            assertEquals("from server", dao.getSubTaskById("s1")?.title)
+            assertThat(dao.getSubTaskById("s1")?.title).isEqualTo("from server")
         }
 
     @Test
@@ -319,7 +319,7 @@ class ProjectDaoPullMergeTest {
                 subTasks = listOf(subTaskEntity("s1", "t1", "stale server copy", updatedAt = 100)),
             )
 
-            assertEquals("edited offline", dao.getSubTaskById("s1")?.title)
+            assertThat(dao.getSubTaskById("s1")?.title).isEqualTo("edited offline")
         }
 
     @Test
@@ -335,7 +335,7 @@ class ProjectDaoPullMergeTest {
                 subTasks = listOf(subTaskEntity("s1", "t1", "renamed elsewhere", updatedAt = 900)),
             )
 
-            assertEquals("renamed elsewhere", dao.getSubTaskById("s1")?.title)
+            assertThat(dao.getSubTaskById("s1")?.title).isEqualTo("renamed elsewhere")
         }
 
     @Test
@@ -352,7 +352,7 @@ class ProjectDaoPullMergeTest {
             )
 
             // Still queued for upload — a pull must never delete it.
-            assertNotNull(dao.getSubTaskById("local-only"))
+            assertThat(dao.getSubTaskById("local-only")).isNotNull()
         }
 
     @Test
@@ -372,11 +372,11 @@ class ProjectDaoPullMergeTest {
                     ),
             )
 
-            assertNull(dao.getSubTaskById("orphan"))
+            assertThat(dao.getSubTaskById("orphan")).isNull()
             // Everything around it survived.
-            assertNotNull(dao.getProjectById("p1"))
-            assertNotNull(dao.getTaskById("t1"))
-            assertNotNull(dao.getSubTaskById("s1"))
+            assertThat(dao.getProjectById("p1")).isNotNull()
+            assertThat(dao.getTaskById("t1")).isNotNull()
+            assertThat(dao.getSubTaskById("s1")).isNotNull()
         }
 
     private fun subTaskIntervalEntity(
@@ -416,7 +416,7 @@ class ProjectDaoPullMergeTest {
             )
 
             // The last thing a fresh install could not recover.
-            assertEquals(600L, dao.getSubTaskIntervalById("si1")?.durationMillis)
+            assertThat(dao.getSubTaskIntervalById("si1")?.durationMillis).isEqualTo(600L)
         }
 
     @Test
@@ -437,8 +437,8 @@ class ProjectDaoPullMergeTest {
             )
 
             // Losing this would break "stopping this subtask also stops its parent task".
-            assertEquals(true, dao.getSubTaskIntervalById("si1")?.startedParentTimer)
-            assertEquals(900L, dao.getSubTaskIntervalById("si1")?.endDateTimeEpochMs)
+            assertThat(dao.getSubTaskIntervalById("si1")?.startedParentTimer).isEqualTo(true)
+            assertThat(dao.getSubTaskIntervalById("si1")?.endDateTimeEpochMs).isEqualTo(900L)
         }
 
     @Test
@@ -455,7 +455,7 @@ class ProjectDaoPullMergeTest {
                 subTaskIntervals = listOf(subTaskIntervalEntity("si1", "s1", "ti1", end = 60_000)),
             )
 
-            assertEquals(60_000L, dao.getSubTaskIntervalById("si1")?.endDateTimeEpochMs)
+            assertThat(dao.getSubTaskIntervalById("si1")?.endDateTimeEpochMs).isEqualTo(60_000L)
         }
 
     @Test
@@ -473,7 +473,7 @@ class ProjectDaoPullMergeTest {
                 subTaskIntervals = listOf(subTaskIntervalEntity("si1", "s1", "ti1", end = 60_000)),
             )
 
-            assertNull(dao.getSubTaskIntervalById("si1")?.endDateTimeEpochMs)
+            assertThat(dao.getSubTaskIntervalById("si1")?.endDateTimeEpochMs).isNull()
         }
 
     @Test
@@ -492,7 +492,7 @@ class ProjectDaoPullMergeTest {
                 subTaskIntervals = listOf(subTaskIntervalEntity("si1", "s1", "ti1", end = 60_000)),
             )
 
-            assertEquals(60_000L, dao.getSubTaskIntervalById("si1")?.endDateTimeEpochMs)
+            assertThat(dao.getSubTaskIntervalById("si1")?.endDateTimeEpochMs).isEqualTo(60_000L)
         }
 
     @Test
@@ -514,9 +514,9 @@ class ProjectDaoPullMergeTest {
             )
 
             // Either dangling reference would throw inside the transaction and lose the whole pull.
-            assertNull(dao.getSubTaskIntervalById("no-subtask"))
-            assertNull(dao.getSubTaskIntervalById("no-interval"))
-            assertNotNull(dao.getSubTaskIntervalById("fine"))
+            assertThat(dao.getSubTaskIntervalById("no-subtask")).isNull()
+            assertThat(dao.getSubTaskIntervalById("no-interval")).isNull()
+            assertThat(dao.getSubTaskIntervalById("fine")).isNotNull()
         }
 
     @Test
@@ -533,6 +533,6 @@ class ProjectDaoPullMergeTest {
                 subTaskIntervals = emptyList(),
             )
 
-            assertNotNull(dao.getSubTaskIntervalById("local-only"))
+            assertThat(dao.getSubTaskIntervalById("local-only")).isNotNull()
         }
 }

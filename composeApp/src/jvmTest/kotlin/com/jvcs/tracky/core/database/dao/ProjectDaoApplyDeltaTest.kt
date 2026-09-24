@@ -2,6 +2,10 @@ package com.jvcs.tracky.core.database.dao
 
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNotNull
+import assertk.assertions.isNull
 import com.jvcs.tracky.core.database.TrackyDatabase
 import com.jvcs.tracky.core.database.entity.PendingSyncEntity
 import com.jvcs.tracky.core.database.entity.ProjectEntity
@@ -12,9 +16,6 @@ import kotlinx.coroutines.runBlocking
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 
 /**
  * Exercises [ProjectDao.applyDelta] — specifically the deletions, which are the first thing in
@@ -127,7 +128,7 @@ class ProjectDaoApplyDeltaTest {
             applyDeletions(tasks = listOf("t1"))
 
             // The whole point of the feed: a deletion on another device finally lands here.
-            assertNull(dao.getTaskById("t1"))
+            assertThat(dao.getTaskById("t1")).isNull()
         }
 
     @Test
@@ -137,9 +138,9 @@ class ProjectDaoApplyDeltaTest {
 
             applyDeletions(projects = listOf("p1"))
 
-            assertNull(dao.getProjectById("p1"))
-            assertNull(dao.getTaskById("t1"))
-            assertNull(dao.getIntervalById("i1"))
+            assertThat(dao.getProjectById("p1")).isNull()
+            assertThat(dao.getTaskById("t1")).isNull()
+            assertThat(dao.getIntervalById("i1")).isNull()
         }
 
     @Test
@@ -152,7 +153,7 @@ class ProjectDaoApplyDeltaTest {
 
             // The server emitted this before it heard about the edit this device is still carrying.
             // Honouring it would destroy work the outbox has not delivered yet.
-            assertEquals("t1", dao.getTaskById("t1")?.projectTaskId)
+            assertThat(dao.getTaskById("t1")?.projectTaskId).isEqualTo("t1")
         }
 
     @Test
@@ -164,8 +165,8 @@ class ProjectDaoApplyDeltaTest {
 
             applyDeletions(tasks = listOf("t1", "t2"))
 
-            assertNotNull(dao.getTaskById("t1"))
-            assertNull(dao.getTaskById("t2"))
+            assertThat(dao.getTaskById("t1")).isNotNull()
+            assertThat(dao.getTaskById("t2")).isNull()
         }
 
     @Test
@@ -175,7 +176,7 @@ class ProjectDaoApplyDeltaTest {
 
             applyDeletions(tasks = listOf("never-existed"))
 
-            assertEquals("t1", dao.getTaskById("t1")?.projectTaskId)
+            assertThat(dao.getTaskById("t1")?.projectTaskId).isEqualTo("t1")
         }
 
     @Test
@@ -186,7 +187,7 @@ class ProjectDaoApplyDeltaTest {
             // The project's cascade already removed the task by the time its own tombstone runs.
             applyDeletions(projects = listOf("p1"), tasks = listOf("t1"), intervals = listOf("i1"))
 
-            assertNull(dao.getProjectById("p1"))
+            assertThat(dao.getProjectById("p1")).isNull()
         }
 
     @Test
@@ -207,8 +208,8 @@ class ProjectDaoApplyDeltaTest {
                 deletedSubTaskIntervalIds = emptyList(),
             )
 
-            assertNotNull(dao.getProjectById("p2"))
-            assertNull(dao.getProjectById("p1"))
+            assertThat(dao.getProjectById("p2")).isNotNull()
+            assertThat(dao.getProjectById("p1")).isNull()
         }
 
     @Test
@@ -218,7 +219,7 @@ class ProjectDaoApplyDeltaTest {
 
             applyDeletions(intervals = listOf("i1"))
 
-            assertNull(dao.getIntervalById("i1"))
-            assertEquals("t1", dao.getTaskById("t1")?.projectTaskId)
+            assertThat(dao.getIntervalById("i1")).isNull()
+            assertThat(dao.getTaskById("t1")?.projectTaskId).isEqualTo("t1")
         }
 }

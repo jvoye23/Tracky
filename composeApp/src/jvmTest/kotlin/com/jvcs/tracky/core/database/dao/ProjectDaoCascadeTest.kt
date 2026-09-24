@@ -2,6 +2,9 @@ package com.jvcs.tracky.core.database.dao
 
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import assertk.assertThat
+import assertk.assertions.isNotNull
+import assertk.assertions.isNull
 import com.jvcs.tracky.core.database.TrackyDatabase
 import com.jvcs.tracky.core.database.entity.ProjectEntity
 import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
@@ -11,8 +14,6 @@ import kotlinx.coroutines.runBlocking
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 
 /**
  * Pins down the cascading deletes on a real (in-memory) database.
@@ -98,10 +99,10 @@ class ProjectDaoCascadeTest {
 
             dao.deleteProject("p1")
 
-            assertNull(dao.getTaskById("t1"))
-            assertNull(dao.getTaskById("t2"))
-            assertNull(dao.getIntervalById("i-t1"))
-            assertNull(dao.getIntervalById("i-t2"))
+            assertThat(dao.getTaskById("t1")).isNull()
+            assertThat(dao.getTaskById("t2")).isNull()
+            assertThat(dao.getIntervalById("i-t1")).isNull()
+            assertThat(dao.getIntervalById("i-t2")).isNull()
         }
 
     @Test
@@ -111,10 +112,10 @@ class ProjectDaoCascadeTest {
 
             dao.deleteProjectTask("t1")
 
-            assertNull(dao.getIntervalById("i-t1"))
+            assertThat(dao.getIntervalById("i-t1")).isNull()
             // The sibling task is untouched, so its tracked time has to survive.
-            assertNotNull(dao.getTaskById("t2"))
-            assertNotNull(dao.getIntervalById("i-t2"))
+            assertThat(dao.getTaskById("t2")).isNotNull()
+            assertThat(dao.getIntervalById("i-t2")).isNotNull()
             Unit
         }
 
@@ -125,8 +126,8 @@ class ProjectDaoCascadeTest {
 
             dao.deleteAllProjects()
 
-            assertNull(dao.getTaskById("t1"))
-            assertNull(dao.getIntervalById("i-t1"))
-            assertNull(dao.getIntervalById("i-t2"))
+            assertThat(dao.getTaskById("t1")).isNull()
+            assertThat(dao.getIntervalById("i-t1")).isNull()
+            assertThat(dao.getIntervalById("i-t2")).isNull()
         }
 }
