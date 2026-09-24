@@ -74,6 +74,7 @@ import com.jvcs.tracky.designsystem.theme.SampleProjectColors
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.features.project.presentation.models.ProjectSubTaskUi
 import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
+import com.jvcs.tracky.features.project.presentation.util.SubTaskDragDropState
 import com.jvcs.tracky.features.project.presentation.util.rememberSubTaskDragDropState
 import org.jetbrains.compose.resources.stringResource
 import tracky.composeapp.generated.resources.Res
@@ -553,136 +554,21 @@ fun TaskItemCard(
                         // Keyed so a row's identity follows the subtask rather than the position,
                         // which is what lets the bounds it reports survive a reorder.
                         key(subTaskId) {
-                            DisposableEffect(subTaskId) {
-                                onDispose { subTaskDragState.onRowDisposed(subTaskId) }
-                            }
-                            val isDragActive =
-                                subTaskId == subTaskDragState.draggingItemKey ||
-                                    subTaskId == subTaskDragState.settlingItemKey
-                            Row(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .onGloballyPositioned { coordinates ->
-                                            subTaskDragState.onRowPlaced(
-                                                key = subTaskId,
-                                                top = coordinates.positionInParent().y,
-                                                height = coordinates.size.height.toFloat(),
-                                            )
-                                        }.then(
-                                            if (isDragActive) {
-                                                Modifier
-                                                    .zIndex(1f)
-                                                    .graphicsLayer {
-                                                        translationY =
-                                                            if (subTaskId == subTaskDragState.draggingItemKey) {
-                                                                subTaskDragState.draggingItemOffset
-                                                            } else {
-                                                                subTaskDragState.settlingItemOffset
-                                                            }
-                                                    }
-                                            } else {
-                                                Modifier
-                                            },
-                                        )
-                                        // After the drag layer, so the outline travels with a dragged row.
-                                        .editModeRowBorder(
-                                            isEditMode,
-                                            taskBorder(projectSubTaskUi.isTimerRunning, projectColor),
-                                        ).padding(vertical = 6.dp)
-                                        .then(if (isEditMode) Modifier.padding(horizontal = 8.dp) else Modifier),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            ) {
-                                val textDecoration =
-                                    if (projectSubTaskUi.isFinished) TextDecoration.LineThrough else null
-                                val contentAlpha = if (projectSubTaskUi.isFinished) 0.4f else 1f
-
-                                if (isEditMode) {
-                                    DragHandle(
-                                        isReorderable = isReorderable,
-                                        onDragStart = { subTaskDragState.onDragStart(subTaskId) },
-                                        onDrag = { dragAmountY -> subTaskDragState.onDrag(dragAmountY) },
-                                        onDragEnd = {
-                                            if (subTaskDragState.hasMoved) onSubTaskReorderCommit()
-                                            subTaskDragState.onDragEnd()
-                                        },
-                                        onDragCancel = {
-                                            onSubTaskReorderCancel()
-                                            subTaskDragState.onDragCancel()
-                                        },
-                                    )
-                                } else {
-                                    TimerToggleButton(
-                                        isTimerRunning = projectSubTaskUi.isTimerRunning,
-                                        isFinished = projectSubTaskUi.isFinished,
-                                        projectColor = projectColor,
-                                        pulseAlpha = { pulseAlpha },
-                                        buttonSize = 48.dp,
-                                        onClick = { onToggleSubTaskTimer(projectSubTaskUi.projectSubTaskId) },
-                                    )
-                                }
-                                Column(
-                                    modifier = Modifier.weight(1f),
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        Text(
-                                            text = "$index.${subTaskIndex + 1}",
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
-                                            textDecoration = textDecoration,
-                                        )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text(
-                                            modifier =
-                                                Modifier
-                                                    .weight(1f)
-                                                    .then(
-                                                        if (isEditMode) {
-                                                            Modifier.clickable { onSubTaskClick(subTaskId) }
-                                                        } else {
-                                                            Modifier
-                                                        },
-                                                    ),
-                                            text = projectSubTaskUi.title,
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
-                                            textDecoration = textDecoration,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                        )
-                                    }
-                                    if (!isEditMode) {
-                                        Text(
-                                            text = projectSubTaskUi.formattedDuration,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontFamily = FontFamily.Monospace,
-                                            fontWeight = FontWeight.Bold,
-                                            color =
-                                                if (projectSubTaskUi.isTimerRunning) {
-                                                    projectColor
-                                                } else {
-                                                    MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha)
-                                                },
-                                            letterSpacing = (-0.5).sp,
-                                        )
-                                    }
-                                }
-                                if (isEditMode) {
-                                    DeleteTaskButton(
-                                        onClick = { onDeleteSubTaskClick(projectSubTaskUi.projectSubTaskId) },
-                                    )
-                                } else {
-                                    TrackyCheckbox(
-                                        checked = projectSubTaskUi.isFinished,
-                                        onCheckedChange = {
-                                            onSubTaskCheckedChange(projectSubTaskUi.projectSubTaskId)
-                                        },
-                                    )
-                                }
-                            }
+                            SubTaskRow(
+                                ordinal = "$index.${subTaskIndex + 1}",
+                                subTask = projectSubTaskUi,
+                                projectColor = projectColor,
+                                isEditMode = isEditMode,
+                                isReorderable = isReorderable,
+                                dragState = subTaskDragState,
+                                pulseAlpha = { pulseAlpha },
+                                onToggleTimer = { onToggleSubTaskTimer(subTaskId) },
+                                onDeleteClick = { onDeleteSubTaskClick(subTaskId) },
+                                onCheckedChange = { onSubTaskCheckedChange(subTaskId) },
+                                onTitleClick = { onSubTaskClick(subTaskId) },
+                                onReorderCommit = onSubTaskReorderCommit,
+                                onReorderCancel = onSubTaskReorderCancel,
+                            )
                         }
                     }
                 }
@@ -693,6 +579,178 @@ fun TaskItemCard(
                     )
                 }
             }
+        }
+    }
+}
+
+/**
+ * Reports the row's bounds to [dragState] for hit-testing, and lifts and offsets the row while it
+ * is the one being dragged or settling back into place.
+ */
+private fun Modifier.subTaskDragLayer(subTaskId: String, dragState: SubTaskDragDropState): Modifier {
+    val isDragActive =
+        subTaskId == dragState.draggingItemKey ||
+            subTaskId == dragState.settlingItemKey
+    return onGloballyPositioned { coordinates ->
+        dragState.onRowPlaced(
+            key = subTaskId,
+            top = coordinates.positionInParent().y,
+            height = coordinates.size.height.toFloat(),
+        )
+    }.then(
+        if (isDragActive) {
+            Modifier
+                .zIndex(1f)
+                .graphicsLayer {
+                    translationY =
+                        if (subTaskId == dragState.draggingItemKey) {
+                            dragState.draggingItemOffset
+                        } else {
+                            dragState.settlingItemOffset
+                        }
+                }
+        } else {
+            Modifier
+        },
+    )
+}
+
+@Composable
+private fun SubTaskRow(
+    ordinal: String,
+    subTask: ProjectSubTaskUi,
+    projectColor: Color,
+    isEditMode: Boolean,
+    isReorderable: Boolean,
+    dragState: SubTaskDragDropState,
+    pulseAlpha: () -> Float,
+    onToggleTimer: () -> Unit,
+    onDeleteClick: () -> Unit,
+    onCheckedChange: () -> Unit,
+    onTitleClick: () -> Unit,
+    onReorderCommit: () -> Unit,
+    onReorderCancel: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val subTaskId = subTask.projectSubTaskId
+    DisposableEffect(subTaskId) {
+        onDispose { dragState.onRowDisposed(subTaskId) }
+    }
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .subTaskDragLayer(subTaskId, dragState)
+                // After the drag layer, so the outline travels with a dragged row.
+                .editModeRowBorder(
+                    isEditMode,
+                    taskBorder(subTask.isTimerRunning, projectColor),
+                ).padding(vertical = 6.dp)
+                .then(if (isEditMode) Modifier.padding(horizontal = 8.dp) else Modifier),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        if (isEditMode) {
+            DragHandle(
+                isReorderable = isReorderable,
+                onDragStart = { dragState.onDragStart(subTaskId) },
+                onDrag = { dragAmountY -> dragState.onDrag(dragAmountY) },
+                onDragEnd = {
+                    if (dragState.hasMoved) onReorderCommit()
+                    dragState.onDragEnd()
+                },
+                onDragCancel = {
+                    onReorderCancel()
+                    dragState.onDragCancel()
+                },
+            )
+        } else {
+            TimerToggleButton(
+                isTimerRunning = subTask.isTimerRunning,
+                isFinished = subTask.isFinished,
+                projectColor = projectColor,
+                pulseAlpha = pulseAlpha,
+                buttonSize = 48.dp,
+                onClick = onToggleTimer,
+            )
+        }
+        SubTaskTitleColumn(
+            ordinal = ordinal,
+            subTask = subTask,
+            projectColor = projectColor,
+            isEditMode = isEditMode,
+            onTitleClick = onTitleClick,
+            modifier = Modifier.weight(1f),
+        )
+        if (isEditMode) {
+            DeleteTaskButton(onClick = onDeleteClick)
+        } else {
+            TrackyCheckbox(
+                checked = subTask.isFinished,
+                onCheckedChange = { onCheckedChange() },
+            )
+        }
+    }
+}
+
+@Composable
+private fun SubTaskTitleColumn(
+    ordinal: String,
+    subTask: ProjectSubTaskUi,
+    projectColor: Color,
+    isEditMode: Boolean,
+    onTitleClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val textDecoration = if (subTask.isFinished) TextDecoration.LineThrough else null
+    val contentAlpha = if (subTask.isFinished) 0.4f else 1f
+
+    Column(
+        modifier = modifier,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = ordinal,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
+                textDecoration = textDecoration,
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .then(
+                            if (isEditMode) {
+                                Modifier.clickable { onTitleClick() }
+                            } else {
+                                Modifier
+                            },
+                        ),
+                text = subTask.title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
+                textDecoration = textDecoration,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        if (!isEditMode) {
+            Text(
+                text = subTask.formattedDuration,
+                style = MaterialTheme.typography.bodyMedium,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                color =
+                    if (subTask.isTimerRunning) {
+                        projectColor
+                    } else {
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha)
+                    },
+                letterSpacing = (-0.5).sp,
+            )
         }
     }
 }
