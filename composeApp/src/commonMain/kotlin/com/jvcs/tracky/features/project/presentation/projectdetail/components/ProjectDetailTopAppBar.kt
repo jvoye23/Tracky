@@ -73,9 +73,6 @@ fun ProjectDetailTopAppBar(
                 }
             } else {
                 IconButton(
-                    modifier =
-                        Modifier
-                            .size(40.dp),
                     onClick = {
                         onAction(ProjectDetailAction.OnCloseAndCancelClick)
                     },
@@ -104,9 +101,6 @@ fun ProjectDetailTopAppBar(
                 }
             } else {
                 IconButton(
-                    modifier =
-                        Modifier
-                            .size(40.dp),
                     onClick = {
                         onAction(ProjectDetailAction.OnEditModeClick)
                     },

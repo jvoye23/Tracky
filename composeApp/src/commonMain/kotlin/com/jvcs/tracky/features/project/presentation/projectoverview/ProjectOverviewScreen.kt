@@ -241,9 +241,9 @@ fun ProjectOverviewScreenRoot(
 
 @Composable
 fun ProjectOverviewScreen(
-    modifier: Modifier = Modifier,
-    onAction: (ProjectOverviewAction) -> Unit,
     state: ProjectOverviewState,
+    onAction: (ProjectOverviewAction) -> Unit,
+    modifier: Modifier = Modifier,
     onNavigateToArchive: () -> Unit = {},
     onNavigateToTrash: () -> Unit = {},
     snackbarHostState: SnackbarHostState,

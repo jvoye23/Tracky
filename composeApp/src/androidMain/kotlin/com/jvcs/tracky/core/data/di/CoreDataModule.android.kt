@@ -18,6 +18,7 @@ import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.okhttp.OkHttp
 import okio.Path.Companion.toPath
 import org.koin.android.ext.koin.androidContext
+import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.bind
 import org.koin.dsl.module
 
@@ -25,7 +26,7 @@ actual val platformCoreDataModule =
     module {
         single { DatabaseFactory(androidContext()) }
         single { ConnectivityObserver(androidContext()) }
-        single { AppLifecycleObserver() }
+        singleOf(::AppLifecycleObserver)
 
         single { AndroidSyncScheduler(androidContext()) } bind SyncScheduler::class
         single { AndroidTrashCleanupScheduler(androidContext()) } bind TrashCleanupScheduler::class

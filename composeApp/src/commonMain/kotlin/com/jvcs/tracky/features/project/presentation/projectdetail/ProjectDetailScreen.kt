@@ -90,12 +90,15 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import tracky.composeapp.generated.resources.Res
+import tracky.composeapp.generated.resources.add_task
 import tracky.composeapp.generated.resources.daily_overview_title
 import tracky.composeapp.generated.resources.description
+import tracky.composeapp.generated.resources.edit
 import tracky.composeapp.generated.resources.last_active
 import tracky.composeapp.generated.resources.light_text_color
 import tracky.composeapp.generated.resources.ok
 import tracky.composeapp.generated.resources.project_duration
+import tracky.composeapp.generated.resources.save
 import tracky.composeapp.generated.resources.select_project_color
 import tracky.composeapp.generated.resources.start_date
 import tracky.composeapp.generated.resources.task_completed_count
@@ -313,7 +316,10 @@ fun ProjectDetailScreen(
                     }) {
                         Icon(
                             if (state.isEditMode) Icons.Default.Check else Icons.Default.Edit,
-                            contentDescription = "Action",
+                            contentDescription =
+                                stringResource(
+                                    if (state.isEditMode) Res.string.save else Res.string.edit,
+                                ),
                         )
                     }
                 },
@@ -662,8 +668,18 @@ private fun InfoGrid(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            InfoCard(Modifier.weight(1f), Icons.Outlined.DateRange, stringResource(Res.string.start_date), startDate)
-            InfoCard(Modifier.weight(1f), Icons.Outlined.History, stringResource(Res.string.last_active), lastActive)
+            InfoCard(
+                icon = Icons.Outlined.DateRange,
+                label = stringResource(Res.string.start_date),
+                value = startDate,
+                modifier = Modifier.weight(1f),
+            )
+            InfoCard(
+                icon = Icons.Outlined.History,
+                label = stringResource(Res.string.last_active),
+                value = lastActive,
+                modifier = Modifier.weight(1f),
+            )
         }
 
         Row(
@@ -774,7 +790,7 @@ private fun TasksHeader(
                     contentColor = addButtonContentColor,
                 ),
         ) {
-            Icon(Icons.Default.Add, contentDescription = "Add Task")
+            Icon(Icons.Default.Add, contentDescription = stringResource(Res.string.add_task))
         }
     }
 }

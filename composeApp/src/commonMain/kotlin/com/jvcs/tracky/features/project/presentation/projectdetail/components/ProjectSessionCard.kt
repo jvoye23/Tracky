@@ -25,6 +25,9 @@ import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
 import com.jvcs.tracky.features.project.presentation.projectdetail.ProjectDetailAction
 import com.jvcs.tracky.features.project.presentation.projectdetail.ProjectDetailState
+import org.jetbrains.compose.resources.stringResource
+import tracky.composeapp.generated.resources.Res
+import tracky.composeapp.generated.resources.delete_session
 
 @Composable
 fun ProjectSessionCard(
@@ -56,7 +59,7 @@ fun ProjectSessionCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete Session",
+                        contentDescription = stringResource(Res.string.delete_session),
                         tint = MaterialTheme.colorScheme.error,
                     )
                 }
@@ -109,7 +112,7 @@ fun ProjectSessionCard(
 
 @Preview
 @Composable
-fun ProjectSessionCardPreview() {
+private fun ProjectSessionCardPreview() {
     TrackyTheme {
         ProjectSessionCard(
             projectTaskUi =

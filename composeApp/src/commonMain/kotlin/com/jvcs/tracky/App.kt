@@ -4,8 +4,9 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation3.runtime.NavBackStack
+import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberNavBackStack
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.designsystem.util.ObserveAsEvents
@@ -15,11 +16,9 @@ import com.jvcs.tracky.navigation.DeepLinkListener
 import com.jvcs.tracky.navigation.NavigationRoot
 import com.jvcs.tracky.navigation.Route
 import com.jvcs.tracky.navigation.routeSavedStateConfiguration
-import kotlinx.coroutines.flow.Flow
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-@Preview
 fun App(
     isDarkTheme: Boolean = isSystemInDarkTheme(),
     onAuthenticationChecked: () -> Unit = {},
@@ -42,9 +41,30 @@ fun App(
         // the back stack to Login even when a valid session exists on disk.
 
         if (!state.isCheckingAuth) {
+            val startDestination =
+                if (state.isLoggedIn) {
+                    Route.ProjectRoute.ProjectOverview
+                } else {
+                    Route.AuthRoute.Login
+                }
+            val backStack =
+                rememberNavBackStack(
+                    configuration = routeSavedStateConfiguration,
+                    startDestination,
+                )
+
+            ObserveAsEvents(mainViewModel.events) { event ->
+                when (event) {
+                    is MainEvent.OnSessionExpired -> {
+                        backStack.removeAll { true }
+                        backStack.add(Route.AuthRoute.Login)
+                    }
+                }
+            }
+
             AppNavHost(
+                backStack = backStack,
                 isLoggedIn = state.isLoggedIn,
-                events = mainViewModel.events,
             )
 
             // Above the nav host, not inside a screen: the back stack is restored across process
@@ -62,29 +82,7 @@ fun App(
 }
 
 @Composable
-private fun AppNavHost(isLoggedIn: Boolean, events: Flow<MainEvent>) {
-    val startDestination =
-        if (isLoggedIn) {
-            Route.ProjectRoute.ProjectOverview
-        } else {
-            Route.AuthRoute.Login
-        }
-
-    val backStack =
-        rememberNavBackStack(
-            configuration = routeSavedStateConfiguration,
-            startDestination,
-        )
-
-    ObserveAsEvents(events) { event ->
-        when (event) {
-            is MainEvent.OnSessionExpired -> {
-                backStack.removeAll { true }
-                backStack.add(Route.AuthRoute.Login)
-            }
-        }
-    }
-
+private fun AppNavHost(backStack: NavBackStack<NavKey>, isLoggedIn: Boolean) {
     DeepLinkListener(backStack = backStack, isLoggedIn = isLoggedIn)
 
     NavigationRoot(

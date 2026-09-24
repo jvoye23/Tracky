@@ -279,7 +279,7 @@ private fun MetaInfoStackedItem(
 
 @Preview(showBackground = true)
 @Composable
-fun ProjectCardPreview() {
+private fun ProjectCardPreview() {
     TrackyTheme {
         Surface(
             modifier = Modifier.padding(16.dp),

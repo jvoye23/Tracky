@@ -18,6 +18,7 @@ import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.darwin.Darwin
 import kotlinx.cinterop.ExperimentalForeignApi
 import okio.Path.Companion.toPath
+import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.bind
 import org.koin.dsl.module
 import platform.Foundation.NSDocumentDirectory
@@ -27,9 +28,9 @@ import platform.Foundation.NSUserDomainMask
 @OptIn(ExperimentalForeignApi::class)
 actual val platformCoreDataModule =
     module {
-        single { DatabaseFactory() }
-        single { ConnectivityObserver() }
-        single { AppLifecycleObserver() }
+        singleOf(::DatabaseFactory)
+        singleOf(::ConnectivityObserver)
+        singleOf(::AppLifecycleObserver)
 
         single { IosSyncScheduler() } bind SyncScheduler::class
         single { IosTrashCleanupScheduler() } bind TrashCleanupScheduler::class

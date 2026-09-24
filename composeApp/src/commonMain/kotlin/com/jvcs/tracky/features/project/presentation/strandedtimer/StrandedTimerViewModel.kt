@@ -3,6 +3,8 @@ package com.jvcs.tracky.features.project.presentation.strandedtimer
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jvcs.tracky.core.domain.util.DataError
+import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.features.project.domain.timer.StrandedTimer
 import com.jvcs.tracky.features.project.domain.timer.StrandedTimerRepository
@@ -108,7 +110,7 @@ class StrandedTimerViewModel(private val strandedTimerRepository: StrandedTimerR
         }
     }
 
-    private fun resolve(block: suspend (StrandedTimer) -> Result<Unit, com.jvcs.tracky.core.domain.util.DataError>) {
+    private fun resolve(block: suspend (StrandedTimer) -> EmptyResult<DataError>) {
         val timer = _state.value.current ?: return
         if (_state.value.isResolving) return
 

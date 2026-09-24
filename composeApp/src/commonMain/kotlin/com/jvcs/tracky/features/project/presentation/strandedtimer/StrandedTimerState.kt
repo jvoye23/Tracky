@@ -1,6 +1,7 @@
 package com.jvcs.tracky.features.project.presentation.strandedtimer
 
 import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.runtime.Stable
 import com.jvcs.tracky.features.project.domain.timer.StrandedTimer
 
 /**
@@ -9,6 +10,7 @@ import com.jvcs.tracky.features.project.domain.timer.StrandedTimer
  * One at a time rather than a combined prompt: several timers can be parked at once — different
  * tasks, different launches — and collapsing them would hide all but the first.
  */
+@Stable
 data class StrandedTimerState(
     val pending: List<StrandedTimer> = emptyList(),
     val isEditingDuration: Boolean = false,

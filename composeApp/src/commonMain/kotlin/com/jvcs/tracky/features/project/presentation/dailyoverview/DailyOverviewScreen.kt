@@ -138,16 +138,16 @@ private fun DailyOverviewScreen(
                 item(key = "month-summary") {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         InfoCard(
-                            Modifier.weight(1f),
-                            Icons.Outlined.LocalFireDepartment,
-                            stringResource(Res.string.calendar_busiest_day_label),
-                            month.busiestDayLabel ?: stringResource(Res.string.calendar_no_value),
+                            icon = Icons.Outlined.LocalFireDepartment,
+                            label = stringResource(Res.string.calendar_busiest_day_label),
+                            value = month.busiestDayLabel ?: stringResource(Res.string.calendar_no_value),
+                            modifier = Modifier.weight(1f),
                         )
                         InfoCard(
-                            Modifier.weight(1f),
-                            Icons.Outlined.Schedule,
-                            stringResource(Res.string.calendar_month_total_label),
-                            month.monthTotalLabel ?: stringResource(Res.string.calendar_no_value),
+                            icon = Icons.Outlined.Schedule,
+                            label = stringResource(Res.string.calendar_month_total_label),
+                            value = month.monthTotalLabel ?: stringResource(Res.string.calendar_no_value),
+                            modifier = Modifier.weight(1f),
                         )
                     }
                 }

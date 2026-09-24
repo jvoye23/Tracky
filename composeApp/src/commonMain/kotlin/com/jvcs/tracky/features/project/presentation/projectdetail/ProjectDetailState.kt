@@ -1,10 +1,12 @@
 package com.jvcs.tracky.features.project.presentation.projectdetail
 
 import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.runtime.Stable
 import androidx.compose.ui.graphics.Color
 import com.jvcs.tracky.features.project.presentation.models.PerDayStripUi
 import com.jvcs.tracky.features.project.presentation.models.ProjectUi
 
+@Stable
 data class ProjectDetailState(
     val project: ProjectUi? = null,
     val isEditMode: Boolean = false,

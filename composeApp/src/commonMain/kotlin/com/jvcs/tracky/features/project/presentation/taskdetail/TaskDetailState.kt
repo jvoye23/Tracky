@@ -1,9 +1,11 @@
 package com.jvcs.tracky.features.project.presentation.taskdetail
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
 import com.jvcs.tracky.features.project.presentation.taskdetail.model.DailyStatistic
 
+@Immutable
 data class TaskDetailState(
     val task: ProjectTaskUi? = null,
     val isLoading: Boolean = false,
