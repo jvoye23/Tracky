@@ -23,7 +23,7 @@ class DataStoreSessionStorage(private val dataStore: DataStore<Preferences>) : S
             preferences[authInfoKey]?.let {
                 try {
                     json.decodeFromString<AuthInfoSerializable>(it).toDomain()
-                } catch (exception: Exception) {
+                } catch (exception: IllegalArgumentException) {
                     null
                 }
             }

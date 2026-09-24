@@ -1,11 +1,13 @@
 package com.jvcs.tracky.core.data.sync
 
 import android.content.Context
+import androidx.sqlite.SQLiteException
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.jvcs.tracky.core.domain.sync.TrashRetention
 import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
+import kotlinx.io.IOException
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import kotlin.coroutines.cancellation.CancellationException
@@ -26,9 +28,9 @@ class TrashCleanupWorker(context: Context, params: WorkerParameters) :
         try {
             projectRepository.purgeExpiredTrashedProjects(TrashRetention.cutoff(timeProvider.nowInstant))
             Result.success()
-        } catch (exception: CancellationException) {
-            throw exception
-        } catch (exception: Exception) {
+        } catch (exception: SQLiteException) {
+            if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()
+        } catch (exception: IOException) {
             if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()
         }
 

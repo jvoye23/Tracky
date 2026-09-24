@@ -82,8 +82,14 @@ class SafeCallTest {
     }
 
     @Test
-    fun unrecognisedFailure_staysUnknown() {
-        assertThat(classify(IllegalStateException("boom"))).isEqualTo(Result.Error(DataError.Remote.UNKNOWN))
+    fun unrecognisedIoFailure_staysUnknown() {
+        assertThat(classify(java.io.IOException("stream reset"))).isEqualTo(Result.Error(DataError.Remote.UNKNOWN))
+    }
+
+    @Test
+    fun nonTransportFailure_propagates_ratherThanBecomingAnError() {
+        // Only transport failures are the network's to report. A programming error surfaces.
+        assertFailure { classify(IllegalStateException("boom")) }.isInstanceOf<IllegalStateException>()
     }
 
     @Test
