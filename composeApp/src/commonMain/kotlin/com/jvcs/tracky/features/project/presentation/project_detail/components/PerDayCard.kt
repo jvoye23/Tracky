@@ -290,14 +290,17 @@ private fun LegendSwatch(color: Color) {
 private val PreviewProjectColor = Color(0xFFF39B19)
 private val PreviewAlternateProjectColor = Color(0xFF3E8E8A)
 
+@Suppress("MagicNumber") // preview fixture: sample data is meant to be literal
 private fun minutes(value: Long): Long = value * 60_000L
 
+@Suppress("MagicNumber") // preview fixture: sample data is meant to be literal
 private fun seconds(value: Long): Long = value * 1_000L
 
 /**
  * A full strip: the ten most recent active days, drawn from the design reference. The dates skip
  * 26.8, 28.8, 29.8, 31.8, 3.9 and 4.9 the way the mapper does — an untracked day takes no tile.
  */
+@Suppress("MagicNumber") // preview fixture: sample data is meant to be literal
 private fun referenceDays(): List<PerDayUi> =
     listOf(
         PerDayUi("Mon", "24.8", "00:52:12", minutes(52) + seconds(12)),
@@ -313,6 +316,7 @@ private fun referenceDays(): List<PerDayUi> =
     )
 
 /** The first day a project banks time: one tile, which is also the busiest. */
+@Suppress("MagicNumber") // preview fixture: sample data is meant to be literal
 private fun singleTrackedDay(): List<PerDayUi> =
     listOf(
         PerDayUi("Wed", "09.9", "00:07:18", minutes(7) + seconds(18)),

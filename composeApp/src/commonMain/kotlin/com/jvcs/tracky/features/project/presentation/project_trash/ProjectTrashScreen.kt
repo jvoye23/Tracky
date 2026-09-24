@@ -277,6 +277,7 @@ fun ProjectTrashScreen(
     }
 }
 
+@Suppress("MagicNumber") // preview fixture: sample data is meant to be literal
 private fun previewTrashedProjects(): List<ProjectUi> =
     listOf(
         ProjectUi(
