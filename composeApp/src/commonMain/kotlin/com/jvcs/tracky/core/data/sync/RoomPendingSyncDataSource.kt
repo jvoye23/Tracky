@@ -1,6 +1,7 @@
 package com.jvcs.tracky.core.data.sync
 
 import androidx.sqlite.SQLiteException
+import co.touchlab.kermit.Logger
 import com.jvcs.tracky.core.database.dao.PendingSyncDao
 import com.jvcs.tracky.core.database.entity.PendingSyncEntity
 import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource
@@ -66,6 +67,7 @@ class RoomPendingSyncDataSource(private val pendingSyncDao: PendingSyncDao) : Pe
         try {
             Result.Success(block())
         } catch (exception: SQLiteException) {
+            Logger.withTag("RoomPendingSyncDataSource").e(exception) { "dbRead failed (SQLiteException)" }
             Result.Error(DataError.Local.UNKNOWN)
         }
 }

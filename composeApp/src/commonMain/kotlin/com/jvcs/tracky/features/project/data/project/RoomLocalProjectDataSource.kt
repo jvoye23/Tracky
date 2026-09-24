@@ -1,6 +1,7 @@
 package com.jvcs.tracky.features.project.data.project
 
 import androidx.sqlite.SQLiteException
+import co.touchlab.kermit.Logger
 import com.jvcs.tracky.core.database.dao.ProjectDao
 import com.jvcs.tracky.core.domain.sync.SyncChanges
 import com.jvcs.tracky.core.domain.sync.Tombstone
@@ -176,6 +177,7 @@ class RoomLocalProjectDataSource(private val projectDao: ProjectDao) : LocalProj
         try {
             Result.Success(block())
         } catch (exception: SQLiteException) {
+            Logger.withTag("RoomLocalProjectDataSource").e(exception) { "read failed (SQLiteException)" }
             Result.Error(DataError.Local.UNKNOWN)
         }
 
@@ -189,6 +191,7 @@ class RoomLocalProjectDataSource(private val projectDao: ProjectDao) : LocalProj
             withContext(dbWriteDispatcher) { block() }
             Result.Success(Unit)
         } catch (exception: SQLiteException) {
+            Logger.withTag("RoomLocalProjectDataSource").e(exception) { "write failed (SQLiteException)" }
             Result.Error(DataError.Local.DISK_FULL)
         }
 }

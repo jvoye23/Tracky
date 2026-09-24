@@ -1,5 +1,6 @@
 package com.jvcs.tracky.core.data.networking
 
+import co.touchlab.kermit.Logger
 import io.ktor.http.URLBuilder
 import io.ktor.http.URLProtocol
 import io.ktor.http.path
@@ -33,6 +34,10 @@ internal fun realtimeUrl(baseUrl: String, path: String = REALTIME_PATH): String?
                 path(path)
             }.buildString()
     } catch (exception: IllegalArgumentException) {
+        Logger
+            .withTag(
+                "RealtimeUrl",
+            ).w(exception) { "realtimeUrl: ignored unreadable input (IllegalArgumentException)" }
         null
     }
 }

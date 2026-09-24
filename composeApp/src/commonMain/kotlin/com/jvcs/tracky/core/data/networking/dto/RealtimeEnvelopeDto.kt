@@ -2,6 +2,7 @@
 
 package com.jvcs.tracky.core.data.networking.dto
 
+import co.touchlab.kermit.Logger
 import com.jvcs.tracky.core.domain.realtime.RealtimeEvent
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -55,8 +56,16 @@ class RealtimeEnvelopeParser(private val json: Json) {
                 else -> RealtimeEvent.Unknown(type)
             }
         } catch (exception: SerializationException) {
+            Logger
+                .withTag(
+                    "RealtimeEnvelopeDto",
+                ).w(exception) { "parse: ignored unreadable input (SerializationException)" }
             null
         } catch (exception: IllegalArgumentException) {
+            Logger
+                .withTag(
+                    "RealtimeEnvelopeDto",
+                ).w(exception) { "parse: ignored unreadable input (IllegalArgumentException)" }
             // jsonObject / jsonPrimitive throw this when the frame is well-formed JSON of the wrong
             // shape — a bare array, say. Same answer: ignore the frame, keep the connection.
             null
