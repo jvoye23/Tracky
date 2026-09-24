@@ -4,6 +4,7 @@ import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
 import com.jvcs.tracky.core.domain.sync.SyncOutcome
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
+import com.jvcs.tracky.core.domain.sync.pushQueuedRow
 import com.jvcs.tracky.core.domain.sync.toSyncOutcome
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
@@ -197,46 +198,49 @@ class OfflineFirstIntervalRepository(
             }
     }
 
-    private suspend fun runIntervalOperation(op: PendingSyncOperation): SyncOutcome {
-        return when (op.operationType) {
+    private suspend fun runIntervalOperation(op: PendingSyncOperation): SyncOutcome =
+        when (op.operationType) {
             PendingSyncOperation.OP_CREATE, PendingSyncOperation.OP_UPDATE -> {
-                val interval =
-                    when (val result = localIntervalDataSource.getIntervalById(op.entityId)) {
-                        is Result.Success -> result.data ?: return SyncOutcome.DROP
-
-                        // deleted meanwhile
-                        is Result.Error -> return SyncOutcome.RETRY
-                    }
-                // The task drain runs before this one, so a still-pending CREATE means that push
-                // failed too. Stay queued rather than burning a request that cannot succeed.
-                if (pendingSyncDataSource.hasPendingCreate(interval.parentTaskId).getOrDefault(false)) {
-                    return SyncOutcome.RETRY
-                }
-                val result =
-                    if (op.operationType == PendingSyncOperation.OP_CREATE) {
-                        remoteIntervalDataSource.postInterval(interval)
-                    } else {
-                        remoteIntervalDataSource.updateInterval(interval)
-                    }
-                result.toSyncOutcome(
-                    onSuccess = { localIntervalDataSource.upsertTaskInterval(it) },
-                    onConflict = { resolveIntervalConflict(interval) },
-                )
+                localIntervalDataSource.getIntervalById(op.entityId).pushQueuedRow { pushInterval(op, it) }
             }
 
             PendingSyncOperation.OP_DELETE -> {
-                val taskId = op.parentEntityId ?: return SyncOutcome.DROP
-                if (pendingSyncDataSource.hasPendingCreate(taskId).getOrDefault(false)) {
-                    return SyncOutcome.RETRY
-                }
-                val projectId = parentProjectIdOf(taskId) ?: return SyncOutcome.DROP
-                remoteIntervalDataSource.deleteInterval(projectId, taskId, op.entityId).toSyncOutcome()
+                deleteRemoteInterval(op)
             }
 
             else -> {
                 SyncOutcome.DROP
             }
         }
+
+    private suspend fun pushInterval(op: PendingSyncOperation, interval: TaskInterval): SyncOutcome {
+        // The task drain runs before this one, so a still-pending CREATE means that push
+        // failed too. Stay queued rather than burning a request that cannot succeed.
+        if (pendingSyncDataSource.hasPendingCreate(interval.parentTaskId).getOrDefault(false)) {
+            return SyncOutcome.RETRY
+        }
+        val result =
+            if (op.operationType == PendingSyncOperation.OP_CREATE) {
+                remoteIntervalDataSource.postInterval(interval)
+            } else {
+                remoteIntervalDataSource.updateInterval(interval)
+            }
+        return result.toSyncOutcome(
+            onSuccess = { localIntervalDataSource.upsertTaskInterval(it) },
+            onConflict = { resolveIntervalConflict(interval) },
+        )
+    }
+
+    private suspend fun deleteRemoteInterval(op: PendingSyncOperation): SyncOutcome {
+        val taskId = op.parentEntityId ?: return SyncOutcome.DROP
+        if (pendingSyncDataSource.hasPendingCreate(taskId).getOrDefault(false)) {
+            return SyncOutcome.RETRY
+        }
+        return parentProjectIdOf(taskId)
+            ?.let { projectId ->
+                remoteIntervalDataSource.deleteInterval(projectId, taskId, op.entityId).toSyncOutcome()
+            }
+            ?: SyncOutcome.DROP
     }
 
     /**
