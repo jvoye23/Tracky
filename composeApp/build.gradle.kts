@@ -139,6 +139,12 @@ kotlin {
             // itself — a 204 that means "nothing is running", a 409 that carries an answer.
             implementation(libs.ktor.client.mock)
         }
+        jvmTest.dependencies {
+            // JUnit Platform (JUnit 6) runs the JVM tests; kotlin.test's annotations map onto it.
+            implementation(libs.kotlin.test.junit5)
+            implementation(project.dependencies.platform(libs.junit.bom))
+            runtimeOnly(libs.junit.platform.launcher)
+        }
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutines.swing)
@@ -155,6 +161,10 @@ kotlin {
 // above.
 configurations.configureEach {
     exclude(group = "org.jetbrains.androidx.navigationevent", module = "navigationevent-compose")
+}
+
+tasks.named<Test>("jvmTest") {
+    useJUnitPlatform()
 }
 
 room {
