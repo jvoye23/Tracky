@@ -2,6 +2,9 @@ package com.jvcs.tracky.features.project.data.project
 
 import androidx.sqlite.SQLiteException
 import co.touchlab.kermit.Logger
+import com.jvcs.tracky.core.database.ServerTombstones
+import com.jvcs.tracky.core.database.ServerTreeRows
+import com.jvcs.tracky.core.database.ServerTreeWriter
 import com.jvcs.tracky.core.database.dao.ProjectDao
 import com.jvcs.tracky.core.domain.sync.SyncChanges
 import com.jvcs.tracky.core.domain.sync.Tombstone
@@ -26,7 +29,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlin.time.Instant
 
-class RoomLocalProjectDataSource(private val projectDao: ProjectDao) : LocalProjectDataSource {
+class RoomLocalProjectDataSource(private val projectDao: ProjectDao, private val serverTreeWriter: ServerTreeWriter) :
+    LocalProjectDataSource {
 
     private val dbWriteDispatcher = platformIoDispatcher.limitedParallelism(1)
 
@@ -102,7 +106,7 @@ class RoomLocalProjectDataSource(private val projectDao: ProjectDao) : LocalProj
         write {
             val tasks = projects.flatMap { it.projectTasks.orEmpty() }
             val subTasks = tasks.flatMap { task -> task.subTasks.orEmpty() }
-            projectDao.upsertServerTree(
+            serverTreeWriter.upsertServerTree(
                 projects = projects.map { it.toProjectEntity() },
                 tasks = tasks.map { it.toProjectTaskEntity() },
                 intervals =
@@ -122,17 +126,23 @@ class RoomLocalProjectDataSource(private val projectDao: ProjectDao) : LocalProj
             // The feed is flat, unlike GET /api/projects, so there is nothing to walk down — but the
             // tombstones have to be split by level, because each one names a different table.
             val deletions = changes.tombstones.groupBy({ it.entityType }, { it.entityId })
-            projectDao.applyDelta(
-                projects = changes.projects.map { it.toProjectEntity() },
-                tasks = changes.tasks.map { it.toProjectTaskEntity() },
-                intervals = changes.taskIntervals.map { it.toTaskIntervalEntity() },
-                subTasks = changes.subTasks.map { it.toProjectSubTaskEntity() },
-                subTaskIntervals = changes.subTaskIntervals.map { it.toSubTaskIntervalEntity() },
-                deletedProjectIds = deletions[Tombstone.PROJECT].orEmpty(),
-                deletedTaskIds = deletions[Tombstone.TASK].orEmpty(),
-                deletedIntervalIds = deletions[Tombstone.TASK_INTERVAL].orEmpty(),
-                deletedSubTaskIds = deletions[Tombstone.SUB_TASK].orEmpty(),
-                deletedSubTaskIntervalIds = deletions[Tombstone.SUB_TASK_INTERVAL].orEmpty(),
+            serverTreeWriter.applyDelta(
+                upserts =
+                    ServerTreeRows(
+                        projects = changes.projects.map { it.toProjectEntity() },
+                        tasks = changes.tasks.map { it.toProjectTaskEntity() },
+                        intervals = changes.taskIntervals.map { it.toTaskIntervalEntity() },
+                        subTasks = changes.subTasks.map { it.toProjectSubTaskEntity() },
+                        subTaskIntervals = changes.subTaskIntervals.map { it.toSubTaskIntervalEntity() },
+                    ),
+                deletions =
+                    ServerTombstones(
+                        projectIds = deletions[Tombstone.PROJECT].orEmpty(),
+                        taskIds = deletions[Tombstone.TASK].orEmpty(),
+                        intervalIds = deletions[Tombstone.TASK_INTERVAL].orEmpty(),
+                        subTaskIds = deletions[Tombstone.SUB_TASK].orEmpty(),
+                        subTaskIntervalIds = deletions[Tombstone.SUB_TASK_INTERVAL].orEmpty(),
+                    ),
             )
             // These are the *wire's* names, not the outbox's — see Tombstone's companion, which is
             // where they used to come from and where two of the five were wrong.
@@ -152,7 +162,7 @@ class RoomLocalProjectDataSource(private val projectDao: ProjectDao) : LocalProj
         write {
             // upsertServerTree, not applyDelta: an echo names rows the server changed, never rows it
             // removed, and that method is the one that promises never to delete.
-            projectDao.upsertServerTree(
+            serverTreeWriter.upsertServerTree(
                 projects = emptyList(),
                 tasks = emptyList(),
                 intervals = taskIntervals.map { it.toTaskIntervalEntity() },

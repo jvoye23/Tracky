@@ -89,7 +89,7 @@ fun ProjectSubTaskDto.toProjectSubTask(parentProjectId: String): ProjectSubTask 
  * the happy path of a push writes the server's echo straight back to Room, and a defaulted `false`
  * would quietly break "stopping this subtask also stops its parent task". A push passes the value
  * off the row it sent; a pull has no way to know it and passes `false`, which the merge in
- * ProjectDao.upsertServerTree then overrides with whatever the local row already held.
+ * ServerTreeWriter.upsertServerTree then overrides with whatever the local row already held.
  *
  * [startedByDeviceId] is a parameter for the same reason and behaves the same way: which device
  * opened an interval is not on the wire, so a push passes the value off the row it sent and a pull

@@ -17,6 +17,7 @@ import com.jvcs.tracky.core.data.sync.SyncCoordinator
 import com.jvcs.tracky.core.data.timer.KtorRemoteActiveTimerDataSource
 import com.jvcs.tracky.core.data.timer.OfflineFirstActiveTimerRepository
 import com.jvcs.tracky.core.database.DatabaseFactory
+import com.jvcs.tracky.core.database.ServerTreeWriter
 import com.jvcs.tracky.core.database.TrackyDatabase
 import com.jvcs.tracky.core.domain.auth.AuthService
 import com.jvcs.tracky.core.domain.auth.SessionStorage
@@ -99,6 +100,7 @@ val coreDataModule =
 
         single { get<TrackyDatabase>().projectDao }
         single { get<TrackyDatabase>().pendingSyncDao }
+        singleOf(::ServerTreeWriter)
 
         singleOf(::RoomPendingSyncDataSource) bind PendingSyncDataSource::class
 

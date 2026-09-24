@@ -1,4 +1,4 @@
-package com.jvcs.tracky.core.database.dao
+package com.jvcs.tracky.core.database
 
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
@@ -6,7 +6,7 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import com.jvcs.tracky.core.database.TrackyDatabase
+import com.jvcs.tracky.core.database.dao.ProjectDao
 import com.jvcs.tracky.core.database.entity.PendingSyncEntity
 import com.jvcs.tracky.core.database.entity.ProjectEntity
 import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
@@ -18,16 +18,17 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 
 /**
- * Exercises [ProjectDao.applyDelta] — specifically the deletions, which are the first thing in
+ * Exercises [ServerTreeWriter.applyDelta] — specifically the deletions, which are the first thing in
  * this codebase that lets a pull remove local data.
  *
  * `upsertServerTree` promises never to delete, because in a full-tree pull an absent row is
  * ambiguous. A tombstone is not ambiguous. The line between the two is what these tests hold.
  */
-class ProjectDaoApplyDeltaTest {
+class ServerTreeWriterApplyDeltaTest {
 
     private lateinit var db: TrackyDatabase
     private lateinit var dao: ProjectDao
+    private lateinit var writer: ServerTreeWriter
 
     @BeforeTest
     fun setUp() {
@@ -38,6 +39,7 @@ class ProjectDaoApplyDeltaTest {
                 .setQueryCoroutineContext(Dispatchers.IO)
                 .build()
         dao = db.projectDao
+        writer = ServerTreeWriter(db)
     }
 
     @AfterTest
@@ -107,17 +109,9 @@ class ProjectDaoApplyDeltaTest {
         projects: List<String> = emptyList(),
         tasks: List<String> = emptyList(),
         intervals: List<String> = emptyList(),
-    ) = dao.applyDelta(
-        projects = emptyList(),
-        tasks = emptyList(),
-        intervals = emptyList(),
-        subTasks = emptyList(),
-        subTaskIntervals = emptyList(),
-        deletedProjectIds = projects,
-        deletedTaskIds = tasks,
-        deletedIntervalIds = intervals,
-        deletedSubTaskIds = emptyList(),
-        deletedSubTaskIntervalIds = emptyList(),
+    ) = writer.applyDelta(
+        upserts = ServerTreeRows(),
+        deletions = ServerTombstones(projectIds = projects, taskIds = tasks, intervalIds = intervals),
     )
 
     @Test
@@ -195,17 +189,9 @@ class ProjectDaoApplyDeltaTest {
         runBlocking {
             seedTree()
 
-            dao.applyDelta(
-                projects = listOf(projectEntity("p2")),
-                tasks = emptyList(),
-                intervals = emptyList(),
-                subTasks = emptyList(),
-                subTaskIntervals = emptyList(),
-                deletedProjectIds = listOf("p1"),
-                deletedTaskIds = emptyList(),
-                deletedIntervalIds = emptyList(),
-                deletedSubTaskIds = emptyList(),
-                deletedSubTaskIntervalIds = emptyList(),
+            writer.applyDelta(
+                upserts = ServerTreeRows(projects = listOf(projectEntity("p2"))),
+                deletions = ServerTombstones(projectIds = listOf("p1")),
             )
 
             assertThat(dao.getProjectById("p2")).isNotNull()
