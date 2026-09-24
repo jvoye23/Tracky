@@ -2,6 +2,10 @@ package com.jvcs.tracky.features.project.presentation.timer_permission
 
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.domain.notification.TimerNotificationPermission
 import com.jvcs.tracky.core.domain.notification.TimerNotificationPermissionRequester
 import com.jvcs.tracky.features.project.domain.timer.ProjectRef
@@ -20,9 +24,6 @@ import kotlinx.coroutines.test.setMain
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
 
@@ -79,7 +80,7 @@ internal class TimerNotificationPermissionViewModelTest {
         runTest(UnconfinedTestDispatcher()) {
             subscribeToState()
 
-            assertEquals(0, requester.requestCount)
+            assertThat(requester.requestCount).isEqualTo(0)
         }
 
     @Test
@@ -89,7 +90,7 @@ internal class TimerNotificationPermissionViewModelTest {
 
             runningTimer.value = timer
 
-            assertEquals(1, requester.requestCount)
+            assertThat(requester.requestCount).isEqualTo(1)
         }
 
     @Test
@@ -98,7 +99,7 @@ internal class TimerNotificationPermissionViewModelTest {
             requester.answer = TimerNotificationPermission.Granted
 
             viewModel.state.test {
-                assertFalse(awaitItem().showDeniedDialog)
+                assertThat(awaitItem().showDeniedDialog).isFalse()
                 runningTimer.value = timer
                 expectNoEvents()
             }
@@ -111,7 +112,7 @@ internal class TimerNotificationPermissionViewModelTest {
             requester.answer = TimerNotificationPermission.NotRequired
 
             viewModel.state.test {
-                assertFalse(awaitItem().showDeniedDialog)
+                assertThat(awaitItem().showDeniedDialog).isFalse()
                 runningTimer.value = timer
                 expectNoEvents()
             }
@@ -123,9 +124,9 @@ internal class TimerNotificationPermissionViewModelTest {
             requester.answer = TimerNotificationPermission.Denied
 
             viewModel.state.test {
-                assertFalse(awaitItem().showDeniedDialog)
+                assertThat(awaitItem().showDeniedDialog).isFalse()
                 runningTimer.value = timer
-                assertTrue(awaitItem().showDeniedDialog)
+                assertThat(awaitItem().showDeniedDialog).isTrue()
             }
         }
 
@@ -135,9 +136,9 @@ internal class TimerNotificationPermissionViewModelTest {
             requester.answer = TimerNotificationPermission.DeniedAlways
 
             viewModel.state.test {
-                assertFalse(awaitItem().showDeniedDialog)
+                assertThat(awaitItem().showDeniedDialog).isFalse()
                 runningTimer.value = timer
-                assertTrue(awaitItem().showDeniedDialog)
+                assertThat(awaitItem().showDeniedDialog).isTrue()
             }
         }
 
@@ -150,7 +151,7 @@ internal class TimerNotificationPermissionViewModelTest {
             runningTimer.value = null
             runningTimer.value = timer
 
-            assertEquals(1, requester.requestCount)
+            assertThat(requester.requestCount).isEqualTo(1)
         }
 
     @Test
@@ -158,14 +159,14 @@ internal class TimerNotificationPermissionViewModelTest {
         runTest(UnconfinedTestDispatcher()) {
             subscribeToState()
             runningTimer.value = timer
-            assertEquals(1, requester.requestCount)
+            assertThat(requester.requestCount).isEqualTo(1)
 
             // Same SavedStateHandle, new ViewModel: what Android hands back after process death with a
             // timer still running. A plain field would ask a second time here.
             viewModel = buildViewModel()
             subscribeToState()
 
-            assertEquals(1, requester.requestCount)
+            assertThat(requester.requestCount).isEqualTo(1)
         }
 
     @Test
@@ -177,8 +178,8 @@ internal class TimerNotificationPermissionViewModelTest {
 
             viewModel.onAction(TimerNotificationPermissionAction.OnConfirm)
 
-            assertFalse(viewModel.state.value.showDeniedDialog)
-            assertEquals(0, requester.openAppSettingsCount)
+            assertThat(viewModel.state.value.showDeniedDialog).isFalse()
+            assertThat(requester.openAppSettingsCount).isEqualTo(0)
         }
 
     @Test
@@ -190,8 +191,8 @@ internal class TimerNotificationPermissionViewModelTest {
 
             viewModel.onAction(TimerNotificationPermissionAction.OnOpenAppSettings)
 
-            assertEquals(1, requester.openAppSettingsCount)
-            assertFalse(viewModel.state.value.showDeniedDialog)
+            assertThat(requester.openAppSettingsCount).isEqualTo(1)
+            assertThat(viewModel.state.value.showDeniedDialog).isFalse()
         }
 
     private class FakeRequester : TimerNotificationPermissionRequester {

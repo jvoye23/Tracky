@@ -5,6 +5,11 @@ package com.jvcs.tracky.features.project.presentation.edit_text
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.lifecycle.SavedStateHandle
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
@@ -33,10 +38,6 @@ import kotlinx.datetime.LocalDateTime
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
@@ -72,16 +73,14 @@ class EditTextViewModelTest {
                 )
             val vm = viewModel(savedStateHandle = handle)
 
-            assertEquals(
-                "Draft title",
+            assertThat(
                 vm.state.value.titleState.text
                     .toString(),
-            )
-            assertEquals(
-                "Draft description",
+            ).isEqualTo("Draft title")
+            assertThat(
                 vm.state.value.descriptionState.text
                     .toString(),
-            )
+            ).isEqualTo("Draft description")
         }
 
     @Test
@@ -89,16 +88,14 @@ class EditTextViewModelTest {
         runTest {
             val vm = viewModel()
 
-            assertEquals(
-                STORED_TITLE,
+            assertThat(
                 vm.state.value.titleState.text
                     .toString(),
-            )
-            assertEquals(
-                STORED_DESCRIPTION,
+            ).isEqualTo(STORED_TITLE)
+            assertThat(
                 vm.state.value.descriptionState.text
                     .toString(),
-            )
+            ).isEqualTo(STORED_DESCRIPTION)
         }
 
     @Test
@@ -116,8 +113,8 @@ class EditTextViewModelTest {
             Snapshot.sendApplyNotifications()
             advanceUntilIdle()
 
-            assertEquals("Edited title", handle.get<String>(EditTextViewModel.KEY_TITLE))
-            assertEquals("Edited description", handle.get<String>(EditTextViewModel.KEY_DESCRIPTION))
+            assertThat(handle.get<String>(EditTextViewModel.KEY_TITLE)).isEqualTo("Edited title")
+            assertThat(handle.get<String>(EditTextViewModel.KEY_DESCRIPTION)).isEqualTo("Edited description")
         }
 
     @Test
@@ -128,12 +125,12 @@ class EditTextViewModelTest {
 
             vm.onAction(EditTextAction.OnEditClick)
             advanceUntilIdle()
-            assertEquals(true, handle.get<Boolean>(EditTextViewModel.KEY_IS_EDIT_MODE))
-            assertTrue(vm.state.value.isEditMode)
+            assertThat(handle.get<Boolean>(EditTextViewModel.KEY_IS_EDIT_MODE)).isEqualTo(true)
+            assertThat(vm.state.value.isEditMode).isTrue()
 
             vm.onAction(EditTextAction.OnSaveClick)
             advanceUntilIdle()
-            assertEquals(false, handle.get<Boolean>(EditTextViewModel.KEY_IS_EDIT_MODE))
+            assertThat(handle.get<Boolean>(EditTextViewModel.KEY_IS_EDIT_MODE)).isEqualTo(false)
         }
 
     @Test
@@ -152,9 +149,9 @@ class EditTextViewModelTest {
             advanceUntilIdle()
 
             val saved = repository.upserted.single()
-            assertEquals("Renamed", saved.title)
-            assertEquals(3L, saved.sortIndex)
-            assertTrue(saved.isPinned)
+            assertThat(saved.title).isEqualTo("Renamed")
+            assertThat(saved.sortIndex).isEqualTo(3L)
+            assertThat(saved.isPinned).isTrue()
         }
 
     @Test
@@ -168,16 +165,14 @@ class EditTextViewModelTest {
                     isEditMode = true,
                     taskRepository = tasks,
                 )
-            assertEquals(
-                "Stored task",
+            assertThat(
                 vm.state.value.titleState.text
                     .toString(),
-            )
-            assertEquals(
-                "Stored task description",
+            ).isEqualTo("Stored task")
+            assertThat(
                 vm.state.value.descriptionState.text
                     .toString(),
-            )
+            ).isEqualTo("Stored task description")
 
             vm.state.value.titleState
                 .setTextAndPlaceCursorAtEnd("Renamed task")
@@ -186,11 +181,10 @@ class EditTextViewModelTest {
             vm.onAction(EditTextAction.OnSaveClick)
             advanceUntilIdle()
 
-            assertEquals(
-                listOf(Triple<String, String, String?>(TASK_ID, "Renamed task", "New description")),
+            assertThat(
                 tasks.textUpdates,
-            )
-            assertFalse(vm.state.value.isEditMode)
+            ).isEqualTo(listOf(Triple<String, String, String?>(TASK_ID, "Renamed task", "New description")))
+            assertThat(vm.state.value.isEditMode).isFalse()
         }
 
     @Test
@@ -205,16 +199,14 @@ class EditTextViewModelTest {
                     isEditMode = true,
                     subTaskRepository = subTasks,
                 )
-            assertEquals(
-                "Stored subtask",
+            assertThat(
                 vm.state.value.titleState.text
                     .toString(),
-            )
-            assertEquals(
-                "Stored subtask description",
+            ).isEqualTo("Stored subtask")
+            assertThat(
                 vm.state.value.descriptionState.text
                     .toString(),
-            )
+            ).isEqualTo("Stored subtask description")
 
             vm.state.value.titleState
                 .setTextAndPlaceCursorAtEnd("Renamed subtask")
@@ -224,11 +216,11 @@ class EditTextViewModelTest {
             advanceUntilIdle()
 
             val saved = subTasks.upserted.single()
-            assertEquals("Renamed subtask", saved.title)
-            assertNull(saved.description, "a cleared description is stored as none")
+            assertThat(saved.title).isEqualTo("Renamed subtask")
+            assertThat(saved.description, name = "a cleared description is stored as none").isNull()
             // Everything else comes from the stored row.
-            assertEquals(1_000L, saved.durationMillis)
-            assertEquals(2L, saved.sortIndex)
+            assertThat(saved.durationMillis).isEqualTo(1_000L)
+            assertThat(saved.sortIndex).isEqualTo(2L)
         }
 
     @Test
@@ -244,18 +236,17 @@ class EditTextViewModelTest {
                     subTaskRepository = subTasks,
                     events = events,
                 )
-            assertEquals(
-                "",
+            assertThat(
                 vm.state.value.titleState.text
                     .toString(),
-            )
+            ).isEqualTo("")
 
             vm.onAction(EditTextAction.OnSaveClick)
             advanceUntilIdle()
 
-            assertTrue(subTasks.upserted.isEmpty())
-            assertTrue(events.single() is EditTextEvent.Error)
-            assertTrue(vm.state.value.isEditMode, "a refused save keeps the user in the field")
+            assertThat(subTasks.upserted.isEmpty()).isTrue()
+            assertThat(events.single() is EditTextEvent.Error).isTrue()
+            assertThat(vm.state.value.isEditMode, name = "a refused save keeps the user in the field").isTrue()
         }
 
     @Test
@@ -280,11 +271,11 @@ class EditTextViewModelTest {
             advanceUntilIdle()
 
             val created = subTasks.upserted.single()
-            assertEquals("Fresh subtask", created.title)
-            assertEquals("With a description", created.description)
-            assertEquals(TASK_ID, created.parentProjectTaskId)
-            assertEquals(PROJECT_ID, created.parentProjectId)
-            assertEquals(listOf<EditTextEvent>(EditTextEvent.NavigateBack), events)
+            assertThat(created.title).isEqualTo("Fresh subtask")
+            assertThat(created.description).isEqualTo("With a description")
+            assertThat(created.parentProjectTaskId).isEqualTo(TASK_ID)
+            assertThat(created.parentProjectId).isEqualTo(PROJECT_ID)
+            assertThat(events).isEqualTo(listOf<EditTextEvent>(EditTextEvent.NavigateBack))
         }
 
     @Test
@@ -306,8 +297,8 @@ class EditTextViewModelTest {
             vm.onAction(EditTextAction.OnSaveClick)
             advanceUntilIdle()
 
-            assertTrue(tasks.textUpdates.isEmpty())
-            assertTrue(events.single() is EditTextEvent.Error)
+            assertThat(tasks.textUpdates.isEmpty()).isTrue()
+            assertThat(events.single() is EditTextEvent.Error).isTrue()
         }
 
     // --- helpers -------------------------------------------------------------------------------
