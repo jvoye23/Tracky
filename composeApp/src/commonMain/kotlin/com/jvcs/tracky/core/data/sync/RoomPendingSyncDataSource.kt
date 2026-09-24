@@ -64,9 +64,9 @@ class RoomPendingSyncDataSource(private val pendingSyncDao: PendingSyncDao) : Pe
     private inline fun <T> dbRead(block: () -> T): Result<T, DataError.Local> =
         try {
             Result.Success(block())
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
+        } catch (exception: CancellationException) {
+            throw exception
+        } catch (exception: Exception) {
             Result.Error(DataError.Local.UNKNOWN)
         }
 }

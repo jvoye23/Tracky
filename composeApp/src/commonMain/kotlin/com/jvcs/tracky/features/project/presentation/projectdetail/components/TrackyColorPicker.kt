@@ -159,9 +159,9 @@ fun TrackyColorPicker(
                                 saturation = saturation,
                                 value = value,
                                 onHueChange = { hue = it },
-                                onSaturationValueChange = { s, v ->
-                                    saturation = s
-                                    value = v
+                                onSaturationValueChange = { newSaturation, newValue ->
+                                    saturation = newSaturation
+                                    value = newValue
                                 },
                             )
                         }
@@ -332,9 +332,9 @@ private fun SpectrumTab(
 
 @Composable
 private fun SlidersTab(currentColor: Color, onColorChange: (Color) -> Unit) {
-    val r = (currentColor.red * CHANNEL_MAX).roundToInt()
-    val g = (currentColor.green * CHANNEL_MAX).roundToInt()
-    val b = (currentColor.blue * CHANNEL_MAX).roundToInt()
+    val redChannel = (currentColor.red * CHANNEL_MAX).roundToInt()
+    val greenChannel = (currentColor.green * CHANNEL_MAX).roundToInt()
+    val blueChannel = (currentColor.blue * CHANNEL_MAX).roundToInt()
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -342,7 +342,7 @@ private fun SlidersTab(currentColor: Color, onColorChange: (Color) -> Unit) {
     ) {
         SliderRow(
             label = "R",
-            value = r,
+            value = redChannel,
             activeColor = Color(SLIDER_RED_ARGB),
             onValueChange = { newVal ->
                 onColorChange(Color(newVal / CHANNEL_MAX, currentColor.green, currentColor.blue, currentColor.alpha))
@@ -350,7 +350,7 @@ private fun SlidersTab(currentColor: Color, onColorChange: (Color) -> Unit) {
         )
         SliderRow(
             label = "G",
-            value = g,
+            value = greenChannel,
             activeColor = Color(SLIDER_GREEN_ARGB),
             onValueChange = { newVal ->
                 onColorChange(Color(currentColor.red, newVal / CHANNEL_MAX, currentColor.blue, currentColor.alpha))
@@ -358,7 +358,7 @@ private fun SlidersTab(currentColor: Color, onColorChange: (Color) -> Unit) {
         )
         SliderRow(
             label = "B",
-            value = b,
+            value = blueChannel,
             activeColor = Color(SLIDER_BLUE_ARGB),
             onValueChange = { newVal ->
                 onColorChange(Color(currentColor.red, currentColor.green, newVal / CHANNEL_MAX, currentColor.alpha))
@@ -429,26 +429,22 @@ private fun SliderRow(
  * Returns floatArrayOf(hue, saturation, value).
  */
 private fun Color.toHsv(): FloatArray {
-    val r = this.red
-    val g = this.green
-    val b = this.blue
+    val max = maxOf(red, green, blue)
+    val min = minOf(red, green, blue)
+    val delta = max - min
 
-    val max = maxOf(r, g, b)
-    val min = minOf(r, g, b)
-    val d = max - min
-
-    val h =
+    val hue =
         when {
             max == min -> 0f
-            max == r -> (60f * ((g - b) / d) + 360f) % 360f
-            max == g -> (60f * ((b - r) / d) + 120f)
-            else -> (60f * ((r - g) / d) + 240f)
+            max == red -> (60f * ((green - blue) / delta) + 360f) % 360f
+            max == green -> (60f * ((blue - red) / delta) + 120f)
+            else -> (60f * ((red - green) / delta) + 240f)
         }
 
-    val s = if (max == 0f) 0f else d / max
-    val v = max
+    val saturation = if (max == 0f) 0f else delta / max
+    val value = max
 
-    return floatArrayOf(h, s, v)
+    return floatArrayOf(hue, saturation, value)
 }
 
 @Preview(showBackground = true)

@@ -40,7 +40,7 @@ suspend inline fun <reified T> responseToResult(response: HttpResponse): Result<
         response.status.isSuccess() -> {
             try {
                 Result.Success(response.body<T>())
-            } catch (e: Exception) {
+            } catch (exception: Exception) {
                 Result.Error(DataError.Remote.SERIALIZATION)
             }
         }
@@ -93,27 +93,27 @@ suspend inline fun safeResponse(execute: () -> HttpResponse): Result<HttpRespons
     val response =
         try {
             execute()
-        } catch (e: UnresolvedAddressException) {
+        } catch (exception: UnresolvedAddressException) {
             // CIO / native DNS failure. OkHttp signals this as UnknownHostException instead,
             // which toRemoteDataError() picks up below.
-            e.printStackTrace()
+            exception.printStackTrace()
             return Result.Error(DataError.Remote.NO_INTERNET)
-        } catch (e: ConnectTimeoutException) {
-            e.printStackTrace()
+        } catch (exception: ConnectTimeoutException) {
+            exception.printStackTrace()
             return Result.Error(DataError.Remote.REQUEST_TIMEOUT)
-        } catch (e: SocketTimeoutException) {
-            e.printStackTrace()
+        } catch (exception: SocketTimeoutException) {
+            exception.printStackTrace()
             return Result.Error(DataError.Remote.REQUEST_TIMEOUT)
-        } catch (e: HttpRequestTimeoutException) {
-            e.printStackTrace()
+        } catch (exception: HttpRequestTimeoutException) {
+            exception.printStackTrace()
             return Result.Error(DataError.Remote.REQUEST_TIMEOUT)
-        } catch (e: SerializationException) {
-            e.printStackTrace()
+        } catch (exception: SerializationException) {
+            exception.printStackTrace()
             return Result.Error(DataError.Remote.SERIALIZATION)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            e.printStackTrace()
-            return Result.Error(e.toRemoteDataError())
+        } catch (exception: Exception) {
+            if (exception is CancellationException) throw exception
+            exception.printStackTrace()
+            return Result.Error(exception.toRemoteDataError())
         }
     return Result.Success(response)
 }

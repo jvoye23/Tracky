@@ -126,8 +126,8 @@ class RoomLocalTaskDataSource(
                     TaskTimerStart(domain, openedInterval = domain)
                 } ?: return Result.Error(DataError.Local.NOT_FOUND)
             Result.Success(start)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
+        } catch (exception: Exception) {
+            if (exception is CancellationException) throw exception
             Result.Error(DataError.Local.DISK_FULL)
         }
     }
@@ -156,17 +156,17 @@ class RoomLocalTaskDataSource(
                     updatedInterval
                 }
             Result.Success(closedInterval?.toTaskInterval())
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
+        } catch (exception: Exception) {
+            if (exception is CancellationException) throw exception
             Result.Error(DataError.Local.DISK_FULL)
         }
 
     private inline fun <T> read(block: () -> T): Result<T, DataError.Local> =
         try {
             Result.Success(block())
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
+        } catch (exception: CancellationException) {
+            throw exception
+        } catch (exception: Exception) {
             Result.Error(DataError.Local.UNKNOWN)
         }
 
@@ -174,9 +174,9 @@ class RoomLocalTaskDataSource(
         try {
             withContext(dbWriteDispatcher) { block() }
             Result.Success(Unit)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
+        } catch (exception: CancellationException) {
+            throw exception
+        } catch (exception: Exception) {
             Result.Error(DataError.Local.DISK_FULL)
         }
 }

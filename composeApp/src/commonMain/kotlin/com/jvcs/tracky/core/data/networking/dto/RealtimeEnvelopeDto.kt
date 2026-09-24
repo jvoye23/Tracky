@@ -54,9 +54,9 @@ class RealtimeEnvelopeParser(private val json: Json) {
                 null -> null
                 else -> RealtimeEvent.Unknown(type)
             }
-        } catch (e: SerializationException) {
+        } catch (exception: SerializationException) {
             null
-        } catch (e: IllegalArgumentException) {
+        } catch (exception: IllegalArgumentException) {
             // jsonObject / jsonPrimitive throw this when the frame is well-formed JSON of the wrong
             // shape — a bare array, say. Same answer: ignore the frame, keep the connection.
             null

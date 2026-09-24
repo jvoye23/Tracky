@@ -99,7 +99,7 @@ fun CalendarMonthCard(
     // trip through the ViewModel - selecting the date is the whole behaviour, and selectDate
     // pages the calendar there. toCalendarMonthsUi always includes today's month, so this only
     // comes back null for a caller that passed a partial page list.
-    val todayDate = months.firstNotNullOfOrNull { m -> m.monthDays.firstOrNull { it.isToday }?.date }
+    val todayDate = months.firstNotNullOfOrNull { month -> month.monthDays.firstOrNull { it.isToday }?.date }
 
     // Two directions to keep in step: a swipe settles the pager and has to tell the caller, and
     // a caller-driven jump (the chevrons, or a year) has to move the pager.

@@ -32,7 +32,7 @@ internal fun realtimeUrl(baseUrl: String, path: String = REALTIME_PATH): String?
                     }
                 path(path)
             }.buildString()
-    } catch (e: IllegalArgumentException) {
+    } catch (exception: IllegalArgumentException) {
         null
     }
 }
