@@ -1,5 +1,6 @@
 package com.jvcs.tracky.core.data.realtime
 
+import co.touchlab.kermit.Logger
 import com.jvcs.tracky.core.data.networking.httpStatusToRemoteError
 import com.jvcs.tracky.core.data.networking.toRemoteDataError
 import com.jvcs.tracky.core.domain.realtime.RealtimeChannel
@@ -47,10 +48,10 @@ class KtorRealtimeChannel(
             Result.Error(httpStatusToRemoteError(exception.response.status.value))
         } catch (exception: WebSocketException) {
             // A handshake the server answered with something other than an upgrade.
-            exception.printStackTrace()
+            Logger.withTag("KtorRealtimeChannel").w(exception) { "open: WebSocketException" }
             Result.Error(exception.toRemoteDataError())
         } catch (exception: IOException) {
-            exception.printStackTrace()
+            Logger.withTag("KtorRealtimeChannel").w(exception) { "open: IOException" }
             Result.Error(exception.toRemoteDataError())
         }
     }
@@ -74,9 +75,9 @@ private class KtorRealtimeSession(private val session: WebSocketSession) : Realt
             session.close()
         } catch (exception: ClosedSendChannelException) {
             // Closing a socket that is already gone is the normal case on a dropped connection.
-            exception.printStackTrace()
+            Logger.withTag("KtorRealtimeChannel").w(exception) { "close: ClosedSendChannelException" }
         } catch (exception: IOException) {
-            exception.printStackTrace()
+            Logger.withTag("KtorRealtimeChannel").w(exception) { "close: IOException" }
         }
     }
 }

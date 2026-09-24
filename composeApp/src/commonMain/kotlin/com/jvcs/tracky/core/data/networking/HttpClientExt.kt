@@ -115,22 +115,22 @@ suspend inline fun safeResponse(execute: () -> HttpResponse): Result<HttpRespons
         } catch (exception: UnresolvedAddressException) {
             // CIO / native DNS failure. OkHttp signals this as UnknownHostException instead,
             // which toRemoteDataError() picks up below.
-            exception.printStackTrace()
+            Logger.withTag("HttpClientExt").w(exception) { "safeResponse: UnresolvedAddressException" }
             return Result.Error(DataError.Remote.NO_INTERNET)
         } catch (exception: ConnectTimeoutException) {
-            exception.printStackTrace()
+            Logger.withTag("HttpClientExt").w(exception) { "safeResponse: ConnectTimeoutException" }
             return Result.Error(DataError.Remote.REQUEST_TIMEOUT)
         } catch (exception: SocketTimeoutException) {
-            exception.printStackTrace()
+            Logger.withTag("HttpClientExt").w(exception) { "safeResponse: SocketTimeoutException" }
             return Result.Error(DataError.Remote.REQUEST_TIMEOUT)
         } catch (exception: HttpRequestTimeoutException) {
-            exception.printStackTrace()
+            Logger.withTag("HttpClientExt").w(exception) { "safeResponse: HttpRequestTimeoutException" }
             return Result.Error(DataError.Remote.REQUEST_TIMEOUT)
         } catch (exception: SerializationException) {
-            exception.printStackTrace()
+            Logger.withTag("HttpClientExt").w(exception) { "safeResponse: SerializationException" }
             return Result.Error(DataError.Remote.SERIALIZATION)
         } catch (exception: IOException) {
-            exception.printStackTrace()
+            Logger.withTag("HttpClientExt").w(exception) { "safeResponse: IOException" }
             return Result.Error(exception.toRemoteDataError())
         }
     return Result.Success(response)

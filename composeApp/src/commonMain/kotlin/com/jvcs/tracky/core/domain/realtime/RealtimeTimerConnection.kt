@@ -2,6 +2,7 @@
 
 package com.jvcs.tracky.core.domain.realtime
 
+import co.touchlab.kermit.Logger
 import com.jvcs.tracky.core.data.networking.dto.HelloEnvelopeDto
 import com.jvcs.tracky.core.data.networking.dto.RealtimeEnvelopeParser
 import com.jvcs.tracky.core.domain.device.DeviceIdProvider
@@ -151,7 +152,7 @@ class RealtimeTimerConnection(
                         } catch (exception: IOException) {
                             // A socket that died under us is the ordinary case, not an error worth
                             // surfacing. Reconnect.
-                            exception.printStackTrace()
+                            Logger.withTag("RealtimeTimerConnection").w(exception) { "connectionLoop: IOException" }
                         } finally {
                             // The scope may already be cancelled — the gate closing is exactly that —
                             // and the close frame is still worth sending.
