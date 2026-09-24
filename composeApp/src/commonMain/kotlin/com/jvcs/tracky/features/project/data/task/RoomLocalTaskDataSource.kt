@@ -47,7 +47,7 @@ class RoomLocalTaskDataSource(
     private val serverClock: ServerClock,
 ) : LocalTaskDataSource {
 
-    // Same single-writer funnel as the other Room data sources — see RoomLocalProjectDataSource.
+    // Same single-writer funnel as the other Room data sources — see projectWriteDispatcher in RoomCalls.kt.
     private val dbWriteDispatcher = platformIoDispatcher.limitedParallelism(1)
 
     override fun getTaskWithIntervalsById(taskId: String): Flow<ProjectTask?> =

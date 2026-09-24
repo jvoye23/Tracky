@@ -32,6 +32,8 @@ import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.features.project.domain.models.SubTaskInterval
 import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import com.jvcs.tracky.features.project.domain.project.LocalProjectDataSource
+import com.jvcs.tracky.features.project.domain.project.LocalProjectOrganizationDataSource
+import com.jvcs.tracky.features.project.domain.project.LocalServerTreeDataSource
 import com.jvcs.tracky.features.project.domain.project.RemoteProjectDataSource
 import com.jvcs.tracky.features.project.domain.subtask.LocalSubTaskDataSource
 import com.jvcs.tracky.features.project.domain.subtask.RemoteSubTaskDataSource
@@ -201,7 +203,10 @@ class FakeDb {
 
 // --- Local data sources ---------------------------------------------------------------------------
 
-class FakeLocalProjectDataSource(private val db: FakeDb = FakeDb()) : LocalProjectDataSource {
+class FakeLocalProjectDataSource(private val db: FakeDb = FakeDb()) :
+    LocalProjectDataSource,
+    LocalProjectOrganizationDataSource,
+    LocalServerTreeDataSource {
     val projects get() = db.projects
     val tasks get() = db.tasks
     val intervals get() = db.intervals
@@ -1122,6 +1127,8 @@ internal class RepoFixture(val time: FakeTimeProvider = FakeTimeProvider()) {
     val projectRepository =
         OfflineFirstProjectRepository(
             localProjectDataSource = localProject,
+            localProjectOrganizationDataSource = localProject,
+            localServerTreeDataSource = localProject,
             remoteProjectDataSource = remoteProject,
             pendingSyncDataSource = queue,
             syncScheduler = scheduler,

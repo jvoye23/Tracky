@@ -17,7 +17,7 @@ import kotlinx.coroutines.withContext
 class RoomLocalSubTaskIntervalDataSource(private val subTaskIntervalDao: SubTaskIntervalDao) :
     LocalSubTaskIntervalDataSource {
 
-    // Same single-writer funnel as the other Room data sources — see RoomLocalProjectDataSource.
+    // Same single-writer funnel as the other Room data sources — see projectWriteDispatcher in RoomCalls.kt.
     private val dbWriteDispatcher = platformIoDispatcher.limitedParallelism(1)
 
     override suspend fun upsertSubTaskInterval(interval: SubTaskInterval): EmptyResult<DataError.Local> =

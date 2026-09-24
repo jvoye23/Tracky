@@ -26,15 +26,6 @@ interface LocalProjectDataSource {
 
     fun getActiveProjects(): Flow<List<Project>>
 
-    fun getArchivedProjects(): Flow<List<Project>>
-
-    fun getTrashedProjects(): Flow<List<Project>>
-
-    /** One-shot: the pin reindex needs the current pinned section, not a stream of it. */
-    suspend fun getPinnedProjects(): Result<List<Project>, DataError.Local>
-
-    suspend fun getExpiredTrashedProjectIds(cutoff: Instant): Result<List<String>, DataError.Local>
-
     suspend fun getProjectById(projectId: String): Result<Project?, DataError.Local>
 
     /** The project row as a live stream, without its task tree. Emits null once the row is gone. */
@@ -45,41 +36,7 @@ interface LocalProjectDataSource {
     /** The same tree, streamed, so a sync writing another device's rows repaints the screen. */
     fun observeProjectWithTaskTreeById(projectId: String): Flow<Project?>
 
-    /** Current sortIndex per project id. A null value means the project was never manually ordered. */
-    suspend fun getSortIndices(): Result<Map<String, Long?>, DataError.Local>
-
-    /** Writes every index in one transaction, so a reorder can never land half-applied. */
-    suspend fun updateSortIndices(indices: Map<String, Long>, updatedAt: Instant): EmptyResult<DataError.Local>
-
     suspend fun upsertProject(project: Project): EmptyResult<DataError.Local>
-
-    suspend fun upsertProjects(projects: List<Project>): EmptyResult<DataError.Local>
-
-    /**
-     * Applies one page of the change feed — the upserts and the tombstoned deletions — atomically.
-     *
-     * Separate from [upsertProjects] because that one promises never to delete, and it has to
-     * keep promising it: in a full-tree pull an absent row may simply be one this device created
-     * offline. A tombstone is the server stating a fact, which is a different thing entirely.
-     */
-    suspend fun applyDelta(changes: SyncChanges): EmptyResult<DataError.Local>
-
-    /**
-     * Writes the interval rows an active-timer call echoed back, under the same merge rules a pull
-     * uses.
-     *
-     * Start and stop answer with every interval they touched, not just the one named — so the
-     * device that superseded another device's timer learns the closing row here rather than up to
-     * five minutes later, when the next delta happens to carry it.
-     *
-     * It goes through the pull merge on purpose: the echo is the server stating what it did, which
-     * is exactly what a pulled row is, and both have to respect an unsent local change and keep a
-     * row's provenance. Nothing is ever deleted, so this needs no tombstones.
-     */
-    suspend fun applyTimerEcho(
-        taskIntervals: List<TaskInterval>,
-        subTaskIntervals: List<SubTaskInterval>,
-    ): EmptyResult<DataError.Local>
 
     suspend fun deleteProject(projectId: String): EmptyResult<DataError.Local>
 

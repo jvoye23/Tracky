@@ -64,10 +64,12 @@ internal fun testDeltaSyncApplier(
     local: FakeLocalProjectDataSource = FakeLocalProjectDataSource(),
 ) = DeltaSyncApplier(
     remoteSyncDataSource = remote,
-    localProjectDataSource = local,
+    localServerTreeDataSource = local,
     projectRepository =
         OfflineFirstProjectRepository(
             localProjectDataSource = local,
+            localProjectOrganizationDataSource = local,
+            localServerTreeDataSource = local,
             remoteProjectDataSource = FakeRemoteProjectDataSource(),
             pendingSyncDataSource = FakePendingSyncDataSource(),
             syncScheduler = FakeSyncScheduler(),

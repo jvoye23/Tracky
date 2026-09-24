@@ -27,10 +27,10 @@ import kotlin.time.Instant
  * It goes through the same merge a pull uses, so the cases worth pinning are the ones that merge
  * exists for — and the one it must never do, which is delete.
  */
-internal class RoomLocalProjectDataSourceEchoTest {
+internal class RoomLocalServerTreeDataSourceEchoTest {
 
     private lateinit var db: TrackyDatabase
-    private lateinit var dataSource: RoomLocalProjectDataSource
+    private lateinit var dataSource: RoomLocalServerTreeDataSource
 
     @BeforeTest
     fun setUp() {
@@ -40,7 +40,7 @@ internal class RoomLocalProjectDataSourceEchoTest {
                 .setDriver(BundledSQLiteDriver())
                 .setQueryCoroutineContext(Dispatchers.IO)
                 .build()
-        dataSource = RoomLocalProjectDataSource(db.projectDao, db.projectTreeDao, db.sortOrderDao, ServerTreeWriter(db))
+        dataSource = RoomLocalServerTreeDataSource(ServerTreeWriter(db))
     }
 
     @AfterTest

@@ -17,6 +17,8 @@ import com.jvcs.tracky.core.domain.util.isTransient
 import com.jvcs.tracky.core.domain.util.map
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.project.LocalProjectDataSource
+import com.jvcs.tracky.features.project.domain.project.LocalProjectOrganizationDataSource
+import com.jvcs.tracky.features.project.domain.project.LocalServerTreeDataSource
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
 import com.jvcs.tracky.features.project.domain.project.RemoteProjectDataSource
 import com.jvcs.tracky.features.project.domain.project.sortedByCustomOrder
@@ -30,6 +32,8 @@ import kotlin.time.Instant
 
 class OfflineFirstProjectRepository(
     private val localProjectDataSource: LocalProjectDataSource,
+    private val localProjectOrganizationDataSource: LocalProjectOrganizationDataSource,
+    private val localServerTreeDataSource: LocalServerTreeDataSource,
     private val remoteProjectDataSource: RemoteProjectDataSource,
     private val pendingSyncDataSource: PendingSyncDataSource,
     private val syncScheduler: SyncScheduler,
@@ -46,7 +50,7 @@ class OfflineFirstProjectRepository(
             is Result.Success -> {
                 applicationScope
                     .async {
-                        localProjectDataSource.upsertProjects(remoteResult.data).asEmptyDataResult()
+                        localServerTreeDataSource.upsertProjects(remoteResult.data).asEmptyDataResult()
                     }.await()
             }
         }
@@ -55,9 +59,9 @@ class OfflineFirstProjectRepository(
 
     override fun getActiveProjects(): Flow<List<Project>> = localProjectDataSource.getActiveProjects()
 
-    override fun getArchivedProjects(): Flow<List<Project>> = localProjectDataSource.getArchivedProjects()
+    override fun getArchivedProjects(): Flow<List<Project>> = localProjectOrganizationDataSource.getArchivedProjects()
 
-    override fun getTrashedProjects(): Flow<List<Project>> = localProjectDataSource.getTrashedProjects()
+    override fun getTrashedProjects(): Flow<List<Project>> = localProjectOrganizationDataSource.getTrashedProjects()
 
     override suspend fun getProjectById(projectId: String): Project? =
         localProjectDataSource.getProjectById(projectId).getOrDefault(null)
@@ -161,7 +165,7 @@ class OfflineFirstProjectRepository(
     override suspend fun purgeExpiredTrashedProjects(cutoff: Instant): EmptyResult<DataError> =
         coroutineScope {
             val expiredIds =
-                when (val result = localProjectDataSource.getExpiredTrashedProjectIds(cutoff)) {
+                when (val result = localProjectOrganizationDataSource.getExpiredTrashedProjectIds(cutoff)) {
                     is Result.Success -> result.data
                     is Result.Error -> return@coroutineScope result.asEmptyDataResult()
                 }
@@ -203,7 +207,7 @@ class OfflineFirstProjectRepository(
     // section from 0 in one transaction and one request.
     private suspend fun moveToFrontOfPinnedSection(moved: List<String>): EmptyResult<DataError> {
         val section =
-            when (val allPinnedProjects = localProjectDataSource.getPinnedProjects()) {
+            when (val allPinnedProjects = localProjectOrganizationDataSource.getPinnedProjects()) {
                 is Result.Success -> allPinnedProjects.data
                 is Result.Error -> return allPinnedProjects.asEmptyDataResult()
             }
@@ -224,7 +228,7 @@ class OfflineFirstProjectRepository(
     // let a failure halfway through leave two projects sharing an index, which no retry can repair.
     override suspend fun reorderProjects(orderedProjectIds: List<String>): EmptyResult<DataError> {
         val current =
-            when (val existing = localProjectDataSource.getSortIndices()) {
+            when (val existing = localProjectOrganizationDataSource.getSortIndices()) {
                 is Result.Success -> existing.data
                 is Result.Error -> return existing.asEmptyDataResult()
             }
@@ -243,7 +247,7 @@ class OfflineFirstProjectRepository(
         // One timestamp for both writes — reading the clock twice would stamp the local row and the
         // server row with different values for what is a single reorder.
         val updatedAt = timeProvider.nowInstant
-        val localResult = localProjectDataSource.updateSortIndices(changed, updatedAt)
+        val localResult = localProjectOrganizationDataSource.updateSortIndices(changed, updatedAt)
         if (localResult !is Result.Success) {
             return localResult.asEmptyDataResult()
         }
@@ -388,7 +392,7 @@ class OfflineFirstProjectRepository(
     // so projects deleted meanwhile drop out and repeated offline reorders collapse into one push.
     private suspend fun pushProjectOrder(): SyncOutcome {
         val indices =
-            when (val result = localProjectDataSource.getSortIndices()) {
+            when (val result = localProjectOrganizationDataSource.getSortIndices()) {
                 is Result.Success -> result.data.mapNotNull { (id, index) -> index?.let { id to it } }.toMap()
                 is Result.Error -> return SyncOutcome.RETRY
             }

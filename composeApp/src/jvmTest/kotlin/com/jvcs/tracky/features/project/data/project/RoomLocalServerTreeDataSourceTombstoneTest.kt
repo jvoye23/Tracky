@@ -36,10 +36,10 @@ import kotlin.test.Test
  * happens to hold, which is exactly how the bug survived; these strings have to be read off the
  * spec and disagree loudly when the code drifts from it.
  */
-internal class RoomLocalProjectDataSourceTombstoneTest {
+internal class RoomLocalServerTreeDataSourceTombstoneTest {
 
     private lateinit var db: TrackyDatabase
-    private lateinit var dataSource: RoomLocalProjectDataSource
+    private lateinit var dataSource: RoomLocalServerTreeDataSource
 
     @BeforeTest
     fun setUp() {
@@ -49,7 +49,7 @@ internal class RoomLocalProjectDataSourceTombstoneTest {
                 .setDriver(BundledSQLiteDriver())
                 .setQueryCoroutineContext(Dispatchers.IO)
                 .build()
-        dataSource = RoomLocalProjectDataSource(db.projectDao, db.projectTreeDao, db.sortOrderDao, ServerTreeWriter(db))
+        dataSource = RoomLocalServerTreeDataSource(ServerTreeWriter(db))
     }
 
     @AfterTest
