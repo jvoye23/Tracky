@@ -37,6 +37,11 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // The E2E tests drive the live backend and a real mailbox, so they run only when asked for
+        // with -Pe2e. A filter class rather than notClass: the test launcher cuts that list at its comma.
+        if (!project.hasProperty("e2e")) {
+            testInstrumentationRunnerArguments["filter"] = "com.jvcs.androidapp.SkipE2eTests"
+        }
 
         buildConfigField("String", "TEST_EMAIL", "\"${localProperties["TEST_EMAIL"] ?: ""}\"")
         buildConfigField("String", "TEST_PASSWORD", "\"${localProperties["TEST_PASSWORD"] ?: ""}\"")
