@@ -1,5 +1,9 @@
 package com.jvcs.tracky.core.data.networking
 
+import assertk.assertFailure
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isInstanceOf
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.Result
 import io.ktor.client.network.sockets.ConnectTimeoutException
@@ -12,8 +16,6 @@ import java.net.SocketException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 
 /**
  * `safeCall`'s parameter is a plain `() -> HttpResponse`, so the transport failures each engine
@@ -30,43 +32,36 @@ class SafeCallTest {
         // java.net.UnknownHostException. Ktor's UnresolvedAddressException is a typealias for
         // java.nio.channels.UnresolvedAddressException (a CIO thing), so this used to fall through
         // to the catch-all and surface as "an unknown error happened".
-        assertEquals(
-            Result.Error(DataError.Remote.NO_INTERNET),
+        assertThat(
             classify(UnknownHostException("api.example.com")),
-        )
+        ).isEqualTo(Result.Error(DataError.Remote.NO_INTERNET))
     }
 
     @Test
     fun connectionRefused_isReportedAsNoInternet() {
-        assertEquals(
-            Result.Error(DataError.Remote.NO_INTERNET),
+        assertThat(
             classify(ConnectException("Connection refused")),
-        )
+        ).isEqualTo(Result.Error(DataError.Remote.NO_INTERNET))
     }
 
     @Test
     fun networkUnreachable_isReportedAsNoInternet() {
-        assertEquals(
-            Result.Error(DataError.Remote.NO_INTERNET),
+        assertThat(
             classify(SocketException("Network is unreachable")),
-        )
+        ).isEqualTo(Result.Error(DataError.Remote.NO_INTERNET))
     }
 
     @Test
     fun unresolvedAddress_isReportedAsNoInternet() {
         // Still correct if the engine is ever swapped to CIO.
-        assertEquals(
-            Result.Error(DataError.Remote.NO_INTERNET),
-            classify(UnresolvedAddressException()),
-        )
+        assertThat(classify(UnresolvedAddressException())).isEqualTo(Result.Error(DataError.Remote.NO_INTERNET))
     }
 
     @Test
     fun socketTimeout_isReportedAsRequestTimeout() {
-        assertEquals(
-            Result.Error(DataError.Remote.REQUEST_TIMEOUT),
+        assertThat(
             classify(SocketTimeoutException("Read timed out")),
-        )
+        ).isEqualTo(Result.Error(DataError.Remote.REQUEST_TIMEOUT))
     }
 
     @Test
@@ -74,31 +69,26 @@ class SafeCallTest {
         // Guards the catch ordering: on JVM, Ktor's ConnectTimeoutException subclasses
         // java.net.ConnectException. If the timeout branches ever move below the connect-failure
         // handling, a timeout starts masquerading as "no internet" and this test fails.
-        assertEquals(
-            Result.Error(DataError.Remote.REQUEST_TIMEOUT),
+        assertThat(
             classify(ConnectTimeoutException("Connect timeout has expired")),
-        )
+        ).isEqualTo(Result.Error(DataError.Remote.REQUEST_TIMEOUT))
     }
 
     @Test
     fun serializationFailure_isReportedAsSerialization() {
-        assertEquals(
-            Result.Error(DataError.Remote.SERIALIZATION),
+        assertThat(
             classify(SerializationException("Unexpected JSON token")),
-        )
+        ).isEqualTo(Result.Error(DataError.Remote.SERIALIZATION))
     }
 
     @Test
     fun unrecognisedFailure_staysUnknown() {
-        assertEquals(
-            Result.Error(DataError.Remote.UNKNOWN),
-            classify(IllegalStateException("boom")),
-        )
+        assertThat(classify(IllegalStateException("boom"))).isEqualTo(Result.Error(DataError.Remote.UNKNOWN))
     }
 
     @Test
     fun cancellation_isRethrown_ratherThanTurnedIntoAnError() {
         // Swallowing this would break structured concurrency for every caller.
-        assertFailsWith<CancellationException> { classify(CancellationException("cancelled")) }
+        assertFailure { classify(CancellationException("cancelled")) }.isInstanceOf<CancellationException>()
     }
 }

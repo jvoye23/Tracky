@@ -1,5 +1,9 @@
 package com.jvcs.tracky.core.data.networking
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.data.networking.dto.HelloEnvelopeDto
 import com.jvcs.tracky.core.data.networking.dto.RealtimeEnvelopeParser
 import com.jvcs.tracky.core.data.realtime.KtorRealtimeChannel
@@ -11,24 +15,20 @@ import io.ktor.client.engine.mock.respondBadRequest
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 internal class RealtimeUrlTest {
 
     @Test
     fun httpsBecomesWss() {
-        assertEquals(
-            "wss://tracky.jv-coding-solutions.com/api/realtime",
+        assertThat(
             realtimeUrl("https://tracky.jv-coding-solutions.com:443"),
-        )
+        ).isEqualTo("wss://tracky.jv-coding-solutions.com/api/realtime")
     }
 
     /** 443 is wss's default and drops out; a dev port is not and must survive. */
     @Test
     fun aNonDefaultPortSurvives() {
-        assertEquals("ws://localhost:8080/api/realtime", realtimeUrl("http://localhost:8080"))
+        assertThat(realtimeUrl("http://localhost:8080")).isEqualTo("ws://localhost:8080/api/realtime")
     }
 
     /**
@@ -38,18 +38,18 @@ internal class RealtimeUrlTest {
      */
     @Test
     fun aBlankBaseUrlHasNoRealtimeAddress() {
-        assertNull(realtimeUrl(""))
-        assertNull(realtimeUrl("   "))
+        assertThat(realtimeUrl("")).isNull()
+        assertThat(realtimeUrl("   ")).isNull()
     }
 
     @Test
     fun anUnexpectedSchemeIsRefusedRatherThanGuessedAt() {
-        assertNull(realtimeUrl("ftp://example.com"))
+        assertThat(realtimeUrl("ftp://example.com")).isNull()
     }
 
     @Test
     fun aBasePathOnTheRestUrlIsReplacedNotAppended() {
-        assertEquals("wss://example.com/api/realtime", realtimeUrl("https://example.com/api/v1"))
+        assertThat(realtimeUrl("https://example.com/api/v1")).isEqualTo("wss://example.com/api/realtime")
     }
 }
 
@@ -59,22 +59,18 @@ internal class RealtimeEnvelopeParserTest {
 
     @Test
     fun readsTheThreeKnownTypes() {
-        assertEquals(RealtimeEvent.Ready, parser.parse("""{"type":"ready"}"""))
-        assertEquals(
-            RealtimeEvent.Invalidate(84219),
-            parser.parse("""{"type":"invalidate","cursor":84219}"""),
-        )
-        assertEquals(
-            RealtimeEvent.Timer(84219),
+        assertThat(parser.parse("""{"type":"ready"}""")).isEqualTo(RealtimeEvent.Ready)
+        assertThat(parser.parse("""{"type":"invalidate","cursor":84219}""")).isEqualTo(RealtimeEvent.Invalidate(84219))
+        assertThat(
             parser.parse("""{"type":"timer","cursor":84219,"active":null}"""),
-        )
+        ).isEqualTo(RealtimeEvent.Timer(84219))
     }
 
     /** The fat timer envelope carries rows we deliberately ignore; it must still parse. */
     @Test
     fun aTimerEnvelopeWithInlineStateStillParses() {
         val frame = """{"type":"timer","cursor":7,"active":{"intervalId":"i1","kind":"task"}}"""
-        assertEquals(RealtimeEvent.Timer(7), parser.parse(frame))
+        assertThat(parser.parse(frame)).isEqualTo(RealtimeEvent.Timer(7))
     }
 
     /**
@@ -85,34 +81,32 @@ internal class RealtimeEnvelopeParserTest {
     @Test
     fun anUnknownTypeIsCarriedRatherThanThrown() {
         val event = parser.parse("""{"type":"somethingNewInV2","cursor":1}""")
-        assertEquals(RealtimeEvent.Unknown("somethingNewInV2"), event)
+        assertThat(event).isEqualTo(RealtimeEvent.Unknown("somethingNewInV2"))
     }
 
     @Test
     fun unknownExtraFieldsAreIgnored() {
-        assertEquals(
-            RealtimeEvent.Invalidate(3),
+        assertThat(
             parser.parse("""{"type":"invalidate","cursor":3,"somethingNew":{"a":1}}"""),
-        )
+        ).isEqualTo(RealtimeEvent.Invalidate(3))
     }
 
     /** A cursor we cannot read is not a reason to fail: we pull from our own anyway. */
     @Test
     fun aMissingOrUnreadableCursorDefaultsToZero() {
-        assertEquals(RealtimeEvent.Invalidate(0), parser.parse("""{"type":"invalidate"}"""))
-        assertEquals(
-            RealtimeEvent.Invalidate(0),
+        assertThat(parser.parse("""{"type":"invalidate"}""")).isEqualTo(RealtimeEvent.Invalidate(0))
+        assertThat(
             parser.parse("""{"type":"invalidate","cursor":"not-a-number"}"""),
-        )
+        ).isEqualTo(RealtimeEvent.Invalidate(0))
     }
 
     /** Null, not an exception: a frame we cannot read must never drop a healthy connection. */
     @Test
     fun rubbishIsIgnoredRatherThanThrown() {
-        assertNull(parser.parse("not json at all"))
-        assertNull(parser.parse(""))
-        assertNull(parser.parse("[1,2,3]"))
-        assertNull(parser.parse("""{"cursor":5}"""))
+        assertThat(parser.parse("not json at all")).isNull()
+        assertThat(parser.parse("")).isNull()
+        assertThat(parser.parse("[1,2,3]")).isNull()
+        assertThat(parser.parse("""{"cursor":5}""")).isNull()
     }
 
     @Test
@@ -121,9 +115,9 @@ internal class RealtimeEnvelopeParserTest {
             Json.encodeToString(
                 HelloEnvelopeDto(deviceId = "d-1", cursor = 84213),
             )
-        assertTrue(json.contains(""""type":"hello""""), json)
-        assertTrue(json.contains(""""deviceId":"d-1""""), json)
-        assertTrue(json.contains(""""cursor":84213"""), json)
+        assertThat(json.contains(""""type":"hello""""), name = json).isTrue()
+        assertThat(json.contains(""""deviceId":"d-1""""), name = json).isTrue()
+        assertThat(json.contains(""""cursor":84213"""), name = json).isTrue()
     }
 }
 
@@ -142,6 +136,6 @@ internal class KtorRealtimeChannelTest {
 
             val result = KtorRealtimeChannel(httpClient = client, url = null).open()
 
-            assertTrue(result is Result.Error)
+            assertThat(result is Result.Error).isTrue()
         }
 }

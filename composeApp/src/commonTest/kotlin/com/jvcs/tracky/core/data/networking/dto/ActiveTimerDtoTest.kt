@@ -1,10 +1,11 @@
 package com.jvcs.tracky.core.data.networking.dto
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 /**
  * Guards the wire shapes of `/api/timer/active`.
@@ -55,13 +56,13 @@ class ActiveTimerDtoTest {
                 """.trimIndent(),
             )
 
-        assertEquals("9d42d176-0000-4000-8000-000000000001", dto.active?.intervalId)
-        assertEquals("25247336-0000-4000-8000-00000000000a", dto.active?.startedByDeviceId)
+        assertThat(dto.active?.intervalId).isEqualTo("9d42d176-0000-4000-8000-000000000001")
+        assertThat(dto.active?.startedByDeviceId).isEqualTo("25247336-0000-4000-8000-00000000000a")
         // changeSeq is on the wire but deliberately not decoded: the client never stores a
         // sequence per row, only the feed cursor. Tolerating it is what ignoreUnknownKeys buys.
-        assertEquals("c6df0a86-0000-4000-8000-000000000004", dto.touched.single().id)
-        assertEquals(1859L, dto.touched.single().durationMillis)
-        assertEquals("2026-09-21T15:56:16.642Z", dto.serverNowUtc)
+        assertThat(dto.touched.single().id).isEqualTo("c6df0a86-0000-4000-8000-000000000004")
+        assertThat(dto.touched.single().durationMillis).isEqualTo(1859L)
+        assertThat(dto.serverNowUtc).isEqualTo("2026-09-21T15:56:16.642Z")
     }
 
     @Test
@@ -82,13 +83,13 @@ class ActiveTimerDtoTest {
             )
 
         // One shape covers both levels; the parent ids that do not apply come back null.
-        assertEquals("sub_task", dto.kind)
-        assertNull(dto.parentTaskId)
-        assertEquals("22222222-0000-4000-8000-000000000006", dto.parentSubTaskId)
-        assertEquals("c6df0a86-0000-4000-8000-000000000004", dto.parentTaskIntervalId)
+        assertThat(dto.kind).isEqualTo("sub_task")
+        assertThat(dto.parentTaskId).isNull()
+        assertThat(dto.parentSubTaskId).isEqualTo("22222222-0000-4000-8000-000000000006")
+        assertThat(dto.parentTaskIntervalId).isEqualTo("c6df0a86-0000-4000-8000-000000000004")
         // An interval that is still open has no end and no duration yet.
-        assertNull(dto.endDateTimeUtc)
-        assertEquals(0L, dto.durationMillis)
+        assertThat(dto.endDateTimeUtc).isNull()
+        assertThat(dto.durationMillis).isEqualTo(0L)
     }
 
     @Test
@@ -100,8 +101,8 @@ class ActiveTimerDtoTest {
                 """{"active":null,"touched":[],"serverNowUtc":"2026-09-21T15:56:16.642Z"}""",
             )
 
-        assertNull(dto.active)
-        assertTrue(dto.touched.isEmpty())
+        assertThat(dto.active).isNull()
+        assertThat(dto.touched.isEmpty()).isTrue()
     }
 
     @Test
@@ -124,8 +125,8 @@ class ActiveTimerDtoTest {
                 """.trimIndent(),
             )
 
-        assertEquals("TIMER_CONFLICT", dto.code)
-        assertEquals("d8bc4ae2-0000-4000-8000-000000000009", dto.active?.intervalId)
+        assertThat(dto.code).isEqualTo("TIMER_CONFLICT")
+        assertThat(dto.active?.intervalId).isEqualTo("d8bc4ae2-0000-4000-8000-000000000009")
     }
 
     @Test
@@ -136,6 +137,6 @@ class ActiveTimerDtoTest {
                 """{"code":"TIMER_CONFLICT","message":"already closed","active":null}""",
             )
 
-        assertNull(dto.active)
+        assertThat(dto.active).isNull()
     }
 }

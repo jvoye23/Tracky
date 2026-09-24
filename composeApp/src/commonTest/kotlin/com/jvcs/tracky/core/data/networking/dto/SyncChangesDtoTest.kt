@@ -1,12 +1,13 @@
 package com.jvcs.tracky.core.data.networking.dto
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.data.networking.mappers.toSyncChanges
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 import kotlin.time.Instant
 
 /**
@@ -55,10 +56,10 @@ class SyncChangesDtoTest {
     fun theDocumentedResponseDecodes() {
         val changes = json.decodeFromString<SyncChangesDto>(documentedResponse).toSyncChanges()
 
-        assertEquals(84_213L, changes.cursor)
-        assertEquals(Instant.parse("2026-09-20T09:14:02.118Z"), changes.serverNow)
-        assertFalse(changes.fullResyncRequired)
-        assertFalse(changes.hasMore)
+        assertThat(changes.cursor).isEqualTo(84_213L)
+        assertThat(changes.serverNow).isEqualTo(Instant.parse("2026-09-20T09:14:02.118Z"))
+        assertThat(changes.fullResyncRequired).isFalse()
+        assertThat(changes.hasMore).isFalse()
     }
 
     @Test
@@ -66,14 +67,14 @@ class SyncChangesDtoTest {
         val changes = json.decodeFromString<SyncChangesDto>(documentedResponse).toSyncChanges()
 
         val interval = changes.taskIntervals.single()
-        assertEquals("6f2a91b4-0c3d-4e58-a77f-1b9e2c4d8a03", interval.intervalId)
-        assertEquals("06357c1e-0000-4000-8000-000000000001", interval.parentTaskId)
+        assertThat(interval.intervalId).isEqualTo("6f2a91b4-0c3d-4e58-a77f-1b9e2c4d8a03")
+        assertThat(interval.parentTaskId).isEqualTo("06357c1e-0000-4000-8000-000000000001")
         // The flat feed has no enclosing project to hand this down from, so the row carries it.
-        assertEquals("a3a2aef0-0000-4000-8000-000000000002", interval.parentProjectId)
-        assertEquals(Instant.parse("2026-09-20T09:22:44Z"), interval.endDateTimeUtc)
+        assertThat(interval.parentProjectId).isEqualTo("a3a2aef0-0000-4000-8000-000000000002")
+        assertThat(interval.endDateTimeUtc).isEqualTo(Instant.parse("2026-09-20T09:22:44Z"))
         // This row predates the column, so the server has nothing to send and the merge falls back
         // to whatever the local row holds. A row that *does* carry provenance is covered below.
-        assertNull(interval.startedByDeviceId)
+        assertThat(interval.startedByDeviceId).isNull()
     }
 
     @Test
@@ -114,14 +115,10 @@ class SyncChangesDtoTest {
                     """.trimIndent(),
                 ).toSyncChanges()
 
-        assertEquals(
-            "d41c7f90-0000-4000-8000-00000000000a",
-            changes.taskIntervals.single().startedByDeviceId,
-        )
-        assertEquals(
-            "d41c7f90-0000-4000-8000-00000000000a",
+        assertThat(changes.taskIntervals.single().startedByDeviceId).isEqualTo("d41c7f90-0000-4000-8000-00000000000a")
+        assertThat(
             changes.subTaskIntervals.single().startedByDeviceId,
-        )
+        ).isEqualTo("d41c7f90-0000-4000-8000-00000000000a")
     }
 
     @Test
@@ -129,8 +126,8 @@ class SyncChangesDtoTest {
         val changes = json.decodeFromString<SyncChangesDto>(documentedResponse).toSyncChanges()
 
         val tombstone = changes.tombstones.single()
-        assertEquals("project", tombstone.entityType)
-        assertEquals("6f2a0000-0000-4000-8000-000000000003", tombstone.entityId)
+        assertThat(tombstone.entityType).isEqualTo("project")
+        assertThat(tombstone.entityId).isEqualTo("6f2a0000-0000-4000-8000-000000000003")
     }
 
     @Test
@@ -154,8 +151,8 @@ class SyncChangesDtoTest {
 
         // parentProjectId is NOT NULL locally and backs the cascade onto projects, so the row
         // cannot be written. One malformed entry must not cost the whole delta.
-        assertTrue(changes.taskIntervals.isEmpty())
-        assertEquals(5L, changes.cursor)
+        assertThat(changes.taskIntervals.isEmpty()).isTrue()
+        assertThat(changes.cursor).isEqualTo(5L)
     }
 
     @Test
@@ -163,9 +160,9 @@ class SyncChangesDtoTest {
         val changes = json.decodeFromString<SyncChangesDto>("""{"cursor": 0}""").toSyncChanges()
 
         // A quiet poll, and a server that omits empty arrays rather than sending [].
-        assertTrue(changes.isEmpty)
-        assertNull(changes.serverNow)
-        assertFalse(changes.fullResyncRequired)
+        assertThat(changes.isEmpty).isTrue()
+        assertThat(changes.serverNow).isNull()
+        assertThat(changes.fullResyncRequired).isFalse()
     }
 
     @Test
@@ -174,14 +171,14 @@ class SyncChangesDtoTest {
 
         val changes = json.decodeFromString<SyncChangesDto>(payload).toSyncChanges()
 
-        assertTrue(changes.fullResyncRequired)
+        assertThat(changes.fullResyncRequired).isTrue()
     }
 
     @Test
     fun unknownFieldsAreTolerated() {
         val payload = """{"cursor": 9, "somethingNewerServersSend": {"a": 1}}"""
 
-        assertEquals(9L, json.decodeFromString<SyncChangesDto>(payload).toSyncChanges().cursor)
+        assertThat(json.decodeFromString<SyncChangesDto>(payload).toSyncChanges().cursor).isEqualTo(9L)
     }
 
     @Test
@@ -189,6 +186,6 @@ class SyncChangesDtoTest {
         val payload = """{"cursor": 9, "serverNowUtc": "not a timestamp"}"""
 
         // Losing clock correction degrades the timer by the skew; throwing would lose the pull.
-        assertNull(json.decodeFromString<SyncChangesDto>(payload).toSyncChanges().serverNow)
+        assertThat(json.decodeFromString<SyncChangesDto>(payload).toSyncChanges().serverNow).isNull()
     }
 }

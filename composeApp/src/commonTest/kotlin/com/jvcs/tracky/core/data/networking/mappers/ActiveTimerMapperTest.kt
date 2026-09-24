@@ -1,14 +1,15 @@
 package com.jvcs.tracky.core.data.networking.mappers
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.data.networking.dto.ActiveTimerChangeDto
 import com.jvcs.tracky.core.data.networking.dto.ActiveTimerConflictDto
 import com.jvcs.tracky.core.domain.timer.ActiveTimerKind
 import com.jvcs.tracky.core.domain.timer.StartActiveTimer
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 import kotlin.time.Instant
 
 /** Turns the measured `/api/timer/active` payloads into the rows the sync layer writes. */
@@ -51,19 +52,19 @@ class ActiveTimerMapperTest {
             )
 
         val closed = applied.touchedTaskIntervals.single()
-        assertEquals("c6df0a86-0000-4000-8000-000000000004", closed.intervalId)
+        assertThat(closed.intervalId).isEqualTo("c6df0a86-0000-4000-8000-000000000004")
         // The point of `touched`: the winning device writes the loser's closing row from this
         // response instead of waiting for the next delta to mention it.
-        assertEquals(1859L, closed.durationMillis)
-        assertEquals(Instant.parse("2026-09-21T15:56:16.284Z"), closed.endDateTimeUtc)
+        assertThat(closed.durationMillis).isEqualTo(1859L)
+        assertThat(closed.endDateTimeUtc).isEqualTo(Instant.parse("2026-09-21T15:56:16.284Z"))
         // Provenance survives, or an adopted foreign timer reads as one this device started.
-        assertEquals("25247336-0000-4000-8000-00000000000a", closed.startedByDeviceId)
+        assertThat(closed.startedByDeviceId).isEqualTo("25247336-0000-4000-8000-00000000000a")
 
         val nested = applied.touchedSubTaskIntervals.single()
-        assertEquals("11111111-0000-4000-8000-000000000005", nested.subTaskIntervalId)
-        assertEquals("c6df0a86-0000-4000-8000-000000000004", nested.parentTaskIntervalId)
+        assertThat(nested.subTaskIntervalId).isEqualTo("11111111-0000-4000-8000-000000000005")
+        assertThat(nested.parentTaskIntervalId).isEqualTo("c6df0a86-0000-4000-8000-000000000004")
         // No wire counterpart; the merge keeps whatever the local row holds.
-        assertTrue(!nested.startedParentTimer)
+        assertThat(!nested.startedParentTimer).isTrue()
     }
 
     @Test
@@ -94,8 +95,8 @@ class ActiveTimerMapperTest {
                 """.trimIndent(),
             )
 
-        assertTrue(applied.touchedTaskIntervals.isEmpty())
-        assertTrue(applied.touchedSubTaskIntervals.isEmpty())
+        assertThat(applied.touchedTaskIntervals.isEmpty()).isTrue()
+        assertThat(applied.touchedSubTaskIntervals.isEmpty()).isTrue()
     }
 
     @Test
@@ -104,16 +105,16 @@ class ActiveTimerMapperTest {
         // take" would leave the local interval open forever on every retry.
         val applied = change("""{"active":null,"touched":[],"serverNowUtc":"2026-09-21T15:56:16.642Z"}""")
 
-        assertNull(applied.active)
-        assertTrue(applied.touchedTaskIntervals.isEmpty())
-        assertEquals(Instant.parse("2026-09-21T15:56:16.642Z"), applied.serverNow)
+        assertThat(applied.active).isNull()
+        assertThat(applied.touchedTaskIntervals.isEmpty()).isTrue()
+        assertThat(applied.serverNow).isEqualTo(Instant.parse("2026-09-21T15:56:16.642Z"))
     }
 
     @Test
     fun anUnparseableServerTimeIsTreatedAsAbsent() {
         // Same rule the delta feed follows: a clock sample the client cannot read is no sample,
         // not a reason to lose the rows that came with it.
-        assertNull(change("""{"touched":[],"serverNowUtc":"not a timestamp"}""").serverNow)
+        assertThat(change("""{"touched":[],"serverNowUtc":"not a timestamp"}""").serverNow).isNull()
     }
 
     @Test
@@ -139,10 +140,10 @@ class ActiveTimerMapperTest {
                 ).toRejected()
 
         // What lets the losing device converge on the truth without a second round trip.
-        assertEquals("d8bc4ae2-0000-4000-8000-000000000009", rejected.active?.intervalId)
-        assertEquals(ActiveTimerKind.SUB_TASK, rejected.active?.kind)
+        assertThat(rejected.active?.intervalId).isEqualTo("d8bc4ae2-0000-4000-8000-000000000009")
+        assertThat(rejected.active?.kind).isEqualTo(ActiveTimerKind.SUB_TASK)
         // No envelope timestamp on a conflict, but the timer it names carries one.
-        assertEquals(Instant.parse("2026-09-21T16:07:15.927Z"), rejected.serverNow)
+        assertThat(rejected.serverNow).isEqualTo(Instant.parse("2026-09-21T16:07:15.927Z"))
     }
 
     @Test
@@ -153,8 +154,8 @@ class ActiveTimerMapperTest {
                     """{"code":"TIMER_CONFLICT","active":null}""",
                 ).toRejected()
 
-        assertNull(rejected.active)
-        assertNull(rejected.serverNow)
+        assertThat(rejected.active).isNull()
+        assertThat(rejected.serverNow).isNull()
     }
 
     @Test
@@ -170,8 +171,8 @@ class ActiveTimerMapperTest {
                 deviceId = "25247336-0000-4000-8000-00000000000a",
             ).toRequest()
 
-        assertEquals("sub_task", request.kind)
-        assertEquals("2026-09-21T15:56:14.425Z", request.startedAtUtc)
-        assertEquals("25247336-0000-4000-8000-00000000000a", request.deviceId)
+        assertThat(request.kind).isEqualTo("sub_task")
+        assertThat(request.startedAtUtc).isEqualTo("2026-09-21T15:56:14.425Z")
+        assertThat(request.deviceId).isEqualTo("25247336-0000-4000-8000-00000000000a")
     }
 }

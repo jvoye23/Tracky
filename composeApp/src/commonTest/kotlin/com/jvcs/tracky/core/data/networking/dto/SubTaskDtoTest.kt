@@ -1,5 +1,9 @@
 package com.jvcs.tracky.core.data.networking.dto
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.data.networking.CreateSubTaskIntervalRequest
 import com.jvcs.tracky.core.data.networking.CreateSubTaskRequest
 import com.jvcs.tracky.core.data.networking.mappers.toProjectSubTask
@@ -8,9 +12,6 @@ import com.jvcs.tracky.features.project.data.mappers.toCreateSubTaskIntervalRequ
 import com.jvcs.tracky.features.project.data.mappers.toCreateSubTaskRequest
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 /**
  * Guards the wire contract for subtasks and subtask intervals against the documented server
@@ -69,16 +70,16 @@ class SubTaskDtoTest {
         val task = json.decodeFromString<ProjectTaskDto>(documentedTask)
 
         val subTask = task.subTasks.single()
-        assertEquals("3d90b1ac-51f7-4a02-9e64-1c7b2f0e5d48", subTask.subTaskId)
-        assertEquals("fe316e35-bd3f-4c6f-9d7d-23d6b6e8877e", subTask.parentProjectTaskId)
-        assertEquals("Draft the outline", subTask.title)
-        assertEquals(600000L, subTask.durationMillis)
-        assertTrue(subTask.isFinished)
+        assertThat(subTask.subTaskId).isEqualTo("3d90b1ac-51f7-4a02-9e64-1c7b2f0e5d48")
+        assertThat(subTask.parentProjectTaskId).isEqualTo("fe316e35-bd3f-4c6f-9d7d-23d6b6e8877e")
+        assertThat(subTask.title).isEqualTo("Draft the outline")
+        assertThat(subTask.durationMillis).isEqualTo(600000L)
+        assertThat(subTask.isFinished).isTrue()
 
         val interval = subTask.intervals.single()
-        assertEquals("7a41e0c9-2b8d-4f31-8c05-9e6a3d1f4b72", interval.subTaskIntervalId)
-        assertEquals("3d90b1ac-51f7-4a02-9e64-1c7b2f0e5d48", interval.parentSubTaskId)
-        assertEquals("9c1f0b52-6a4e-4f0d-9d16-2b5b0f8c9a31", interval.parentTaskIntervalId)
+        assertThat(interval.subTaskIntervalId).isEqualTo("7a41e0c9-2b8d-4f31-8c05-9e6a3d1f4b72")
+        assertThat(interval.parentSubTaskId).isEqualTo("3d90b1ac-51f7-4a02-9e64-1c7b2f0e5d48")
+        assertThat(interval.parentTaskIntervalId).isEqualTo("9c1f0b52-6a4e-4f0d-9d16-2b5b0f8c9a31")
     }
 
     @Test
@@ -88,10 +89,12 @@ class SubTaskDtoTest {
 
         val subTask = dto.toProjectSubTask(parentProjectId = "p1")
 
-        assertEquals("p1", subTask.parentProjectId)
-        assertEquals("2026-03-28T15:26:40.771Z", subTask.ownUpdatedAt.toString())
+        assertThat(subTask.parentProjectId).isEqualTo("p1")
+        assertThat(subTask.ownUpdatedAt.toString()).isEqualTo("2026-03-28T15:26:40.771Z")
         // A pulled subtask now brings its intervals with it.
-        assertEquals("9c1f0b52-6a4e-4f0d-9d16-2b5b0f8c9a31", subTask.subTaskIntervals.single().parentTaskIntervalId)
+        assertThat(
+            subTask.subTaskIntervals.single().parentTaskIntervalId,
+        ).isEqualTo("9c1f0b52-6a4e-4f0d-9d16-2b5b0f8c9a31")
     }
 
     @Test
@@ -112,11 +115,11 @@ class SubTaskDtoTest {
             )
 
         // The fields with no wire counterpart: they must survive a server echo unchanged.
-        assertTrue(interval.startedParentTimer)
-        assertEquals("device-1", interval.startedByDeviceId)
+        assertThat(interval.startedParentTimer).isTrue()
+        assertThat(interval.startedByDeviceId).isEqualTo("device-1")
         // The nesting now comes off the wire rather than from the caller.
-        assertEquals("9c1f0b52-6a4e-4f0d-9d16-2b5b0f8c9a31", interval.parentTaskIntervalId)
-        assertEquals("p1", interval.parentProjectId)
+        assertThat(interval.parentTaskIntervalId).isEqualTo("9c1f0b52-6a4e-4f0d-9d16-2b5b0f8c9a31")
+        assertThat(interval.parentProjectId).isEqualTo("p1")
     }
 
     @Test
@@ -131,8 +134,8 @@ class SubTaskDtoTest {
                 """{"id":"t1","title":"T","startDateTimeUtc":"2026-03-28T15:16:40Z"}""",
             )
 
-        assertTrue(explicit.subTasks.isEmpty())
-        assertTrue(omitted.subTasks.isEmpty())
+        assertThat(explicit.subTasks.isEmpty()).isTrue()
+        assertThat(omitted.subTasks.isEmpty()).isTrue()
     }
 
     @Test
@@ -150,8 +153,8 @@ class SubTaskDtoTest {
                 """.trimIndent(),
             )
 
-        assertNull(dto.endDateTimeUtc)
-        assertEquals(0L, dto.durationMillis)
+        assertThat(dto.endDateTimeUtc).isNull()
+        assertThat(dto.durationMillis).isEqualTo(0L)
     }
 
     @Test
@@ -159,19 +162,19 @@ class SubTaskDtoTest {
         val subTask = json.decodeFromString<ProjectTaskDto>(documentedTask).subTasks.single()
 
         val body: CreateSubTaskRequest = subTask.toProjectSubTask("p1").toCreateSubTaskRequest()
-        assertEquals("3d90b1ac-51f7-4a02-9e64-1c7b2f0e5d48", body.id)
-        assertTrue(body.title.isNotBlank()) // the server's @NotBlank rule
+        assertThat(body.id).isEqualTo("3d90b1ac-51f7-4a02-9e64-1c7b2f0e5d48")
+        assertThat(body.title.isNotBlank()).isTrue() // the server's @NotBlank rule
 
         val intervalBody: CreateSubTaskIntervalRequest =
             subTask.intervals
                 .single()
                 .toSubTaskInterval("p1", startedParentTimer = true, startedByDeviceId = null)
                 .toCreateSubTaskIntervalRequest()
-        assertEquals("7a41e0c9-2b8d-4f31-8c05-9e6a3d1f4b72", intervalBody.id)
+        assertThat(intervalBody.id).isEqualTo("7a41e0c9-2b8d-4f31-8c05-9e6a3d1f4b72")
         // Required on create; a missing value is a 400.
-        assertEquals("9c1f0b52-6a4e-4f0d-9d16-2b5b0f8c9a31", intervalBody.parentTaskIntervalId)
+        assertThat(intervalBody.parentTaskIntervalId).isEqualTo("9c1f0b52-6a4e-4f0d-9d16-2b5b0f8c9a31")
 
         // The server has no column for this one and would reject the unknown property.
-        assertTrue(!json.encodeToString(intervalBody).contains("startedParentTimer"))
+        assertThat(!json.encodeToString(intervalBody).contains("startedParentTimer")).isTrue()
     }
 }
