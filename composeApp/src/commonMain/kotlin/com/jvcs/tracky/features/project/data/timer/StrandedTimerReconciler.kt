@@ -1,6 +1,8 @@
 package com.jvcs.tracky.features.project.data.timer
 
 import com.jvcs.tracky.core.database.dao.ProjectDao
+import com.jvcs.tracky.core.database.dao.StrandedIntervalDao
+import com.jvcs.tracky.core.database.dao.TaskIntervalDao
 import com.jvcs.tracky.core.database.entity.StrandedIntervalEntity
 import com.jvcs.tracky.core.domain.device.DeviceIdProvider
 import com.jvcs.tracky.core.domain.startup.StartupReconciliation
@@ -33,6 +35,8 @@ import kotlinx.coroutines.launch
  */
 class StrandedTimerReconciler(
     private val projectDao: ProjectDao,
+    private val taskIntervalDao: TaskIntervalDao,
+    private val strandedIntervalDao: StrandedIntervalDao,
     /**
      * The corrected clock, because [detectedAtEpochMs] is subtracted from an interval's
      * `startDateTimeEpochMs` to work out the duration the dialog offers, and that start is written
@@ -76,7 +80,7 @@ class StrandedTimerReconciler(
             projectDao.updateSubTaskTimerStatus(interval.parentSubTaskId, false)
         }
 
-        projectDao.getAllOpenTaskIntervalsForDevice(deviceId).forEach { interval ->
+        taskIntervalDao.getAllOpenTaskIntervalsForDevice(deviceId).forEach { interval ->
             park(interval.intervalId, isSubTaskInterval = false, detectedAt)
             projectDao.updateSessionTimerStatus(interval.parentTaskId, false)
         }
@@ -87,8 +91,8 @@ class StrandedTimerReconciler(
         isSubTaskInterval: Boolean,
         detectedAt: Long,
     ) {
-        if (projectDao.getStrandedInterval(intervalId) != null) return
-        projectDao.upsertStrandedInterval(
+        if (strandedIntervalDao.getStrandedInterval(intervalId) != null) return
+        strandedIntervalDao.upsertStrandedInterval(
             StrandedIntervalEntity(
                 intervalId = intervalId,
                 isSubTaskInterval = isSubTaskInterval,

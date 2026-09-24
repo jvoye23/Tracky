@@ -49,7 +49,7 @@ internal class RoomLocalTaskDataSourceStartTest {
                 .setDriver(BundledSQLiteDriver())
                 .setQueryCoroutineContext(Dispatchers.IO)
                 .build()
-        dataSource = RoomLocalTaskDataSource(db.projectDao, FakeDeviceIdProvider(), serverClock)
+        dataSource = RoomLocalTaskDataSource(db.projectDao, db.taskIntervalDao, FakeDeviceIdProvider(), serverClock)
     }
 
     @AfterTest
@@ -147,7 +147,7 @@ internal class RoomLocalTaskDataSourceStartTest {
         runBlocking {
             seed()
             // A stranded row from an older build, which had no reuse guard.
-            db.projectDao.upsertTaskInterval(
+            db.taskIntervalDao.upsertTaskInterval(
                 TaskIntervalEntity(
                     intervalId = "i-stranded",
                     parentTaskId = "t1",
@@ -157,7 +157,7 @@ internal class RoomLocalTaskDataSourceStartTest {
                     durationMillis = 0,
                 ),
             )
-            db.projectDao.upsertTaskInterval(
+            db.taskIntervalDao.upsertTaskInterval(
                 TaskIntervalEntity(
                     intervalId = "i-recent",
                     parentTaskId = "t1",

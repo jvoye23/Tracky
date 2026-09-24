@@ -1,6 +1,7 @@
 package com.jvcs.tracky.features.project.data.timer
 
 import com.jvcs.tracky.core.database.dao.ProjectDao
+import com.jvcs.tracky.core.database.dao.TaskIntervalDao
 import com.jvcs.tracky.core.database.entity.SubTaskIntervalEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 import com.jvcs.tracky.core.domain.device.DeviceIdProvider
@@ -31,13 +32,14 @@ import kotlin.time.Instant
  */
 class OfflineFirstRunningTimerRepository(
     private val projectDao: ProjectDao,
+    private val taskIntervalDao: TaskIntervalDao,
     private val deviceIdProvider: DeviceIdProvider,
 ) : RunningTimerRepository {
 
     override fun observeRunningTimer(): Flow<RunningTimer?> =
         combine(
             projectDao.observeOpenSubTaskInterval(),
-            projectDao.observeOpenTaskInterval(),
+            taskIntervalDao.observeOpenTaskInterval(),
             ::Pair,
         )
             // Both queries re-run on any write to their tables, so most emissions repeat the row

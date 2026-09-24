@@ -9,7 +9,6 @@ import com.jvcs.tracky.core.database.entity.ProjectSubTaskEntity
 import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
 import com.jvcs.tracky.core.database.entity.StrandedIntervalEntity
 import com.jvcs.tracky.core.database.entity.SubTaskIntervalEntity
-import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 import com.jvcs.tracky.core.database.relation.ProjectSortIndexEntity
 import com.jvcs.tracky.core.database.relation.ProjectWithTaskTreeEntity
 import com.jvcs.tracky.core.database.relation.ProjectWithTasksEntity
@@ -120,28 +119,6 @@ interface ProjectDao {
     @Transaction
     @Query("SELECT * FROM project_tasks WHERE projectTaskId = :taskId")
     fun getTaskWithIntervalsById(taskId: String): Flow<TaskWithIntervals?>
-
-    @Upsert
-    suspend fun upsertTaskInterval(interval: TaskIntervalEntity)
-
-    // Needed by the pending-sync drain: a queued interval op stores only the interval id, so the
-    // row has to be re-read from local state when it is finally pushed.
-    @Query("SELECT * FROM task_intervals WHERE intervalId = :intervalId")
-    suspend fun getIntervalById(intervalId: String): TaskIntervalEntity?
-
-    @Query("DELETE FROM task_intervals WHERE intervalId = :intervalId")
-    suspend fun deleteTaskInterval(intervalId: String)
-
-    // More than one open interval per task is a bug (see startTask's reuse guard), but the rows can
-    // already exist on a device that ran an older build, and LIMIT 1 without an order leaves which
-    // one comes back to the query planner. Newest-first so a stop closes the interval the user just
-    // started, never a stranded one whose span covers the days since.
-    @Query(
-        "SELECT * FROM task_intervals WHERE parentTaskId = :sessionId AND endDateTimeEpochMs IS NULL " +
-            "AND intervalId NOT IN (SELECT intervalId FROM stranded_intervals) " +
-            "ORDER BY startDateTimeEpochMs DESC LIMIT 1",
-    )
-    suspend fun getOpenIntervalBySessionId(sessionId: String): TaskIntervalEntity?
 
     @Query("UPDATE project_tasks SET isTimerRunning = :isRunning WHERE projectTaskId = :sessionId")
     suspend fun updateSessionTimerStatus(sessionId: String, isRunning: Boolean)
@@ -276,56 +253,12 @@ interface ProjectDao {
 
     // Backs the parent task's play button, which resumes whatever was worked on last rather than
     // opening a task-level interval of its own. Same join as above; ordered instead of filtered.
-    // ---- Stranded intervals -----------------------------------------------------------------
-    // Local-only, never synced. An interval listed here is open but nothing is timing it, so every
-    // "what is currently open" query above excludes it and no aggregation counts it - an open
-    // interval banks nothing until it closes. See StrandedIntervalEntity.
-
-    @Upsert
-    suspend fun upsertStrandedInterval(stranded: StrandedIntervalEntity)
-
-    @Query("DELETE FROM stranded_intervals WHERE intervalId = :intervalId")
-    suspend fun deleteStrandedInterval(intervalId: String)
-
-    @Query("SELECT * FROM stranded_intervals WHERE intervalId = :intervalId")
-    suspend fun getStrandedInterval(intervalId: String): StrandedIntervalEntity?
-
-    @Query("SELECT * FROM stranded_intervals ORDER BY detectedAtEpochMs ASC")
-    fun observeStrandedIntervals(): Flow<List<StrandedIntervalEntity>>
-
-    // The running timer's two inputs, mirroring the reconciler's pair below but filtered the other
-    // way: parked rows are open and timing nothing, so they must never look like a running timer.
-    // Global rather than per-task - only one timer runs at a time - and newest-first for the same
-    // reason getOpenIntervalBySessionId is, so a device carrying stale open rows from an older
-    // build reports the one the user just started.
-
-    @Query(
-        "SELECT * FROM task_intervals WHERE endDateTimeEpochMs IS NULL " +
-            "AND intervalId NOT IN (SELECT intervalId FROM stranded_intervals) " +
-            "ORDER BY startDateTimeEpochMs DESC LIMIT 1",
-    )
-    fun observeOpenTaskInterval(): Flow<TaskIntervalEntity?>
-
     @Query(
         "SELECT * FROM sub_task_intervals WHERE endDateTimeEpochMs IS NULL " +
             "AND subTaskIntervalId NOT IN (SELECT intervalId FROM stranded_intervals) " +
             "ORDER BY startDateTimeEpochMs DESC LIMIT 1",
     )
     fun observeOpenSubTaskInterval(): Flow<SubTaskIntervalEntity?>
-
-    // The reconciler's two inputs.
-    //
-    // Not filtered against stranded_intervals, on purpose: the reconciler is the thing that decides
-    // what counts as stranded, so it has to see rows it has already flagged to stay idempotent.
-    //
-    // Filtered by device, also on purpose: an open interval another device started is a timer the
-    // user is running right now, not wreckage from a crash here. A NULL id predates multi-device
-    // sync and means this device, which is what those rows have always meant.
-    @Query(
-        "SELECT * FROM task_intervals WHERE endDateTimeEpochMs IS NULL " +
-            "AND (startedByDeviceId IS NULL OR startedByDeviceId = :deviceId)",
-    )
-    suspend fun getAllOpenTaskIntervalsForDevice(deviceId: String): List<TaskIntervalEntity>
 
     @Query(
         "SELECT * FROM sub_task_intervals WHERE endDateTimeEpochMs IS NULL " +

@@ -48,8 +48,21 @@ internal class RoomLocalSubTaskDataSourceStopTest {
                 .setDriver(BundledSQLiteDriver())
                 .setQueryCoroutineContext(Dispatchers.IO)
                 .build()
-        subTasks = RoomLocalSubTaskDataSource(db.projectDao, FakeDeviceIdProvider(), testServerClock(timeProvider))
-        tasks = RoomLocalTaskDataSource(db.projectDao, FakeDeviceIdProvider(), testServerClock(timeProvider))
+        subTasks =
+            RoomLocalSubTaskDataSource(
+                db.projectDao,
+                db.taskIntervalDao,
+                db.strandedIntervalDao,
+                FakeDeviceIdProvider(),
+                testServerClock(timeProvider),
+            )
+        tasks =
+            RoomLocalTaskDataSource(
+                db.projectDao,
+                db.taskIntervalDao,
+                FakeDeviceIdProvider(),
+                testServerClock(timeProvider),
+            )
     }
 
     @AfterTest
@@ -123,7 +136,7 @@ internal class RoomLocalSubTaskDataSourceStopTest {
 
             assertThat(result is Result.Success).isTrue()
             assertThat(db.projectDao.getOpenSubTaskInterval("s1")).isNull()
-            assertThat(db.projectDao.getOpenIntervalBySessionId("t1")).isNull()
+            assertThat(db.taskIntervalDao.getOpenIntervalBySessionId("t1")).isNull()
             assertThat(subTaskIsRunning("s1")).isFalse()
             assertThat(taskIsRunning()).isFalse()
             assertThat(db.projectDao.getSubTaskById("s1")!!.durationMillis).isEqualTo(60_000L)
@@ -134,7 +147,7 @@ internal class RoomLocalSubTaskDataSourceStopTest {
     fun stoppingASubTaskLeavesATaskTheUserStartedRunning() =
         runBlocking {
             seed("s1")
-            db.projectDao.upsertTaskInterval(
+            db.taskIntervalDao.upsertTaskInterval(
                 TaskIntervalEntity("i-manual", "t1", "p1", 0, null, 0),
             )
             db.projectDao.updateSessionTimerStatus("t1", true)
@@ -145,7 +158,7 @@ internal class RoomLocalSubTaskDataSourceStopTest {
 
             assertThat(db.projectDao.getOpenSubTaskInterval("s1")).isNull()
             // The task timer was not this subtask's to stop.
-            assertThat(db.projectDao.getOpenIntervalBySessionId("t1")).isNotNull()
+            assertThat(db.taskIntervalDao.getOpenIntervalBySessionId("t1")).isNotNull()
             assertThat(taskIsRunning()).isTrue()
         }
 
@@ -160,7 +173,7 @@ internal class RoomLocalSubTaskDataSourceStopTest {
 
             subTasks.stopSubTask("s2")
 
-            assertThat(db.projectDao.getOpenIntervalBySessionId("t1")).isNotNull()
+            assertThat(db.taskIntervalDao.getOpenIntervalBySessionId("t1")).isNotNull()
             assertThat(taskIsRunning()).isTrue()
         }
 
@@ -187,7 +200,7 @@ internal class RoomLocalSubTaskDataSourceStopTest {
 
             // Neither may be left open — and both are banked at the same instant.
             assertThat(db.projectDao.getOpenSubTaskInterval("s1")).isNull()
-            assertThat(db.projectDao.getOpenIntervalBySessionId("t1")).isNull()
+            assertThat(db.taskIntervalDao.getOpenIntervalBySessionId("t1")).isNull()
             assertThat(subTaskIsRunning("s1")).isFalse()
             assertThat(taskIsRunning()).isFalse()
             assertThat(db.projectDao.getSubTaskById("s1")!!.durationMillis).isEqualTo(60_000L)
@@ -198,7 +211,7 @@ internal class RoomLocalSubTaskDataSourceStopTest {
     fun stoppingATaskWithNoRunningSubTaskStillWorks() =
         runBlocking {
             seed("s1")
-            db.projectDao.upsertTaskInterval(TaskIntervalEntity("i1", "t1", "p1", 0, null, 0))
+            db.taskIntervalDao.upsertTaskInterval(TaskIntervalEntity("i1", "t1", "p1", 0, null, 0))
             db.projectDao.updateSessionTimerStatus("t1", true)
             timeProvider.now = Instant.fromEpochMilliseconds(60_000)
 

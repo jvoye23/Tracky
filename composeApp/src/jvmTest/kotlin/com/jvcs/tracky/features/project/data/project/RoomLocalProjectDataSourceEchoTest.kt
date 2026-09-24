@@ -79,7 +79,7 @@ internal class RoomLocalProjectDataSourceEchoTest {
                 updatedAtEpochMs = 0,
             ),
         )
-        db.projectDao.upsertTaskInterval(
+        db.taskIntervalDao.upsertTaskInterval(
             TaskIntervalEntity(
                 intervalId = "i1",
                 parentTaskId = "t1",
@@ -115,7 +115,7 @@ internal class RoomLocalProjectDataSourceEchoTest {
                 subTaskIntervals = emptyList(),
             )
 
-            assertThat(db.projectDao.getIntervalById("i1")?.endDateTimeEpochMs).isEqualTo(60_000L)
+            assertThat(db.taskIntervalDao.getIntervalById("i1")?.endDateTimeEpochMs).isEqualTo(60_000L)
         }
 
     @Test
@@ -130,7 +130,7 @@ internal class RoomLocalProjectDataSourceEchoTest {
                 subTaskIntervals = emptyList(),
             )
 
-            assertThat(db.projectDao.getIntervalById("i1")?.endDateTimeEpochMs).isEqualTo(60_000L)
+            assertThat(db.taskIntervalDao.getIntervalById("i1")?.endDateTimeEpochMs).isEqualTo(60_000L)
         }
 
     @Test
@@ -146,7 +146,7 @@ internal class RoomLocalProjectDataSourceEchoTest {
             )
 
             assertThat(
-                db.projectDao.getIntervalById("i1")?.startedByDeviceId,
+                db.taskIntervalDao.getIntervalById("i1")?.startedByDeviceId,
             ).isEqualTo(FakeDeviceIdProvider.THIS_DEVICE)
         }
 
@@ -159,7 +159,7 @@ internal class RoomLocalProjectDataSourceEchoTest {
 
             dataSource.applyTimerEcho(taskIntervals = emptyList(), subTaskIntervals = emptyList())
 
-            assertThat(db.projectDao.getIntervalById("i1")).isNotNull()
+            assertThat(db.taskIntervalDao.getIntervalById("i1")).isNotNull()
             assertThat(db.projectDao.getTaskById("t1")).isNotNull()
             // Trailing Unit: JUnit rejects a whole class whose runBlocking test ends on a
             // value-returning assertion, and reports it as initializationError rather than a failure.
@@ -184,6 +184,6 @@ internal class RoomLocalProjectDataSourceEchoTest {
                 subTaskIntervals = emptyList(),
             )
 
-            assertThat(db.projectDao.getIntervalById("i-orphan")).isNull()
+            assertThat(db.taskIntervalDao.getIntervalById("i-orphan")).isNull()
         }
 }

@@ -51,7 +51,14 @@ internal class StrandedTimerReconcilerTest {
                 .setQueryCoroutineContext(Dispatchers.IO)
                 .build()
         reconciler =
-            StrandedTimerReconciler(db.projectDao, testServerClock(timeProvider), FakeDeviceIdProvider(), TestScope())
+            StrandedTimerReconciler(
+                db.projectDao,
+                db.taskIntervalDao,
+                db.strandedIntervalDao,
+                testServerClock(timeProvider),
+                FakeDeviceIdProvider(),
+                TestScope(),
+            )
     }
 
     @AfterTest
@@ -115,7 +122,7 @@ internal class StrandedTimerReconcilerTest {
         startedAt: Long = 0,
         startedByDeviceId: String? = FakeDeviceIdProvider.THIS_DEVICE,
     ) {
-        db.projectDao.upsertTaskInterval(
+        db.taskIntervalDao.upsertTaskInterval(
             TaskIntervalEntity(
                 intervalId = id,
                 parentTaskId = "t1",
@@ -157,15 +164,15 @@ internal class StrandedTimerReconcilerTest {
 
             reconciler.reconcile()
 
-            val parked = db.projectDao.getStrandedInterval("i1")
+            val parked = db.strandedIntervalDao.getStrandedInterval("i1")
             checkNotNull(parked) { "an open interval at start-up has nothing timing it" }
             assertThat(parked.isSubTaskInterval).isFalse()
             assertThat(parked.detectedAtEpochMs).isEqualTo(threeDaysLater.toEpochMilliseconds())
 
             // The whole point: three days passed, and not one millisecond of it was banked.
             assertThat(db.projectDao.getTaskById("t1")!!.durationMillis).isEqualTo(0L)
-            assertThat(db.projectDao.getIntervalById("i1")!!.durationMillis).isEqualTo(0L)
-            assertThat(db.projectDao.getIntervalById("i1")!!.endDateTimeEpochMs).isNull()
+            assertThat(db.taskIntervalDao.getIntervalById("i1")!!.durationMillis).isEqualTo(0L)
+            assertThat(db.taskIntervalDao.getIntervalById("i1")!!.endDateTimeEpochMs).isNull()
         }
 
     @Test
@@ -188,7 +195,7 @@ internal class StrandedTimerReconcilerTest {
             reconciler.reconcile()
 
             // Nothing may adopt it: not a task start, and not a subtask looking for a parent to nest in.
-            assertThat(db.projectDao.getOpenIntervalBySessionId("t1")).isNull()
+            assertThat(db.taskIntervalDao.getOpenIntervalBySessionId("t1")).isNull()
         }
 
     @Test
@@ -205,10 +212,10 @@ internal class StrandedTimerReconcilerTest {
 
             // Still the first detection: otherwise the duration the dialog offers grows every launch.
             assertThat(
-                db.projectDao.getStrandedInterval("i1")!!.detectedAtEpochMs,
+                db.strandedIntervalDao.getStrandedInterval("i1")!!.detectedAtEpochMs,
             ).isEqualTo(threeDaysLater.toEpochMilliseconds())
             assertThat(
-                db.projectDao
+                db.strandedIntervalDao
                     .observeStrandedIntervals()
                     .first()
                     .size,
@@ -219,7 +226,7 @@ internal class StrandedTimerReconcilerTest {
     fun aClosedIntervalIsLeftAlone() =
         runBlocking {
             seed()
-            db.projectDao.upsertTaskInterval(
+            db.taskIntervalDao.upsertTaskInterval(
                 TaskIntervalEntity(
                     intervalId = "i-closed",
                     parentTaskId = "t1",
@@ -233,8 +240,8 @@ internal class StrandedTimerReconcilerTest {
 
             reconciler.reconcile()
 
-            assertThat(db.projectDao.getStrandedInterval("i-closed")).isNull()
-            assertThat(db.projectDao.getIntervalById("i-closed")!!.durationMillis).isEqualTo(60_000L)
+            assertThat(db.strandedIntervalDao.getStrandedInterval("i-closed")).isNull()
+            assertThat(db.taskIntervalDao.getIntervalById("i-closed")!!.durationMillis).isEqualTo(60_000L)
         }
 
     @Test
@@ -258,8 +265,8 @@ internal class StrandedTimerReconcilerTest {
 
             reconciler.reconcile()
 
-            val parkedChild = db.projectDao.getStrandedInterval("si1")
-            val parkedParent = db.projectDao.getStrandedInterval("i1")
+            val parkedChild = db.strandedIntervalDao.getStrandedInterval("si1")
+            val parkedParent = db.strandedIntervalDao.getStrandedInterval("i1")
             checkNotNull(parkedChild)
             checkNotNull(parkedParent)
             assertThat(parkedChild.isSubTaskInterval).isTrue()
@@ -284,8 +291,8 @@ internal class StrandedTimerReconcilerTest {
 
             // The user's other phone is tracking right now. Parking it would hide a live timer and ask
             // them to adjudicate a session that has not ended.
-            assertThat(db.projectDao.observeOpenTaskInterval().first()).isNotNull()
-            assertThat(db.projectDao.getStrandedInterval("i1")).isNull()
+            assertThat(db.taskIntervalDao.observeOpenTaskInterval().first()).isNotNull()
+            assertThat(db.strandedIntervalDao.getStrandedInterval("i1")).isNull()
         }
 
     @Test
@@ -309,7 +316,7 @@ internal class StrandedTimerReconcilerTest {
 
             // Every row written before the column existed. Reading null as foreign would strand this
             // device's own crashed timers with nothing ever offering to recover them.
-            assertThat(db.projectDao.getStrandedInterval("i1")).isNotNull()
+            assertThat(db.strandedIntervalDao.getStrandedInterval("i1")).isNotNull()
             assertThat(db.projectDao.getTaskById("t1")!!.isTimerRunning).isFalse()
         }
 
@@ -322,8 +329,8 @@ internal class StrandedTimerReconcilerTest {
 
             reconciler.reconcile()
 
-            assertThat(db.projectDao.getStrandedInterval("mine")).isNotNull()
-            assertThat(db.projectDao.getStrandedInterval("theirs")).isNull()
+            assertThat(db.strandedIntervalDao.getStrandedInterval("mine")).isNotNull()
+            assertThat(db.strandedIntervalDao.getStrandedInterval("theirs")).isNull()
         }
 
     @Test
@@ -335,8 +342,8 @@ internal class StrandedTimerReconcilerTest {
 
             reconciler.reconcile()
 
-            assertThat(db.projectDao.getStrandedInterval("si1")).isNull()
-            assertThat(db.projectDao.getStrandedInterval("i1")).isNull()
+            assertThat(db.strandedIntervalDao.getStrandedInterval("si1")).isNull()
+            assertThat(db.strandedIntervalDao.getStrandedInterval("i1")).isNull()
             assertThat(db.projectDao.getSubTaskById("s1")!!.isTimerRunning).isTrue()
         }
 
@@ -351,7 +358,7 @@ internal class StrandedTimerReconcilerTest {
 
             // Children are walked first and judged on their own provenance, so a crash here is still
             // recovered even though the enclosing interval belongs to another device.
-            assertThat(db.projectDao.getStrandedInterval("si1")).isNotNull()
-            assertThat(db.projectDao.getStrandedInterval("i1")).isNull()
+            assertThat(db.strandedIntervalDao.getStrandedInterval("si1")).isNotNull()
+            assertThat(db.strandedIntervalDao.getStrandedInterval("i1")).isNull()
         }
 }

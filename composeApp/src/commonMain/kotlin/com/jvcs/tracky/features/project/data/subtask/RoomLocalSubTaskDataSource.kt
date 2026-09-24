@@ -3,6 +3,8 @@ package com.jvcs.tracky.features.project.data.subtask
 import androidx.sqlite.SQLiteException
 import co.touchlab.kermit.Logger
 import com.jvcs.tracky.core.database.dao.ProjectDao
+import com.jvcs.tracky.core.database.dao.StrandedIntervalDao
+import com.jvcs.tracky.core.database.dao.TaskIntervalDao
 import com.jvcs.tracky.core.database.entity.SubTaskIntervalEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 import com.jvcs.tracky.core.domain.device.DeviceIdProvider
@@ -29,6 +31,8 @@ import kotlin.uuid.Uuid
 
 class RoomLocalSubTaskDataSource(
     private val projectDao: ProjectDao,
+    private val taskIntervalDao: TaskIntervalDao,
+    private val strandedIntervalDao: StrandedIntervalDao,
     private val deviceIdProvider: DeviceIdProvider,
     /** See [com.jvcs.tracky.features.project.data.task.RoomLocalTaskDataSource]'s serverClock. */
     private val serverClock: ServerClock,
@@ -89,7 +93,7 @@ class RoomLocalSubTaskDataSource(
                     // The enclosing task interval. Reusing the open one keeps a manually started task
                     // timer intact; opening one makes this subtask the reason the task is running, which
                     // startedParentTimer records so stopping it can undo exactly that.
-                    val openTaskInterval = projectDao.getOpenIntervalBySessionId(taskId)
+                    val openTaskInterval = taskIntervalDao.getOpenIntervalBySessionId(taskId)
                     val parentTaskInterval =
                         openTaskInterval
                             ?: TaskIntervalEntity(
@@ -101,7 +105,7 @@ class RoomLocalSubTaskDataSource(
                                 durationMillis = 0L,
                                 startedByDeviceId = deviceId,
                             ).also {
-                                projectDao.upsertTaskInterval(it)
+                                taskIntervalDao.upsertTaskInterval(it)
                                 projectDao.updateSessionTimerStatus(taskId, true)
                             }
                     // Non-null only when this subtask opened the task's interval.
@@ -152,11 +156,11 @@ class RoomLocalSubTaskDataSource(
                     // is open but untimed, and closing it here would bank every hour since it opened.
                     val closedTaskInterval =
                         if (open.startedParentTimer) {
-                            projectDao
+                            taskIntervalDao
                                 .getIntervalById(open.parentTaskIntervalId)
                                 ?.takeIf { it.endDateTimeEpochMs == null }
-                                ?.takeIf { projectDao.getStrandedInterval(it.intervalId) == null }
-                                ?.let { projectDao.closeTaskInterval(it, now) }
+                                ?.takeIf { strandedIntervalDao.getStrandedInterval(it.intervalId) == null }
+                                ?.let { taskIntervalDao.closeTaskInterval(it, now, projectDao) }
                         } else {
                             null
                         }

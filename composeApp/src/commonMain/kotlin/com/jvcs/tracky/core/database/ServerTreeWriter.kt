@@ -108,29 +108,26 @@ class ServerTreeWriter(private val database: TrackyDatabase) {
     }
 
     private suspend fun mergeProjects(projects: List<ProjectEntity>) {
-        val dao = database.projectDao
         projects.forEach { incoming ->
-            val local = dao.getProjectById(incoming.projectId)
+            val local = database.projectDao.getProjectById(incoming.projectId)
             if (serverWinsOnPull(local?.updatedAtEpochMs, incoming.updatedAtEpochMs)) {
-                dao.upsertProject(incoming)
+                database.projectDao.upsertProject(incoming)
             }
         }
     }
 
     private suspend fun mergeTasks(tasks: List<ProjectTaskEntity>) {
-        val dao = database.projectDao
         tasks.forEach { incoming ->
-            val local = dao.getTaskById(incoming.projectTaskId)
+            val local = database.projectDao.getTaskById(incoming.projectTaskId)
             if (serverWinsOnPull(local?.updatedAtEpochMs, incoming.updatedAtEpochMs)) {
-                dao.upsertProjectTask(incoming)
+                database.projectDao.upsertProjectTask(incoming)
             }
         }
     }
 
     private suspend fun mergeIntervals(intervals: List<TaskIntervalEntity>, pendingIntervalIds: Set<String>) {
-        val dao = database.projectDao
         intervals.forEach { incoming ->
-            val local = dao.getIntervalById(incoming.intervalId)
+            val local = database.taskIntervalDao.getIntervalById(incoming.intervalId)
             val serverWins =
                 local == null ||
                     serverWinsOnPullForInterval(
@@ -145,7 +142,7 @@ class ServerTreeWriter(private val database: TrackyDatabase) {
                 // Falling back to the local value covers a row the server still has null for -
                 // every row predating the column - and stops a pull from making this device's own
                 // open interval look foreign and unrecoverable.
-                dao.upsertTaskInterval(
+                database.taskIntervalDao.upsertTaskInterval(
                     incoming.copy(
                         startedByDeviceId = incoming.startedByDeviceId ?: local?.startedByDeviceId,
                     ),
@@ -155,13 +152,12 @@ class ServerTreeWriter(private val database: TrackyDatabase) {
     }
 
     private suspend fun mergeSubTasks(subTasks: List<ProjectSubTaskEntity>) {
-        val dao = database.projectDao
         subTasks.forEach { incoming ->
-            if (dao.getTaskById(incoming.parentProjectTaskId) == null) return@forEach
-            val local = dao.getSubTaskById(incoming.projectSubTaskId)
+            if (database.projectDao.getTaskById(incoming.parentProjectTaskId) == null) return@forEach
+            val local = database.projectDao.getSubTaskById(incoming.projectSubTaskId)
             // A real stamp, exactly like a task's: subtasks are edited by hand.
             if (serverWinsOnPull(local?.updatedAtEpochMs, incoming.updatedAtEpochMs)) {
-                dao.upsertProjectSubTask(incoming)
+                database.projectDao.upsertProjectSubTask(incoming)
             }
         }
     }
@@ -170,12 +166,11 @@ class ServerTreeWriter(private val database: TrackyDatabase) {
         subTaskIntervals: List<SubTaskIntervalEntity>,
         pendingIntervalIds: Set<String>,
     ) {
-        val dao = database.projectDao
         subTaskIntervals.forEach { incoming ->
             // Two cascading parents, so two ways to dangle.
-            if (dao.getSubTaskById(incoming.parentSubTaskId) == null) return@forEach
-            if (dao.getIntervalById(incoming.parentTaskIntervalId) == null) return@forEach
-            val local = dao.getSubTaskIntervalById(incoming.subTaskIntervalId)
+            if (database.projectDao.getSubTaskById(incoming.parentSubTaskId) == null) return@forEach
+            if (database.taskIntervalDao.getIntervalById(incoming.parentTaskIntervalId) == null) return@forEach
+            val local = database.projectDao.getSubTaskIntervalById(incoming.subTaskIntervalId)
             val serverWins =
                 local == null ||
                     serverWinsOnPullForInterval(
@@ -189,7 +184,7 @@ class ServerTreeWriter(private val database: TrackyDatabase) {
                 // has never seen gets false, which is what it should have. startedByDeviceId does
                 // travel, so the incoming value wins and only falls back to the local one for a
                 // row the server still has null for.
-                dao.upsertSubTaskInterval(
+                database.projectDao.upsertSubTaskInterval(
                     incoming.copy(
                         startedParentTimer = local?.startedParentTimer ?: false,
                         startedByDeviceId = incoming.startedByDeviceId ?: local?.startedByDeviceId,
@@ -200,13 +195,12 @@ class ServerTreeWriter(private val database: TrackyDatabase) {
     }
 
     private suspend fun delete(deletions: ServerTombstones) {
-        val dao = database.projectDao
         val pending = database.pendingSyncDao.getAllPendingEntityIds().toSet()
 
-        deletions.projectIds.forEach { if (it !in pending) dao.deleteProject(it) }
-        deletions.taskIds.forEach { if (it !in pending) dao.deleteProjectTask(it) }
-        deletions.intervalIds.forEach { if (it !in pending) dao.deleteTaskInterval(it) }
-        deletions.subTaskIds.forEach { if (it !in pending) dao.deleteProjectSubTask(it) }
-        deletions.subTaskIntervalIds.forEach { if (it !in pending) dao.deleteSubTaskInterval(it) }
+        deletions.projectIds.forEach { if (it !in pending) database.projectDao.deleteProject(it) }
+        deletions.taskIds.forEach { if (it !in pending) database.projectDao.deleteProjectTask(it) }
+        deletions.intervalIds.forEach { if (it !in pending) database.taskIntervalDao.deleteTaskInterval(it) }
+        deletions.subTaskIds.forEach { if (it !in pending) database.projectDao.deleteProjectSubTask(it) }
+        deletions.subTaskIntervalIds.forEach { if (it !in pending) database.projectDao.deleteSubTaskInterval(it) }
     }
 }

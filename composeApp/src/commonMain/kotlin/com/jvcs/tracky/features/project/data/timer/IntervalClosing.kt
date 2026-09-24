@@ -1,6 +1,7 @@
 package com.jvcs.tracky.features.project.data.timer
 
 import com.jvcs.tracky.core.database.dao.ProjectDao
+import com.jvcs.tracky.core.database.dao.TaskIntervalDao
 import com.jvcs.tracky.core.database.entity.SubTaskIntervalEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 import kotlin.time.Instant
@@ -19,14 +20,18 @@ import kotlin.time.Instant
  *
  * Returns the closed row so callers can hand it on without recomputing the duration.
  */
-internal suspend fun ProjectDao.closeTaskInterval(interval: TaskIntervalEntity, now: Instant): TaskIntervalEntity {
+internal suspend fun TaskIntervalDao.closeTaskInterval(
+    interval: TaskIntervalEntity,
+    now: Instant,
+    taskDao: ProjectDao,
+): TaskIntervalEntity {
     val duration = interval.elapsedAt(now)
     val closed =
         interval.copy(endDateTimeEpochMs = now.toEpochMilliseconds(), durationMillis = duration)
 
     upsertTaskInterval(closed)
-    addTaskDuration(interval.parentTaskId, duration)
-    updateSessionTimerStatus(interval.parentTaskId, false)
+    taskDao.addTaskDuration(interval.parentTaskId, duration)
+    taskDao.updateSessionTimerStatus(interval.parentTaskId, false)
     return closed
 }
 

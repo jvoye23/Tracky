@@ -1,6 +1,8 @@
 package com.jvcs.tracky.features.project.data.timer
 
 import com.jvcs.tracky.core.database.dao.ProjectDao
+import com.jvcs.tracky.core.database.dao.StrandedIntervalDao
+import com.jvcs.tracky.core.database.dao.TaskIntervalDao
 import com.jvcs.tracky.core.database.entity.StrandedIntervalEntity
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
@@ -29,6 +31,8 @@ import kotlin.time.Instant
  */
 class OfflineFirstStrandedTimerRepository(
     private val projectDao: ProjectDao,
+    private val taskIntervalDao: TaskIntervalDao,
+    private val strandedIntervalDao: StrandedIntervalDao,
     private val intervalRepository: IntervalRepository,
     private val subTaskIntervalRepository: SubTaskIntervalRepository,
     private val projectTaskRepository: ProjectTaskRepository,
@@ -36,7 +40,7 @@ class OfflineFirstStrandedTimerRepository(
 ) : StrandedTimerRepository {
 
     override fun observeStrandedTimers(): Flow<List<StrandedTimer>> =
-        projectDao.observeStrandedIntervals().map { parked -> parked.toTimers() }
+        strandedIntervalDao.observeStrandedIntervals().map { parked -> parked.toTimers() }
 
     /**
      * Folds the parked rows into review items.
@@ -67,7 +71,7 @@ class OfflineFirstStrandedTimerRepository(
                 val parentInterval =
                     interval.parentTaskIntervalId
                         .takeIf { parentIsParked }
-                        ?.let { projectDao.getIntervalById(it) }
+                        ?.let { taskIntervalDao.getIntervalById(it) }
 
                 StrandedTimer(
                     taskIntervalId = parentInterval?.intervalId,
@@ -88,7 +92,7 @@ class OfflineFirstStrandedTimerRepository(
             taskParked.values
                 .filterNot { it.intervalId in claimedTaskIntervalIds }
                 .mapNotNull { parked ->
-                    val interval = projectDao.getIntervalById(parked.intervalId) ?: return@mapNotNull null
+                    val interval = taskIntervalDao.getIntervalById(parked.intervalId) ?: return@mapNotNull null
                     val task = projectDao.getTaskById(interval.parentTaskId) ?: return@mapNotNull null
                     val project = projectDao.getProjectById(task.parentProjectId) ?: return@mapNotNull null
                     val hasSubTasks = projectDao.countSubTasks(task.projectTaskId) > 0
@@ -123,21 +127,21 @@ class OfflineFirstStrandedTimerRepository(
                 // An edited duration shorter than the subtask's own start would write a negative span.
                 // Nothing defensible is left to keep, so the row goes instead.
                 if (endAt.toEpochMilliseconds() < interval.startDateTimeEpochMs) {
-                    projectDao.deleteStrandedInterval(id)
+                    strandedIntervalDao.deleteStrandedInterval(id)
                     subTaskIntervalRepository.deleteSubTaskInterval(id)
                     null
                 } else {
                     projectDao.closeSubTaskInterval(interval, endAt).also {
-                        projectDao.deleteStrandedInterval(id)
+                        strandedIntervalDao.deleteStrandedInterval(id)
                     }
                 }
             }
 
         val closedTaskInterval =
             timer.taskIntervalId?.let { id ->
-                val interval = projectDao.getIntervalById(id) ?: return@let null
-                projectDao.closeTaskInterval(interval, endAt).also {
-                    projectDao.deleteStrandedInterval(id)
+                val interval = taskIntervalDao.getIntervalById(id) ?: return@let null
+                taskIntervalDao.closeTaskInterval(interval, endAt, projectDao).also {
+                    strandedIntervalDao.deleteStrandedInterval(id)
                 }
             }
 
@@ -171,12 +175,12 @@ class OfflineFirstStrandedTimerRepository(
         // is resurrected by the next pull.
         val subTaskIntervalResult =
             timer.subTaskIntervalId?.let { id ->
-                projectDao.deleteStrandedInterval(id)
+                strandedIntervalDao.deleteStrandedInterval(id)
                 subTaskIntervalRepository.deleteSubTaskInterval(id)
             }
         val taskIntervalResult =
             timer.taskIntervalId?.let { id ->
-                projectDao.deleteStrandedInterval(id)
+                strandedIntervalDao.deleteStrandedInterval(id)
                 intervalRepository.deleteTaskInterval(id)
             }
 
