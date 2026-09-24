@@ -4,6 +4,10 @@ package com.jvcs.tracky.features.project.presentation.daily_overview
 
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.SavedStateHandle
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isTrue
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.presentation.fakes.FakeProjectRepository
 import com.jvcs.tracky.features.project.presentation.fakes.FixedTimeProvider
@@ -26,9 +30,6 @@ import kotlinx.datetime.toLocalDateTime
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
@@ -60,9 +61,9 @@ class DailyOverviewViewModelTest {
         runTest {
             val state = viewModel().state.value
 
-            assertEquals(today, state.selectedDate)
-            assertEquals(YearMonth(today.year, today.month), state.months[state.visibleMonthIndex].yearMonth)
-            assertFalse(state.isLoading)
+            assertThat(state.selectedDate).isEqualTo(today)
+            assertThat(state.months[state.visibleMonthIndex].yearMonth).isEqualTo(YearMonth(today.year, today.month))
+            assertThat(state.isLoading).isFalse()
         }
 
     @Test
@@ -70,8 +71,8 @@ class DailyOverviewViewModelTest {
         runTest {
             val vm = viewModel(project = project().copy(title = "Tracky", colorArgb = 0xFFF39B19.toInt()))
 
-            assertEquals("Tracky", vm.state.value.projectTitle)
-            assertEquals(Color(0xFFF39B19.toInt()), vm.state.value.projectColor)
+            assertThat(vm.state.value.projectTitle).isEqualTo("Tracky")
+            assertThat(vm.state.value.projectColor).isEqualTo(Color(0xFFF39B19.toInt()))
         }
 
     @Test
@@ -80,7 +81,7 @@ class DailyOverviewViewModelTest {
             val target = LocalDate(2026, 9, 4)
             val vm = viewModel(preselected = target.toEpochDays())
 
-            assertEquals(target, vm.state.value.selectedDate)
+            assertThat(vm.state.value.selectedDate).isEqualTo(target)
         }
 
     @Test
@@ -93,7 +94,7 @@ class DailyOverviewViewModelTest {
                 )
             val vm = viewModel(preselected = LocalDate(2026, 9, 4).toEpochDays(), savedStateHandle = handle)
 
-            assertEquals(restored, vm.state.value.selectedDate)
+            assertThat(vm.state.value.selectedDate).isEqualTo(restored)
         }
 
     @Test
@@ -102,11 +103,11 @@ class DailyOverviewViewModelTest {
             val repository = FakeProjectRepository(null)
             val vm = viewModel(repository = repository)
 
-            assertFalse(vm.state.value.isLoading)
-            assertTrue(
+            assertThat(vm.state.value.isLoading).isFalse()
+            assertThat(
                 vm.state.value.months
                     .isEmpty(),
-            )
+            ).isTrue()
         }
 
     @Test
@@ -114,15 +115,15 @@ class DailyOverviewViewModelTest {
         runTest {
             val vm = viewModel(project = project())
 
-            assertEquals(today, vm.state.value.selectedDate)
-            assertTrue(
+            assertThat(vm.state.value.selectedDate).isEqualTo(today)
+            assertThat(
                 vm.state.value.dayDetail
                     ?.isEmpty == true,
-            )
-            assertTrue(
+            ).isTrue()
+            assertThat(
                 vm.state.value.months
                     .isNotEmpty(),
-            )
+            ).isTrue()
         }
 
     // --- deriving in memory --------------------------------------------------------------------
@@ -132,23 +133,21 @@ class DailyOverviewViewModelTest {
         runTest {
             val repository = FakeProjectRepository(trackedProject())
             val vm = viewModel(repository = repository)
-            assertEquals(1, repository.treeReads)
+            assertThat(repository.treeReads).isEqualTo(1)
 
             vm.onAction(DailyOverviewAction.OnDateSelected(LocalDate(2026, 9, 8)))
             advanceUntilIdle()
 
-            assertEquals(
-                "Tue, Sep 08",
+            assertThat(
                 vm.state.value.dayDetail
                     ?.dateLabel,
-            )
-            assertEquals(
-                1,
+            ).isEqualTo("Tue, Sep 08")
+            assertThat(
                 vm.state.value.dayDetail
                     ?.intervalCount,
-            )
+            ).isEqualTo(1)
             // The whole point of holding the tree: no second read.
-            assertEquals(1, repository.treeReads)
+            assertThat(repository.treeReads).isEqualTo(1)
         }
 
     @Test
@@ -161,9 +160,9 @@ class DailyOverviewViewModelTest {
             vm.onAction(DailyOverviewAction.OnMonthChanged(0))
             advanceUntilIdle()
 
-            assertEquals(0, vm.state.value.visibleMonthIndex)
-            assertEquals(selectedBefore, vm.state.value.selectedDate)
-            assertEquals(1, repository.treeReads)
+            assertThat(vm.state.value.visibleMonthIndex).isEqualTo(0)
+            assertThat(vm.state.value.selectedDate).isEqualTo(selectedBefore)
+            assertThat(repository.treeReads).isEqualTo(1)
         }
 
     @Test
@@ -174,7 +173,7 @@ class DailyOverviewViewModelTest {
             vm.onAction(DailyOverviewAction.OnMonthChanged(99))
             advanceUntilIdle()
 
-            assertEquals(vm.state.value.months.lastIndex, vm.state.value.visibleMonthIndex)
+            assertThat(vm.state.value.visibleMonthIndex).isEqualTo(vm.state.value.months.lastIndex)
         }
 
     @Test
@@ -186,11 +185,10 @@ class DailyOverviewViewModelTest {
             vm.onAction(DailyOverviewAction.OnDateSelected(august))
             advanceUntilIdle()
 
-            assertEquals(
-                YearMonth(2026, 8),
+            assertThat(
                 vm.state.value.months[vm.state.value.visibleMonthIndex]
                     .yearMonth,
-            )
+            ).isEqualTo(YearMonth(2026, 8))
         }
 
     @Test
@@ -203,7 +201,7 @@ class DailyOverviewViewModelTest {
             vm.onAction(DailyOverviewAction.OnDateSelected(target))
             advanceUntilIdle()
 
-            assertEquals(target.toEpochDays(), handle.get<Long>(DailyOverviewViewModel.KEY_SELECTED_DATE))
+            assertThat(handle.get<Long>(DailyOverviewViewModel.KEY_SELECTED_DATE)).isEqualTo(target.toEpochDays())
         }
 
     // --- helpers -------------------------------------------------------------------------------

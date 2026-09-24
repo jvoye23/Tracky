@@ -1,6 +1,10 @@
 package com.jvcs.tracky.features.project.presentation.task_detail
 
 import androidx.compose.ui.graphics.toArgb
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.FakeRunningTimerRepository
@@ -32,9 +36,6 @@ import kotlinx.datetime.toLocalDateTime
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
@@ -92,12 +93,11 @@ internal class TaskDetailViewModelTest {
 
             // Three segments, not formatDuration's four: a day total is not a stopwatch reading, and
             // the unbounded-hours dialect is what let an impossible number render.
-            assertEquals(
-                "00:30:00",
+            assertThat(
                 viewModel.state.value.dailyStatistics
                     .single()
                     .formattedDuration,
-            )
+            ).isEqualTo("00:30:00")
         }
 
     @Test
@@ -117,8 +117,8 @@ internal class TaskDetailViewModelTest {
                 )
 
             val stats = viewModel.state.value.dailyStatistics
-            assertEquals(1, stats.size)
-            assertEquals("00:30:00", stats.single().formattedDuration)
+            assertThat(stats.size).isEqualTo(1)
+            assertThat(stats.single().formattedDuration).isEqualTo("00:30:00")
         }
 
     @Test
@@ -131,16 +131,15 @@ internal class TaskDetailViewModelTest {
                 )
 
             val stats = viewModel.state.value.dailyStatistics
-            assertEquals(2, stats.size, "one day cannot hold a 24-hour stretch that started at noon")
+            assertThat(stats.size, name = "one day cannot hold a 24-hour stretch that started at noon").isEqualTo(2)
             // Still 24 hours in total, just no longer all on one row.
-            assertEquals(
-                24 * 60 * 60L,
+            assertThat(
                 stats.sumOf { stat ->
                     stat.formattedDuration.split(":").let { (h, m, s) ->
                         h.toLong() * 3600 + m.toLong() * 60 + s.toLong()
                     }
                 },
-            )
+            ).isEqualTo(24 * 60 * 60L)
         }
 
     @Test
@@ -153,7 +152,7 @@ internal class TaskDetailViewModelTest {
 
             // A running timer banks nothing until it stops - and a stranded one banks nothing at all
             // until it is reviewed.
-            assertEquals(emptyList(), viewModel.state.value.dailyStatistics)
+            assertThat(viewModel.state.value.dailyStatistics).isEqualTo(emptyList())
         }
 
     @Test
@@ -172,12 +171,12 @@ internal class TaskDetailViewModelTest {
 
             val stats = viewModel.state.value.dailyStatistics
             // Newest first, one row each rather than one summed row for the day.
-            assertEquals(listOf("late", "early"), stats.map { it.intervalId })
-            assertEquals(listOf("00:20:00", "00:10:00"), stats.map { it.formattedDuration })
-            assertEquals(localClock("2026-09-09T12:30:00Z"), stats[0].formattedStartTime)
-            assertEquals(localClock("2026-09-09T12:50:00Z"), stats[0].formattedEndTime)
-            assertEquals(localClock("2026-09-09T12:00:00Z"), stats[1].formattedStartTime)
-            assertEquals(localClock("2026-09-09T12:10:00Z"), stats[1].formattedEndTime)
+            assertThat(stats.map { it.intervalId }).isEqualTo(listOf("late", "early"))
+            assertThat(stats.map { it.formattedDuration }).isEqualTo(listOf("00:20:00", "00:10:00"))
+            assertThat(stats[0].formattedStartTime).isEqualTo(localClock("2026-09-09T12:30:00Z"))
+            assertThat(stats[0].formattedEndTime).isEqualTo(localClock("2026-09-09T12:50:00Z"))
+            assertThat(stats[1].formattedStartTime).isEqualTo(localClock("2026-09-09T12:00:00Z"))
+            assertThat(stats[1].formattedEndTime).isEqualTo(localClock("2026-09-09T12:10:00Z"))
         }
 
     @Test
@@ -190,8 +189,8 @@ internal class TaskDetailViewModelTest {
 
             val stats = viewModel.state.value.dailyStatistics
             // The older slice is the second row; it runs up to its day's midnight.
-            assertEquals("24:00", stats[1].formattedEndTime)
-            assertEquals("00:00", stats[0].formattedStartTime)
+            assertThat(stats[1].formattedEndTime).isEqualTo("24:00")
+            assertThat(stats[0].formattedStartTime).isEqualTo("00:00")
         }
 
     @Test
@@ -200,10 +199,10 @@ internal class TaskDetailViewModelTest {
             val viewModel = viewModelFor(task())
 
             viewModel.onAction(TaskDetailAction.OnEditModeClick)
-            assertTrue(viewModel.state.value.isEditMode)
+            assertThat(viewModel.state.value.isEditMode).isTrue()
 
             viewModel.onAction(TaskDetailAction.OnCloseEditModeClick)
-            assertFalse(viewModel.state.value.isEditMode)
+            assertThat(viewModel.state.value.isEditMode).isFalse()
         }
 
     @Test
@@ -216,9 +215,9 @@ internal class TaskDetailViewModelTest {
                 )
 
             val state = viewModel.state.value
-            assertEquals("project", state.projectId)
-            assertEquals(0xFF3F51B5.toInt(), state.projectColor?.toArgb())
-            assertTrue(state.useLightTextColor)
+            assertThat(state.projectId).isEqualTo("project")
+            assertThat(state.projectColor?.toArgb()).isEqualTo(0xFF3F51B5.toInt())
+            assertThat(state.useLightTextColor).isTrue()
         }
 
     @Test
@@ -231,11 +230,10 @@ internal class TaskDetailViewModelTest {
                 )
 
             // The figure Project Detail's task card shows, not the task's own banked total.
-            assertEquals(
-                90_000,
+            assertThat(
                 viewModel.state.value.task!!
                     .displayDurationMillis,
-            )
+            ).isEqualTo(90_000)
         }
 
     @Test
@@ -249,8 +247,8 @@ internal class TaskDetailViewModelTest {
             running.startTimer(runningTimer(taskId = "task-0", subTaskId = "s2", bankedDuration = 45_000.milliseconds))
 
             val state = viewModel.state.value
-            assertEquals(105_000, state.task!!.displayDurationMillis)
-            assertTrue(state.isTimerRunning)
+            assertThat(state.task!!.displayDurationMillis).isEqualTo(105_000)
+            assertThat(state.isTimerRunning).isTrue()
         }
 
     @Test
@@ -262,12 +260,11 @@ internal class TaskDetailViewModelTest {
             // Any write to the row while the timer runs - an interval opening, a title saved.
             stored.value = stored.value!!.copy(title = "Renamed")
 
-            assertEquals(
-                25_000,
+            assertThat(
                 viewModel.state.value.task!!
                     .displayDurationMillis,
-            )
-            assertTrue(viewModel.state.value.isTimerRunning)
+            ).isEqualTo(25_000)
+            assertThat(viewModel.state.value.isTimerRunning).isTrue()
         }
 
     @Test
@@ -278,8 +275,8 @@ internal class TaskDetailViewModelTest {
 
             viewModel.onAction(TaskDetailAction.OnToggleTimer)
 
-            assertEquals(listOf("s2"), subTaskRepository.started)
-            assertEquals(emptyList(), taskRepository.started)
+            assertThat(subTaskRepository.started).isEqualTo(listOf("s2"))
+            assertThat(taskRepository.started).isEqualTo(emptyList())
         }
 
     @Test
@@ -293,7 +290,7 @@ internal class TaskDetailViewModelTest {
 
             viewModel.onAction(TaskDetailAction.OnToggleTimer)
 
-            assertEquals(listOf("s2"), subTaskRepository.started)
+            assertThat(subTaskRepository.started).isEqualTo(listOf("s2"))
         }
 
     @Test
@@ -304,8 +301,8 @@ internal class TaskDetailViewModelTest {
 
             viewModel.onAction(TaskDetailAction.OnToggleTimer)
 
-            assertEquals(listOf("s1"), subTaskRepository.stopped)
-            assertEquals(emptyList(), taskRepository.stopped)
+            assertThat(subTaskRepository.stopped).isEqualTo(listOf("s1"))
+            assertThat(taskRepository.stopped).isEqualTo(emptyList())
         }
 
     @Test
@@ -314,12 +311,12 @@ internal class TaskDetailViewModelTest {
             val viewModel = viewModelFor(task())
 
             viewModel.onAction(TaskDetailAction.OnToggleTimer)
-            assertEquals(listOf("task-0"), taskRepository.started)
-            assertTrue(viewModel.state.value.isTimerRunning)
+            assertThat(taskRepository.started).isEqualTo(listOf("task-0"))
+            assertThat(viewModel.state.value.isTimerRunning).isTrue()
 
             viewModel.onAction(TaskDetailAction.OnToggleTimer)
-            assertEquals(listOf("task-0"), taskRepository.stopped)
-            assertFalse(viewModel.state.value.isTimerRunning)
+            assertThat(taskRepository.stopped).isEqualTo(listOf("task-0"))
+            assertThat(viewModel.state.value.isTimerRunning).isFalse()
         }
 
     private fun sub(id: String, millis: Long = 0L) = subTask(id = id).copy(durationMillis = millis)

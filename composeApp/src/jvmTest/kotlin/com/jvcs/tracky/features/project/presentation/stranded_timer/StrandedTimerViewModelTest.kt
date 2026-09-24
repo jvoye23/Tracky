@@ -2,6 +2,11 @@ package com.jvcs.tracky.features.project.presentation.stranded_timer
 
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import app.cash.turbine.test
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
@@ -19,10 +24,6 @@ import kotlinx.coroutines.test.setMain
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
@@ -68,11 +69,11 @@ internal class StrandedTimerViewModelTest {
     fun theQueueSurfacesOneItemAtATime() =
         runTest(UnconfinedTestDispatcher()) {
             viewModel.state.test {
-                assertNull(awaitItem().current)
+                assertThat(awaitItem().current).isNull()
                 parked.value = listOf(timer("a"), timer("b"))
                 val state = awaitItem()
-                assertEquals("a", state.current?.taskIntervalId)
-                assertEquals(2, state.pending.size)
+                assertThat(state.current?.taskIntervalId).isEqualTo("a")
+                assertThat(state.pending.size).isEqualTo(2)
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -86,13 +87,12 @@ internal class StrandedTimerViewModelTest {
 
                 viewModel.onAction(StrandedTimerAction.OnKeep)
 
-                assertEquals(listOf("a"), repository.kept.map { it.taskIntervalId })
+                assertThat(repository.kept.map { it.taskIntervalId }).isEqualTo(listOf("a"))
                 // The repository's flow is what drops it, so the dialog advances on its own.
-                assertEquals(
-                    "b",
+                assertThat(
                     viewModel.state.value.current
                         ?.taskIntervalId,
-                )
+                ).isEqualTo("b")
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -107,14 +107,13 @@ internal class StrandedTimerViewModelTest {
             viewModel.events.test {
                 viewModel.onAction(StrandedTimerAction.OnKeep)
 
-                assertTrue(awaitItem() is StrandedTimerEvent.Error)
+                assertThat(awaitItem() is StrandedTimerEvent.Error).isTrue()
                 // Still there: a resolution that did not happen must not look like one.
-                assertEquals(
-                    "a",
+                assertThat(
                     viewModel.state.value.current
                         ?.taskIntervalId,
-                )
-                assertFalse(viewModel.state.value.isResolving)
+                ).isEqualTo("a")
+                assertThat(viewModel.state.value.isResolving).isFalse()
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -129,8 +128,8 @@ internal class StrandedTimerViewModelTest {
                 viewModel.onAction(StrandedTimerAction.OnBeginEditDuration)
 
                 val state = viewModel.state.value
-                assertTrue(state.isEditingDuration)
-                assertEquals("75:00", state.editDurationState.text.toString())
+                assertThat(state.isEditingDuration).isTrue()
+                assertThat(state.editDurationState.text.toString()).isEqualTo("75:00")
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -146,7 +145,7 @@ internal class StrandedTimerViewModelTest {
 
             viewModel.onAction(StrandedTimerAction.OnConfirmEditedDuration)
 
-            assertEquals(listOf(2.hours + 30.minutes), repository.keptDurations)
+            assertThat(repository.keptDurations).isEqualTo(listOf(2.hours + 30.minutes))
         }
 
     @Test
@@ -160,12 +159,11 @@ internal class StrandedTimerViewModelTest {
 
             viewModel.onAction(StrandedTimerAction.OnConfirmEditedDuration)
 
-            assertTrue(repository.keptDurations.isEmpty())
-            assertEquals(
-                "a",
+            assertThat(repository.keptDurations.isEmpty()).isTrue()
+            assertThat(
                 viewModel.state.value.current
                     ?.taskIntervalId,
-            )
+            ).isEqualTo("a")
         }
 
     @Test
@@ -179,23 +177,22 @@ internal class StrandedTimerViewModelTest {
 
             parked.value = listOf(timer("b"))
 
-            assertFalse(viewModel.state.value.isEditingDuration)
-            assertEquals(
-                "",
+            assertThat(viewModel.state.value.isEditingDuration).isFalse()
+            assertThat(
                 viewModel.state.value.editDurationState.text
                     .toString(),
-            )
+            ).isEqualTo("")
         }
 
     @Test
     fun durationParsingAcceptsHoursAndMinutesAndRejectsNonsense() {
-        assertEquals(3.hours + 7.minutes, StrandedTimerViewModel.parseHoursMinutes("3:07"))
-        assertEquals(3.hours, StrandedTimerViewModel.parseHoursMinutes("3"))
-        assertEquals(Duration.ZERO, StrandedTimerViewModel.parseHoursMinutes("0:00"))
-        assertNull(StrandedTimerViewModel.parseHoursMinutes(""))
-        assertNull(StrandedTimerViewModel.parseHoursMinutes("1:60"), "60 minutes is an hour")
-        assertNull(StrandedTimerViewModel.parseHoursMinutes("-1:00"))
-        assertNull(StrandedTimerViewModel.parseHoursMinutes("1:2:3"))
+        assertThat(StrandedTimerViewModel.parseHoursMinutes("3:07")).isEqualTo(3.hours + 7.minutes)
+        assertThat(StrandedTimerViewModel.parseHoursMinutes("3")).isEqualTo(3.hours)
+        assertThat(StrandedTimerViewModel.parseHoursMinutes("0:00")).isEqualTo(Duration.ZERO)
+        assertThat(StrandedTimerViewModel.parseHoursMinutes("")).isNull()
+        assertThat(StrandedTimerViewModel.parseHoursMinutes("1:60"), name = "60 minutes is an hour").isNull()
+        assertThat(StrandedTimerViewModel.parseHoursMinutes("-1:00")).isNull()
+        assertThat(StrandedTimerViewModel.parseHoursMinutes("1:2:3")).isNull()
     }
 
     private inner class FakeStrandedTimerRepository : StrandedTimerRepository {
