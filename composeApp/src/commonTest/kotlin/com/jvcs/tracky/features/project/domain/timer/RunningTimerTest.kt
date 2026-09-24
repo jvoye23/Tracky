@@ -1,7 +1,8 @@
 package com.jvcs.tracky.features.project.domain.timer
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
 import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
@@ -27,7 +28,7 @@ class RunningTimerTest {
         val elapsed = running.elapsedAt(Instant.fromEpochMilliseconds((16 * 60 + 9) * 1000L))
 
         // The number on the mock: 2h banked plus 16m09s of this sitting.
-        assertEquals(2.hours + 16.minutes + 9.seconds, elapsed)
+        assertThat(elapsed).isEqualTo(2.hours + 16.minutes + 9.seconds)
     }
 
     @Test
@@ -36,12 +37,12 @@ class RunningTimerTest {
 
         val elapsed = running.elapsedAt(Instant.fromEpochMilliseconds(0))
 
-        assertEquals(1.hours, elapsed)
+        assertThat(elapsed).isEqualTo(1.hours)
     }
 
     @Test
     fun theTimedEntityIsTheSubTaskWhenOneIsRunning() {
-        assertEquals("t1", timer().timedEntityId)
-        assertEquals("s1", timer().copy(subTask = TaskRef(id = "s1", title = "Auth endpoints")).timedEntityId)
+        assertThat(timer().timedEntityId).isEqualTo("t1")
+        assertThat(timer().copy(subTask = TaskRef(id = "s1", title = "Auth endpoints")).timedEntityId).isEqualTo("s1")
     }
 }

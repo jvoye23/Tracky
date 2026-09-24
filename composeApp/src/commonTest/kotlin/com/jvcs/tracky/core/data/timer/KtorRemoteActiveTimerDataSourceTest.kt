@@ -1,5 +1,9 @@
 package com.jvcs.tracky.core.data.timer
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.domain.timer.ActiveTimerChange
 import com.jvcs.tracky.core.domain.timer.ActiveTimerKind
 import com.jvcs.tracky.core.domain.timer.StartActiveTimer
@@ -17,10 +21,6 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertIs
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 import kotlin.time.Instant
 
 /**
@@ -81,8 +81,8 @@ class KtorRemoteActiveTimerDataSourceTest {
             // "Nothing is running" is as authoritative an answer as naming an interval.
             val result = dataSource(HttpStatusCode.NoContent).getActive()
 
-            assertIs<Result.Success<*>>(result)
-            assertNull(result.data)
+            check(result is Result.Success<*>)
+            assertThat(result.data).isNull()
         }
 
     @Test
@@ -90,11 +90,10 @@ class KtorRemoteActiveTimerDataSourceTest {
         runTest {
             val result = dataSource(HttpStatusCode.OK, activeBody).getActive()
 
-            assertIs<Result.Success<*>>(result)
-            assertEquals(
-                "9d42d176-0000-4000-8000-000000000001",
+            check(result is Result.Success<*>)
+            assertThat(
                 (result.data as com.jvcs.tracky.core.domain.timer.ActiveTimer).intervalId,
-            )
+            ).isEqualTo("9d42d176-0000-4000-8000-000000000001")
         }
 
     @Test
@@ -121,9 +120,12 @@ class KtorRemoteActiveTimerDataSourceTest {
                     """.trimIndent(),
                 ).start(start)
 
-            assertIs<Result.Success<*>>(result)
-            val applied = assertIs<ActiveTimerChange.Applied>(result.data)
-            assertEquals("c6df0a86-0000-4000-8000-000000000004", applied.touchedTaskIntervals.single().intervalId)
+            check(result is Result.Success<*>)
+            val applied = result.data
+            check(applied is ActiveTimerChange.Applied)
+            assertThat(
+                applied.touchedTaskIntervals.single().intervalId,
+            ).isEqualTo("c6df0a86-0000-4000-8000-000000000004")
         }
 
     @Test
@@ -137,9 +139,10 @@ class KtorRemoteActiveTimerDataSourceTest {
                     """{"code":"TIMER_CONFLICT","message":"not the running timer","active":$activeBody}""",
                 ).stop("c6df0a86-0000-4000-8000-000000000004", Instant.parse("2026-09-21T15:57:00Z"))
 
-            assertIs<Result.Success<*>>(result)
-            val rejected = assertIs<ActiveTimerChange.Rejected>(result.data)
-            assertEquals("9d42d176-0000-4000-8000-000000000001", rejected.active?.intervalId)
+            check(result is Result.Success<*>)
+            val rejected = result.data
+            check(rejected is ActiveTimerChange.Rejected)
+            assertThat(rejected.active?.intervalId).isEqualTo("9d42d176-0000-4000-8000-000000000001")
         }
 
     @Test
@@ -150,9 +153,10 @@ class KtorRemoteActiveTimerDataSourceTest {
             // error page is the realistic way to get one.
             val result = dataSource(HttpStatusCode.Conflict, "<html>gateway said no</html>").start(start)
 
-            assertIs<Result.Success<*>>(result)
-            val rejected = assertIs<ActiveTimerChange.Rejected>(result.data)
-            assertNull(rejected.active)
+            check(result is Result.Success<*>)
+            val rejected = result.data
+            check(rejected is ActiveTimerChange.Rejected)
+            assertThat(rejected.active).isNull()
         }
 
     @Test
@@ -164,9 +168,13 @@ class KtorRemoteActiveTimerDataSourceTest {
                     """{"active":null,"touched":[],"serverNowUtc":"2026-09-21T15:56:16.642Z"}""",
                 ).stop("c6df0a86-0000-4000-8000-000000000004", Instant.parse("2026-09-21T15:57:00Z"))
 
-            val applied = assertIs<ActiveTimerChange.Applied>(assertIs<Result.Success<*>>(result).data)
-            assertNull(applied.active)
-            assertTrue(applied.touchedTaskIntervals.isEmpty())
+            check(result is Result.Success<*>)
+
+            val applied = result.data
+
+            check(applied is ActiveTimerChange.Applied)
+            assertThat(applied.active).isNull()
+            assertThat(applied.touchedTaskIntervals.isEmpty()).isTrue()
         }
 
     @Test
@@ -178,19 +186,17 @@ class KtorRemoteActiveTimerDataSourceTest {
                     install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
                 }
 
-            assertEquals(
-                Result.Error(DataError.Remote.SERVICE_UNAVAILABLE),
+            assertThat(
                 KtorRemoteActiveTimerDataSource(client).getActive(),
-            )
+            ).isEqualTo(Result.Error(DataError.Remote.SERVICE_UNAVAILABLE))
         }
 
     @Test
     fun aForbiddenStartIsReportedAsSuch() =
         runTest {
             // Someone else's task. The API collapses missing and not-yours into 403 on purpose.
-            assertEquals(
-                Result.Error(DataError.Remote.FORBIDDEN),
+            assertThat(
                 dataSource(HttpStatusCode.Forbidden).start(start),
-            )
+            ).isEqualTo(Result.Error(DataError.Remote.FORBIDDEN))
         }
 }

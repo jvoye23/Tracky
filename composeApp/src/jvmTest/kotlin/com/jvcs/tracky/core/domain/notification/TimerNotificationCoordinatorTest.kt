@@ -1,5 +1,9 @@
 package com.jvcs.tracky.core.domain.notification
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.domain.startup.StartupReconciliation
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
@@ -23,9 +27,6 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.yield
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
 
@@ -99,12 +100,12 @@ internal class TimerNotificationCoordinatorTest {
 
             // A timer still open at start-up may be about to be parked. Showing it would put a
             // stranded interval in the notification and let Pause bank every hour since it opened.
-            assertTrue(controller.shown.isEmpty())
+            assertThat(controller.shown.isEmpty()).isTrue()
 
             reconciled.complete(Unit)
             settle()
 
-            assertEquals(1, controller.shown.size)
+            assertThat(controller.shown.size).isEqualTo(1)
         }
 
     @Test
@@ -116,11 +117,11 @@ internal class TimerNotificationCoordinatorTest {
             settle()
 
             val session = controller.shown.last()
-            assertEquals("Tracky App Redesign", session.project.title)
-            assertEquals(TaskRef(id = "t1", title = "Token refresh"), session.task)
-            assertEquals(TaskRef(id = "s1", title = "Auth endpoints"), session.subTask)
-            assertEquals(0xFF7DA0B7.toInt(), session.project.colorArgb)
-            assertTrue(session.isRunning)
+            assertThat(session.project.title).isEqualTo("Tracky App Redesign")
+            assertThat(session.task).isEqualTo(TaskRef(id = "t1", title = "Token refresh"))
+            assertThat(session.subTask).isEqualTo(TaskRef(id = "s1", title = "Auth endpoints"))
+            assertThat(session.project.colorArgb).isEqualTo(0xFF7DA0B7.toInt())
+            assertThat(session.isRunning).isTrue()
         }
 
     @Test
@@ -132,7 +133,7 @@ internal class TimerNotificationCoordinatorTest {
             coordinator()
             settle()
 
-            assertEquals(5.minutes, controller.shown.last().elapsed)
+            assertThat(controller.shown.last().elapsed).isEqualTo(5.minutes)
         }
 
     @Test
@@ -146,7 +147,7 @@ internal class TimerNotificationCoordinatorTest {
             runningTimer.value = null
             settle()
 
-            assertEquals(1, controller.dismissed)
+            assertThat(controller.dismissed).isEqualTo(1)
         }
 
     @Test
@@ -163,11 +164,11 @@ internal class TimerNotificationCoordinatorTest {
             runningTimer.value = null
             settle()
 
-            assertEquals(listOf("t1"), stoppedTaskIds)
-            assertEquals(0, controller.dismissed)
+            assertThat(stoppedTaskIds).isEqualTo(listOf("t1"))
+            assertThat(controller.dismissed).isEqualTo(0)
             val session = controller.shown.last()
-            assertFalse(session.isRunning)
-            assertEquals(5.minutes, session.elapsed)
+            assertThat(session.isRunning).isFalse()
+            assertThat(session.elapsed).isEqualTo(5.minutes)
         }
 
     @Test
@@ -181,8 +182,8 @@ internal class TimerNotificationCoordinatorTest {
             coordinator.onPause()
             settle()
 
-            assertEquals(listOf("s1"), stoppedSubTaskIds)
-            assertTrue(stoppedTaskIds.isEmpty())
+            assertThat(stoppedSubTaskIds).isEqualTo(listOf("s1"))
+            assertThat(stoppedTaskIds.isEmpty()).isTrue()
         }
 
     @Test
@@ -199,7 +200,7 @@ internal class TimerNotificationCoordinatorTest {
             coordinator.onResume()
             settle()
 
-            assertEquals(listOf("s1"), startedSubTaskIds)
+            assertThat(startedSubTaskIds).isEqualTo(listOf("s1"))
         }
 
     @Test
@@ -215,10 +216,10 @@ internal class TimerNotificationCoordinatorTest {
             coordinator.onPause()
             settle()
 
-            assertTrue(stoppedTaskIds.isEmpty())
-            assertTrue(stoppedSubTaskIds.isEmpty())
+            assertThat(stoppedTaskIds.isEmpty()).isTrue()
+            assertThat(stoppedSubTaskIds.isEmpty()).isTrue()
             // And the card keeps showing it running, because it is.
-            assertTrue(controller.shown.last().isRunning)
+            assertThat(controller.shown.last().isRunning).isTrue()
         }
 
     /**
@@ -233,7 +234,7 @@ internal class TimerNotificationCoordinatorTest {
             coordinator()
             settle()
 
-            assertTrue(controller.shown.last().isForeign)
+            assertThat(controller.shown.last().isForeign).isTrue()
         }
 
     @Test
@@ -244,7 +245,7 @@ internal class TimerNotificationCoordinatorTest {
             coordinator()
             settle()
 
-            assertFalse(controller.shown.last().isForeign)
+            assertThat(controller.shown.last().isForeign).isFalse()
         }
 
     @Test
@@ -267,8 +268,8 @@ internal class TimerNotificationCoordinatorTest {
             coordinator.onResume()
             settle()
 
-            assertTrue(startedTaskIds.isEmpty())
-            assertTrue(startedSubTaskIds.isEmpty())
+            assertThat(startedTaskIds.isEmpty()).isTrue()
+            assertThat(startedSubTaskIds.isEmpty()).isTrue()
         }
 
     @Test
@@ -281,8 +282,8 @@ internal class TimerNotificationCoordinatorTest {
             coordinator.onResume()
             settle()
 
-            assertTrue(startedSubTaskIds.isEmpty())
-            assertTrue(startedTaskIds.isEmpty())
+            assertThat(startedSubTaskIds.isEmpty()).isTrue()
+            assertThat(startedTaskIds.isEmpty()).isTrue()
         }
 
     private class RecordingController : TimerNotificationController {

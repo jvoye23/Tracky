@@ -1,5 +1,9 @@
 package com.jvcs.tracky.core.domain.sync
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.FakeServerClockOffsetStore
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
@@ -14,9 +18,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
@@ -95,8 +96,8 @@ internal class DeltaSyncApplierTest {
             applier(remote).pullChanges()
 
             // Null rather than 0: the server reads a missing `since` as "everything, no tombstones".
-            assertEquals(listOf<Long?>(null), remote.requestedCursors)
-            assertEquals(12L, cursorStore.cursor())
+            assertThat(remote.requestedCursors).isEqualTo(listOf<Long?>(null))
+            assertThat(cursorStore.cursor()).isEqualTo(12L)
         }
 
     @Test
@@ -109,8 +110,8 @@ internal class DeltaSyncApplierTest {
 
             applier(remote).pullChanges()
 
-            assertEquals(1, local.applyDeltaCalls)
-            assertEquals(12L, cursorStore.cursor())
+            assertThat(local.applyDeltaCalls).isEqualTo(1)
+            assertThat(cursorStore.cursor()).isEqualTo(12L)
         }
 
     @Test
@@ -126,8 +127,8 @@ internal class DeltaSyncApplierTest {
             val result = applier(remote).pullChanges()
 
             // Advancing past a page that did not land would skip it on every later pull, for good.
-            assertTrue(result is Result.Error)
-            assertEquals(5L, cursorStore.cursor())
+            assertThat(result is Result.Error).isTrue()
+            assertThat(cursorStore.cursor()).isEqualTo(5L)
         }
 
     @Test
@@ -138,9 +139,9 @@ internal class DeltaSyncApplierTest {
 
             val result = applier(remote).pullChanges()
 
-            assertTrue(result is Result.Error)
-            assertEquals(5L, cursorStore.cursor())
-            assertTrue(remoteProjects.getProjectsCallCount == 0)
+            assertThat(result is Result.Error).isTrue()
+            assertThat(cursorStore.cursor()).isEqualTo(5L)
+            assertThat(remoteProjects.getProjectsCallCount == 0).isTrue()
         }
 
     @Test
@@ -156,8 +157,8 @@ internal class DeltaSyncApplierTest {
             applier(remote).pullChanges()
 
             // One call leaves the device current, not one page behind.
-            assertEquals(listOf<Long?>(null, 10, 20), remote.requestedCursors)
-            assertEquals(30L, cursorStore.cursor())
+            assertThat(remote.requestedCursors).isEqualTo(listOf<Long?>(null, 10, 20))
+            assertThat(cursorStore.cursor()).isEqualTo(30L)
         }
 
     @Test
@@ -172,7 +173,7 @@ internal class DeltaSyncApplierTest {
 
             applier(remote).pullChanges()
 
-            assertEquals(1, remote.requestedCursors.size)
+            assertThat(remote.requestedCursors.size).isEqualTo(1)
         }
 
     @Test
@@ -187,8 +188,8 @@ internal class DeltaSyncApplierTest {
             applier(remote).pullChanges()
 
             // Whatever the cursor pointed at is exactly what could not be trusted, so it goes.
-            assertEquals(1, remoteProjects.getProjectsCallCount)
-            assertNull(cursorStore.cursor())
+            assertThat(remoteProjects.getProjectsCallCount).isEqualTo(1)
+            assertThat(cursorStore.cursor()).isNull()
         }
 
     @Test
@@ -200,8 +201,8 @@ internal class DeltaSyncApplierTest {
 
             // This is what makes the client shippable ahead of the backend: no feed, no problem,
             // just the old full pull.
-            assertTrue(result is Result.Success)
-            assertEquals(1, remoteProjects.getProjectsCallCount)
+            assertThat(result is Result.Success).isTrue()
+            assertThat(remoteProjects.getProjectsCallCount).isEqualTo(1)
         }
 
     @Test
@@ -213,8 +214,8 @@ internal class DeltaSyncApplierTest {
 
             // The common case on a quiet account: no transaction, but the cursor moves so the next
             // poll stays cheap.
-            assertEquals(0, local.applyDeltaCalls)
-            assertEquals(42L, cursorStore.cursor())
+            assertThat(local.applyDeltaCalls).isEqualTo(0)
+            assertThat(cursorStore.cursor()).isEqualTo(42L)
         }
 
     @Test
@@ -229,7 +230,7 @@ internal class DeltaSyncApplierTest {
 
             // The timer derives elapsed as now - startedAt, and startedAt may have come from another
             // device. Forty seconds of skew is forty seconds of tracked time that does not exist.
-            assertEquals(40_000L, offsetStore.offsetMillis())
+            assertThat(offsetStore.offsetMillis()).isEqualTo(40_000L)
         }
 
     @Test
@@ -243,7 +244,7 @@ internal class DeltaSyncApplierTest {
 
             applier(remote).pullChanges()
 
-            assertEquals(40_000L, offsetStore.offsetMillis())
+            assertThat(offsetStore.offsetMillis()).isEqualTo(40_000L)
         }
 
     /**
@@ -259,7 +260,7 @@ internal class DeltaSyncApplierTest {
 
             applier(remote).pullChanges()
 
-            assertEquals(timeProvider.nowInstant, syncRecency.lastSuccessfulSync.value)
+            assertThat(syncRecency.lastSuccessfulSync.value).isEqualTo(timeProvider.nowInstant)
         }
 
     @Test
@@ -271,6 +272,6 @@ internal class DeltaSyncApplierTest {
 
             applier(remote).pullChanges()
 
-            assertNull(syncRecency.lastSuccessfulSync.value)
+            assertThat(syncRecency.lastSuccessfulSync.value).isNull()
         }
 }

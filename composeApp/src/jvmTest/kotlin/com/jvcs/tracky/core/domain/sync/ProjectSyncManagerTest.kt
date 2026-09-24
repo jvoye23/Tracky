@@ -2,6 +2,9 @@
 
 package com.jvcs.tracky.core.domain.sync
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
 import com.jvcs.tracky.core.domain.lifecycle.AppLifecycleObserver
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
@@ -10,8 +13,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
@@ -71,10 +72,10 @@ internal class ProjectSyncManagerTest {
             advanceTimeBy(90.seconds)
 
             // Launch, plus one per 30s tick. The exact count matters less than "more than one".
-            assertTrue(
+            assertThat(
                 remote.calls >= 3,
-                "expected repeated pulls while foregrounded, but the feed was asked ${remote.calls} time(s)",
-            )
+                name = "expected repeated pulls while foregrounded, but the feed was asked ${remote.calls} time(s)",
+            ).isTrue()
         }
 
     @Test
@@ -84,10 +85,10 @@ internal class ProjectSyncManagerTest {
 
             advanceTimeBy(90.seconds)
 
-            assertTrue(
+            assertThat(
                 syncRepository.drains >= 3,
-                "expected the outbox to drain on every tick, but it drained ${syncRepository.drains} time(s)",
-            )
+                name = "expected the outbox to drain on every tick, but it drained ${syncRepository.drains} time(s)",
+            ).isTrue()
         }
 
     /**
@@ -102,14 +103,14 @@ internal class ProjectSyncManagerTest {
 
             advanceTimeBy(90.seconds)
 
-            assertTrue(
+            assertThat(
                 remote.calls >= 3,
-                "a failed pull must not burn the window, but the feed was asked ${remote.calls} time(s)",
-            )
-            assertTrue(
+                name = "a failed pull must not burn the window, but the feed was asked ${remote.calls} time(s)",
+            ).isTrue()
+            assertThat(
                 syncRecency.lastSuccessfulSync.value != null,
-                "a later successful pull should still stamp SyncRecency",
-            )
+                name = "a later successful pull should still stamp SyncRecency",
+            ).isTrue()
         }
 
     /** Only a pull that landed counts as hearing from the server. */
@@ -121,7 +122,7 @@ internal class ProjectSyncManagerTest {
 
             advanceTimeBy(90.seconds)
 
-            assertEquals(null, syncRecency.lastSuccessfulSync.value)
+            assertThat(syncRecency.lastSuccessfulSync.value).isEqualTo(null)
         }
 
     @Test
@@ -135,7 +136,7 @@ internal class ProjectSyncManagerTest {
             advanceTimeBy(100.milliseconds)
             val afterOneLaunch = remote.calls
 
-            assertEquals(1, afterOneLaunch, "a second start() must not add a second polling loop")
+            assertThat(afterOneLaunch, name = "a second start() must not add a second polling loop").isEqualTo(1)
         }
 
     /** The cadence is a safety net, not a busy loop. */
@@ -147,9 +148,9 @@ internal class ProjectSyncManagerTest {
 
             advanceTimeBy(5.minutes)
 
-            assertTrue(
+            assertThat(
                 remote.calls <= 12,
-                "expected roughly one pull per 30s, but the feed was asked ${remote.calls} time(s)",
-            )
+                name = "expected roughly one pull per 30s, but the feed was asked ${remote.calls} time(s)",
+            ).isTrue()
         }
 }

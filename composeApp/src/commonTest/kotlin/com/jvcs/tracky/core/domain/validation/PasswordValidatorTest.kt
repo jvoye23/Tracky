@@ -1,74 +1,75 @@
 package com.jvcs.tracky.core.domain.validation
 
+import assertk.assertThat
+import assertk.assertions.isFalse
+import assertk.assertions.isTrue
 import com.jvcs.tracky.features.auth.domain.PasswordValidator
 import kotlin.test.Test
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 
 class PasswordValidatorTest {
 
     @Test
     fun validPassword() {
         val result = PasswordValidator.validate("Test@123")
-        assertTrue(result.isValidPassword)
-        assertTrue(result.hasMinLength)
-        assertTrue(result.hasDigit)
-        assertTrue(result.hasUppercase)
-        assertTrue(result.hasLowercase)
-        assertTrue(result.hasSpecialChar)
+        assertThat(result.isValidPassword).isTrue()
+        assertThat(result.hasMinLength).isTrue()
+        assertThat(result.hasDigit).isTrue()
+        assertThat(result.hasUppercase).isTrue()
+        assertThat(result.hasLowercase).isTrue()
+        assertThat(result.hasSpecialChar).isTrue()
     }
 
     @Test
     fun tooShort() {
         val result = PasswordValidator.validate("Te@1abc")
-        assertFalse(result.hasMinLength)
-        assertFalse(result.isValidPassword)
+        assertThat(result.hasMinLength).isFalse()
+        assertThat(result.isValidPassword).isFalse()
     }
 
     @Test
     fun noDigit() {
         val result = PasswordValidator.validate("Test@abcd")
-        assertTrue(result.hasMinLength)
-        assertFalse(result.hasDigit)
-        assertFalse(result.isValidPassword)
+        assertThat(result.hasMinLength).isTrue()
+        assertThat(result.hasDigit).isFalse()
+        assertThat(result.isValidPassword).isFalse()
     }
 
     @Test
     fun noUppercase() {
         val result = PasswordValidator.validate("test@1234")
-        assertFalse(result.hasUppercase)
-        assertFalse(result.isValidPassword)
+        assertThat(result.hasUppercase).isFalse()
+        assertThat(result.isValidPassword).isFalse()
     }
 
     @Test
     fun noLowercase() {
         val result = PasswordValidator.validate("TEST@1234")
-        assertFalse(result.hasLowercase)
-        assertFalse(result.isValidPassword)
+        assertThat(result.hasLowercase).isFalse()
+        assertThat(result.isValidPassword).isFalse()
     }
 
     @Test
     fun noSpecialChar() {
         val result = PasswordValidator.validate("Testabcd1")
-        assertFalse(result.hasSpecialChar)
-        assertFalse(result.isValidPassword)
+        assertThat(result.hasSpecialChar).isFalse()
+        assertThat(result.isValidPassword).isFalse()
     }
 
     @Test
     fun emptyString() {
         val result = PasswordValidator.validate("")
-        assertFalse(result.hasMinLength)
-        assertFalse(result.hasDigit)
-        assertFalse(result.hasUppercase)
-        assertFalse(result.hasLowercase)
-        assertFalse(result.hasSpecialChar)
-        assertFalse(result.isValidPassword)
+        assertThat(result.hasMinLength).isFalse()
+        assertThat(result.hasDigit).isFalse()
+        assertThat(result.hasUppercase).isFalse()
+        assertThat(result.hasLowercase).isFalse()
+        assertThat(result.hasSpecialChar).isFalse()
+        assertThat(result.isValidPassword).isFalse()
     }
 
     @Test
     fun exactMinLength() {
         val result = PasswordValidator.validate("Te@1abcd")
-        assertTrue(result.hasMinLength)
-        assertTrue(result.isValidPassword)
+        assertThat(result.hasMinLength).isTrue()
+        assertThat(result.isValidPassword).isTrue()
     }
 }

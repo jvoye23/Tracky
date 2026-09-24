@@ -1,9 +1,10 @@
 package com.jvcs.tracky.features.project.domain.task
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
 import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlin.time.Instant
 
 /**
@@ -52,7 +53,7 @@ class TaskSortOrderTest {
                 task("b", sortIndex = 1, createdAtMs = 0),
             ).sortedByTaskOrder()
 
-        assertEquals(listOf("a", "b", "c"), sorted.map { it.projectTaskId })
+        assertThat(sorted.map { it.projectTaskId }).isEqualTo(listOf("a", "b", "c"))
     }
 
     @Test
@@ -65,7 +66,7 @@ class TaskSortOrderTest {
                 task("dragged", sortIndex = 9, createdAtMs = 100),
             ).sortedByTaskOrder()
 
-        assertEquals(listOf("dragged", "new"), sorted.map { it.projectTaskId })
+        assertThat(sorted.map { it.projectTaskId }).isEqualTo(listOf("dragged", "new"))
     }
 
     @Test
@@ -79,7 +80,7 @@ class TaskSortOrderTest {
                 task("second", sortIndex = null, createdAtMs = 200),
             ).sortedByTaskOrder()
 
-        assertEquals(listOf("first", "second", "third"), sorted.map { it.projectTaskId })
+        assertThat(sorted.map { it.projectTaskId }).isEqualTo(listOf("first", "second", "third"))
     }
 
     @Test
@@ -91,7 +92,7 @@ class TaskSortOrderTest {
                 task("earlier", sortIndex = 1, createdAtMs = 100),
             ).sortedByTaskOrder()
 
-        assertEquals(listOf("earlier", "later"), sorted.map { it.projectTaskId })
+        assertThat(sorted.map { it.projectTaskId }).isEqualTo(listOf("earlier", "later"))
     }
 
     @Test
@@ -103,7 +104,7 @@ class TaskSortOrderTest {
                 subTask("first", sortIndex = 0, createdAtMs = 300),
             ).sortedBySubTaskOrder()
 
-        assertEquals(listOf("first", "second", "new"), sorted.map { it.projectSubTaskId })
+        assertThat(sorted.map { it.projectSubTaskId }).isEqualTo(listOf("first", "second", "new"))
     }
 
     @Test
@@ -115,6 +116,6 @@ class TaskSortOrderTest {
                 task("c", sortIndex = 2, createdAtMs = 0),
             )
 
-        assertEquals(ordered, ordered.sortedByTaskOrder())
+        assertThat(ordered.sortedByTaskOrder()).isEqualTo(ordered)
     }
 }

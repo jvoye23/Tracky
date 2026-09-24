@@ -1,5 +1,9 @@
 package com.jvcs.tracky.core.data.timer
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.domain.device.FakeDeviceIdProvider
 import com.jvcs.tracky.core.domain.sync.DeltaSyncApplier
 import com.jvcs.tracky.core.domain.sync.FakeSyncCursorStore
@@ -29,9 +33,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 import kotlin.time.Instant
 
 /** A scripted active-timer endpoint: one queued answer per call, and a record of what was sent. */
@@ -152,11 +153,11 @@ class OfflineFirstActiveTimerRepositoryTest {
             repository.start(taskInterval())
 
             val sent = remote.starts.single()
-            assertEquals("i1", sent.intervalId)
-            assertEquals(ActiveTimerKind.TASK, sent.kind)
-            assertNull(sent.parentSubTaskId)
+            assertThat(sent.intervalId).isEqualTo("i1")
+            assertThat(sent.kind).isEqualTo(ActiveTimerKind.TASK)
+            assertThat(sent.parentSubTaskId).isNull()
             // Provenance is what lets the user's other devices tell a timer to adopt from one to reclaim.
-            assertEquals(FakeDeviceIdProvider.THIS_DEVICE, sent.deviceId)
+            assertThat(sent.deviceId).isEqualTo(FakeDeviceIdProvider.THIS_DEVICE)
         }
 
     @Test
@@ -167,12 +168,12 @@ class OfflineFirstActiveTimerRepositoryTest {
             repository.start(taskInterval(), subTaskInterval())
 
             val sent = remote.starts.single()
-            assertEquals("si1", sent.intervalId)
-            assertEquals(ActiveTimerKind.SUB_TASK, sent.kind)
-            assertEquals("s1", sent.parentSubTaskId)
-            assertEquals("i1", sent.parentTaskIntervalId)
+            assertThat(sent.intervalId).isEqualTo("si1")
+            assertThat(sent.kind).isEqualTo(ActiveTimerKind.SUB_TASK)
+            assertThat(sent.parentSubTaskId).isEqualTo("s1")
+            assertThat(sent.parentTaskIntervalId).isEqualTo("i1")
             // Still names the enclosing task, so the server can open it if it does not have it.
-            assertEquals("t1", sent.parentTaskId)
+            assertThat(sent.parentTaskId).isEqualTo("t1")
         }
 
     @Test
@@ -185,9 +186,9 @@ class OfflineFirstActiveTimerRepositoryTest {
             repository.start(taskInterval(), subTaskInterval())
 
             val queued = queue.all().single()
-            assertEquals("si1", queued.entityId)
-            assertEquals(PendingSyncOperation.ENTITY_SUBTASK_INTERVAL, queued.entityType)
-            assertEquals("s1", queued.parentEntityId)
+            assertThat(queued.entityId).isEqualTo("si1")
+            assertThat(queued.entityType).isEqualTo(PendingSyncOperation.ENTITY_SUBTASK_INTERVAL)
+            assertThat(queued.parentEntityId).isEqualTo("s1")
         }
 
     @Test
@@ -207,9 +208,9 @@ class OfflineFirstActiveTimerRepositoryTest {
             repository.start(taskInterval())
 
             val stored = local.intervals["i-other"]
-            assertEquals(Instant.fromEpochMilliseconds(60_000), stored?.endDateTimeUtc)
+            assertThat(stored?.endDateTimeUtc).isEqualTo(Instant.fromEpochMilliseconds(60_000))
             // And the row still says which device opened it.
-            assertEquals(FakeDeviceIdProvider.OTHER_DEVICE, stored?.startedByDeviceId)
+            assertThat(stored?.startedByDeviceId).isEqualTo(FakeDeviceIdProvider.OTHER_DEVICE)
         }
 
     @Test
@@ -223,9 +224,9 @@ class OfflineFirstActiveTimerRepositoryTest {
 
             val result = repository.start(taskInterval())
 
-            assertTrue(result is Result.Success)
-            assertTrue(queue.all().isEmpty())
-            assertEquals(1, syncRemote.pulls)
+            assertThat(result is Result.Success).isTrue()
+            assertThat(queue.all().isEmpty()).isTrue()
+            assertThat(syncRemote.pulls).isEqualTo(1)
         }
 
     @Test
@@ -238,10 +239,10 @@ class OfflineFirstActiveTimerRepositoryTest {
             repository.start(taskInterval())
 
             val queued = queue.all().single()
-            assertEquals("i1", queued.entityId)
-            assertEquals(PendingSyncOperation.ENTITY_INTERVAL, queued.entityType)
-            assertEquals(PendingSyncOperation.OP_CREATE, queued.operationType)
-            assertEquals(1, scheduler.scheduleCount)
+            assertThat(queued.entityId).isEqualTo("i1")
+            assertThat(queued.entityType).isEqualTo(PendingSyncOperation.ENTITY_INTERVAL)
+            assertThat(queued.operationType).isEqualTo(PendingSyncOperation.OP_CREATE)
+            assertThat(scheduler.scheduleCount).isEqualTo(1)
         }
 
     @Test
@@ -268,9 +269,9 @@ class OfflineFirstActiveTimerRepositoryTest {
 
             repository.stop("i1", ActiveTimerKind.TASK, Instant.fromEpochMilliseconds(60_000))
 
-            assertEquals(Instant.fromEpochMilliseconds(60_000), local.intervals["i1"]?.endDateTimeUtc)
+            assertThat(local.intervals["i1"]?.endDateTimeUtc).isEqualTo(Instant.fromEpochMilliseconds(60_000))
             // The minute is on the task row once, not twice.
-            assertEquals(60_000, local.tasks["t1"]?.durationMillis)
+            assertThat(local.tasks["t1"]?.durationMillis).isEqualTo(60_000)
         }
 
     @Test
@@ -283,9 +284,9 @@ class OfflineFirstActiveTimerRepositoryTest {
 
             val result = repository.stop("i1", ActiveTimerKind.TASK, Instant.fromEpochMilliseconds(60_000))
 
-            assertTrue(result is Result.Success)
-            assertNull(local.intervals["i1"]?.endDateTimeUtc)
-            assertEquals(1, syncRemote.pulls)
+            assertThat(result is Result.Success).isTrue()
+            assertThat(local.intervals["i1"]?.endDateTimeUtc).isNull()
+            assertThat(syncRemote.pulls).isEqualTo(1)
         }
 
     @Test
@@ -296,8 +297,8 @@ class OfflineFirstActiveTimerRepositoryTest {
             repository.stop("i1", ActiveTimerKind.TASK, Instant.fromEpochMilliseconds(60_000))
 
             val queued = queue.all().single()
-            assertEquals(PendingSyncOperation.OP_UPDATE, queued.operationType)
-            assertEquals(PendingSyncOperation.ENTITY_INTERVAL, queued.entityType)
+            assertThat(queued.operationType).isEqualTo(PendingSyncOperation.OP_UPDATE)
+            assertThat(queued.entityType).isEqualTo(PendingSyncOperation.ENTITY_INTERVAL)
         }
 
     @Test
@@ -309,7 +310,7 @@ class OfflineFirstActiveTimerRepositoryTest {
 
             repository.stop("si1", ActiveTimerKind.SUB_TASK, Instant.fromEpochMilliseconds(60_000))
 
-            assertEquals(PendingSyncOperation.ENTITY_SUBTASK_INTERVAL, queue.all().single().entityType)
+            assertThat(queue.all().single().entityType).isEqualTo(PendingSyncOperation.ENTITY_SUBTASK_INTERVAL)
         }
 
     @Test
@@ -320,8 +321,8 @@ class OfflineFirstActiveTimerRepositoryTest {
 
             val result = repository.start(taskInterval())
 
-            assertEquals(Result.Error(DataError.Remote.BAD_REQUEST), result)
-            assertTrue(queue.all().isEmpty())
+            assertThat(result).isEqualTo(Result.Error(DataError.Remote.BAD_REQUEST))
+            assertThat(queue.all().isEmpty()).isTrue()
         }
 
     @Test
@@ -334,6 +335,6 @@ class OfflineFirstActiveTimerRepositoryTest {
 
             repository.start(taskInterval())
 
-            assertEquals(Instant.fromEpochMilliseconds(6_000), serverClock.now())
+            assertThat(serverClock.now()).isEqualTo(Instant.fromEpochMilliseconds(6_000))
         }
 }

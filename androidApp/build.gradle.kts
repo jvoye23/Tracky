@@ -88,6 +88,8 @@ dependencies {
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.appcompat)
     testImplementation(libs.junit)
+    testImplementation(libs.assertk)
+    androidTestImplementation(libs.assertk)
     androidTestImplementation(libs.androidx.testExt.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     // androidTestImplementation(platform(libs.androidx.compose.bom))

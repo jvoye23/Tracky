@@ -1,12 +1,13 @@
 package com.jvcs.tracky
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
 import kotlin.test.Test
-import kotlin.test.assertEquals
 
 class ComposeAppCommonTest {
 
     @Test
     fun example() {
-        assertEquals(3, 1 + 2)
+        assertThat(1 + 2).isEqualTo(3)
     }
 }
