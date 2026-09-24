@@ -5,6 +5,10 @@ package com.jvcs.tracky.features.project_tracker.presentation.project_detail
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import app.cash.turbine.test
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.FakeRunningTimerRepository
@@ -38,10 +42,6 @@ import kotlinx.coroutines.test.setMain
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
@@ -205,8 +205,8 @@ class ProjectDetailViewModelTest {
                 settle()
 
                 val task = vm.task()!!
-                assertTrue(task.isTimerRunning, "parent should run while a subtask runs")
-                assertTrue(task.subTasks.first { it.projectSubTaskId == "s1" }.isTimerRunning)
+                assertThat(task.isTimerRunning, name = "parent should run while a subtask runs").isTrue()
+                assertThat(task.subTasks.first { it.projectSubTaskId == "s1" }.isTimerRunning).isTrue()
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -227,7 +227,7 @@ class ProjectDetailViewModelTest {
                 awaitItem()
                 advanceUntilIdle()
 
-                assertEquals("00:01:30", vm.task()!!.displayDuration)
+                assertThat(vm.task()!!.displayDuration).isEqualTo("00:01:30")
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -241,8 +241,8 @@ class ProjectDetailViewModelTest {
                 advanceUntilIdle()
 
                 val task = vm.task()!!
-                assertTrue(task.subTasks.isEmpty())
-                assertEquals(task.formattedDuration, task.displayDuration)
+                assertThat(task.subTasks.isEmpty()).isTrue()
+                assertThat(task.displayDuration).isEqualTo(task.formattedDuration)
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -261,11 +261,14 @@ class ProjectDetailViewModelTest {
                 settle()
 
                 val subTasks = vm.task()!!.subTasks
-                assertFalse(
-                    subTasks.first { it.projectSubTaskId == "s1" }.isTimerRunning,
-                    "the first subtask must stop in TimeManager too, not only in the database",
-                )
-                assertTrue(subTasks.first { it.projectSubTaskId == "s2" }.isTimerRunning)
+                assertThat(
+                    subTasks
+                        .first {
+                            it.projectSubTaskId == "s1"
+                        }.isTimerRunning,
+                    name = "the first subtask must stop in TimeManager too, not only in the database",
+                ).isFalse()
+                assertThat(subTasks.first { it.projectSubTaskId == "s2" }.isTimerRunning).isTrue()
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -286,7 +289,7 @@ class ProjectDetailViewModelTest {
 
                 // s1 was stopped and reset; only s2 is ticking, so the parent must not show ~6s.
                 val subTasks = vm.task()!!.subTasks
-                assertEquals(1, subTasks.count { it.isTimerRunning })
+                assertThat(subTasks.count { it.isTimerRunning }).isEqualTo(1)
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -304,10 +307,10 @@ class ProjectDetailViewModelTest {
                 vm.onAction(ProjectDetailAction.OnToggleSessionTimer(TASK_ID))
                 settle()
 
-                assertFalse(vm.task()!!.isTimerRunning)
-                assertEquals(listOf("s1"), repo.stopped)
+                assertThat(vm.task()!!.isTimerRunning).isFalse()
+                assertThat(repo.stopped).isEqualTo(listOf("s1"))
                 // The parent's own timer must never be touched directly.
-                assertTrue(repo.started.isNotEmpty())
+                assertThat(repo.started.isNotEmpty()).isTrue()
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -324,7 +327,7 @@ class ProjectDetailViewModelTest {
                 vm.onAction(ProjectDetailAction.OnToggleSessionTimer(TASK_ID))
                 settle()
 
-                assertEquals(listOf("s2"), repo.started)
+                assertThat(repo.started).isEqualTo(listOf("s2"))
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -341,7 +344,7 @@ class ProjectDetailViewModelTest {
                 vm.onAction(ProjectDetailAction.OnToggleSessionTimer(TASK_ID))
                 settle()
 
-                assertEquals(listOf("s2"), repo.started, "a finished subtask must not be resumed")
+                assertThat(repo.started, name = "a finished subtask must not be resumed").isEqualTo(listOf("s2"))
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -358,8 +361,8 @@ class ProjectDetailViewModelTest {
                 vm.onAction(ProjectDetailAction.OnToggleSessionTimer(TASK_ID))
                 advanceUntilIdle()
 
-                assertTrue(repo.started.isEmpty())
-                assertFalse(vm.task()!!.isTimerRunning)
+                assertThat(repo.started.isEmpty()).isTrue()
+                assertThat(vm.task()!!.isTimerRunning).isFalse()
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -379,9 +382,9 @@ class ProjectDetailViewModelTest {
                 advanceUntilIdle()
 
                 val task = vm.task()!!
-                assertTrue(task.subTasks.first { it.projectSubTaskId == "s1" }.isFinished)
-                assertEquals(1, task.doneSubTaskCount, "the progress row reads off state too")
-                assertTrue(repo.upserted.last().isFinished)
+                assertThat(task.subTasks.first { it.projectSubTaskId == "s1" }.isFinished).isTrue()
+                assertThat(task.doneSubTaskCount, name = "the progress row reads off state too").isEqualTo(1)
+                assertThat(repo.upserted.last().isFinished).isTrue()
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -398,14 +401,14 @@ class ProjectDetailViewModelTest {
                 vm.onAction(ProjectDetailAction.OnSubTaskCheckedChange("s1"))
                 advanceUntilIdle()
 
-                assertFalse(
+                assertThat(
                     vm
                         .task()!!
                         .subTasks
                         .first()
                         .isFinished,
-                )
-                assertFalse(repo.upserted.last().isFinished)
+                ).isFalse()
+                assertThat(repo.upserted.last().isFinished).isFalse()
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -424,8 +427,8 @@ class ProjectDetailViewModelTest {
                 vm.onAction(ProjectDetailAction.OnTaskCheckedChange(TASK_ID))
                 advanceUntilIdle()
 
-                assertTrue(vm.task()!!.isFinished)
-                assertTrue(taskRepo.upserted.last().isFinished)
+                assertThat(vm.task()!!.isFinished).isTrue()
+                assertThat(taskRepo.upserted.last().isFinished).isTrue()
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -441,14 +444,14 @@ class ProjectDetailViewModelTest {
 
                 vm.onAction(ProjectDetailAction.OnToggleSessionTimer(TASK_ID))
                 settle()
-                assertTrue(vm.task()!!.isTimerRunning, "precondition: the timer is running")
+                assertThat(vm.task()!!.isTimerRunning, name = "precondition: the timer is running").isTrue()
 
                 vm.onAction(ProjectDetailAction.OnTaskCheckedChange(TASK_ID))
                 settle()
 
-                assertTrue(taskRepo.stopped.contains(TASK_ID), "a finished task must not keep counting")
-                assertFalse(vm.task()!!.isTimerRunning)
-                assertTrue(vm.task()!!.isFinished)
+                assertThat(taskRepo.stopped.contains(TASK_ID), name = "a finished task must not keep counting").isTrue()
+                assertThat(vm.task()!!.isTimerRunning).isFalse()
+                assertThat(vm.task()!!.isFinished).isTrue()
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -466,9 +469,9 @@ class ProjectDetailViewModelTest {
                 vm.onAction(ProjectDetailAction.OnTaskCheckedChange(TASK_ID))
                 advanceUntilIdle()
 
-                assertFalse(vm.task()!!.isFinished, "a task with no subtasks toggles freely")
-                assertFalse(taskRepo.upserted.last().isFinished)
-                assertFalse(vm.state.value.isUncheckTaskBlockedDialogVisible)
+                assertThat(vm.task()!!.isFinished, name = "a task with no subtasks toggles freely").isFalse()
+                assertThat(taskRepo.upserted.last().isFinished).isFalse()
+                assertThat(vm.state.value.isUncheckTaskBlockedDialogVisible).isFalse()
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -495,15 +498,12 @@ class ProjectDetailViewModelTest {
                 advanceUntilIdle()
 
                 val task = vm.task()!!
-                assertTrue(task.isFinished)
-                assertTrue(task.subTasks.all { it.isFinished }, "checking the parent finishes them all")
-                assertEquals(3, task.doneSubTaskCount)
-                assertTrue(taskRepo.upserted.last().isFinished)
+                assertThat(task.isFinished).isTrue()
+                assertThat(task.subTasks.all { it.isFinished }, name = "checking the parent finishes them all").isTrue()
+                assertThat(task.doneSubTaskCount).isEqualTo(3)
+                assertThat(taskRepo.upserted.last().isFinished).isTrue()
                 // The already-finished one is left alone rather than re-queued for sync.
-                assertEquals(
-                    setOf("s1", "s3"),
-                    subTaskRepo.upserted.map { it.projectSubTaskId }.toSet(),
-                )
+                assertThat(subTaskRepo.upserted.map { it.projectSubTaskId }.toSet()).isEqualTo(setOf("s1", "s3"))
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -526,33 +526,33 @@ class ProjectDetailViewModelTest {
 
                 vm.onAction(ProjectDetailAction.OnToggleSubTaskTimer("s1"))
                 settle()
-                assertTrue(
+                assertThat(
                     vm
                         .task()!!
                         .subTasks
                         .first()
                         .isTimerRunning,
-                    "precondition: it is running",
-                )
+                    name = "precondition: it is running",
+                ).isTrue()
 
                 vm.onAction(ProjectDetailAction.OnTaskCheckedChange(TASK_ID))
                 settle()
 
-                assertTrue(subTaskRepo.stopped.contains("s1"))
-                assertFalse(
+                assertThat(subTaskRepo.stopped.contains("s1")).isTrue()
+                assertThat(
                     vm
                         .task()!!
                         .subTasks
                         .first()
                         .isTimerRunning,
-                )
-                assertTrue(
+                ).isFalse()
+                assertThat(
                     vm
                         .task()!!
                         .subTasks
                         .first()
                         .isFinished,
-                )
+                ).isTrue()
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -576,14 +576,14 @@ class ProjectDetailViewModelTest {
                 vm.onAction(ProjectDetailAction.OnTaskCheckedChange(TASK_ID))
                 advanceUntilIdle()
 
-                assertTrue(vm.state.value.isUncheckTaskBlockedDialogVisible)
-                assertTrue(vm.task()!!.isFinished, "the refusal changes nothing")
-                assertTrue(taskRepo.upserted.isEmpty())
-                assertTrue(subTaskRepo.upserted.isEmpty())
+                assertThat(vm.state.value.isUncheckTaskBlockedDialogVisible).isTrue()
+                assertThat(vm.task()!!.isFinished, name = "the refusal changes nothing").isTrue()
+                assertThat(taskRepo.upserted.isEmpty()).isTrue()
+                assertThat(subTaskRepo.upserted.isEmpty()).isTrue()
 
                 vm.onAction(ProjectDetailAction.OnDismissUncheckTaskDialog)
                 advanceUntilIdle()
-                assertFalse(vm.state.value.isUncheckTaskBlockedDialogVisible)
+                assertThat(vm.state.value.isUncheckTaskBlockedDialogVisible).isFalse()
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -608,15 +608,15 @@ class ProjectDetailViewModelTest {
                 vm.onAction(ProjectDetailAction.OnSubTaskCheckedChange("s1"))
                 advanceUntilIdle()
 
-                assertFalse(
+                assertThat(
                     vm
                         .task()!!
                         .subTasks
                         .first()
                         .isFinished,
-                )
-                assertFalse(vm.task()!!.isFinished, "the parent follows its subtasks")
-                assertFalse(taskRepo.upserted.last().isFinished)
+                ).isFalse()
+                assertThat(vm.task()!!.isFinished, name = "the parent follows its subtasks").isFalse()
+                assertThat(taskRepo.upserted.last().isFinished).isFalse()
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -641,8 +641,8 @@ class ProjectDetailViewModelTest {
                 vm.onAction(ProjectDetailAction.OnSubTaskCheckedChange("s2"))
                 advanceUntilIdle()
 
-                assertTrue(vm.task()!!.isFinished)
-                assertTrue(taskRepo.upserted.last().isFinished)
+                assertThat(vm.task()!!.isFinished).isTrue()
+                assertThat(taskRepo.upserted.last().isFinished).isTrue()
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -672,8 +672,8 @@ class ProjectDetailViewModelTest {
                 // The finishing write must be built on the post-stop row, not the snapshot taken
                 // before it, or the tracked time is silently thrown away.
                 val finishing = subTaskRepo.upserted.last { it.projectSubTaskId == "s1" }
-                assertTrue(finishing.isFinished)
-                assertEquals(1_000L + BANKED_MILLIS, finishing.durationMillis)
+                assertThat(finishing.isFinished).isTrue()
+                assertThat(finishing.durationMillis).isEqualTo(1_000L + BANKED_MILLIS)
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -695,8 +695,8 @@ class ProjectDetailViewModelTest {
                 settle()
 
                 val finishing = subTaskRepo.upserted.last { it.projectSubTaskId == "s1" }
-                assertTrue(finishing.isFinished)
-                assertEquals(1_000L + BANKED_MILLIS, finishing.durationMillis)
+                assertThat(finishing.isFinished).isTrue()
+                assertThat(finishing.durationMillis).isEqualTo(1_000L + BANKED_MILLIS)
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -722,9 +722,9 @@ class ProjectDetailViewModelTest {
                 projectRepo.emit(project(done, subTask("s2"), taskFinished = true))
                 advanceUntilIdle()
 
-                assertEquals(2, vm.task()!!.subTasks.size)
-                assertFalse(vm.task()!!.isFinished, "a new open subtask re-opens its parent")
-                assertFalse(taskRepo.upserted.last().isFinished)
+                assertThat(vm.task()!!.subTasks.size).isEqualTo(2)
+                assertThat(vm.task()!!.isFinished, name = "a new open subtask re-opens its parent").isFalse()
+                assertThat(taskRepo.upserted.last().isFinished).isFalse()
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -748,16 +748,15 @@ class ProjectDetailViewModelTest {
                 )
                 advanceUntilIdle()
 
-                assertEquals("renamed task", vm.task()!!.title)
-                assertEquals(
-                    "renamed subtask",
+                assertThat(vm.task()!!.title).isEqualTo("renamed task")
+                assertThat(
                     vm
                         .task()!!
                         .subTasks
                         .single()
                         .title,
-                )
-                assertEquals(Color.Red, vm.state.value.projectColor, "an unsaved colour pick survives")
+                ).isEqualTo("renamed subtask")
+                assertThat(vm.state.value.projectColor, name = "an unsaved colour pick survives").isEqualTo(Color.Red)
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -776,8 +775,8 @@ class ProjectDetailViewModelTest {
                 running.startTimer(runningTimer(taskId = TASK_ID, isForeign = true))
                 settle()
 
-                assertTrue(vm.state.value.isRunningTimerForeign, "the hero card has nothing to say")
-                assertTrue(vm.task()!!.isForeign)
+                assertThat(vm.state.value.isRunningTimerForeign, name = "the hero card has nothing to say").isTrue()
+                assertThat(vm.task()!!.isForeign).isTrue()
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -795,8 +794,8 @@ class ProjectDetailViewModelTest {
                 running.startTimer(runningTimer(taskId = TASK_ID))
                 settle()
 
-                assertFalse(vm.state.value.isRunningTimerForeign)
-                assertFalse(vm.task()!!.isForeign)
+                assertThat(vm.state.value.isRunningTimerForeign).isFalse()
+                assertThat(vm.task()!!.isForeign).isFalse()
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -815,7 +814,7 @@ class ProjectDetailViewModelTest {
                 projectRepo.emit(project(subTask("s1"), subTask("s2")))
                 advanceUntilIdle()
 
-                assertEquals(listOf("s1", "s2"), vm.subTaskIds())
+                assertThat(vm.subTaskIds()).isEqualTo(listOf("s1", "s2"))
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -833,25 +832,24 @@ class ProjectDetailViewModelTest {
             vm.state.test {
                 awaitItem()
                 advanceUntilIdle()
-                assertEquals("project", vm.state.value.titleText)
+                assertThat(vm.state.value.titleText).isEqualTo("project")
 
                 projectRepository.emit(loaded.copy(title = "renamed", description = "new description"))
                 advanceUntilIdle()
 
                 val state = vm.state.value
-                assertEquals("renamed", state.titleText)
-                assertEquals("new description", state.descriptionText)
-                assertEquals("renamed", state.project?.title)
+                assertThat(state.titleText).isEqualTo("renamed")
+                assertThat(state.descriptionText).isEqualTo("new description")
+                assertThat(state.project?.title).isEqualTo("renamed")
                 // The row carries no tasks, so the loaded tree has to survive the merge untouched.
-                assertEquals(1, state.project?.projectTasks?.size)
-                assertEquals(
-                    1,
+                assertThat(state.project?.projectTasks?.size).isEqualTo(1)
+                assertThat(
                     state.project
                         ?.projectTasks
                         ?.first()
                         ?.subTasks
                         ?.size,
-                )
+                ).isEqualTo(1)
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -872,8 +870,11 @@ class ProjectDetailViewModelTest {
                 vm.onAction(ProjectDetailAction.OnTaskReorderMove(fromTaskId = "c", toTaskId = "a"))
                 settle()
 
-                assertEquals(listOf("c", "a", "b"), vm.taskIds())
-                assertTrue(taskRepository.reorderCalls.isEmpty(), "a move must not reach the repository")
+                assertThat(vm.taskIds()).isEqualTo(listOf("c", "a", "b"))
+                assertThat(
+                    taskRepository.reorderCalls.isEmpty(),
+                    name = "a move must not reach the repository",
+                ).isTrue()
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -890,7 +891,7 @@ class ProjectDetailViewModelTest {
                 vm.onAction(ProjectDetailAction.OnTaskReorderMove(fromTaskId = "a", toTaskId = "c"))
                 settle()
 
-                assertEquals(listOf("b", "c", "a"), vm.taskIds())
+                assertThat(vm.taskIds()).isEqualTo(listOf("b", "c", "a"))
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -907,7 +908,7 @@ class ProjectDetailViewModelTest {
                 vm.onAction(ProjectDetailAction.OnTaskReorderMove(fromTaskId = "ghost", toTaskId = "a"))
                 settle()
 
-                assertEquals(listOf("a", "b"), vm.taskIds())
+                assertThat(vm.taskIds()).isEqualTo(listOf("a", "b"))
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -925,7 +926,7 @@ class ProjectDetailViewModelTest {
                 vm.onAction(ProjectDetailAction.OnTaskReorderCommit)
                 settle()
 
-                assertEquals(listOf(listOf("c", "a", "b")), taskRepository.reorderCalls)
+                assertThat(taskRepository.reorderCalls).isEqualTo(listOf(listOf("c", "a", "b")))
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -948,7 +949,7 @@ class ProjectDetailViewModelTest {
                 vm.onAction(ProjectDetailAction.OnSaveClick)
                 settle()
 
-                assertTrue(projectRepository.upserted.isEmpty(), "nothing on the project changed")
+                assertThat(projectRepository.upserted.isEmpty(), name = "nothing on the project changed").isTrue()
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -976,10 +977,10 @@ class ProjectDetailViewModelTest {
                 settle()
 
                 val saved = projectRepository.upserted.single()
-                assertEquals(Color.Red.toArgb(), saved.colorArgb)
-                assertEquals(3L, saved.sortIndex)
-                assertTrue(saved.isPinned)
-                assertEquals(stored.startDateTimeUtc, saved.startDateTimeUtc, "not truncated to the day")
+                assertThat(saved.colorArgb).isEqualTo(Color.Red.toArgb())
+                assertThat(saved.sortIndex).isEqualTo(3L)
+                assertThat(saved.isPinned).isTrue()
+                assertThat(saved.startDateTimeUtc, name = "not truncated to the day").isEqualTo(stored.startDateTimeUtc)
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -999,12 +1000,12 @@ class ProjectDetailViewModelTest {
                     vm.onAction(ProjectDetailAction.OnTaskReorderCommit)
                     settle()
 
-                    assertTrue(awaitItem() is ProjectDetailEvent.ReorderError)
+                    assertThat(awaitItem() is ProjectDetailEvent.ReorderError).isTrue()
                     cancelAndIgnoreRemainingEvents()
                 }
                 // Don't leave the user looking at an order that says it saved while the snackbar says
                 // it did not: the list goes back to what is actually persisted.
-                assertEquals(listOf("a", "b", "c"), vm.taskIds())
+                assertThat(vm.taskIds()).isEqualTo(listOf("a", "b", "c"))
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -1022,8 +1023,8 @@ class ProjectDetailViewModelTest {
                 vm.onAction(ProjectDetailAction.OnTaskReorderCancel)
                 settle()
 
-                assertEquals(listOf("a", "b", "c"), vm.taskIds())
-                assertTrue(taskRepository.reorderCalls.isEmpty(), "an aborted drag saves nothing")
+                assertThat(vm.taskIds()).isEqualTo(listOf("a", "b", "c"))
+                assertThat(taskRepository.reorderCalls.isEmpty(), name = "an aborted drag saves nothing").isTrue()
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -1045,8 +1046,11 @@ class ProjectDetailViewModelTest {
                 )
                 settle()
 
-                assertEquals(listOf("s3", "s1", "s2"), vm.subTaskIds())
-                assertTrue(subTaskRepository.reorderCalls.isEmpty(), "a move must not reach the repository")
+                assertThat(vm.subTaskIds()).isEqualTo(listOf("s3", "s1", "s2"))
+                assertThat(
+                    subTaskRepository.reorderCalls.isEmpty(),
+                    name = "a move must not reach the repository",
+                ).isTrue()
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -1069,7 +1073,7 @@ class ProjectDetailViewModelTest {
                 vm.onAction(ProjectDetailAction.OnSubTaskReorderCommit(TASK_ID))
                 settle()
 
-                assertEquals(listOf(TASK_ID to listOf("s2", "s1")), subTaskRepository.reorderCalls)
+                assertThat(subTaskRepository.reorderCalls).isEqualTo(listOf(TASK_ID to listOf("s2", "s1")))
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -1093,7 +1097,7 @@ class ProjectDetailViewModelTest {
                 )
                 settle()
 
-                assertEquals(listOf("s1", "s2"), vm.subTaskIds())
+                assertThat(vm.subTaskIds()).isEqualTo(listOf("s1", "s2"))
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -1123,10 +1127,10 @@ class ProjectDetailViewModelTest {
                     vm.onAction(ProjectDetailAction.OnSubTaskReorderCommit(TASK_ID))
                     settle()
 
-                    assertTrue(awaitItem() is ProjectDetailEvent.ReorderError)
+                    assertThat(awaitItem() is ProjectDetailEvent.ReorderError).isTrue()
                     cancelAndIgnoreRemainingEvents()
                 }
-                assertEquals(listOf("s1", "s2"), vm.subTaskIds())
+                assertThat(vm.subTaskIds()).isEqualTo(listOf("s1", "s2"))
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -1152,7 +1156,7 @@ class ProjectDetailViewModelTest {
                 repository.emit(project(taskDurationMillis = 9_000))
                 settle()
 
-                assertEquals(9_000L, vm.task()?.durationMillis)
+                assertThat(vm.task()?.durationMillis).isEqualTo(9_000L)
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -1170,12 +1174,11 @@ class ProjectDetailViewModelTest {
                 repository.emit(projectWithTasks("t1", "t2"))
                 settle()
 
-                assertEquals(
-                    listOf("t1", "t2"),
+                assertThat(
                     vm.state.value.project
                         ?.projectTasks
                         ?.map { it.projectTaskId },
-                )
+                ).isEqualTo(listOf("t1", "t2"))
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -1203,18 +1206,18 @@ class ProjectDetailViewModelTest {
                 running.startTimer(runningTimer(taskId = TASK_ID, bankedDuration = 5.seconds))
                 settle()
                 val whileRunning = vm.task()?.durationMillis ?: 0L
-                assertEquals(5_000L, whileRunning, "the ticker should be driving the duration")
+                assertThat(whileRunning, name = "the ticker should be driving the duration").isEqualTo(5_000L)
 
                 // A distinct value, or the StateFlow behind the fake conflates it away and the
                 // collector never runs -- which would make this assertion pass without the guard.
                 repository.emit(project(taskDurationMillis = 0).copy(description = "touched"))
                 settle()
 
-                assertTrue(
+                assertThat(
                     (vm.task()?.durationMillis ?: 0L) >= whileRunning,
-                    "a tree emission reset the live duration to the stored one",
-                )
-                assertEquals(true, vm.task()?.isTimerRunning)
+                    name = "a tree emission reset the live duration to the stored one",
+                ).isTrue()
+                assertThat(vm.task()?.isTimerRunning).isEqualTo(true)
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -1240,13 +1243,12 @@ class ProjectDetailViewModelTest {
                 repository.emit(projectWithTasks("t1", "t2", "t3").copy(description = "touched"))
                 settle()
 
-                assertEquals(
-                    listOf("t3", "t1", "t2"),
+                assertThat(
                     vm.state.value.project
                         ?.projectTasks
                         ?.map { it.projectTaskId },
-                    "the database order overwrote the drag the user is still holding",
-                )
+                    name = "the database order overwrote the drag the user is still holding",
+                ).isEqualTo(listOf("t3", "t1", "t2"))
                 cancelAndIgnoreRemainingEvents()
             }
         }

@@ -3,6 +3,10 @@
 package com.jvcs.tracky.features.project_tracker.presentation.project_overview
 
 import app.cash.turbine.test
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.domain.auth.FakeAuthService
 import com.jvcs.tracky.core.domain.auth.FakeSessionStorage
 import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
@@ -41,9 +45,6 @@ import tracky.composeapp.generated.resources.error_no_internet
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
@@ -134,8 +135,8 @@ class ProjectOverviewViewModelTest {
         runTest(dispatcher) {
             val viewModel = viewModelWith(FakeProjectRepository(seededProjects()))
 
-            assertEquals(listOf("p1", "p2"), stateOf(viewModel).pinnedProjects.map { it.projectId })
-            assertEquals(listOf("p3", "p4"), stateOf(viewModel).otherProjects.map { it.projectId })
+            assertThat(stateOf(viewModel).pinnedProjects.map { it.projectId }).isEqualTo(listOf("p1", "p2"))
+            assertThat(stateOf(viewModel).otherProjects.map { it.projectId }).isEqualTo(listOf("p3", "p4"))
         }
 
     @Test
@@ -161,7 +162,7 @@ class ProjectOverviewViewModelTest {
 
             viewModel.onAction(ProjectOverviewAction.OnSortOptionSelected(SortOption.MODIFICATION_DATE))
 
-            assertEquals(listOf("stale", "fresh"), stateOf(viewModel).otherProjects.map { it.projectId })
+            assertThat(stateOf(viewModel).otherProjects.map { it.projectId }).isEqualTo(listOf("stale", "fresh"))
         }
 
     private fun task(
@@ -186,8 +187,8 @@ class ProjectOverviewViewModelTest {
 
             viewModel.onAction(ProjectOverviewAction.OnReorderMove(fromId = "p4", toId = "p3"))
 
-            assertEquals(listOf("p4", "p3"), stateOf(viewModel).otherProjects.map { it.projectId })
-            assertEquals(listOf("p1", "p2"), stateOf(viewModel).pinnedProjects.map { it.projectId })
+            assertThat(stateOf(viewModel).otherProjects.map { it.projectId }).isEqualTo(listOf("p4", "p3"))
+            assertThat(stateOf(viewModel).pinnedProjects.map { it.projectId }).isEqualTo(listOf("p1", "p2"))
         }
 
     @Test
@@ -199,8 +200,8 @@ class ProjectOverviewViewModelTest {
             // not something a reorder is allowed to decide.
             viewModel.onAction(ProjectOverviewAction.OnReorderMove(fromId = "p3", toId = "p1"))
 
-            assertEquals(listOf("p1", "p2"), stateOf(viewModel).pinnedProjects.map { it.projectId })
-            assertEquals(listOf("p3", "p4"), stateOf(viewModel).otherProjects.map { it.projectId })
+            assertThat(stateOf(viewModel).pinnedProjects.map { it.projectId }).isEqualTo(listOf("p1", "p2"))
+            assertThat(stateOf(viewModel).otherProjects.map { it.projectId }).isEqualTo(listOf("p3", "p4"))
         }
 
     @Test
@@ -211,7 +212,7 @@ class ProjectOverviewViewModelTest {
             viewModel.onAction(ProjectOverviewAction.OnReorderMove(fromId = "p4", toId = "p3"))
             viewModel.onAction(ProjectOverviewAction.OnReorderCancel)
 
-            assertEquals(listOf("p3", "p4"), stateOf(viewModel).otherProjects.map { it.projectId })
+            assertThat(stateOf(viewModel).otherProjects.map { it.projectId }).isEqualTo(listOf("p3", "p4"))
         }
 
     @Test
@@ -228,15 +229,14 @@ class ProjectOverviewViewModelTest {
                 viewModel.onAction(ProjectOverviewAction.OnReorderCommit("p4"))
                 testScheduler.advanceUntilIdle()
 
-                assertEquals(
-                    ProjectOverviewEvent.ReorderError(UiText.Resource(Res.string.error_disk_full)),
+                assertThat(
                     awaitItem(),
-                )
+                ).isEqualTo(ProjectOverviewEvent.ReorderError(UiText.Resource(Res.string.error_disk_full)))
                 expectNoEvents()
             }
 
             // The snackbar must not contradict the list: both say the reorder did not happen.
-            assertEquals(listOf("p3", "p4"), stateOf(viewModel).otherProjects.map { it.projectId })
+            assertThat(stateOf(viewModel).otherProjects.map { it.projectId }).isEqualTo(listOf("p3", "p4"))
         }
 
     @Test
@@ -252,15 +252,14 @@ class ProjectOverviewViewModelTest {
                 startCollectingState(viewModel) // `state`'s `onStart` runs `loadProjectsFromServer()`.
 
                 // The user must be told the connection is the problem, not shown "an unknown error happened".
-                assertEquals(
-                    ProjectOverviewEvent.Error(UiText.Resource(Res.string.error_no_internet)),
+                assertThat(
                     awaitItem(),
-                )
+                ).isEqualTo(ProjectOverviewEvent.Error(UiText.Resource(Res.string.error_no_internet)))
                 expectNoEvents()
             }
 
             // A failed pull still has to clear the spinner, or the screen hangs on the loading state.
-            assertFalse(stateOf(viewModel).isLoading)
+            assertThat(stateOf(viewModel).isLoading).isFalse()
         }
 
     @Test
@@ -273,7 +272,7 @@ class ProjectOverviewViewModelTest {
                 expectNoEvents()
             }
 
-            assertFalse(stateOf(viewModel).isLoading)
+            assertThat(stateOf(viewModel).isLoading).isFalse()
         }
 
     @Test
@@ -287,14 +286,14 @@ class ProjectOverviewViewModelTest {
             testScheduler.advanceUntilIdle()
 
             // The commit carries only the dragged card; the section order comes from the ViewModel.
-            assertEquals(listOf(listOf("p4", "p3")), repository.reorderCalls)
+            assertThat(repository.reorderCalls).isEqualTo(listOf(listOf("p4", "p3")))
 
             // The DB re-emits the pre-reorder order while the write is still settling; replaying it would
             // undo the move the user just made in front of their eyes.
             repository.emit(seededProjects())
             testScheduler.advanceUntilIdle()
 
-            assertEquals(listOf("p4", "p3"), stateOf(viewModel).otherProjects.map { it.projectId })
+            assertThat(stateOf(viewModel).otherProjects.map { it.projectId }).isEqualTo(listOf("p4", "p3"))
         }
 
     @Test
@@ -307,7 +306,7 @@ class ProjectOverviewViewModelTest {
             repository.emit(seededProjects() + project("p5")) // no sortIndex yet -> sorts first
             testScheduler.advanceUntilIdle()
 
-            assertEquals(listOf("p5", "p4", "p3"), stateOf(viewModel).otherProjects.map { it.projectId })
+            assertThat(stateOf(viewModel).otherProjects.map { it.projectId }).isEqualTo(listOf("p5", "p4", "p3"))
         }
 
     @Test
@@ -337,7 +336,7 @@ class ProjectOverviewViewModelTest {
             testScheduler.advanceUntilIdle()
 
             // Holding on to the first emission's order would strand the pinned card at the bottom.
-            assertEquals(listOf("p4", "p1", "p2"), stateOf(viewModel).pinnedProjects.map { it.projectId })
+            assertThat(stateOf(viewModel).pinnedProjects.map { it.projectId }).isEqualTo(listOf("p4", "p1", "p2"))
         }
 
     @Test
@@ -347,8 +346,8 @@ class ProjectOverviewViewModelTest {
 
             viewModel.onAction(ProjectOverviewAction.OnSearchQueryChange("p3"))
 
-            assertTrue(stateOf(viewModel).pinnedProjects.isEmpty())
-            assertEquals(listOf("p3"), stateOf(viewModel).otherProjects.map { it.projectId })
+            assertThat(stateOf(viewModel).pinnedProjects.isEmpty()).isTrue()
+            assertThat(stateOf(viewModel).otherProjects.map { it.projectId }).isEqualTo(listOf("p3"))
         }
 
     @Test
@@ -363,10 +362,10 @@ class ProjectOverviewViewModelTest {
             testScheduler.advanceUntilIdle()
 
             // One gesture, one repository call — the repository re-indexes the target section once.
-            assertEquals(1, repository.pinCalls.size)
+            assertThat(repository.pinCalls.size).isEqualTo(1)
             val (ids, isPinned) = repository.pinCalls.single()
-            assertEquals(setOf("p3", "p4"), ids.toSet())
-            assertTrue(isPinned)
+            assertThat(ids.toSet()).isEqualTo(setOf("p3", "p4"))
+            assertThat(isPinned).isTrue()
         }
 }
 
