@@ -117,9 +117,21 @@ class MviContractRulesTest {
         // Enums are excluded: an enum-shaped display state (the listing footer's
         // three cases, now `PaginationFooterUi`) cannot be mutated in the first
         // place, so the rule it would fail is not a rule about it.
+        //
+        // Only packages that hold a ViewModel: that is where an MVI screen state
+        // lives. A Compose state holder (Tracky's ReorderableListState and
+        // SubTaskDragDropState, in presentation/util, like LazyListState) is
+        // mutable by design and is not what this rule is about.
+        val screenPackages =
+            ProjectScope.productionFiles
+                .flatMap { it.classes() }
+                .filter { it.name.endsWith("ViewModel") }
+                .mapNotNull { it.packagee?.name }
+                .toSet()
         val subjects =
             ProjectScope.productionFiles
                 .filter { it.packagee?.name?.contains(".presentation") == true }
+                .filter { it.packagee?.name in screenPackages }
                 .flatMap { it.classes() }
                 .filter { it.name.endsWith("State") }
                 .filterNot { it.hasEnumModifier }
