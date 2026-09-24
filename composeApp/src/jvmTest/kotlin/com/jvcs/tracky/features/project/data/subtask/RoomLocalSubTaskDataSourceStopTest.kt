@@ -51,6 +51,7 @@ internal class RoomLocalSubTaskDataSourceStopTest {
         subTasks =
             RoomLocalSubTaskDataSource(
                 db.projectDao,
+                db.subTaskDao,
                 db.taskDao,
                 db.subTaskIntervalDao,
                 db.taskIntervalDao,
@@ -62,6 +63,7 @@ internal class RoomLocalSubTaskDataSourceStopTest {
             RoomLocalTaskDataSource(
                 db.projectDao,
                 db.taskDao,
+                db.subTaskDao,
                 db.subTaskIntervalDao,
                 db.taskIntervalDao,
                 FakeDeviceIdProvider(),
@@ -107,7 +109,7 @@ internal class RoomLocalSubTaskDataSourceStopTest {
             ),
         )
         subTaskIds.forEach { id ->
-            db.projectDao.upsertProjectSubTask(
+            db.subTaskDao.upsertProjectSubTask(
                 ProjectSubTaskEntity(
                     projectSubTaskId = id,
                     parentProjectTaskId = "t1",
@@ -127,7 +129,7 @@ internal class RoomLocalSubTaskDataSourceStopTest {
 
     private suspend fun taskIsRunning() = db.taskDao.getTaskById("t1")!!.isTimerRunning
 
-    private suspend fun subTaskIsRunning(id: String) = db.projectDao.getSubTaskById(id)!!.isTimerRunning
+    private suspend fun subTaskIsRunning(id: String) = db.subTaskDao.getSubTaskById(id)!!.isTimerRunning
 
     @Test
     fun stoppingASubTaskThatStartedTheTaskStopsTheTaskToo() =
@@ -143,7 +145,7 @@ internal class RoomLocalSubTaskDataSourceStopTest {
             assertThat(db.taskIntervalDao.getOpenIntervalBySessionId("t1")).isNull()
             assertThat(subTaskIsRunning("s1")).isFalse()
             assertThat(taskIsRunning()).isFalse()
-            assertThat(db.projectDao.getSubTaskById("s1")!!.durationMillis).isEqualTo(60_000L)
+            assertThat(db.subTaskDao.getSubTaskById("s1")!!.durationMillis).isEqualTo(60_000L)
             assertThat(db.taskDao.getTaskById("t1")!!.durationMillis).isEqualTo(60_000L)
         }
 
@@ -207,7 +209,7 @@ internal class RoomLocalSubTaskDataSourceStopTest {
             assertThat(db.taskIntervalDao.getOpenIntervalBySessionId("t1")).isNull()
             assertThat(subTaskIsRunning("s1")).isFalse()
             assertThat(taskIsRunning()).isFalse()
-            assertThat(db.projectDao.getSubTaskById("s1")!!.durationMillis).isEqualTo(60_000L)
+            assertThat(db.subTaskDao.getSubTaskById("s1")!!.durationMillis).isEqualTo(60_000L)
             assertThat(db.taskDao.getTaskById("t1")!!.durationMillis).isEqualTo(60_000L)
         }
 

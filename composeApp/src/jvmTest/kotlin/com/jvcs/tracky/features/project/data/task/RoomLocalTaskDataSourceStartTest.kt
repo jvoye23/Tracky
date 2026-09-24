@@ -53,6 +53,7 @@ internal class RoomLocalTaskDataSourceStartTest {
             RoomLocalTaskDataSource(
                 db.projectDao,
                 db.taskDao,
+                db.subTaskDao,
                 db.subTaskIntervalDao,
                 db.taskIntervalDao,
                 FakeDeviceIdProvider(),

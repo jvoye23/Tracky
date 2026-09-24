@@ -9,6 +9,7 @@ import androidx.sqlite.execSQL
 import com.jvcs.tracky.core.database.dao.PendingSyncDao
 import com.jvcs.tracky.core.database.dao.ProjectDao
 import com.jvcs.tracky.core.database.dao.StrandedIntervalDao
+import com.jvcs.tracky.core.database.dao.SubTaskDao
 import com.jvcs.tracky.core.database.dao.SubTaskIntervalDao
 import com.jvcs.tracky.core.database.dao.TaskDao
 import com.jvcs.tracky.core.database.dao.TaskIntervalDao
@@ -37,6 +38,7 @@ abstract class TrackyDatabase : RoomDatabase() {
 
     abstract val projectDao: ProjectDao
     abstract val pendingSyncDao: PendingSyncDao
+    abstract val subTaskDao: SubTaskDao
     abstract val taskDao: TaskDao
     abstract val subTaskIntervalDao: SubTaskIntervalDao
     abstract val strandedIntervalDao: StrandedIntervalDao

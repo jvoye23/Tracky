@@ -305,14 +305,14 @@ class ServerTreeWriterPullMergeTest {
                 subTasks = listOf(subTaskEntity("s1", "t1", "from server", updatedAt = 100)),
             )
 
-            assertThat(dao.getSubTaskById("s1")?.title).isEqualTo("from server")
+            assertThat(db.subTaskDao.getSubTaskById("s1")?.title).isEqualTo("from server")
         }
 
     @Test
     fun keepsALocalSubTaskThatIsNewerThanTheServer() =
         runBlocking {
             seedTask()
-            dao.upsertProjectSubTask(subTaskEntity("s1", "t1", "edited offline", updatedAt = 500))
+            db.subTaskDao.upsertProjectSubTask(subTaskEntity("s1", "t1", "edited offline", updatedAt = 500))
 
             writer.upsertServerTree(
                 projects = emptyList(),
@@ -321,14 +321,14 @@ class ServerTreeWriterPullMergeTest {
                 subTasks = listOf(subTaskEntity("s1", "t1", "stale server copy", updatedAt = 100)),
             )
 
-            assertThat(dao.getSubTaskById("s1")?.title).isEqualTo("edited offline")
+            assertThat(db.subTaskDao.getSubTaskById("s1")?.title).isEqualTo("edited offline")
         }
 
     @Test
     fun takesTheServerSubTaskWhenItIsNewer() =
         runBlocking {
             seedTask()
-            dao.upsertProjectSubTask(subTaskEntity("s1", "t1", "old local copy", updatedAt = 100))
+            db.subTaskDao.upsertProjectSubTask(subTaskEntity("s1", "t1", "old local copy", updatedAt = 100))
 
             writer.upsertServerTree(
                 projects = emptyList(),
@@ -337,14 +337,14 @@ class ServerTreeWriterPullMergeTest {
                 subTasks = listOf(subTaskEntity("s1", "t1", "renamed elsewhere", updatedAt = 900)),
             )
 
-            assertThat(dao.getSubTaskById("s1")?.title).isEqualTo("renamed elsewhere")
+            assertThat(db.subTaskDao.getSubTaskById("s1")?.title).isEqualTo("renamed elsewhere")
         }
 
     @Test
     fun neverDeletesALocalOnlySubTask() =
         runBlocking<Unit> {
             seedTask()
-            dao.upsertProjectSubTask(subTaskEntity("local-only", "t1", "created offline", updatedAt = null))
+            db.subTaskDao.upsertProjectSubTask(subTaskEntity("local-only", "t1", "created offline", updatedAt = null))
 
             writer.upsertServerTree(
                 projects = emptyList(),
@@ -354,7 +354,7 @@ class ServerTreeWriterPullMergeTest {
             )
 
             // Still queued for upload — a pull must never delete it.
-            assertThat(dao.getSubTaskById("local-only")).isNotNull()
+            assertThat(db.subTaskDao.getSubTaskById("local-only")).isNotNull()
         }
 
     @Test
@@ -374,11 +374,11 @@ class ServerTreeWriterPullMergeTest {
                     ),
             )
 
-            assertThat(dao.getSubTaskById("orphan")).isNull()
+            assertThat(db.subTaskDao.getSubTaskById("orphan")).isNull()
             // Everything around it survived.
             assertThat(dao.getProjectById("p1")).isNotNull()
             assertThat(db.taskDao.getTaskById("t1")).isNotNull()
-            assertThat(dao.getSubTaskById("s1")).isNotNull()
+            assertThat(db.subTaskDao.getSubTaskById("s1")).isNotNull()
         }
 
     private fun subTaskIntervalEntity(
@@ -402,7 +402,7 @@ class ServerTreeWriterPullMergeTest {
     /** sub_task_intervals cascades from project_sub_tasks AND task_intervals — seed both. */
     private suspend fun seedSubTask(subTaskId: String = "s1", taskId: String = "t1") {
         seedTask(taskId)
-        dao.upsertProjectSubTask(subTaskEntity(subTaskId, taskId, "seeded", updatedAt = 0))
+        db.subTaskDao.upsertProjectSubTask(subTaskEntity(subTaskId, taskId, "seeded", updatedAt = 0))
         db.taskIntervalDao.upsertTaskInterval(intervalEntity("ti1", taskId, end = null))
     }
 

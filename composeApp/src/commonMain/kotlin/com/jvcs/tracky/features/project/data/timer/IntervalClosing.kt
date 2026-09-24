@@ -1,6 +1,6 @@
 package com.jvcs.tracky.features.project.data.timer
 
-import com.jvcs.tracky.core.database.dao.ProjectDao
+import com.jvcs.tracky.core.database.dao.SubTaskDao
 import com.jvcs.tracky.core.database.dao.SubTaskIntervalDao
 import com.jvcs.tracky.core.database.dao.TaskDao
 import com.jvcs.tracky.core.database.dao.TaskIntervalDao
@@ -41,7 +41,7 @@ internal suspend fun TaskIntervalDao.closeTaskInterval(
 internal suspend fun SubTaskIntervalDao.closeSubTaskInterval(
     interval: SubTaskIntervalEntity,
     now: Instant,
-    subTaskDao: ProjectDao,
+    subTaskDao: SubTaskDao,
 ): SubTaskIntervalEntity {
     val duration = interval.elapsedAt(now)
     val closed =

@@ -49,6 +49,7 @@ internal class RoomLocalSubTaskDataSourceStartTest {
         dataSource =
             RoomLocalSubTaskDataSource(
                 db.projectDao,
+                db.subTaskDao,
                 db.taskDao,
                 db.subTaskIntervalDao,
                 db.taskIntervalDao,
@@ -96,7 +97,7 @@ internal class RoomLocalSubTaskDataSourceStartTest {
             ),
         )
         subTaskIds.forEach { id ->
-            db.projectDao.upsertProjectSubTask(
+            db.subTaskDao.upsertProjectSubTask(
                 ProjectSubTaskEntity(
                     projectSubTaskId = id,
                     parentProjectTaskId = "t1",
@@ -116,7 +117,7 @@ internal class RoomLocalSubTaskDataSourceStartTest {
 
     private suspend fun taskIsRunning(): Boolean = db.taskDao.getTaskById("t1")!!.isTimerRunning
 
-    private suspend fun subTaskIsRunning(id: String): Boolean = db.projectDao.getSubTaskById(id)!!.isTimerRunning
+    private suspend fun subTaskIsRunning(id: String): Boolean = db.subTaskDao.getSubTaskById(id)!!.isTimerRunning
 
     @Test
     fun startingASubTaskWhoseTaskIsIdleOpensTheTaskTimerToo() =
@@ -184,7 +185,7 @@ internal class RoomLocalSubTaskDataSourceStartTest {
             assertThat(db.subTaskIntervalDao.getOpenSubTaskInterval("s2")).isNotNull()
             assertThat(subTaskIsRunning("s1")).isFalse()
             assertThat(subTaskIsRunning("s2")).isTrue()
-            assertThat(db.projectDao.getSubTaskById("s1")!!.durationMillis).isEqualTo(30_000L)
+            assertThat(db.subTaskDao.getSubTaskById("s1")!!.durationMillis).isEqualTo(30_000L)
         }
 
     @Test

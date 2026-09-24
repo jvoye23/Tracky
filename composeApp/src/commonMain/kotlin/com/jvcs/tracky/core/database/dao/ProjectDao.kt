@@ -5,12 +5,10 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Upsert
 import com.jvcs.tracky.core.database.entity.ProjectEntity
-import com.jvcs.tracky.core.database.entity.ProjectSubTaskEntity
 import com.jvcs.tracky.core.database.relation.ProjectSortIndexEntity
 import com.jvcs.tracky.core.database.relation.ProjectWithTaskTreeEntity
 import com.jvcs.tracky.core.database.relation.ProjectWithTasksEntity
 import com.jvcs.tracky.core.database.relation.SubTaskSortIndexEntity
-import com.jvcs.tracky.core.database.relation.SubTaskWithIntervals
 import com.jvcs.tracky.core.database.relation.TaskSortIndexEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -99,13 +97,6 @@ interface ProjectDao {
     @Query("SELECT * FROM projects WHERE projectId = :projectId")
     fun observeProjectWithTaskTreeById(projectId: String): Flow<ProjectWithTaskTreeEntity?>
 
-    /** The subtask twin of [getBankedTaskDuration]; `parentSubTaskId` is indexed too. */
-    @Query(
-        "SELECT COALESCE(SUM(durationMillis), 0) FROM sub_task_intervals " +
-            "WHERE parentSubTaskId = :subTaskId AND endDateTimeEpochMs IS NOT NULL",
-    )
-    suspend fun getBankedSubTaskDuration(subTaskId: String): Long
-
     // Task order is per project, so unlike the project queries these are scoped to one parent.
     @Query("SELECT projectTaskId, sortIndex FROM project_tasks WHERE parentProjectId = :projectId")
     suspend fun getTaskSortIndices(projectId: String): List<TaskSortIndexEntity>
@@ -124,29 +115,6 @@ interface ProjectDao {
     suspend fun updateTaskSortIndices(indices: Map<String, Long>, updatedAt: Long) {
         indices.forEach { (id, index) -> setTaskSortIndex(id, index, updatedAt) }
     }
-    // ---- Subtasks ---------------------------------------------------------------------------
-    // The reads mirror their task-level counterparts so the two levels stay swappable.
-
-    @Upsert
-    suspend fun upsertProjectSubTask(subTask: ProjectSubTaskEntity)
-
-    @Transaction
-    @Query("SELECT * FROM project_sub_tasks WHERE parentProjectTaskId = :taskId")
-    fun getSubTasksWithIntervals(taskId: String): Flow<List<SubTaskWithIntervals>>
-
-    @Query("SELECT * FROM project_sub_tasks WHERE projectSubTaskId = :subTaskId")
-    suspend fun getSubTaskById(subTaskId: String): ProjectSubTaskEntity?
-
-    @Query("DELETE FROM project_sub_tasks WHERE projectSubTaskId = :subTaskId")
-    suspend fun deleteProjectSubTask(subTaskId: String)
-
-    @Query("UPDATE project_sub_tasks SET isTimerRunning = :isRunning WHERE projectSubTaskId = :subTaskId")
-    suspend fun updateSubTaskTimerStatus(subTaskId: String, isRunning: Boolean)
-
-    @Query(
-        "UPDATE project_sub_tasks SET durationMillis = COALESCE(durationMillis, 0) + :additionalDuration WHERE projectSubTaskId = :subTaskId",
-    )
-    suspend fun addSubTaskDuration(subTaskId: String, additionalDuration: Long)
 
     // Subtask order is per task, one level further down than the task queries above.
     @Query("SELECT projectSubTaskId, sortIndex FROM project_sub_tasks WHERE parentProjectTaskId = :taskId")
@@ -166,17 +134,4 @@ interface ProjectDao {
     suspend fun updateSubTaskSortIndices(indices: Map<String, Long>, updatedAt: Long) {
         indices.forEach { (id, index) -> setSubTaskSortIndex(id, index, updatedAt) }
     }
-
-    // Whether a task-level parked interval is worth keeping at all: a task that owns subtasks is
-    // counted through them, so time banked on the task itself renders nowhere. See StrandedTimer.
-    @Query("SELECT COUNT(*) FROM project_sub_tasks WHERE parentProjectTaskId = :taskId")
-    suspend fun countSubTasks(taskId: String): Int
-
-    @Query(
-        "SELECT si.parentSubTaskId FROM sub_task_intervals AS si " +
-            "JOIN project_sub_tasks AS s ON s.projectSubTaskId = si.parentSubTaskId " +
-            "WHERE s.parentProjectTaskId = :taskId " +
-            "ORDER BY si.startDateTimeEpochMs DESC LIMIT 1",
-    )
-    suspend fun getLastStartedSubTaskId(taskId: String): String?
 }

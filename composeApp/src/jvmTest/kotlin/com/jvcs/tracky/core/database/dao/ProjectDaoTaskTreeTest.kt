@@ -106,7 +106,7 @@ class ProjectDaoTaskTreeTest {
             ),
         )
         listOf("s1", "s2").forEach { subTaskId ->
-            dao.upsertProjectSubTask(
+            db.subTaskDao.upsertProjectSubTask(
                 ProjectSubTaskEntity(
                     projectSubTaskId = subTaskId,
                     parentProjectTaskId = "t1",
