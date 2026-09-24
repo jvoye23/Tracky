@@ -122,31 +122,13 @@ fun TrackyTextField(
     val isError = error != null
     val elevated = isFocused || hasText
 
-    val borderColor by animateColorAsState(
-        targetValue =
-            when {
-                isError -> borderErrorColor
-                isFocused -> borderIsFocusedColor
-                else -> borderDefaultColor
-            },
-    )
-
-    val backgroundColor by animateColorAsState(
-        targetValue =
-            when {
-                isError -> backgroundErrorColor
-                else -> backgroundDefaultColor
-            },
-    )
-
-    val labelColor by animateColorAsState(
-        targetValue =
-            when {
-                isError -> labelErrorColor
-                isFocused -> labelIsFocusedColor
-                else -> labelDefaultColor
-            },
-    )
+    val borderColor =
+        animateFieldColor(isError, isFocused, borderErrorColor, borderIsFocusedColor, borderDefaultColor)
+    // The background does not react to focus, only to an error.
+    val backgroundColor =
+        animateFieldColor(isError, isFocused, backgroundErrorColor, backgroundDefaultColor, backgroundDefaultColor)
+    val labelColor =
+        animateFieldColor(isError, isFocused, labelErrorColor, labelIsFocusedColor, labelDefaultColor)
 
     val resolvedTextStyle =
         if (textStyle.color.isSpecified) {
@@ -154,12 +136,6 @@ fun TrackyTextField(
         } else {
             textStyle.copy(color = MaterialTheme.colorScheme.onSurface)
         }
-
-    val selectionColors =
-        TextSelectionColors(
-            handleColor = MaterialTheme.colorScheme.primary,
-            backgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
-        )
 
     Column(
         modifier = modifier,
@@ -196,118 +172,221 @@ fun TrackyTextField(
                     )
                 }
 
-                Column(
-                    modifier =
-                        Modifier
-                            .weight(1f)
-                            .then(if (fillHeight) Modifier.fillMaxHeight() else Modifier)
-                            .padding(vertical = 8.dp),
-                ) {
-                    if (elevated && showLabel) {
-                        Text(
-                            text = label,
-                            color = labelColor,
-                            style = elevatedLabelStyle,
-                        )
-                        Spacer(Modifier.height(LabelToTextSpacing))
-                    }
-
-                    Box(
-                        modifier = if (fillHeight) Modifier.weight(1f) else Modifier,
-                        contentAlignment = if (fillHeight) Alignment.TopStart else Alignment.CenterStart,
-                    ) {
-                        if (!elevated && showLabel) {
-                            Text(
-                                text = label,
-                                color = labelColor,
-                                style = labelStyle,
-                            )
-                        }
-
-                        CompositionLocalProvider(LocalTextSelectionColors provides selectionColors) {
-                            val fieldModifier =
-                                if (fillHeight) Modifier.fillMaxSize() else Modifier.fillMaxWidth()
-                            if (isPassword) {
-                                BasicSecureTextField(
-                                    state = state,
-                                    modifier = fieldModifier,
-                                    enabled = enabled,
-                                    textStyle = resolvedTextStyle,
-                                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                                    interactionSource = interactionSource,
-                                    keyboardOptions =
-                                        KeyboardOptions(
-                                            keyboardType = KeyboardType.Password,
-                                            imeAction = imeAction,
-                                        ),
-                                    onKeyboardAction = keyboardActionHandler,
-                                    textObfuscationMode =
-                                        if (passwordVisible) {
-                                            TextObfuscationMode.Visible
-                                        } else {
-                                            TextObfuscationMode.RevealLastTyped
-                                        },
-                                )
-                            } else {
-                                BasicTextField(
-                                    state = state,
-                                    modifier = fieldModifier,
-                                    enabled = enabled,
-                                    textStyle = resolvedTextStyle,
-                                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                                    lineLimits = lineLimits,
-                                    keyboardOptions =
-                                        KeyboardOptions(
-                                            keyboardType = keyboardType,
-                                            imeAction = imeAction,
-                                            capitalization = capitalization,
-                                        ),
-                                    interactionSource = interactionSource,
-                                    onKeyboardAction = keyboardActionHandler,
-                                )
-                            }
-                        }
-                    }
+                FieldLabelAndInput(
+                    label = label,
+                    labelColor = labelColor,
+                    labelStyle = labelStyle,
+                    elevatedLabelStyle = elevatedLabelStyle,
+                    isLabelElevated = elevated,
+                    showLabel = showLabel,
+                    fillHeight = fillHeight,
+                    modifier = Modifier.weight(1f),
+                ) { fieldModifier ->
+                    FieldInput(
+                        state = state,
+                        isPassword = isPassword,
+                        isPasswordVisible = passwordVisible,
+                        enabled = enabled,
+                        textStyle = resolvedTextStyle,
+                        keyboardOptions =
+                            KeyboardOptions(
+                                keyboardType = keyboardType,
+                                imeAction = imeAction,
+                                capitalization = capitalization,
+                            ),
+                        lineLimits = lineLimits,
+                        interactionSource = interactionSource,
+                        onKeyboardAction = keyboardActionHandler,
+                        modifier = fieldModifier,
+                    )
                 }
 
                 if (isPassword) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .size(32.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                                .clickable { passwordVisible = !passwordVisible },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = if (passwordVisible) Icon_EyeOff else Icon_Eye,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp),
-                        )
-                    }
+                    PasswordVisibilityToggle(
+                        isPasswordVisible = passwordVisible,
+                        onToggle = { passwordVisible = !passwordVisible },
+                    )
                 }
             }
         }
 
-        if (error != null || hint != null) {
+        SupportingText(error = error, hint = hint)
+    }
+}
+
+/** Error beats focus beats the resting colour, animated between them. */
+@Composable
+private fun animateFieldColor(
+    isError: Boolean,
+    isFocused: Boolean,
+    errorColor: Color,
+    focusedColor: Color,
+    defaultColor: Color,
+): Color {
+    val color by animateColorAsState(
+        targetValue =
+            when {
+                isError -> errorColor
+                isFocused -> focusedColor
+                else -> defaultColor
+            },
+    )
+    return color
+}
+
+/**
+ * The label - resting inside the field, or elevated above the text once the field has focus or
+ * text - and the [input] under it, which gets the modifier that sizes it.
+ */
+@Composable
+private fun FieldLabelAndInput(
+    label: String,
+    labelColor: Color,
+    labelStyle: TextStyle,
+    elevatedLabelStyle: TextStyle,
+    isLabelElevated: Boolean,
+    showLabel: Boolean,
+    fillHeight: Boolean,
+    modifier: Modifier = Modifier,
+    input: @Composable (fieldModifier: Modifier) -> Unit,
+) {
+    val selectionColors =
+        TextSelectionColors(
+            handleColor = MaterialTheme.colorScheme.primary,
+            backgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+        )
+
+    Column(
+        modifier =
+            modifier
+                .then(if (fillHeight) Modifier.fillMaxHeight() else Modifier)
+                .padding(vertical = 8.dp),
+    ) {
+        if (isLabelElevated && showLabel) {
             Text(
-                text = error ?: hint.orEmpty(),
-                color =
-                    if (isError) {
-                        MaterialTheme.colorScheme.error
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                style =
-                    MaterialTheme.typography.labelSmall.copy(
-                        fontSize = 11.sp,
-                        fontWeight = if (isError) FontWeight.Medium else FontWeight.Normal,
-                    ),
-                modifier = Modifier.padding(start = 20.dp),
+                text = label,
+                color = labelColor,
+                style = elevatedLabelStyle,
             )
+            Spacer(Modifier.height(LabelToTextSpacing))
+        }
+
+        Box(
+            modifier = if (fillHeight) Modifier.weight(1f) else Modifier,
+            contentAlignment = if (fillHeight) Alignment.TopStart else Alignment.CenterStart,
+        ) {
+            if (!isLabelElevated && showLabel) {
+                Text(
+                    text = label,
+                    color = labelColor,
+                    style = labelStyle,
+                )
+            }
+
+            CompositionLocalProvider(LocalTextSelectionColors provides selectionColors) {
+                input(if (fillHeight) Modifier.fillMaxSize() else Modifier.fillMaxWidth())
+            }
         }
     }
+}
+
+@Composable
+private fun FieldInput(
+    state: TextFieldState,
+    isPassword: Boolean,
+    isPasswordVisible: Boolean,
+    enabled: Boolean,
+    textStyle: TextStyle,
+    keyboardOptions: KeyboardOptions,
+    lineLimits: TextFieldLineLimits,
+    interactionSource: MutableInteractionSource,
+    onKeyboardAction: KeyboardActionHandler?,
+    modifier: Modifier = Modifier,
+) {
+    if (isPassword) {
+        BasicSecureTextField(
+            state = state,
+            modifier = modifier,
+            enabled = enabled,
+            textStyle = textStyle,
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            interactionSource = interactionSource,
+            // A password field always takes the password keyboard, whatever the caller asked for.
+            keyboardOptions =
+                KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = keyboardOptions.imeAction,
+                ),
+            onKeyboardAction = onKeyboardAction,
+            textObfuscationMode =
+                if (isPasswordVisible) {
+                    TextObfuscationMode.Visible
+                } else {
+                    TextObfuscationMode.RevealLastTyped
+                },
+        )
+    } else {
+        BasicTextField(
+            state = state,
+            modifier = modifier,
+            enabled = enabled,
+            textStyle = textStyle,
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            lineLimits = lineLimits,
+            keyboardOptions = keyboardOptions,
+            interactionSource = interactionSource,
+            onKeyboardAction = onKeyboardAction,
+        )
+    }
+}
+
+@Composable
+private fun PasswordVisibilityToggle(
+    isPasswordVisible: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier =
+            modifier
+                .size(32.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .clickable { onToggle() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = if (isPasswordVisible) Icon_EyeOff else Icon_Eye,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp),
+        )
+    }
+}
+
+/** The error when there is one, the hint otherwise, and nothing when there is neither. */
+@Composable
+private fun SupportingText(
+    error: String?,
+    hint: String?,
+    modifier: Modifier = Modifier,
+) {
+    val text = error ?: hint ?: return
+    val isError = error != null
+    Text(
+        text = text,
+        color =
+            if (isError) {
+                MaterialTheme.colorScheme.error
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+        style =
+            MaterialTheme.typography.labelSmall.copy(
+                fontSize = 11.sp,
+                fontWeight = if (isError) FontWeight.Medium else FontWeight.Normal,
+            ),
+        modifier = modifier.padding(start = 20.dp),
+    )
 }
 
 @Composable
