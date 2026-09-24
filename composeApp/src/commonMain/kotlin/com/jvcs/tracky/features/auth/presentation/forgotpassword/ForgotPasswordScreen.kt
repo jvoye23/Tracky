@@ -80,8 +80,13 @@ fun ForgotPasswordScreenRoot(viewModel: ForgotPasswordViewModel = koinViewModel(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ForgotPasswordScreen(state: ForgotPasswordState, onAction: (ForgotPasswordAction) -> Unit) {
+fun ForgotPasswordScreen(
+    state: ForgotPasswordState,
+    onAction: (ForgotPasswordAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Scaffold(
+        modifier = modifier,
         contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
             TopAppBar(

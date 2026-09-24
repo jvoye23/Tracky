@@ -30,12 +30,12 @@ import tracky.composeapp.generated.resources.trash_title
 @Composable
 fun ProjectArchiveSearchTopAppBar(
     title: String?,
-    modifier: Modifier = Modifier,
     isSearchActive: Boolean,
     searchQuery: String,
     onAction: (ProjectArchiveAction) -> Unit,
     onMenuClick: () -> Unit,
     scrollBehavior: TopAppBarScrollBehavior,
+    modifier: Modifier = Modifier,
 ) {
     SearchTopAppBar(
         title = title,

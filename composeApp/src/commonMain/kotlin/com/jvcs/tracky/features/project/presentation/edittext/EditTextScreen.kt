@@ -37,8 +37,8 @@ import com.jvcs.tracky.designsystem.theme.SampleProjectColors
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.designsystem.theme.projectElevatedLabelStyle
 import com.jvcs.tracky.designsystem.theme.projectLabelStyle
-import com.jvcs.tracky.designsystem.util.DevicePreviews
 import com.jvcs.tracky.designsystem.util.ObserveAsEvents
+import com.jvcs.tracky.designsystem.util.PreviewDevices
 import com.jvcs.tracky.designsystem.util.UiText
 import com.jvcs.tracky.features.project.presentation.projectdetail.components.ProjectSubDetailTopAppBar
 import kotlinx.coroutines.delay
@@ -232,7 +232,6 @@ private const val PREVIEW_DESCRIPTION =
 
 private val previewProjectColor = SampleProjectColors.Violet
 
-@Composable
 private fun previewState(
     title: String = PREVIEW_TITLE,
     description: String = PREVIEW_DESCRIPTION,
@@ -363,7 +362,7 @@ private fun EditTextScreenNewSubTaskPreview() {
     )
 }
 
-@DevicePreviews
+@PreviewDevices
 @Composable
 private fun EditTextScreenDevicesPreview() {
     EditTextScreenPreviewContainer(

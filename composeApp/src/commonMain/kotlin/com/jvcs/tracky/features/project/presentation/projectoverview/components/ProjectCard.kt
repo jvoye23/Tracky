@@ -52,8 +52,8 @@ import tracky.composeapp.generated.resources.start_date
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ProjectCard(
-    modifier: Modifier = Modifier,
     projectUi: ProjectUi,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit = {},
     onLongClick: () -> Unit = {},
     onToggleSelection: () -> Unit = {},

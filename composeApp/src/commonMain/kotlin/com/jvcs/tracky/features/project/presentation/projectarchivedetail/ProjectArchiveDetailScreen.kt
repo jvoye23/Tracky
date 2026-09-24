@@ -33,7 +33,7 @@ fun ProjectArchiveDetailScreen(
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
@@ -62,7 +62,7 @@ fun ProjectArchiveDetailScreen(
     ) { innerPadding ->
         Box(
             modifier =
-                modifier
+                Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
             contentAlignment = Alignment.Center,

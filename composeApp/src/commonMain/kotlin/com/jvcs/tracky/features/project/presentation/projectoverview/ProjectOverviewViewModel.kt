@@ -398,8 +398,7 @@ class ProjectOverviewViewModel(
         // otherwise (all already pinned) unpin all.
         val selected =
             _state.value.projects
-                ?.filter { it.projectId in ids }
-                .orEmpty()
+                .filter { it.projectId in ids }
         val targetPinned = selected.any { !it.isPinned }
         viewModelScope.launch {
             // One call for the whole selection: the repository flips every flag and then re-indexes

@@ -71,7 +71,7 @@ internal fun CalendarMonthGrid(
     month: CalendarMonthUi,
     selectedDate: LocalDate?,
     projectColor: Color,
-    onDateSelected: (LocalDate) -> Unit,
+    onDateSelect: (LocalDate) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     // A plain Column of Rows, not a LazyVerticalGrid: a month is at most six rows, all of them on
@@ -91,7 +91,7 @@ internal fun CalendarMonthGrid(
                         maxTrackedMillis = month.maxTrackedMillis,
                         isSelected = day.date == selectedDate,
                         projectColor = projectColor,
-                        onClick = { onDateSelected(day.date) },
+                        onClick = { onDateSelect(day.date) },
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -263,7 +263,7 @@ private fun CalendarMonthGridDefaultPreview() {
             month = previewCalendarMonth(),
             selectedDate = LocalDate(2026, 9, 8),
             projectColor = PreviewProjectColor,
-            onDateSelected = {},
+            onDateSelect = {},
         )
     }
 }
@@ -277,7 +277,7 @@ private fun CalendarMonthGridEmptyPreview() {
             month = previewCalendarMonth(tracked = emptyMap()).copy(monthTotalLabel = null, busiestDayLabel = null),
             selectedDate = LocalDate(2026, 9, 8),
             projectColor = PreviewProjectColor,
-            onDateSelected = {},
+            onDateSelect = {},
         )
     }
 }
@@ -291,7 +291,7 @@ private fun CalendarMonthGridSingleTrackedDayPreview() {
             month = previewCalendarMonth(tracked = mapOf(8 to 27L)),
             selectedDate = LocalDate(2026, 9, 8),
             projectColor = PreviewProjectColor,
-            onDateSelected = {},
+            onDateSelect = {},
         )
     }
 }
@@ -304,7 +304,7 @@ private fun CalendarMonthGridAlternateColorPreview() {
             month = previewCalendarMonth(),
             selectedDate = LocalDate(2026, 9, 8),
             projectColor = PreviewAlternateProjectColor,
-            onDateSelected = {},
+            onDateSelect = {},
         )
     }
 }
@@ -317,7 +317,7 @@ private fun CalendarMonthGridCompactPreview() {
             month = previewCalendarMonth(),
             selectedDate = LocalDate(2026, 9, 8),
             projectColor = PreviewProjectColor,
-            onDateSelected = {},
+            onDateSelect = {},
         )
     }
 }
@@ -330,7 +330,7 @@ private fun CalendarMonthGridExpandedWidthPreview() {
             month = previewCalendarMonth(),
             selectedDate = LocalDate(2026, 9, 8),
             projectColor = PreviewProjectColor,
-            onDateSelected = {},
+            onDateSelect = {},
         )
     }
 }
@@ -344,7 +344,7 @@ private fun CalendarMonthGridFontScalePreview() {
             month = previewCalendarMonth(),
             selectedDate = LocalDate(2026, 9, 8),
             projectColor = PreviewProjectColor,
-            onDateSelected = {},
+            onDateSelect = {},
         )
     }
 }

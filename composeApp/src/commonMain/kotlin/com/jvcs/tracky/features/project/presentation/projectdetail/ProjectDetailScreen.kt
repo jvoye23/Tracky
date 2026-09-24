@@ -231,6 +231,7 @@ fun ProjectDetailScreen(
     state: ProjectDetailState,
     onAction: (ProjectDetailAction) -> Unit,
     snackbarHostState: SnackbarHostState,
+    modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
     // Reordering is an edit-mode affordance: outside it the cards show timer buttons, not grips.
@@ -269,7 +270,7 @@ fun ProjectDetailScreen(
             SnackbarHost(hostState = snackbarHostState)
         },
         modifier =
-            Modifier
+            modifier
                 .fillMaxSize()
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
@@ -510,7 +511,7 @@ fun ProjectDetailScreen(
                             onAction(ProjectDetailAction.OnSubTaskCheckedChange(subTaskId))
                         },
                         isExpanded = session.projectTaskId !in state.collapsedTaskIds,
-                        onToggleExpanded = {
+                        onToggleExpand = {
                             onAction(ProjectDetailAction.OnToggleTaskExpanded(session.projectTaskId))
                         },
                         onTaskTitleClick = {
@@ -585,12 +586,12 @@ fun ProjectDetailScreen(
 
 @Composable
 private fun ProjectHeader(
-    modifier: Modifier = Modifier,
     title: String,
     description: String,
     onAction: (ProjectDetailAction) -> Unit,
     isEditMode: Boolean,
     projectId: String?,
+    modifier: Modifier = Modifier,
 ) {
     Column(
         modifier =
@@ -651,7 +652,6 @@ private fun ProjectHeader(
 
 @Composable
 private fun InfoGrid(
-    modifier: Modifier = Modifier,
     startDate: String,
     lastActive: String,
     perDayStrip: PerDayStripUi?,
@@ -660,6 +660,7 @@ private fun InfoGrid(
     taskCount: Int,
     taskProgress: () -> Float,
     onAction: (ProjectDetailAction) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Column(
         modifier =
@@ -733,9 +734,9 @@ private fun InfoGrid(
 
 @Composable
 private fun TextColorToggle(
-    modifier: Modifier = Modifier,
     useLightTextColor: Boolean,
     onToggle: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -770,10 +771,10 @@ private fun TextColorToggle(
 
 @Composable
 private fun TasksHeader(
-    modifier: Modifier = Modifier,
     onAddClick: () -> Unit,
     addButtonContainerColor: Color,
     addButtonContentColor: Color,
+    modifier: Modifier = Modifier,
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),

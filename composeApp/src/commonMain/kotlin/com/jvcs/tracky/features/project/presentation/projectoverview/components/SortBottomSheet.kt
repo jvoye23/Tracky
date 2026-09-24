@@ -44,9 +44,9 @@ import tracky.composeapp.generated.resources.sort_modification_date
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SortBottomSheet(
-    modifier: Modifier = Modifier,
     sortOption: SortOption,
     onAction: (ProjectOverviewAction) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
@@ -60,7 +60,7 @@ fun SortBottomSheet(
     ) {
         SortSheetContent(
             selectedOption = sortOption,
-            onOptionSelected = { option ->
+            onOptionSelect = { option ->
                 scope.launch { sheetState.hide() }.invokeOnCompletion {
                     if (!sheetState.isVisible) {
                         onAction(ProjectOverviewAction.OnSortOptionSelected(option))
@@ -73,9 +73,9 @@ fun SortBottomSheet(
 
 @Composable
 internal fun SortSheetContent(
-    modifier: Modifier = Modifier,
     selectedOption: SortOption,
-    onOptionSelected: (SortOption) -> Unit,
+    onOptionSelect: (SortOption) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Column(
         modifier =
@@ -112,7 +112,7 @@ internal fun SortSheetContent(
                 SortOptionRow(
                     selected = option == selectedOption,
                     label = stringResource(option.labelRes),
-                    onClick = { onOptionSelected(option) },
+                    onClick = { onOptionSelect(option) },
                 )
             }
         }
@@ -174,7 +174,7 @@ private fun SortBottomSheetPreview() {
         ) {
             SortSheetContent(
                 selectedOption = SortOption.CUSTOM,
-                onOptionSelected = {},
+                onOptionSelect = {},
             )
         }
     }

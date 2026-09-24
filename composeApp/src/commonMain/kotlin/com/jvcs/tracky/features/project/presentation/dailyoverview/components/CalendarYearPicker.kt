@@ -44,7 +44,7 @@ fun CalendarYearPicker(
     years: List<Int>,
     selectedYear: Int,
     projectColor: Color,
-    onYearSelected: (Int) -> Unit,
+    onYearSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val gridState = rememberLazyGridState()
@@ -68,7 +68,7 @@ fun CalendarYearPicker(
                 year = year,
                 isSelected = year == selectedYear,
                 projectColor = projectColor,
-                onClick = { onYearSelected(year) },
+                onClick = { onYearSelect(year) },
             )
         }
     }
@@ -133,7 +133,7 @@ private fun CalendarYearPickerPreview() {
             years = (2024..2026).toList(),
             selectedYear = 2026,
             projectColor = PreviewProjectColor,
-            onYearSelected = {},
+            onYearSelect = {},
         )
     }
 }
@@ -147,7 +147,7 @@ private fun CalendarYearPickerSingleYearPreview() {
             years = listOf(2026),
             selectedYear = 2026,
             projectColor = PreviewProjectColor,
-            onYearSelected = {},
+            onYearSelect = {},
         )
     }
 }
@@ -161,7 +161,7 @@ private fun CalendarYearPickerManyYearsPreview() {
             years = (2015..2026).toList(),
             selectedYear = 2025,
             projectColor = PreviewProjectColor,
-            onYearSelected = {},
+            onYearSelect = {},
         )
     }
 }
@@ -174,7 +174,7 @@ private fun CalendarYearPickerFontScalePreview() {
             years = (2024..2026).toList(),
             selectedYear = 2026,
             projectColor = PreviewProjectColor,
-            onYearSelected = {},
+            onYearSelect = {},
         )
     }
 }

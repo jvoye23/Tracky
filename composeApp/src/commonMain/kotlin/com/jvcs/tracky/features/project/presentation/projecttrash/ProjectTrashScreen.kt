@@ -51,8 +51,8 @@ import com.jvcs.tracky.designsystem.components.MainNavDrawerItem
 import com.jvcs.tracky.designsystem.components.MainNavigationDrawer
 import com.jvcs.tracky.designsystem.theme.SampleProjectColors
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
-import com.jvcs.tracky.designsystem.util.DevicePreviews
 import com.jvcs.tracky.designsystem.util.ObserveAsEvents
+import com.jvcs.tracky.designsystem.util.PreviewDevices
 import com.jvcs.tracky.features.project.presentation.models.ProjectUi
 import com.jvcs.tracky.features.project.presentation.projectoverview.components.ProjectCard
 import com.jvcs.tracky.features.project.presentation.projecttrash.components.ProjectTrashSearchTopAppBar
@@ -155,6 +155,7 @@ fun ProjectTrashScreen(
     )
 
     MainNavigationDrawer(
+        modifier = modifier,
         drawerState = drawerState,
         selectedItem = MainNavDrawerItem.TRASH,
         onProjectsClick = onNavigateToProjects,
@@ -200,7 +201,7 @@ fun ProjectTrashScreen(
             LazyColumn(
                 state = listState,
                 modifier =
-                    modifier
+                    Modifier
                         .fillMaxSize()
                         .padding(horizontal = 10.dp)
                         .testTag("project_trash"),
@@ -306,7 +307,7 @@ private fun previewTrashedProjects(): List<ProjectUi> =
         ),
     )
 
-@DevicePreviews
+@PreviewDevices
 @Composable
 private fun ProjectTrashDefaultPreview() {
     TrackyTheme {
@@ -320,7 +321,7 @@ private fun ProjectTrashDefaultPreview() {
     }
 }
 
-@DevicePreviews
+@PreviewDevices
 @Composable
 private fun ProjectTrashEmptyPreview() {
     TrackyTheme {

@@ -51,8 +51,8 @@ import com.jvcs.tracky.designsystem.components.MainNavDrawerItem
 import com.jvcs.tracky.designsystem.components.MainNavigationDrawer
 import com.jvcs.tracky.designsystem.theme.SampleProjectColors
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
-import com.jvcs.tracky.designsystem.util.DevicePreviews
 import com.jvcs.tracky.designsystem.util.ObserveAsEvents
+import com.jvcs.tracky.designsystem.util.PreviewDevices
 import com.jvcs.tracky.designsystem.util.rememberCollapsibleScrollBehavior
 import com.jvcs.tracky.features.project.presentation.models.ProjectUi
 import com.jvcs.tracky.features.project.presentation.projectarchive.components.ProjectArchiveSearchTopAppBar
@@ -157,6 +157,7 @@ fun ProjectArchiveScreen(
     )
 
     MainNavigationDrawer(
+        modifier = modifier,
         drawerState = drawerState,
         selectedItem = MainNavDrawerItem.ARCHIVE,
         onProjectsClick = onNavigateToProjects,
@@ -202,7 +203,7 @@ fun ProjectArchiveScreen(
             LazyColumn(
                 state = listState,
                 modifier =
-                    modifier
+                    Modifier
                         .fillMaxSize()
                         .padding(horizontal = 10.dp)
                         .testTag("project_archive"),
@@ -308,7 +309,7 @@ private fun previewArchivedProjects(): List<ProjectUi> =
         ),
     )
 
-@DevicePreviews
+@PreviewDevices
 @Composable
 private fun ProjectArchiveDefaultPreview() {
     TrackyTheme {
@@ -322,7 +323,7 @@ private fun ProjectArchiveDefaultPreview() {
     }
 }
 
-@DevicePreviews
+@PreviewDevices
 @Composable
 private fun ProjectArchiveEmptyPreview() {
     TrackyTheme {
@@ -336,7 +337,7 @@ private fun ProjectArchiveEmptyPreview() {
     }
 }
 
-@DevicePreviews
+@PreviewDevices
 @Composable
 private fun ProjectArchiveSearchPreview() {
     TrackyTheme {

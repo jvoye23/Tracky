@@ -28,10 +28,10 @@ private const val UPSIDE_DOWN_DEGREES = 180f
 
 @Composable
 fun ProjectArchiveSelectionTopAppBar(
-    modifier: Modifier = Modifier,
     selectedCount: Int,
     onAction: (ProjectArchiveAction) -> Unit,
     scrollBehavior: TopAppBarScrollBehavior,
+    modifier: Modifier = Modifier,
 ) {
     SelectionTopAppBar(
         selectedCount = selectedCount,

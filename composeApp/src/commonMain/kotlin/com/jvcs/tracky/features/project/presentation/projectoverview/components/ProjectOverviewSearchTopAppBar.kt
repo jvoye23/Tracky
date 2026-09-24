@@ -30,7 +30,6 @@ import tracky.composeapp.generated.resources.search_in_projects
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProjectOverviewSearchTopAppBar(
-    modifier: Modifier = Modifier,
     onAction: (ProjectOverviewAction) -> Unit,
     searchQuery: String,
     sortOption: SortOption,
@@ -38,6 +37,7 @@ fun ProjectOverviewSearchTopAppBar(
     onMenuClick: () -> Unit,
     username: String?,
     email: String?,
+    modifier: Modifier = Modifier,
 ) {
     SearchTopAppBar(
         isSearchBoxExpanded = true,

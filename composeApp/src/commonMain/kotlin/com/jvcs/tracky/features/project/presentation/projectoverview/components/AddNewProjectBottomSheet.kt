@@ -41,9 +41,9 @@ import tracky.composeapp.generated.resources.enter_new_title
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddNewProjectBottomSheet(
-    modifier: Modifier = Modifier,
     textFieldState: TextFieldState,
     onAction: (ProjectOverviewAction) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val sheetState = rememberModalBottomSheetState()
 
@@ -62,9 +62,9 @@ fun AddNewProjectBottomSheet(
 
 @Composable
 private fun SheetContent(
-    modifier: Modifier = Modifier,
     textFieldState: TextFieldState,
     onAction: (ProjectOverviewAction) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Column(
         modifier =
@@ -84,7 +84,7 @@ private fun SheetContent(
         TextField(
             state = textFieldState,
             modifier =
-                modifier
+                Modifier
                     .fillMaxWidth()
                     .background(MaterialTheme.colorScheme.background)
                     .onFocusChanged {

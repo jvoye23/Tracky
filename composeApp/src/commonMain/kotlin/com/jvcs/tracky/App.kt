@@ -4,6 +4,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
@@ -21,14 +22,15 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun App(
     isDarkTheme: Boolean = isSystemInDarkTheme(),
-    onAuthenticationChecked: () -> Unit = {},
+    onAuthenticationCheck: () -> Unit = {},
     mainViewModel: MainViewModel = koinViewModel(),
 ) {
     val state by mainViewModel.state.collectAsStateWithLifecycle()
 
+    val currentOnAuthenticationCheck by rememberUpdatedState(onAuthenticationCheck)
     LaunchedEffect(state.isCheckingAuth) {
         if (!state.isCheckingAuth) {
-            onAuthenticationChecked()
+            currentOnAuthenticationCheck()
         }
     }
 

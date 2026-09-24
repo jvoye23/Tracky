@@ -29,10 +29,10 @@ import tracky.composeapp.generated.resources.pin_selected
 
 @Composable
 fun ProjectOverviewSelectionTopAppBar(
-    modifier: Modifier = Modifier,
     selectedCount: Int,
     onAction: (ProjectOverviewAction) -> Unit,
     scrollBehavior: TopAppBarScrollBehavior,
+    modifier: Modifier = Modifier,
 ) {
     SelectionTopAppBar(
         selectedCount = selectedCount,
