@@ -6,6 +6,8 @@ import com.jvcs.tracky.core.database.ServerTombstones
 import com.jvcs.tracky.core.database.ServerTreeRows
 import com.jvcs.tracky.core.database.ServerTreeWriter
 import com.jvcs.tracky.core.database.dao.ProjectDao
+import com.jvcs.tracky.core.database.dao.ProjectTreeDao
+import com.jvcs.tracky.core.database.dao.SortOrderDao
 import com.jvcs.tracky.core.domain.sync.SyncChanges
 import com.jvcs.tracky.core.domain.sync.Tombstone
 import com.jvcs.tracky.core.domain.util.DataError
@@ -29,34 +31,38 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlin.time.Instant
 
-class RoomLocalProjectDataSource(private val projectDao: ProjectDao, private val serverTreeWriter: ServerTreeWriter) :
-    LocalProjectDataSource {
+class RoomLocalProjectDataSource(
+    private val projectDao: ProjectDao,
+    private val projectTreeDao: ProjectTreeDao,
+    private val sortOrderDao: SortOrderDao,
+    private val serverTreeWriter: ServerTreeWriter,
+) : LocalProjectDataSource {
 
     private val dbWriteDispatcher = platformIoDispatcher.limitedParallelism(1)
 
     override fun getProjects(): Flow<List<Project>> =
-        projectDao
+        projectTreeDao
             .getProjectsWithTasks()
             .map { list -> list.map { it.toProject() } }
 
     override fun getActiveProjects(): Flow<List<Project>> =
-        projectDao
+        projectTreeDao
             .getActiveProjectsWithTasks()
             .map { list -> list.map { it.toProject() } }
 
     override fun getArchivedProjects(): Flow<List<Project>> =
-        projectDao
+        projectTreeDao
             .getArchivedProjectsWithTasks()
             .map { list -> list.map { it.toProject() } }
 
     override fun getTrashedProjects(): Flow<List<Project>> =
-        projectDao
+        projectTreeDao
             .getTrashedProjectsWithTasks()
             .map { list -> list.map { it.toProject() } }
 
     override suspend fun getPinnedProjects(): Result<List<Project>, DataError.Local> =
         read {
-            projectDao.getPinnedProjectsWithTasks().first().map { it.toProject() }
+            projectTreeDao.getPinnedProjectsWithTasks().first().map { it.toProject() }
         }
 
     override suspend fun getExpiredTrashedProjectIds(cutoff: Instant): Result<List<String>, DataError.Local> =
@@ -74,15 +80,15 @@ class RoomLocalProjectDataSource(private val projectDao: ProjectDao, private val
 
     override suspend fun getProjectWithTasksByProjectId(projectId: String): Result<Project?, DataError.Local> =
         read {
-            projectDao.getProjectWithTaskTreeById(projectId)?.toProject()
+            projectTreeDao.getProjectWithTaskTreeById(projectId)?.toProject()
         }
 
     override fun observeProjectWithTaskTreeById(projectId: String): Flow<Project?> =
-        projectDao.observeProjectWithTaskTreeById(projectId).map { it?.toProject() }
+        projectTreeDao.observeProjectWithTaskTreeById(projectId).map { it?.toProject() }
 
     override suspend fun getSortIndices(): Result<Map<String, Long?>, DataError.Local> =
         read {
-            projectDao.getSortIndices().associate { it.projectId to it.sortIndex }
+            sortOrderDao.getSortIndices().associate { it.projectId to it.sortIndex }
         }
 
     override suspend fun updateSortIndices(
@@ -90,7 +96,7 @@ class RoomLocalProjectDataSource(private val projectDao: ProjectDao, private val
         updatedAt: Instant,
     ): EmptyResult<DataError.Local> =
         write {
-            projectDao.updateSortIndices(indices, updatedAt.toEpochMilliseconds())
+            sortOrderDao.updateSortIndices(indices, updatedAt.toEpochMilliseconds())
         }
 
     override suspend fun upsertProject(project: Project): EmptyResult<DataError.Local> =

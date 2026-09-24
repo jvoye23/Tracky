@@ -103,6 +103,8 @@ val coreDataModule =
 
         // One DAO per table of the project tree; ServerTreeWriter is what holds a pull across them.
         single { get<TrackyDatabase>().projectDao }
+        single { get<TrackyDatabase>().projectTreeDao }
+        single { get<TrackyDatabase>().sortOrderDao }
         single { get<TrackyDatabase>().taskDao }
         single { get<TrackyDatabase>().subTaskDao }
 

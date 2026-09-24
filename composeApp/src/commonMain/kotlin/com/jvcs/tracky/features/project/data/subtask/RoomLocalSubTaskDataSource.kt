@@ -2,7 +2,7 @@ package com.jvcs.tracky.features.project.data.subtask
 
 import androidx.sqlite.SQLiteException
 import co.touchlab.kermit.Logger
-import com.jvcs.tracky.core.database.dao.ProjectDao
+import com.jvcs.tracky.core.database.dao.SortOrderDao
 import com.jvcs.tracky.core.database.dao.StrandedIntervalDao
 import com.jvcs.tracky.core.database.dao.SubTaskDao
 import com.jvcs.tracky.core.database.dao.SubTaskIntervalDao
@@ -33,7 +33,7 @@ import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
 class RoomLocalSubTaskDataSource(
-    private val projectDao: ProjectDao,
+    private val sortOrderDao: SortOrderDao,
     private val subTaskDao: SubTaskDao,
     private val taskDao: TaskDao,
     private val subTaskIntervalDao: SubTaskIntervalDao,
@@ -62,7 +62,7 @@ class RoomLocalSubTaskDataSource(
 
     override suspend fun getSubTaskSortIndices(taskId: String): Result<Map<String, Long?>, DataError.Local> =
         read {
-            projectDao.getSubTaskSortIndices(taskId).associate { it.projectSubTaskId to it.sortIndex }
+            sortOrderDao.getSubTaskSortIndices(taskId).associate { it.projectSubTaskId to it.sortIndex }
         }
 
     override suspend fun updateSubTaskSortIndices(
@@ -70,7 +70,7 @@ class RoomLocalSubTaskDataSource(
         updatedAt: Instant,
     ): EmptyResult<DataError.Local> =
         write {
-            projectDao.updateSubTaskSortIndices(indices, updatedAt.toEpochMilliseconds())
+            sortOrderDao.updateSubTaskSortIndices(indices, updatedAt.toEpochMilliseconds())
         }
 
     override suspend fun upsertSubTask(subTask: ProjectSubTask): EmptyResult<DataError.Local> =

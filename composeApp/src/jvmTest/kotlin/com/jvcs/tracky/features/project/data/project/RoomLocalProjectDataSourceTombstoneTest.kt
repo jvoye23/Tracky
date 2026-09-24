@@ -49,7 +49,7 @@ internal class RoomLocalProjectDataSourceTombstoneTest {
                 .setDriver(BundledSQLiteDriver())
                 .setQueryCoroutineContext(Dispatchers.IO)
                 .build()
-        dataSource = RoomLocalProjectDataSource(db.projectDao, ServerTreeWriter(db))
+        dataSource = RoomLocalProjectDataSource(db.projectDao, db.projectTreeDao, db.sortOrderDao, ServerTreeWriter(db))
     }
 
     @AfterTest

@@ -48,7 +48,7 @@ internal class RoomLocalSubTaskDataSourceStartTest {
                 .build()
         dataSource =
             RoomLocalSubTaskDataSource(
-                db.projectDao,
+                db.sortOrderDao,
                 db.subTaskDao,
                 db.taskDao,
                 db.subTaskIntervalDao,
