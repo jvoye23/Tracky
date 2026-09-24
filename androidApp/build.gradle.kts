@@ -91,8 +91,9 @@ dependencies {
     testImplementation(libs.assertk)
     androidTestImplementation(libs.assertk)
     androidTestImplementation(libs.androidx.testExt.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.espresso.core)
-    // androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

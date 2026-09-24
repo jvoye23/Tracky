@@ -24,10 +24,15 @@ allprojects {
         // contrast, are already applied by the time any afterEvaluate runs.
         // We depend on the task by name (a String dependency Gradle resolves
         // lazily at execution time), so the task need not exist yet here.
-        val isAndroid = pluginManager.hasPlugin("com.android.base")
+        // Kotlin Multiplatform first: a KMP module may also carry an Android
+        // plugin, but its JVM-measurable code is the jvm target's, tested by
+        // jvmTest (which runs commonTest too).
+        val isKmp = pluginManager.hasPlugin("org.jetbrains.kotlin.multiplatform")
+        val isAndroid = !isKmp && pluginManager.hasPlugin("com.android.base")
         val isKotlinJvm = pluginManager.hasPlugin("org.jetbrains.kotlin.jvm") ||
             pluginManager.hasPlugin("java")
         val unitTestTaskName = when {
+            isKmp -> "jvmTest"
             isAndroid -> "testDebugUnitTest"
             isKotlinJvm -> "test"
             else -> return@afterEvaluate // no JVM unit-test task (e.g. an umbrella module)
@@ -78,6 +83,9 @@ allprojects {
             // carry most of those lines.
             "**/*_Impl.*",
             "**/*_Impl\$*.*",
+            // Compose Multiplatform's generated resource accessors (Res.string.*
+            // and friends): the KMP counterpart of R.class above.
+            "**/composeapp/generated/resources/**",
         )
 
         // CLASS OUTPUT DIRECTORIES — ASKED FOR, NOT GUESSED.
@@ -106,10 +114,20 @@ allprojects {
         // things that know where they actually wrote. The literal paths remain
         // as a fallback for a build whose tasks are named something else, and
         // there two live candidates FAIL rather than merge.
-        val kotlinTask = if (isAndroid) "compileDebugKotlin" else "compileKotlin"
-        val javaTask = if (isAndroid) "compileDebugJavaWithJavac" else "compileJava"
+        val kotlinTask = when {
+            isKmp -> "compileKotlinJvm"
+            isAndroid -> "compileDebugKotlin"
+            else -> "compileKotlin"
+        }
+        val javaTask = when {
+            isKmp -> "compileJvmMainJava"
+            isAndroid -> "compileDebugJavaWithJavac"
+            else -> "compileJava"
+        }
 
-        val legacyKotlin = if (isAndroid) {
+        val legacyKotlin = if (isKmp) {
+            listOf("classes/kotlin/jvm/main")
+        } else if (isAndroid) {
             listOf(
                 "intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes", // AGP 9.x
                 "tmp/kotlin-classes/debug",                                        // AGP 8.x
@@ -182,7 +200,11 @@ allprojects {
             files(roots.map { root -> fileTree(root) { exclude(coverageExcludes) } })
         }
 
-        val sourceDirs = files("src/main/java", "src/main/kotlin")
+        val sourceDirs = if (isKmp) {
+            files("src/commonMain/kotlin", "src/jvmMain/kotlin", "src/jvmMain/java")
+        } else {
+            files("src/main/java", "src/main/kotlin")
+        }
 
         // Two possible homes for the unit-test execution data, and which one is
         // used depends on whether AGP is also instrumenting the module:

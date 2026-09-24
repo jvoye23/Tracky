@@ -452,6 +452,11 @@ prism_build_tasks_for() {
         if [ -d "$PRISM_ROOT/$dir/src/test" ]; then
             printf '%s:test\n' "$gradle_path"
         fi
+        # Kotlin Multiplatform: the JVM target's tests, which run commonTest
+        # too. Without this a KMP module's tests ran under no gate at all.
+        if [ -d "$PRISM_ROOT/$dir/src/jvmTest" ]; then
+            printf '%s:jvmTest\n' "$gradle_path"
+        fi
     else
         printf '%s:assembleDebug\n' "$gradle_path"
         if [ -d "$PRISM_ROOT/$dir/src/test" ]; then
