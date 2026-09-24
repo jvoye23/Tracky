@@ -19,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
@@ -31,10 +32,10 @@ import tracky.composeapp.generated.resources.delete_session
 
 @Composable
 fun ProjectSessionCard(
-    modifier: Modifier = Modifier,
     projectTaskUi: ProjectTaskUi,
     onAction: (ProjectDetailAction) -> Unit,
     isEditMode: Boolean,
+    modifier: Modifier = Modifier,
 ) {
     ListItem(
         modifier =
@@ -76,17 +77,16 @@ fun ProjectSessionCard(
                 modifier =
                     Modifier
                         .size(40.dp)
-                        .clickable {
+                        .clip(CircleShape)
+                        .background(
+                            if (projectTaskUi.isTimerRunning) {
+                                MaterialTheme.colorScheme.errorContainer
+                            } else {
+                                MaterialTheme.colorScheme.primaryContainer
+                            },
+                        ).clickable {
                             onAction(ProjectDetailAction.OnToggleSessionTimer(projectTaskUi.projectTaskId))
-                        }.background(
-                            color =
-                                if (projectTaskUi.isTimerRunning) {
-                                    MaterialTheme.colorScheme.errorContainer
-                                } else {
-                                    MaterialTheme.colorScheme.primaryContainer
-                                },
-                            shape = CircleShape,
-                        ),
+                        },
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(

@@ -72,8 +72,8 @@ import com.jvcs.tracky.designsystem.components.MainNavDrawerItem
 import com.jvcs.tracky.designsystem.components.MainNavigationDrawer
 import com.jvcs.tracky.designsystem.theme.SampleProjectColors
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
-import com.jvcs.tracky.designsystem.util.DevicePreviews
 import com.jvcs.tracky.designsystem.util.ObserveAsEvents
+import com.jvcs.tracky.designsystem.util.PreviewDevices
 import com.jvcs.tracky.designsystem.util.rememberCollapsibleScrollBehavior
 import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
 import com.jvcs.tracky.features.project.presentation.models.ProjectUi
@@ -120,6 +120,7 @@ import tracky.composeapp.generated.resources.search_results
 fun ProjectOverviewScreenRoot(
     onSuccessfulLogout: () -> Unit,
     onNavigateToDetailScreen: (String) -> Unit,
+    modifier: Modifier = Modifier,
     onNavigateToArchive: () -> Unit = {},
     onNavigateToTrash: () -> Unit = {},
     viewModel: ProjectOverviewViewModel = koinViewModel(),
@@ -210,7 +211,7 @@ fun ProjectOverviewScreenRoot(
 
     Box(
         modifier =
-            Modifier
+            modifier
                 .fillMaxSize(),
     ) {
         ProjectOverviewScreen(
@@ -243,10 +244,10 @@ fun ProjectOverviewScreenRoot(
 fun ProjectOverviewScreen(
     state: ProjectOverviewState,
     onAction: (ProjectOverviewAction) -> Unit,
+    snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier,
     onNavigateToArchive: () -> Unit = {},
     onNavigateToTrash: () -> Unit = {},
-    snackbarHostState: SnackbarHostState,
     sortOption: SortOption = SortOption.CUSTOM,
     drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed),
 ) {
@@ -285,6 +286,7 @@ fun ProjectOverviewScreen(
     )
 
     MainNavigationDrawer(
+        modifier = modifier,
         drawerState = drawerState,
         selectedItem = MainNavDrawerItem.PROJECTS,
         onArchiveClick = onNavigateToArchive,
@@ -355,7 +357,7 @@ fun ProjectOverviewScreen(
             // When the offline banner is shown it already sits under the bar and reserves the inset.
             val contentTopInset = if (state.isOnline) topInset else 0.dp
             Column(
-                modifier = modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.Top,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
@@ -753,7 +755,7 @@ private fun previewProjects(): List<ProjectUi> =
         ),
     )
 
-@DevicePreviews
+@PreviewDevices
 @Composable
 private fun ProjectOverviewDefaultPreview() {
     TrackyTheme {
@@ -776,7 +778,7 @@ private fun ProjectOverviewDefaultPreview() {
     }
 }
 
-@DevicePreviews
+@PreviewDevices
 @Composable
 private fun ProjectOverviewSearchPreview() {
     TrackyTheme {
@@ -799,7 +801,7 @@ private fun ProjectOverviewSearchPreview() {
     }
 }
 
-@DevicePreviews
+@PreviewDevices
 @Composable
 private fun ProjectOverviewEditModePreview() {
     TrackyTheme {
@@ -823,7 +825,7 @@ private fun ProjectOverviewEditModePreview() {
     }
 }
 
-@DevicePreviews
+@PreviewDevices
 @Composable
 private fun ProjectOverviewDrawerOpenPreview() {
     TrackyTheme {
@@ -846,7 +848,7 @@ private fun ProjectOverviewDrawerOpenPreview() {
     }
 }
 
-@DevicePreviews
+@PreviewDevices
 @Composable
 private fun ProjectOverviewSortSheetVisiblePreview() {
     TrackyTheme {
@@ -879,7 +881,7 @@ private fun ProjectOverviewSortSheetVisiblePreview() {
             ) {
                 SortSheetContent(
                     selectedOption = SortOption.CREATION_DATE,
-                    onOptionSelected = {},
+                    onOptionSelect = {},
                 )
             }
         }

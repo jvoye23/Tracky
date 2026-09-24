@@ -76,9 +76,9 @@ import tracky.composeapp.generated.resources.terms_of_service
 
 @Composable
 fun RegisterScreenRoot(
-    viewModel: RegisterViewModel = koinViewModel(),
     onRegisterSuccess: (email: String) -> Unit,
     onLoginClick: () -> Unit,
+    viewModel: RegisterViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
@@ -101,8 +101,12 @@ fun RegisterScreenRoot(
 }
 
 @Composable
-fun RegisterScreen(state: RegisterState, onAction: (RegisterAction) -> Unit) {
-    Scaffold { paddingValues ->
+fun RegisterScreen(
+    state: RegisterState,
+    onAction: (RegisterAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Scaffold(modifier = modifier) { paddingValues ->
         Column(
             modifier =
                 Modifier

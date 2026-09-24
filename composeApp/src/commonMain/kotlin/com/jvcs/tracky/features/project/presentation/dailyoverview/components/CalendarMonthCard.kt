@@ -80,7 +80,7 @@ fun CalendarMonthCard(
     selectedDate: LocalDate?,
     selectedDateLabel: String?,
     projectColor: Color,
-    onDateSelected: (LocalDate) -> Unit,
+    onDateSelect: (LocalDate) -> Unit,
     onMonthChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -131,7 +131,7 @@ fun CalendarMonthCard(
             MonthHeader(
                 month = month,
                 selectedDateLabel = selectedDateLabel,
-                onJumpToToday = todayDate?.let { date -> { onDateSelected(date) } },
+                onJumpToToday = todayDate?.let { date -> { onDateSelect(date) } },
                 isYearPickerOpen = isYearPickerOpen,
                 onToggleYearPicker = { isYearPickerOpen = !isYearPickerOpen },
                 onPreviousMonth = { onMonthChange(displayedIndex - 1) },
@@ -148,7 +148,7 @@ fun CalendarMonthCard(
                     years = months.map { it.yearMonth.year }.distinct(),
                     selectedYear = month.yearMonth.year,
                     projectColor = projectColor,
-                    onYearSelected = { year ->
+                    onYearSelect = { year ->
                         // Land on the same month of that year when it exists, so picking a year
                         // does not silently move the user to January.
                         val target =
@@ -170,7 +170,7 @@ fun CalendarMonthCard(
                         month = months[page],
                         selectedDate = selectedDate,
                         projectColor = projectColor,
-                        onDateSelected = onDateSelected,
+                        onDateSelect = onDateSelect,
                         modifier = Modifier.padding(horizontal = 12.dp),
                     )
                 }
@@ -380,7 +380,7 @@ private fun PreviewCard(
         selectedDate = LocalDate(2026, 9, 8),
         selectedDateLabel = "Sep 8, 2026",
         projectColor = projectColor,
-        onDateSelected = {},
+        onDateSelect = {},
         onMonthChange = {},
     )
 }

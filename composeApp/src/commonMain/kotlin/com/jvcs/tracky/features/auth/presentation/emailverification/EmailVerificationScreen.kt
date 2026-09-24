@@ -36,9 +36,9 @@ import tracky.composeapp.generated.resources.verifying_account
 
 @Composable
 fun EmailVerificationScreenRoot(
-    viewModel: EmailVerificationViewModel = koinViewModel(),
     onLoginClick: () -> Unit,
     onCloseClick: () -> Unit,
+    viewModel: EmailVerificationViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
@@ -54,8 +54,12 @@ fun EmailVerificationScreenRoot(
 }
 
 @Composable
-fun EmailVerificationScreen(state: EmailVerificationState, onAction: (EmailVerificationAction) -> Unit) {
-    Scaffold { paddingValues ->
+fun EmailVerificationScreen(
+    state: EmailVerificationState,
+    onAction: (EmailVerificationAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Scaffold(modifier = modifier) { paddingValues ->
         Column(
             modifier =
                 Modifier

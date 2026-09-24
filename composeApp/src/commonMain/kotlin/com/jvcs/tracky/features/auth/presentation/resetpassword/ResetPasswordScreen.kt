@@ -56,8 +56,12 @@ fun ResetPasswordScreenRoot(viewModel: ResetPasswordViewModel = koinViewModel(),
 }
 
 @Composable
-fun ResetPasswordScreen(state: ResetPasswordState, onAction: (ResetPasswordAction) -> Unit) {
-    Scaffold { paddingValues ->
+fun ResetPasswordScreen(
+    state: ResetPasswordState,
+    onAction: (ResetPasswordAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Scaffold(modifier = modifier) { paddingValues ->
         Column(
             modifier =
                 Modifier

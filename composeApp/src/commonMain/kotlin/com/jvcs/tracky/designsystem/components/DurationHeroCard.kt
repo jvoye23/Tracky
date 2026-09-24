@@ -28,12 +28,12 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun DurationHeroCard(
-    modifier: Modifier = Modifier,
     label: String,
     totalDuration: String,
     projectColor: Color,
     useLightTextColor: Boolean,
     onStartStopClick: () -> Unit,
+    modifier: Modifier = Modifier,
     /**
      * Shown under the figure when it is not this device's to explain. Null draws nothing, so the
      * card keeps its height for the ordinary case.

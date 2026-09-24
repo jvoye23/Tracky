@@ -34,9 +34,9 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
 @Composable
-fun NavigationRoot(backStack: NavBackStack<NavKey>) {
+fun NavigationRoot(backStack: NavBackStack<NavKey>, modifier: Modifier = Modifier) {
     NavDisplay(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
         backStack = backStack,
         entryDecorators =
             listOf(

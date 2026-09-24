@@ -105,7 +105,11 @@ fun TaskDetailScreenRoot(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TaskDetailScreen(state: TaskDetailState, onAction: (TaskDetailAction) -> Unit) {
+fun TaskDetailScreen(
+    state: TaskDetailState,
+    onAction: (TaskDetailAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     // Composited so it is fully opaque, matching Project Detail: the top bar and the header share
     // this colour and must read as one surface.
     val headerColor =
@@ -115,6 +119,7 @@ fun TaskDetailScreen(state: TaskDetailState, onAction: (TaskDetailAction) -> Uni
             ?: MaterialTheme.colorScheme.surfaceContainerLow
 
     Scaffold(
+        modifier = modifier,
         contentWindowInsets = WindowInsets.safeDrawing,
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         topBar = {
@@ -283,11 +288,11 @@ fun TaskDetailScreen(state: TaskDetailState, onAction: (TaskDetailAction) -> Uni
 
 @Composable
 private fun TaskHeader(
-    modifier: Modifier = Modifier,
     title: String,
     description: String,
     isEditMode: Boolean,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Column(
         modifier =
@@ -337,11 +342,11 @@ private fun TaskHeader(
 /** One line of the sessions table. The header uses it too, so the columns line up. */
 @Composable
 private fun SessionRow(
-    modifier: Modifier = Modifier,
     date: String,
     startTime: String,
     endTime: String,
     duration: String,
+    modifier: Modifier = Modifier,
     fontWeight: FontWeight? = null,
 ) {
     Row(

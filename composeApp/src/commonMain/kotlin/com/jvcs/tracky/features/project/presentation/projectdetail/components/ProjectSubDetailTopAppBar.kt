@@ -33,14 +33,16 @@ import kotlin.time.ExperimentalTime
 @Composable
 fun ProjectSubDetailTopAppBar(
     title: String,
+    onNavigateBack: () -> Unit,
+    modifier: Modifier = Modifier,
     isEditMode: Boolean = false,
     showEditAction: Boolean = true,
-    onNavigateBack: () -> Unit,
     onEditClick: () -> Unit = {},
     onSaveClick: () -> Unit = {},
     projectColor: Color = MaterialTheme.colorScheme.primary,
 ) {
     TopAppBar(
+        modifier = modifier,
         title = {
             Row(
                 modifier =

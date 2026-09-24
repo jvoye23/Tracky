@@ -31,10 +31,10 @@ import tracky.composeapp.generated.resources.title
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProjectDetailTopAppBar(
-    modifier: Modifier = Modifier,
     isEditMode: Boolean,
     onAction: (ProjectDetailAction) -> Unit,
     project: ProjectUi?,
+    modifier: Modifier = Modifier,
 ) {
     TopAppBar(
         modifier = modifier,

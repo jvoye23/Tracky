@@ -98,8 +98,8 @@ fun DayHeaderRow(day: DayDetailUi, modifier: Modifier = Modifier) {
 @Composable
 fun DayIntervalCard(
     interval: DayIntervalUi,
-    modifier: Modifier = Modifier,
     projectColor: Color,
+    modifier: Modifier = Modifier,
 ) {
     val description =
         stringResource(

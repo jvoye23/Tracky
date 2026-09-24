@@ -128,7 +128,7 @@ private fun DailyOverviewScreen(
                     selectedDate = state.selectedDate,
                     selectedDateLabel = state.dayDetail?.headlineLabel,
                     projectColor = projectColor,
-                    onDateSelected = { onAction(DailyOverviewAction.OnDateSelected(it)) },
+                    onDateSelect = { onAction(DailyOverviewAction.OnDateSelected(it)) },
                     onMonthChange = { onAction(DailyOverviewAction.OnMonthChanged(it)) },
                 )
             }

@@ -286,7 +286,6 @@ private fun Modifier.editModeRowBorder(isEditMode: Boolean, rowBorder: BorderStr
 
 @Composable
 fun TaskItemCard(
-    modifier: Modifier = Modifier,
     index: Int,
     task: ProjectTaskUi,
     projectColor: Color,
@@ -298,8 +297,9 @@ fun TaskItemCard(
     onToggleSubTaskTimer: (subTaskId: String) -> Unit,
     onDeleteSubTaskClick: (subTaskId: String) -> Unit,
     onSubTaskCheckedChange: (subTaskId: String) -> Unit,
+    modifier: Modifier = Modifier,
     isExpanded: Boolean = true,
-    onToggleExpanded: () -> Unit = {},
+    onToggleExpand: () -> Unit = {},
     // Edit-mode taps that open the edit-text screen for the task, one of its subtasks, or a new one.
     onTaskTitleClick: () -> Unit = {},
     onSubTaskClick: (subTaskId: String) -> Unit = {},
@@ -517,7 +517,7 @@ fun TaskItemCard(
                             color = MaterialTheme.colorScheme.outline,
                         )
                         IconButton(
-                            onClick = onToggleExpanded,
+                            onClick = onToggleExpand,
                             modifier = Modifier,
                         ) {
                             Icon(

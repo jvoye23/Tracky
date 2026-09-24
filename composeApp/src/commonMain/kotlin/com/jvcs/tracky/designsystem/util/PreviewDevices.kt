@@ -18,4 +18,4 @@ import androidx.compose.ui.tooling.preview.Preview
     showSystemUi = true,
     device = "spec:parent=pixel_tablet,orientation=landscape",
 )
-annotation class DevicePreviews
+annotation class PreviewDevices

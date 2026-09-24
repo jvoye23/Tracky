@@ -66,10 +66,10 @@ import tracky.composeapp.generated.resources.welcome_title
 
 @Composable
 fun LoginScreenRoot(
-    viewModel: LoginViewModel = koinViewModel(),
     onLoginSuccess: () -> Unit,
     onForgotPasswordClick: () -> Unit,
     onCreateAccountClick: () -> Unit,
+    viewModel: LoginViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
@@ -93,8 +93,13 @@ fun LoginScreenRoot(
 }
 
 @Composable
-fun LoginScreen(state: LoginState, onAction: (LoginAction) -> Unit) {
+fun LoginScreen(
+    state: LoginState,
+    onAction: (LoginAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Scaffold(
+        modifier = modifier,
         contentWindowInsets = WindowInsets.safeDrawing,
     ) { paddingValues ->
         Column(

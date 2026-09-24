@@ -38,7 +38,7 @@ class MainActivity : ComponentActivity() {
         routeDeepLink(intent)
         setContent {
             App(
-                onAuthenticationChecked = {
+                onAuthenticationCheck = {
                     shouldShowSplashScreen = false
                 },
             )
