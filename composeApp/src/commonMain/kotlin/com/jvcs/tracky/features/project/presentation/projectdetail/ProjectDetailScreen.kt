@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -86,6 +87,7 @@ import com.jvcs.tracky.features.project.presentation.projectdetail.components.Co
 import com.jvcs.tracky.features.project.presentation.projectdetail.components.PerDayCard
 import com.jvcs.tracky.features.project.presentation.projectdetail.components.TaskItemCard
 import com.jvcs.tracky.features.project.presentation.projectdetail.components.TrackyColorPicker
+import com.jvcs.tracky.features.project.presentation.util.ReorderableListState
 import com.jvcs.tracky.features.project.presentation.util.rememberReorderableListState
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -239,8 +241,6 @@ fun ProjectDetailScreen(
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
-    // Reordering is an edit-mode affordance: outside it the cards show timer buttons, not grips.
-    val reorderEnabled = state.isEditMode
     val dragDropState =
         rememberReorderableListState(
             lazyListState = listState,
@@ -263,12 +263,6 @@ fun ProjectDetailScreen(
             ?.copy(alpha = 0.12f)
             ?.compositeOver(MaterialTheme.colorScheme.surfaceContainerLow)
             ?: MaterialTheme.colorScheme.onSurface
-    // The header paints edge-to-edge behind the status bar, so it has to reserve the space
-    // the bar and the status bar occupy itself. Both values are constant, unlike the
-    // Scaffold's top padding, which shrinks frame by frame as the bar collapses.
-    val headerTopInset =
-        WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding() +
-            TopAppBarDefaults.TopAppBarExpandedHeight
 
     Scaffold(
         snackbarHost = {
@@ -294,6 +288,7 @@ fun ProjectDetailScreen(
                 CircularProgressIndicator()
             }
         } else {
+            val projectColor = state.projectColor ?: MaterialTheme.colorScheme.primary
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
@@ -302,77 +297,19 @@ fun ProjectDetailScreen(
             ) {
                 // 1. Header
                 item {
-                    Column(
-                        modifier =
-                            Modifier
-                                .background(
-                                    color = headerColor,
-                                    shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
-                                ).padding(top = headerTopInset),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        ProjectHeader(
-                            modifier =
-                                Modifier
-                                    .padding(horizontal = 16.dp),
-                            title = state.titleText ?: stringResource(Res.string.title),
-                            description = state.descriptionText ?: stringResource(Res.string.description),
-                            onAction = onAction,
-                            isEditMode = state.isEditMode,
-                            projectId = state.project.projectId,
-                        )
-                        if (state.isEditMode) {
-                            ColorInfoCard(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp),
-                                label = stringResource(Res.string.select_project_color),
-                                colorValue = state.projectColor ?: Color.Cyan,
-                                hexCode = state.selectedColorHex,
-                                isEditMode = state.isEditMode,
-                                onClick = { onAction(ProjectDetailAction.OnToggleColorPicker) },
-                            )
-                            TextColorToggle(
-                                modifier =
-                                    Modifier
-                                        .padding(horizontal = 16.dp),
-                                useLightTextColor = state.useLightTextColor,
-                                onToggle = { onAction(ProjectDetailAction.OnUseLightTextColorToggled(it)) },
-                            )
-                        }
-                        DurationHeroCard(
-                            modifier =
-                                Modifier
-                                    .padding(horizontal = 16.dp)
-                                    .padding(bottom = 16.dp),
-                            label = stringResource(Res.string.project_duration),
-                            totalDuration = state.project.totalProjectDuration,
-                            projectColor = state.projectColor ?: MaterialTheme.colorScheme.onSurface,
-                            useLightTextColor = state.useLightTextColor,
-                            onStartStopClick = {
-                                // Logic for project-wide tracker if needed
-                                onAction(ProjectDetailAction.OnStartTrackerClick)
-                            },
-                            // The number keeps ticking for a foreign timer and is right; when it
-                            // goes stale it stops and is merely the last thing known to be true.
-                            // Either way the card has to say whose timer it is.
-                            caption =
-                                when {
-                                    state.isRunningTimerStale -> {
-                                        stringResource(Res.string.timer_stale_on_another_device)
-                                    }
-
-                                    state.isRunningTimerForeign -> {
-                                        stringResource(Res.string.timer_running_on_another_device)
-                                    }
-
-                                    else -> {
-                                        null
-                                    }
-                                },
-                        )
-                    }
+                    ProjectDetailHeader(
+                        project = state.project,
+                        title = state.titleText ?: stringResource(Res.string.title),
+                        description = state.descriptionText ?: stringResource(Res.string.description),
+                        isEditMode = state.isEditMode,
+                        projectColor = state.projectColor,
+                        selectedColorHex = state.selectedColorHex,
+                        useLightTextColor = state.useLightTextColor,
+                        isRunningTimerStale = state.isRunningTimerStale,
+                        isRunningTimerForeign = state.isRunningTimerForeign,
+                        headerColor = headerColor,
+                        onAction = onAction,
+                    )
                 }
 
                 // 2. Info Grid
@@ -384,7 +321,7 @@ fun ProjectDetailScreen(
                         startDate = state.project.startDateTimeUtc,
                         lastActive = state.project.startDateTimeUtc,
                         perDayStrip = state.perDayStrip,
-                        projectColor = state.projectColor ?: MaterialTheme.colorScheme.primary,
+                        projectColor = projectColor,
                         doneTaskCount = state.project.doneTaskCount,
                         taskCount =
                             state.project.projectTasks?.size ?: 0,
@@ -402,7 +339,7 @@ fun ProjectDetailScreen(
                         onAddClick = {
                             onAction(ProjectDetailAction.OnToggleAddNewProjectSessionBottomSheet)
                         },
-                        addButtonContainerColor = state.projectColor ?: MaterialTheme.colorScheme.primary,
+                        addButtonContainerColor = projectColor,
                         addButtonContentColor = if (state.useLightTextColor) Color.White else Color.Black,
                     )
                 }
@@ -414,96 +351,17 @@ fun ProjectDetailScreen(
                     // this one is keyed by position, which is what keeps a drag inside the task list.
                     key = { _, task -> task.projectTaskId },
                 ) { index, session ->
-                    // The dragged card (and the one settling back after release) drives its own
-                    // translation and rides above the rest; every other card animates to its new
-                    // slot via animateItem().
-                    val isActive =
-                        session.projectTaskId == dragDropState.draggingItemKey ||
-                            session.projectTaskId == dragDropState.settlingItemKey
-                    val cardModifier =
-                        if (isActive) {
-                            Modifier
-                                .zIndex(1f)
-                                .graphicsLayer {
-                                    translationY =
-                                        if (session.projectTaskId == dragDropState.draggingItemKey) {
-                                            dragDropState.draggingItemOffset
-                                        } else {
-                                            dragDropState.settlingItemOffset
-                                        }
-                                }
-                        } else {
-                            Modifier.animateItem()
-                        }
-                    TaskItemCard(
+                    ReorderableTaskItem(
                         modifier =
-                            cardModifier
+                            reorderItemModifier(session.projectTaskId, dragDropState)
                                 .padding(horizontal = 16.dp),
                         index = index + 1,
                         task = session,
-                        projectColor = state.projectColor ?: MaterialTheme.colorScheme.primary,
+                        projectColor = projectColor,
                         isEditMode = state.isEditMode,
-                        onToggleTimer = {
-                            onAction(ProjectDetailAction.OnToggleSessionTimer(session.projectTaskId))
-                        },
-                        onDeleteClick = {
-                            onAction(ProjectDetailAction.OnDeleteSessionClick(session.projectTaskId))
-                        },
-                        onCardClick = {
-                            onAction(ProjectDetailAction.OnProjectSessionCardClick(session.projectTaskId))
-                        },
-                        onCheckedChange = {
-                            onAction(ProjectDetailAction.OnTaskCheckedChange(session.projectTaskId))
-                        },
-                        onToggleSubTaskTimer = { subTaskId ->
-                            onAction(ProjectDetailAction.OnToggleSubTaskTimer(subTaskId))
-                        },
-                        onDeleteSubTaskClick = { subTaskId ->
-                            onAction(ProjectDetailAction.OnDeleteSubTaskClick(subTaskId))
-                        },
-                        onSubTaskCheckedChange = { subTaskId ->
-                            onAction(ProjectDetailAction.OnSubTaskCheckedChange(subTaskId))
-                        },
                         isExpanded = session.projectTaskId !in state.collapsedTaskIds,
-                        onToggleExpand = {
-                            onAction(ProjectDetailAction.OnToggleTaskExpanded(session.projectTaskId))
-                        },
-                        onTaskTitleClick = {
-                            onAction(ProjectDetailAction.OnTaskTitleClick(session.projectTaskId))
-                        },
-                        onAddSubTaskClick = {
-                            onAction(ProjectDetailAction.OnAddSubTaskClick(session.projectTaskId))
-                        },
-                        onSubTaskClick = { subTaskId ->
-                            onAction(ProjectDetailAction.OnSubTaskClick(session.projectTaskId, subTaskId))
-                        },
-                        isReorderable = reorderEnabled,
-                        onReorderDragStart = { dragDropState.onDragStart(session.projectTaskId) },
-                        onReorderDrag = { dragAmountY -> dragDropState.onDrag(dragAmountY) },
-                        onReorderDragEnd = {
-                            // Only a gesture that actually moved something is worth persisting.
-                            if (dragDropState.hasMoved) onAction(ProjectDetailAction.OnTaskReorderCommit)
-                            dragDropState.onDragEnd()
-                        },
-                        onReorderDragCancel = {
-                            onAction(ProjectDetailAction.OnTaskReorderCancel)
-                            dragDropState.onDragCancel()
-                        },
-                        onSubTaskReorderMove = { fromSubTaskId, toSubTaskId ->
-                            onAction(
-                                ProjectDetailAction.OnSubTaskReorderMove(
-                                    taskId = session.projectTaskId,
-                                    fromSubTaskId = fromSubTaskId,
-                                    toSubTaskId = toSubTaskId,
-                                ),
-                            )
-                        },
-                        onSubTaskReorderCommit = {
-                            onAction(ProjectDetailAction.OnSubTaskReorderCommit(session.projectTaskId))
-                        },
-                        onSubTaskReorderCancel = {
-                            onAction(ProjectDetailAction.OnSubTaskReorderCancel)
-                        },
+                        dragDropState = dragDropState,
+                        onAction = onAction,
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
@@ -518,6 +376,30 @@ fun ProjectDetailScreen(
         isUncheckTaskBlockedDialogVisible = state.isUncheckTaskBlockedDialogVisible,
         onAction = onAction,
     )
+}
+
+/**
+ * The dragged card (and the one settling back after release) drives its own translation and rides
+ * above the rest; every other card animates to its new slot via animateItem().
+ */
+private fun LazyItemScope.reorderItemModifier(taskId: String, dragDropState: ReorderableListState): Modifier {
+    val isActive =
+        taskId == dragDropState.draggingItemKey ||
+            taskId == dragDropState.settlingItemKey
+    return if (isActive) {
+        Modifier
+            .zIndex(1f)
+            .graphicsLayer {
+                translationY =
+                    if (taskId == dragDropState.draggingItemKey) {
+                        dragDropState.draggingItemOffset
+                    } else {
+                        dragDropState.settlingItemOffset
+                    }
+            }
+    } else {
+        Modifier.animateItem()
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -586,6 +468,185 @@ private fun ProjectDetailTopBar(
                 scrolledContainerColor = headerColor,
             ),
         scrollBehavior = scrollBehavior,
+    )
+}
+
+@Composable
+private fun ProjectDetailHeader(
+    project: ProjectUi,
+    title: String,
+    description: String,
+    isEditMode: Boolean,
+    projectColor: Color?,
+    selectedColorHex: String,
+    useLightTextColor: Boolean,
+    isRunningTimerStale: Boolean,
+    isRunningTimerForeign: Boolean,
+    headerColor: Color,
+    onAction: (ProjectDetailAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    // The header paints edge-to-edge behind the status bar, so it has to reserve the space
+    // the bar and the status bar occupy itself. Both values are constant, unlike the
+    // Scaffold's top padding, which shrinks frame by frame as the bar collapses.
+    val headerTopInset =
+        WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding() +
+            TopAppBarDefaults.TopAppBarExpandedHeight
+
+    Column(
+        modifier =
+            modifier
+                .background(
+                    color = headerColor,
+                    shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
+                ).padding(top = headerTopInset),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        ProjectHeader(
+            modifier =
+                Modifier
+                    .padding(horizontal = 16.dp),
+            title = title,
+            description = description,
+            onAction = onAction,
+            isEditMode = isEditMode,
+            projectId = project.projectId,
+        )
+        if (isEditMode) {
+            ColorInfoCard(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                label = stringResource(Res.string.select_project_color),
+                colorValue = projectColor ?: Color.Cyan,
+                hexCode = selectedColorHex,
+                isEditMode = isEditMode,
+                onClick = { onAction(ProjectDetailAction.OnToggleColorPicker) },
+            )
+            TextColorToggle(
+                modifier =
+                    Modifier
+                        .padding(horizontal = 16.dp),
+                useLightTextColor = useLightTextColor,
+                onToggle = { onAction(ProjectDetailAction.OnUseLightTextColorToggled(it)) },
+            )
+        }
+        DurationHeroCard(
+            modifier =
+                Modifier
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 16.dp),
+            label = stringResource(Res.string.project_duration),
+            totalDuration = project.totalProjectDuration,
+            projectColor = projectColor ?: MaterialTheme.colorScheme.onSurface,
+            useLightTextColor = useLightTextColor,
+            onStartStopClick = {
+                // Logic for project-wide tracker if needed
+                onAction(ProjectDetailAction.OnStartTrackerClick)
+            },
+            // The number keeps ticking for a foreign timer and is right; when it
+            // goes stale it stops and is merely the last thing known to be true.
+            // Either way the card has to say whose timer it is.
+            caption =
+                when {
+                    isRunningTimerStale -> {
+                        stringResource(Res.string.timer_stale_on_another_device)
+                    }
+
+                    isRunningTimerForeign -> {
+                        stringResource(Res.string.timer_running_on_another_device)
+                    }
+
+                    else -> {
+                        null
+                    }
+                },
+        )
+    }
+}
+
+/** A task card wired to the screen's actions and to the list's reorder state. */
+@Composable
+private fun ReorderableTaskItem(
+    index: Int,
+    task: ProjectTaskUi,
+    projectColor: Color,
+    isEditMode: Boolean,
+    isExpanded: Boolean,
+    dragDropState: ReorderableListState,
+    onAction: (ProjectDetailAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val taskId = task.projectTaskId
+    TaskItemCard(
+        modifier = modifier,
+        index = index,
+        task = task,
+        projectColor = projectColor,
+        isEditMode = isEditMode,
+        onToggleTimer = {
+            onAction(ProjectDetailAction.OnToggleSessionTimer(taskId))
+        },
+        onDeleteClick = {
+            onAction(ProjectDetailAction.OnDeleteSessionClick(taskId))
+        },
+        onCardClick = {
+            onAction(ProjectDetailAction.OnProjectSessionCardClick(taskId))
+        },
+        onCheckedChange = {
+            onAction(ProjectDetailAction.OnTaskCheckedChange(taskId))
+        },
+        onToggleSubTaskTimer = { subTaskId ->
+            onAction(ProjectDetailAction.OnToggleSubTaskTimer(subTaskId))
+        },
+        onDeleteSubTaskClick = { subTaskId ->
+            onAction(ProjectDetailAction.OnDeleteSubTaskClick(subTaskId))
+        },
+        onSubTaskCheckedChange = { subTaskId ->
+            onAction(ProjectDetailAction.OnSubTaskCheckedChange(subTaskId))
+        },
+        isExpanded = isExpanded,
+        onToggleExpand = {
+            onAction(ProjectDetailAction.OnToggleTaskExpanded(taskId))
+        },
+        onTaskTitleClick = {
+            onAction(ProjectDetailAction.OnTaskTitleClick(taskId))
+        },
+        onAddSubTaskClick = {
+            onAction(ProjectDetailAction.OnAddSubTaskClick(taskId))
+        },
+        onSubTaskClick = { subTaskId ->
+            onAction(ProjectDetailAction.OnSubTaskClick(taskId, subTaskId))
+        },
+        // Reordering is an edit-mode affordance: outside it the cards show timer buttons, not grips.
+        isReorderable = isEditMode,
+        onReorderDragStart = { dragDropState.onDragStart(taskId) },
+        onReorderDrag = { dragAmountY -> dragDropState.onDrag(dragAmountY) },
+        onReorderDragEnd = {
+            // Only a gesture that actually moved something is worth persisting.
+            if (dragDropState.hasMoved) onAction(ProjectDetailAction.OnTaskReorderCommit)
+            dragDropState.onDragEnd()
+        },
+        onReorderDragCancel = {
+            onAction(ProjectDetailAction.OnTaskReorderCancel)
+            dragDropState.onDragCancel()
+        },
+        onSubTaskReorderMove = { fromSubTaskId, toSubTaskId ->
+            onAction(
+                ProjectDetailAction.OnSubTaskReorderMove(
+                    taskId = taskId,
+                    fromSubTaskId = fromSubTaskId,
+                    toSubTaskId = toSubTaskId,
+                ),
+            )
+        },
+        onSubTaskReorderCommit = {
+            onAction(ProjectDetailAction.OnSubTaskReorderCommit(taskId))
+        },
+        onSubTaskReorderCancel = {
+            onAction(ProjectDetailAction.OnSubTaskReorderCancel)
+        },
     )
 }
 
