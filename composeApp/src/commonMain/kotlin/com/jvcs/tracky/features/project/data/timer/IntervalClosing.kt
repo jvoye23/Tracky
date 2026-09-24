@@ -8,7 +8,7 @@ import com.jvcs.tracky.core.database.entity.SubTaskIntervalEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 import kotlin.time.Instant
 
-/**
+/*
  * Closing an interval, shared by the two data sources that have to do it.
  *
  * Stopping a task and stopping a subtask each have to close rows at the *other* level — a task

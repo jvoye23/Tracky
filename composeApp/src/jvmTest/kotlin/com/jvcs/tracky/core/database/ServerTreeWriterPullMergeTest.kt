@@ -114,8 +114,6 @@ class ServerTreeWriterPullMergeTest {
             assertThat(db.taskIntervalDao.getIntervalById("i1")?.durationMillis).isEqualTo(60_000L)
         }
 
-    /** project_tasks has a CASCADE foreign key onto projects, so the parent must exist first. */
-
     /** Queues an outbox row, which is what makes a local interval defend itself against a pull. */
     private suspend fun queuePush(intervalId: String, entityType: String = "task_interval") {
         db.pendingSyncDao.enqueueDeduped(

@@ -117,7 +117,12 @@ fun SearchTopAppBar(
                                     imageVector = Icon_Swap_Vert_Down,
                                     contentDescription = stringResource(Res.string.sort_by),
                                     modifier = Modifier.size(20.dp),
-                                    tint = if (isSortActive) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint =
+                                        if (isSortActive) {
+                                            Color.White
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        },
                                 )
                             }
                         }

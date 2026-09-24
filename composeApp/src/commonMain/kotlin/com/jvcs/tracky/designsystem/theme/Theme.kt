@@ -172,12 +172,7 @@ val unspecified_scheme =
     )
 
 @Composable
-fun TrackyTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    content:
-        @Composable()
-        () -> Unit,
-) {
+fun TrackyTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
     val colorScheme =
         when {
             darkTheme -> darkScheme

@@ -132,6 +132,9 @@ class OfflineFirstActiveTimerRepository(
             }
         }
 
+    /** The instant halfway between a request leaving and its answer arriving. */
+    private fun midpoint(sentAt: Instant, receivedAt: Instant): Instant = sentAt + (receivedAt - sentAt) / 2
+
     /**
      * Writes back whatever the server says it did.
      *
@@ -143,10 +146,6 @@ class OfflineFirstActiveTimerRepository(
      * the guess `StrandedTimerReconciler` exists to refuse. A pull carries the real row, so that is
      * what is asked for.
      */
-
-    /** The instant halfway between a request leaving and its answer arriving. */
-    private fun midpoint(sentAt: Instant, receivedAt: Instant): Instant = sentAt + (receivedAt - sentAt) / 2
-
     private suspend fun settle(change: ActiveTimerChange, receivedAt: Instant): EmptyResult<DataError> {
         // receivedAt, not "now": settle() runs after the round trip, so passing the current
         // instant would credit the whole call's latency to clock skew.
