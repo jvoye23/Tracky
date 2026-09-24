@@ -88,7 +88,7 @@ class ServerTreeWriterApplyDeltaTest {
 
     private suspend fun seedTree() {
         dao.upsertProject(projectEntity("p1"))
-        dao.upsertProjectTask(taskEntity("t1"))
+        db.taskDao.upsertProjectTask(taskEntity("t1"))
         db.taskIntervalDao.upsertTaskInterval(intervalEntity("i1"))
     }
 
@@ -122,7 +122,7 @@ class ServerTreeWriterApplyDeltaTest {
             applyDeletions(tasks = listOf("t1"))
 
             // The whole point of the feed: a deletion on another device finally lands here.
-            assertThat(dao.getTaskById("t1")).isNull()
+            assertThat(db.taskDao.getTaskById("t1")).isNull()
         }
 
     @Test
@@ -133,7 +133,7 @@ class ServerTreeWriterApplyDeltaTest {
             applyDeletions(projects = listOf("p1"))
 
             assertThat(dao.getProjectById("p1")).isNull()
-            assertThat(dao.getTaskById("t1")).isNull()
+            assertThat(db.taskDao.getTaskById("t1")).isNull()
             assertThat(db.taskIntervalDao.getIntervalById("i1")).isNull()
         }
 
@@ -147,20 +147,20 @@ class ServerTreeWriterApplyDeltaTest {
 
             // The server emitted this before it heard about the edit this device is still carrying.
             // Honouring it would destroy work the outbox has not delivered yet.
-            assertThat(dao.getTaskById("t1")?.projectTaskId).isEqualTo("t1")
+            assertThat(db.taskDao.getTaskById("t1")?.projectTaskId).isEqualTo("t1")
         }
 
     @Test
     fun aQueuedChangeOnOneRowDoesNotShieldAnother() =
         runBlocking {
             seedTree()
-            dao.upsertProjectTask(taskEntity("t2"))
+            db.taskDao.upsertProjectTask(taskEntity("t2"))
             queuePush("t1", "project_task")
 
             applyDeletions(tasks = listOf("t1", "t2"))
 
-            assertThat(dao.getTaskById("t1")).isNotNull()
-            assertThat(dao.getTaskById("t2")).isNull()
+            assertThat(db.taskDao.getTaskById("t1")).isNotNull()
+            assertThat(db.taskDao.getTaskById("t2")).isNull()
         }
 
     @Test
@@ -170,7 +170,7 @@ class ServerTreeWriterApplyDeltaTest {
 
             applyDeletions(tasks = listOf("never-existed"))
 
-            assertThat(dao.getTaskById("t1")?.projectTaskId).isEqualTo("t1")
+            assertThat(db.taskDao.getTaskById("t1")?.projectTaskId).isEqualTo("t1")
         }
 
     @Test
@@ -206,6 +206,6 @@ class ServerTreeWriterApplyDeltaTest {
             applyDeletions(intervals = listOf("i1"))
 
             assertThat(db.taskIntervalDao.getIntervalById("i1")).isNull()
-            assertThat(dao.getTaskById("t1")?.projectTaskId).isEqualTo("t1")
+            assertThat(db.taskDao.getTaskById("t1")?.projectTaskId).isEqualTo("t1")
         }
 }

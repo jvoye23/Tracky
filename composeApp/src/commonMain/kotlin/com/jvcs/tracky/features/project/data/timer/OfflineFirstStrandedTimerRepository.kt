@@ -3,6 +3,7 @@ package com.jvcs.tracky.features.project.data.timer
 import com.jvcs.tracky.core.database.dao.ProjectDao
 import com.jvcs.tracky.core.database.dao.StrandedIntervalDao
 import com.jvcs.tracky.core.database.dao.SubTaskIntervalDao
+import com.jvcs.tracky.core.database.dao.TaskDao
 import com.jvcs.tracky.core.database.dao.TaskIntervalDao
 import com.jvcs.tracky.core.database.entity.StrandedIntervalEntity
 import com.jvcs.tracky.core.domain.util.DataError
@@ -32,6 +33,7 @@ import kotlin.time.Instant
  */
 class OfflineFirstStrandedTimerRepository(
     private val projectDao: ProjectDao,
+    private val taskDao: TaskDao,
     private val subTaskIntervalDao: SubTaskIntervalDao,
     private val taskIntervalDao: TaskIntervalDao,
     private val strandedIntervalDao: StrandedIntervalDao,
@@ -59,7 +61,7 @@ class OfflineFirstStrandedTimerRepository(
             subTaskParked.mapNotNull { parked ->
                 val interval = subTaskIntervalDao.getSubTaskIntervalById(parked.intervalId) ?: return@mapNotNull null
                 val subTask = projectDao.getSubTaskById(interval.parentSubTaskId) ?: return@mapNotNull null
-                val task = projectDao.getTaskById(subTask.parentProjectTaskId) ?: return@mapNotNull null
+                val task = taskDao.getTaskById(subTask.parentProjectTaskId) ?: return@mapNotNull null
                 val project = projectDao.getProjectById(task.parentProjectId) ?: return@mapNotNull null
 
                 // Only claim the parent if it is parked too. A subtask nested in a task interval the
@@ -95,7 +97,7 @@ class OfflineFirstStrandedTimerRepository(
                 .filterNot { it.intervalId in claimedTaskIntervalIds }
                 .mapNotNull { parked ->
                     val interval = taskIntervalDao.getIntervalById(parked.intervalId) ?: return@mapNotNull null
-                    val task = projectDao.getTaskById(interval.parentTaskId) ?: return@mapNotNull null
+                    val task = taskDao.getTaskById(interval.parentTaskId) ?: return@mapNotNull null
                     val project = projectDao.getProjectById(task.parentProjectId) ?: return@mapNotNull null
                     val hasSubTasks = projectDao.countSubTasks(task.projectTaskId) > 0
 
@@ -142,7 +144,7 @@ class OfflineFirstStrandedTimerRepository(
         val closedTaskInterval =
             timer.taskIntervalId?.let { id ->
                 val interval = taskIntervalDao.getIntervalById(id) ?: return@let null
-                taskIntervalDao.closeTaskInterval(interval, endAt, projectDao).also {
+                taskIntervalDao.closeTaskInterval(interval, endAt, taskDao).also {
                     strandedIntervalDao.deleteStrandedInterval(id)
                 }
             }
@@ -163,7 +165,7 @@ class OfflineFirstStrandedTimerRepository(
                     ?.let { subTaskRepository.upsertSubTask(it.toProjectSubTask()) }
             }
         val taskResult =
-            projectDao
+            taskDao
                 .getTaskById(timer.taskId)
                 ?.let { projectTaskRepository.upsertProjectTask(it.toProjectTask()) }
 
@@ -189,7 +191,7 @@ class OfflineFirstStrandedTimerRepository(
         // The task kept its timer flag cleared by the reconciler, but push the row so the server
         // stops believing a timer is running on this task.
         val taskResult =
-            projectDao
+            taskDao
                 .getTaskById(timer.taskId)
                 ?.let { projectTaskRepository.upsertProjectTask(it.toProjectTask()) }
 

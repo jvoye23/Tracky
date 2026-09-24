@@ -53,6 +53,7 @@ internal class StrandedTimerReconcilerTest {
         reconciler =
             StrandedTimerReconciler(
                 db.projectDao,
+                db.taskDao,
                 db.subTaskIntervalDao,
                 db.taskIntervalDao,
                 db.strandedIntervalDao,
@@ -85,7 +86,7 @@ internal class StrandedTimerReconcilerTest {
                 updatedAtEpochMs = null,
             ),
         )
-        db.projectDao.upsertProjectTask(
+        db.taskDao.upsertProjectTask(
             ProjectTaskEntity(
                 projectTaskId = "t1",
                 parentProjectId = "p1",
@@ -171,7 +172,7 @@ internal class StrandedTimerReconcilerTest {
             assertThat(parked.detectedAtEpochMs).isEqualTo(threeDaysLater.toEpochMilliseconds())
 
             // The whole point: three days passed, and not one millisecond of it was banked.
-            assertThat(db.projectDao.getTaskById("t1")!!.durationMillis).isEqualTo(0L)
+            assertThat(db.taskDao.getTaskById("t1")!!.durationMillis).isEqualTo(0L)
             assertThat(db.taskIntervalDao.getIntervalById("i1")!!.durationMillis).isEqualTo(0L)
             assertThat(db.taskIntervalDao.getIntervalById("i1")!!.endDateTimeEpochMs).isNull()
         }
@@ -184,7 +185,7 @@ internal class StrandedTimerReconcilerTest {
 
             reconciler.reconcile()
 
-            assertThat(db.projectDao.getTaskById("t1")!!.isTimerRunning).isFalse()
+            assertThat(db.taskDao.getTaskById("t1")!!.isTimerRunning).isFalse()
         }
 
     @Test
@@ -276,7 +277,7 @@ internal class StrandedTimerReconcilerTest {
             // parent's.
             assertThat(parkedChild.detectedAtEpochMs).isEqualTo(parkedParent.detectedAtEpochMs)
             assertThat(db.projectDao.getSubTaskById("s1")!!.isTimerRunning).isFalse()
-            assertThat(db.projectDao.getTaskById("t1")!!.isTimerRunning).isFalse()
+            assertThat(db.taskDao.getTaskById("t1")!!.isTimerRunning).isFalse()
         }
 
     // ---- device scoping ------------------------------------------------------------------------
@@ -304,7 +305,7 @@ internal class StrandedTimerReconcilerTest {
 
             reconciler.reconcile()
 
-            assertThat(db.projectDao.getTaskById("t1")!!.isTimerRunning).isTrue()
+            assertThat(db.taskDao.getTaskById("t1")!!.isTimerRunning).isTrue()
         }
 
     @Test
@@ -318,7 +319,7 @@ internal class StrandedTimerReconcilerTest {
             // Every row written before the column existed. Reading null as foreign would strand this
             // device's own crashed timers with nothing ever offering to recover them.
             assertThat(db.strandedIntervalDao.getStrandedInterval("i1")).isNotNull()
-            assertThat(db.projectDao.getTaskById("t1")!!.isTimerRunning).isFalse()
+            assertThat(db.taskDao.getTaskById("t1")!!.isTimerRunning).isFalse()
         }
 
     @Test

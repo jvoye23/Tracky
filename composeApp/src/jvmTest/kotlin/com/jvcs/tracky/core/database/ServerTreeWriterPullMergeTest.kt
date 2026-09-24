@@ -109,7 +109,7 @@ class ServerTreeWriterPullMergeTest {
             )
 
             assertThat(dao.getProjectById("p1")).isNotNull()
-            assertThat(dao.getTaskById("t1")).isNotNull()
+            assertThat(db.taskDao.getTaskById("t1")).isNotNull()
             // Intervals are the whole point: this is what a fresh install could not recover before.
             assertThat(db.taskIntervalDao.getIntervalById("i1")?.durationMillis).isEqualTo(60_000L)
         }
@@ -137,14 +137,14 @@ class ServerTreeWriterPullMergeTest {
     /** task_intervals cascades from both project_tasks and projects, so seed the whole chain. */
     private suspend fun seedTask(taskId: String = "t1", projectId: String = "p1") {
         seedProject(projectId)
-        dao.upsertProjectTask(taskEntity(taskId, projectId, "seeded", updatedAt = 0))
+        db.taskDao.upsertProjectTask(taskEntity(taskId, projectId, "seeded", updatedAt = 0))
     }
 
     @Test
     fun keepsALocalTaskThatIsNewerThanTheServer() =
         runBlocking {
             seedProject()
-            dao.upsertProjectTask(taskEntity("t1", "p1", "edited offline", updatedAt = 500))
+            db.taskDao.upsertProjectTask(taskEntity("t1", "p1", "edited offline", updatedAt = 500))
 
             writer.upsertServerTree(
                 projects = emptyList(),
@@ -152,14 +152,14 @@ class ServerTreeWriterPullMergeTest {
                 intervals = emptyList(),
             )
 
-            assertThat(dao.getTaskById("t1")?.title).isEqualTo("edited offline")
+            assertThat(db.taskDao.getTaskById("t1")?.title).isEqualTo("edited offline")
         }
 
     @Test
     fun takesTheServerTaskWhenItIsNewer() =
         runBlocking {
             seedProject()
-            dao.upsertProjectTask(taskEntity("t1", "p1", "old local copy", updatedAt = 100))
+            db.taskDao.upsertProjectTask(taskEntity("t1", "p1", "old local copy", updatedAt = 100))
 
             writer.upsertServerTree(
                 projects = emptyList(),
@@ -167,7 +167,7 @@ class ServerTreeWriterPullMergeTest {
                 intervals = emptyList(),
             )
 
-            assertThat(dao.getTaskById("t1")?.title).isEqualTo("fresh from server")
+            assertThat(db.taskDao.getTaskById("t1")?.title).isEqualTo("fresh from server")
         }
 
     @Test
@@ -265,12 +265,12 @@ class ServerTreeWriterPullMergeTest {
     fun leavesRowsTheServerDoesNotKnowAbout() =
         runBlocking {
             seedProject()
-            dao.upsertProjectTask(taskEntity("local-only", "p1", "created offline", updatedAt = null))
+            db.taskDao.upsertProjectTask(taskEntity("local-only", "p1", "created offline", updatedAt = null))
             db.taskIntervalDao.upsertTaskInterval(intervalEntity("i-local", "local-only", end = 1_000))
 
             writer.upsertServerTree(projects = emptyList(), tasks = emptyList(), intervals = emptyList())
 
-            assertThat(dao.getTaskById("local-only")).isNotNull()
+            assertThat(db.taskDao.getTaskById("local-only")).isNotNull()
             assertThat(db.taskIntervalDao.getIntervalById("i-local")).isNotNull()
             Unit
         }
@@ -377,7 +377,7 @@ class ServerTreeWriterPullMergeTest {
             assertThat(dao.getSubTaskById("orphan")).isNull()
             // Everything around it survived.
             assertThat(dao.getProjectById("p1")).isNotNull()
-            assertThat(dao.getTaskById("t1")).isNotNull()
+            assertThat(db.taskDao.getTaskById("t1")).isNotNull()
             assertThat(dao.getSubTaskById("s1")).isNotNull()
         }
 

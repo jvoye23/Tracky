@@ -87,9 +87,9 @@ class ProjectTaskTitleColumnTest {
         runBlocking {
             seedProject()
 
-            dao.upsertProjectTask(task(title = "Write the report", description = "Quarterly, due Friday"))
+            db.taskDao.upsertProjectTask(task(title = "Write the report", description = "Quarterly, due Friday"))
 
-            val stored = dao.getTaskById("t1")
+            val stored = db.taskDao.getTaskById("t1")
             assertThat(stored?.title).isEqualTo("Write the report")
             assertThat(stored?.description).isEqualTo("Quarterly, due Friday")
         }
@@ -99,21 +99,21 @@ class ProjectTaskTitleColumnTest {
         runBlocking {
             seedProject()
 
-            dao.upsertProjectTask(task(title = "Write the report", description = null))
+            db.taskDao.upsertProjectTask(task(title = "Write the report", description = null))
 
-            assertThat(dao.getTaskById("t1")?.title).isEqualTo("Write the report")
-            assertThat(dao.getTaskById("t1")?.description).isNull()
+            assertThat(db.taskDao.getTaskById("t1")?.title).isEqualTo("Write the report")
+            assertThat(db.taskDao.getTaskById("t1")?.description).isNull()
         }
 
     @Test
     fun renamingATaskLeavesItsDescriptionAlone() =
         runBlocking {
             seedProject()
-            dao.upsertProjectTask(task(title = "Write the report", description = "Quarterly, due Friday"))
+            db.taskDao.upsertProjectTask(task(title = "Write the report", description = "Quarterly, due Friday"))
 
-            dao.updateTaskTitle(taskId = "t1", title = "Write the summary")
+            db.taskDao.updateTaskTitle(taskId = "t1", title = "Write the summary")
 
-            val stored = dao.getTaskById("t1")
+            val stored = db.taskDao.getTaskById("t1")
             assertThat(stored?.title).isEqualTo("Write the summary")
             // The rename used to overwrite this column, because it *was* the title column.
             assertThat(stored?.description).isEqualTo("Quarterly, due Friday")

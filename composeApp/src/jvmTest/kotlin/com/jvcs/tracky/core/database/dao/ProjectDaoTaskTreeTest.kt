@@ -66,7 +66,7 @@ class ProjectDaoTaskTreeTest {
                 sortIndex = null,
             ),
         )
-        dao.upsertProjectTask(
+        db.taskDao.upsertProjectTask(
             ProjectTaskEntity(
                 projectTaskId = "t1",
                 parentProjectId = "p1",
@@ -81,7 +81,7 @@ class ProjectDaoTaskTreeTest {
             ),
         )
         // A second task with no subtasks: the relation must not spill s1/s2 onto it.
-        dao.upsertProjectTask(
+        db.taskDao.upsertProjectTask(
             ProjectTaskEntity(
                 projectTaskId = "t2",
                 parentProjectId = "p1",

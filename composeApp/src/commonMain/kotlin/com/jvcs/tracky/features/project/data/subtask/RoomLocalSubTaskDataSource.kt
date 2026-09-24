@@ -5,6 +5,7 @@ import co.touchlab.kermit.Logger
 import com.jvcs.tracky.core.database.dao.ProjectDao
 import com.jvcs.tracky.core.database.dao.StrandedIntervalDao
 import com.jvcs.tracky.core.database.dao.SubTaskIntervalDao
+import com.jvcs.tracky.core.database.dao.TaskDao
 import com.jvcs.tracky.core.database.dao.TaskIntervalDao
 import com.jvcs.tracky.core.database.entity.SubTaskIntervalEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
@@ -32,6 +33,7 @@ import kotlin.uuid.Uuid
 
 class RoomLocalSubTaskDataSource(
     private val projectDao: ProjectDao,
+    private val taskDao: TaskDao,
     private val subTaskIntervalDao: SubTaskIntervalDao,
     private val taskIntervalDao: TaskIntervalDao,
     private val strandedIntervalDao: StrandedIntervalDao,
@@ -108,7 +110,7 @@ class RoomLocalSubTaskDataSource(
                                 startedByDeviceId = deviceId,
                             ).also {
                                 taskIntervalDao.upsertTaskInterval(it)
-                                projectDao.updateSessionTimerStatus(taskId, true)
+                                taskDao.updateSessionTimerStatus(taskId, true)
                             }
                     // Non-null only when this subtask opened the task's interval.
                     val opened = parentTaskInterval.takeIf { openTaskInterval == null }
@@ -162,7 +164,7 @@ class RoomLocalSubTaskDataSource(
                                 .getIntervalById(open.parentTaskIntervalId)
                                 ?.takeIf { it.endDateTimeEpochMs == null }
                                 ?.takeIf { strandedIntervalDao.getStrandedInterval(it.intervalId) == null }
-                                ?.let { taskIntervalDao.closeTaskInterval(it, now, projectDao) }
+                                ?.let { taskIntervalDao.closeTaskInterval(it, now, taskDao) }
                         } else {
                             null
                         }

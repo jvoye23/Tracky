@@ -65,7 +65,7 @@ internal class RoomLocalProjectDataSourceEchoTest {
                 sortIndex = null,
             ),
         )
-        db.projectDao.upsertProjectTask(
+        db.taskDao.upsertProjectTask(
             ProjectTaskEntity(
                 projectTaskId = "t1",
                 parentProjectId = "p1",
@@ -160,7 +160,7 @@ internal class RoomLocalProjectDataSourceEchoTest {
             dataSource.applyTimerEcho(taskIntervals = emptyList(), subTaskIntervals = emptyList())
 
             assertThat(db.taskIntervalDao.getIntervalById("i1")).isNotNull()
-            assertThat(db.projectDao.getTaskById("t1")).isNotNull()
+            assertThat(db.taskDao.getTaskById("t1")).isNotNull()
             // Trailing Unit: JUnit rejects a whole class whose runBlocking test ends on a
             // value-returning assertion, and reports it as initializationError rather than a failure.
             Unit
