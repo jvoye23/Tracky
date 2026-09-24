@@ -1,10 +1,10 @@
 package com.jvcs.tracky.core.data.timer
 
+import com.jvcs.tracky.core.data.networking.StopActiveTimerRequest
 import com.jvcs.tracky.core.data.networking.constructRoute
 import com.jvcs.tracky.core.data.networking.dto.ActiveTimerChangeDto
 import com.jvcs.tracky.core.data.networking.dto.ActiveTimerConflictDto
 import com.jvcs.tracky.core.data.networking.dto.ActiveTimerDto
-import com.jvcs.tracky.core.data.networking.dto.StopActiveTimerRequest
 import com.jvcs.tracky.core.data.networking.httpStatusToRemoteError
 import com.jvcs.tracky.core.data.networking.mappers.toActiveTimer
 import com.jvcs.tracky.core.data.networking.mappers.toActiveTimerChange

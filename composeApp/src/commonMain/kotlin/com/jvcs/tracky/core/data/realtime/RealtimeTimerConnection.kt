@@ -1,11 +1,15 @@
 @file:OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 
-package com.jvcs.tracky.core.domain.realtime
+package com.jvcs.tracky.core.data.realtime
 
 import co.touchlab.kermit.Logger
 import com.jvcs.tracky.core.data.networking.dto.HelloEnvelopeDto
-import com.jvcs.tracky.core.data.networking.dto.RealtimeEnvelopeParser
+import com.jvcs.tracky.core.data.realtime.RealtimeEnvelopeParser
 import com.jvcs.tracky.core.domain.device.DeviceIdProvider
+import com.jvcs.tracky.core.domain.realtime.RealtimeChannel
+import com.jvcs.tracky.core.domain.realtime.RealtimeConnectionState
+import com.jvcs.tracky.core.domain.realtime.RealtimeConnectivity
+import com.jvcs.tracky.core.domain.realtime.RealtimeEvent
 import com.jvcs.tracky.core.domain.sync.SyncCursorStore
 import com.jvcs.tracky.core.domain.sync.SyncPullCoordinator
 import com.jvcs.tracky.core.domain.util.DataError

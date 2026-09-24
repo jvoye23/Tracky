@@ -1,9 +1,9 @@
 package com.jvcs.tracky.core.data.networking.mappers
 
+import com.jvcs.tracky.core.data.networking.StartActiveTimerRequest
 import com.jvcs.tracky.core.data.networking.dto.ActiveTimerChangeDto
 import com.jvcs.tracky.core.data.networking.dto.ActiveTimerConflictDto
 import com.jvcs.tracky.core.data.networking.dto.ActiveTimerDto
-import com.jvcs.tracky.core.data.networking.dto.StartActiveTimerRequest
 import com.jvcs.tracky.core.data.networking.dto.TouchedIntervalDto
 import com.jvcs.tracky.core.domain.timer.ActiveTimer
 import com.jvcs.tracky.core.domain.timer.ActiveTimerChange

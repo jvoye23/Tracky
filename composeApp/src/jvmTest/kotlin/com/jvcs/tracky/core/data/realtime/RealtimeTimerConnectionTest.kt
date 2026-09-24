@@ -1,13 +1,17 @@
 @file:OptIn(ExperimentalCoroutinesApi::class)
 
-package com.jvcs.tracky.core.domain.realtime
+package com.jvcs.tracky.core.data.realtime
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
-import com.jvcs.tracky.core.data.networking.dto.RealtimeEnvelopeParser
+import com.jvcs.tracky.core.data.realtime.RealtimeEnvelopeParser
+import com.jvcs.tracky.core.data.realtime.RealtimeTimerConnection
 import com.jvcs.tracky.core.domain.device.FakeDeviceIdProvider
+import com.jvcs.tracky.core.domain.realtime.FakeRealtimeChannel
+import com.jvcs.tracky.core.domain.realtime.RealtimeConnectionState
+import com.jvcs.tracky.core.domain.realtime.RealtimeConnectivity
 import com.jvcs.tracky.core.domain.sync.CountingRemoteSyncDataSource
 import com.jvcs.tracky.core.domain.sync.FakeSyncCursorStore
 import com.jvcs.tracky.core.domain.sync.SyncPullCoordinator

@@ -3,7 +3,7 @@ package com.jvcs.tracky.core.data.dto
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class UserSerializable(
+data class UserDto(
     val id: String,
     val email: String,
     val username: String,
