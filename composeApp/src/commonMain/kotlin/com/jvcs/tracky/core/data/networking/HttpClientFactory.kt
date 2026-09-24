@@ -10,8 +10,10 @@ import com.jvcs.tracky.core.domain.util.onSuccess
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.plugins.auth.Auth
+import io.ktor.client.plugins.auth.providers.BearerAuthConfig
 import io.ktor.client.plugins.auth.providers.BearerAuthProvider
 import io.ktor.client.plugins.auth.providers.BearerTokens
+import io.ktor.client.plugins.auth.providers.RefreshTokensParams
 import io.ktor.client.plugins.auth.providers.bearer
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
@@ -26,8 +28,8 @@ import kotlinx.serialization.json.Json
 
 class HttpClientFactory(private val sessionStorage: SessionStorage) {
 
-    fun create(engine: HttpClientEngine): HttpClient {
-        return HttpClient(engine) {
+    fun create(engine: HttpClientEngine): HttpClient =
+        HttpClient(engine) {
             install(ContentNegotiation) {
                 json(
                     json =
@@ -54,54 +56,58 @@ class HttpClientFactory(private val sessionStorage: SessionStorage) {
                 contentType(ContentType.Application.Json)
             }
             install(Auth) {
-                bearer {
-                    sendWithoutRequest { request ->
-                        !request.url.buildString().contains("/api/auth/")
-                    }
-                    loadTokens {
-                        sessionStorage.observeAuthInfo().firstOrNull()?.let {
-                            BearerTokens(
-                                accessToken = it.accessToken,
-                                refreshToken = it.refreshToken,
-                            )
-                        }
-                    }
-                    refreshTokens {
-                        // Never refresh on 401 from /api/auth/* (e.g. wrong password on login)
-                        // — otherwise this would loop indefinitely.
-                        if (this.response.call.request.url.encodedPath
-                                .startsWith("/api/auth/")
-                        ) {
-                            return@refreshTokens null
-                        }
-
-                        val authInfo = sessionStorage.observeAuthInfo().firstOrNull()
-                        if (authInfo?.refreshToken.isNullOrBlank()) {
-                            sessionStorage.set(null)
-                            return@refreshTokens null
-                        }
-
-                        var bearerTokens: BearerTokens? = null
-                        client
-                            .post<RefreshRequest, AuthInfoSerializable>(
-                                route = "/api/auth/refresh",
-                                body = RefreshRequest(refreshToken = authInfo.refreshToken),
-                                builder = { markAsRefreshTokenRequest() },
-                            ).onSuccess { newAuthInfo ->
-                                val newAuthInfoDomain = newAuthInfo.toDomain()
-                                sessionStorage.set(newAuthInfoDomain)
-                                bearerTokens =
-                                    BearerTokens(
-                                        accessToken = newAuthInfo.accessToken,
-                                        refreshToken = newAuthInfo.refreshToken,
-                                    )
-                            }.onFailure {
-                                sessionStorage.set(null)
-                            }
-                        bearerTokens
-                    }
-                }
+                bearer { loadAndRefreshFromSession() }
             }
         }
+
+    private fun BearerAuthConfig.loadAndRefreshFromSession() {
+        sendWithoutRequest { request ->
+            !request.url.buildString().contains("/api/auth/")
+        }
+        loadTokens {
+            sessionStorage.observeAuthInfo().firstOrNull()?.let {
+                BearerTokens(
+                    accessToken = it.accessToken,
+                    refreshToken = it.refreshToken,
+                )
+            }
+        }
+        refreshTokens { refreshSession() }
+    }
+
+    /** Trades the stored refresh token for new tokens. Null, with the session cleared, when it can't. */
+    private suspend fun RefreshTokensParams.refreshSession(): BearerTokens? {
+        // Never refresh on 401 from /api/auth/* (e.g. wrong password on login)
+        // — otherwise this would loop indefinitely.
+        if (response.call.request.url.encodedPath
+                .startsWith("/api/auth/")
+        ) {
+            return null
+        }
+
+        val authInfo = sessionStorage.observeAuthInfo().firstOrNull()
+        if (authInfo?.refreshToken.isNullOrBlank()) {
+            sessionStorage.set(null)
+            return null
+        }
+
+        var bearerTokens: BearerTokens? = null
+        client
+            .post<RefreshRequest, AuthInfoSerializable>(
+                route = "/api/auth/refresh",
+                body = RefreshRequest(refreshToken = authInfo.refreshToken),
+                builder = { markAsRefreshTokenRequest() },
+            ).onSuccess { newAuthInfo ->
+                val newAuthInfoDomain = newAuthInfo.toDomain()
+                sessionStorage.set(newAuthInfoDomain)
+                bearerTokens =
+                    BearerTokens(
+                        accessToken = newAuthInfo.accessToken,
+                        refreshToken = newAuthInfo.refreshToken,
+                    )
+            }.onFailure {
+                sessionStorage.set(null)
+            }
+        return bearerTokens
     }
 }
