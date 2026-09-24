@@ -1,9 +1,8 @@
-package com.jvcs.tracky.core.domain.validation
+package com.jvcs.tracky.features.auth.domain
 
 import assertk.assertThat
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
-import com.jvcs.tracky.features.auth.domain.PasswordValidator
 import kotlin.test.Test
 
 class PasswordValidatorTest {

@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalTime::class)
 
-package com.jvcs.tracky.features.projecttracker.data
+package com.jvcs.tracky.features.project.data.project
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
@@ -12,12 +12,14 @@ import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
 import com.jvcs.tracky.core.domain.util.Result
-import com.jvcs.tracky.features.project.data.project.OfflineFirstProjectOrganizationRepository
-import com.jvcs.tracky.features.project.data.project.OfflineFirstProjectRepository
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.features.project.domain.models.TaskInterval
+import com.jvcs.tracky.features.projecttracker.data.FakeLocalProjectDataSource
+import com.jvcs.tracky.features.projecttracker.data.FakePendingSyncDataSource
+import com.jvcs.tracky.features.projecttracker.data.FakeRemoteProjectDataSource
+import com.jvcs.tracky.features.projecttracker.data.FakeSyncScheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking

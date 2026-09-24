@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalTime::class)
 
-package com.jvcs.tracky.features.projecttracker.data
+package com.jvcs.tracky.features.project.data.task
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
@@ -15,6 +15,7 @@ import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
+import com.jvcs.tracky.features.projecttracker.data.RepoFixture
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.time.ExperimentalTime

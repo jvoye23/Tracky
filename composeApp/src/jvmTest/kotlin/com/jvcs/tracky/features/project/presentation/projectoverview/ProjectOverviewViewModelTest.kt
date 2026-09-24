@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalTime::class, ExperimentalCoroutinesApi::class)
 
-package com.jvcs.tracky.features.projecttracker.presentation.projectoverview
+package com.jvcs.tracky.features.project.presentation.projectoverview
 
 import app.cash.turbine.test
 import assertk.assertThat
@@ -22,11 +22,6 @@ import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.features.project.domain.project.ProjectOrganizationRepository
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
-import com.jvcs.tracky.features.project.presentation.projectoverview.ProjectOverviewAction
-import com.jvcs.tracky.features.project.presentation.projectoverview.ProjectOverviewEvent
-import com.jvcs.tracky.features.project.presentation.projectoverview.ProjectOverviewState
-import com.jvcs.tracky.features.project.presentation.projectoverview.ProjectOverviewViewModel
-import com.jvcs.tracky.features.project.presentation.projectoverview.SortOption
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
