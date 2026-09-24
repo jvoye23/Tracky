@@ -17,10 +17,15 @@ import io.ktor.client.request.setBody
 import io.ktor.client.request.url
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
+import io.ktor.http.isSuccess
 import io.ktor.util.network.UnresolvedAddressException
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerializationException
+
+private const val FIRST_SERVER_ERROR = 500
+private const val LAST_SERVER_ERROR = 599
 
 fun constructRoute(route: String): String =
     when {
@@ -31,8 +36,8 @@ fun constructRoute(route: String): String =
     }
 
 suspend inline fun <reified T> responseToResult(response: HttpResponse): Result<T, DataError.Remote> =
-    when (response.status.value) {
-        in 200..299 -> {
+    when {
+        response.status.isSuccess() -> {
             try {
                 Result.Success(response.body<T>())
             } catch (e: Exception) {
@@ -54,16 +59,16 @@ suspend inline fun <reified T> responseToResult(response: HttpResponse): Result<
  */
 fun httpStatusToRemoteError(status: Int): DataError.Remote =
     when (status) {
-        400 -> DataError.Remote.BAD_REQUEST
-        401 -> DataError.Remote.UNAUTHORIZED
-        403 -> DataError.Remote.FORBIDDEN
-        404 -> DataError.Remote.NOT_FOUND
-        408 -> DataError.Remote.REQUEST_TIMEOUT
-        409 -> DataError.Remote.CONFLICT
-        413 -> DataError.Remote.PAYLOAD_TOO_LARGE
-        429 -> DataError.Remote.TOO_MANY_REQUESTS
-        503 -> DataError.Remote.SERVICE_UNAVAILABLE
-        in 500..599 -> DataError.Remote.SERVER_ERROR
+        HttpStatusCode.BadRequest.value -> DataError.Remote.BAD_REQUEST
+        HttpStatusCode.Unauthorized.value -> DataError.Remote.UNAUTHORIZED
+        HttpStatusCode.Forbidden.value -> DataError.Remote.FORBIDDEN
+        HttpStatusCode.NotFound.value -> DataError.Remote.NOT_FOUND
+        HttpStatusCode.RequestTimeout.value -> DataError.Remote.REQUEST_TIMEOUT
+        HttpStatusCode.Conflict.value -> DataError.Remote.CONFLICT
+        HttpStatusCode.PayloadTooLarge.value -> DataError.Remote.PAYLOAD_TOO_LARGE
+        HttpStatusCode.TooManyRequests.value -> DataError.Remote.TOO_MANY_REQUESTS
+        HttpStatusCode.ServiceUnavailable.value -> DataError.Remote.SERVICE_UNAVAILABLE
+        in FIRST_SERVER_ERROR..LAST_SERVER_ERROR -> DataError.Remote.SERVER_ERROR
         else -> DataError.Remote.UNKNOWN
     }
 

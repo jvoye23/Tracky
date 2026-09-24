@@ -16,6 +16,8 @@ import kotlinx.datetime.format.Padding
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.ExperimentalTime
 
+private const val DEFAULT_PROJECT_COLOR_ARGB = 0xFF475D92
+
 /** "Tue, Sep 08" — the day list's heading. */
 private val dateLabelFormat =
     LocalDate.Format {
@@ -98,7 +100,7 @@ fun Project.toDayDetailUi(date: LocalDate, timeZone: TimeZone): DayDetailUi {
                             RANGE_SEPARATOR +
                             if (interval.endsAtMidnight) END_OF_DAY else interval.end.format(clockFormat),
                     formattedDuration = formatDurationHoursMinutesSeconds(interval.durationMillis.milliseconds),
-                    projectColor = if (this.colorArgb != null) Color(colorArgb) else Color(0xFF475D92),
+                    projectColor = if (this.colorArgb != null) Color(colorArgb) else Color(DEFAULT_PROJECT_COLOR_ARGB),
                 )
             },
         // Distinct parent tasks: two intervals of the same task, or of two of its subtasks, are

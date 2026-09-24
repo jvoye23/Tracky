@@ -32,6 +32,11 @@ import tracky.composeapp.generated.resources.select
 import tracky.composeapp.generated.resources.select_color
 import kotlin.math.roundToInt
 
+private const val CHANNEL_MAX = 255f
+private const val SLIDER_RED_ARGB = 0xFFB3261E // Material 3 Red
+private const val SLIDER_GREEN_ARGB = 0xFF146C2E // Material 3 Green
+private const val SLIDER_BLUE_ARGB = 0xFF0B57D0 // Material 3 Blue
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TrackyColorPicker(
@@ -327,9 +332,9 @@ private fun SpectrumTab(
 
 @Composable
 private fun SlidersTab(currentColor: Color, onColorChange: (Color) -> Unit) {
-    val r = (currentColor.red * 255).roundToInt()
-    val g = (currentColor.green * 255).roundToInt()
-    val b = (currentColor.blue * 255).roundToInt()
+    val r = (currentColor.red * CHANNEL_MAX).roundToInt()
+    val g = (currentColor.green * CHANNEL_MAX).roundToInt()
+    val b = (currentColor.blue * CHANNEL_MAX).roundToInt()
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -338,25 +343,25 @@ private fun SlidersTab(currentColor: Color, onColorChange: (Color) -> Unit) {
         SliderRow(
             label = "R",
             value = r,
-            activeColor = Color(0xFFB3261E), // Material 3 Red
+            activeColor = Color(SLIDER_RED_ARGB),
             onValueChange = { newVal ->
-                onColorChange(Color(newVal / 255f, currentColor.green, currentColor.blue, currentColor.alpha))
+                onColorChange(Color(newVal / CHANNEL_MAX, currentColor.green, currentColor.blue, currentColor.alpha))
             },
         )
         SliderRow(
             label = "G",
             value = g,
-            activeColor = Color(0xFF146C2E), // Material 3 Green
+            activeColor = Color(SLIDER_GREEN_ARGB),
             onValueChange = { newVal ->
-                onColorChange(Color(currentColor.red, newVal / 255f, currentColor.blue, currentColor.alpha))
+                onColorChange(Color(currentColor.red, newVal / CHANNEL_MAX, currentColor.blue, currentColor.alpha))
             },
         )
         SliderRow(
             label = "B",
             value = b,
-            activeColor = Color(0xFF0B57D0), // Material 3 Blue
+            activeColor = Color(SLIDER_BLUE_ARGB),
             onValueChange = { newVal ->
-                onColorChange(Color(currentColor.red, currentColor.green, newVal / 255f, currentColor.alpha))
+                onColorChange(Color(currentColor.red, currentColor.green, newVal / CHANNEL_MAX, currentColor.alpha))
             },
         )
     }

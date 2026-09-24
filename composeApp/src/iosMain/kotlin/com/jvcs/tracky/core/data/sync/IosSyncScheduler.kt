@@ -9,6 +9,9 @@ import platform.BackgroundTasks.BGTaskScheduler
 import platform.Foundation.NSDate
 import platform.Foundation.dateWithTimeIntervalSinceNow
 
+private const val SECONDS_PER_HOUR = 60.0 * 60.0
+private const val SYNC_INTERVAL_HOURS = 6
+
 /**
  * Best-effort background sync via BGTaskScheduler. To actually execute, [TASK_IDENTIFIER] must be
  * listed in Info.plist (BGTaskSchedulerPermittedIdentifiers) and a handler installed in the Swift
@@ -24,7 +27,7 @@ class IosSyncScheduler : SyncScheduler {
         if (!BackgroundTaskRegistry.isRegistered(TASK_IDENTIFIER)) return
 
         val request = BGAppRefreshTaskRequest(identifier = TASK_IDENTIFIER)
-        request.earliestBeginDate = NSDate.dateWithTimeIntervalSinceNow(60.0 * 60.0 * 6)
+        request.earliestBeginDate = NSDate.dateWithTimeIntervalSinceNow(SECONDS_PER_HOUR * SYNC_INTERVAL_HOURS)
         BGTaskScheduler.sharedScheduler.submitTaskRequest(request, error = null)
     }
 

@@ -85,6 +85,10 @@ import tracky.composeapp.generated.resources.start_timer
 import tracky.composeapp.generated.resources.stop_timer
 import tracky.composeapp.generated.resources.subtask_progress
 
+private const val PULSE_DURATION_MILLIS = 1000
+private const val TIMER_ICON_SIZE_FRACTION = 0.45f
+private const val RUNNING_BORDER_ALPHA = 0.2f
+
 /**
  * Returns the pulse alpha as a [State] so callers can read it inside a `graphicsLayer {}`
  * lambda — a draw-phase read that invalidates only the layer instead of recomposing the card
@@ -100,7 +104,7 @@ private fun rememberPulseAlpha(enabled: Boolean): State<Float> {
     return infiniteTransition.animateFloat(
         initialValue = 1f,
         targetValue = 0.7f,
-        animationSpec = infiniteRepeatable(tween(1000), RepeatMode.Reverse),
+        animationSpec = infiniteRepeatable(tween(PULSE_DURATION_MILLIS), RepeatMode.Reverse),
         label = "alpha",
     )
 }
@@ -146,7 +150,7 @@ private fun TimerToggleButton(
                 stringResource(
                     if (isTimerRunning) Res.string.stop_timer else Res.string.start_timer,
                 ),
-            modifier = Modifier.size(buttonSize * 0.45f),
+            modifier = Modifier.size(buttonSize * TIMER_ICON_SIZE_FRACTION),
         )
     }
 }
@@ -272,7 +276,7 @@ private val TaskCardShape = RoundedCornerShape(12.dp)
 private fun taskBorder(isTimerRunning: Boolean, projectColor: Color): BorderStroke =
     BorderStroke(
         if (isTimerRunning) 1.dp else 0.dp,
-        if (isTimerRunning) projectColor.copy(0.2f) else MaterialTheme.colorScheme.outlineVariant,
+        if (isTimerRunning) projectColor.copy(RUNNING_BORDER_ALPHA) else MaterialTheme.colorScheme.outlineVariant,
     )
 
 /** Edit mode outlines each tappable row - the task and every subtask - the way the card is. */

@@ -10,6 +10,9 @@ import platform.BackgroundTasks.BGTaskScheduler
 import platform.Foundation.NSDate
 import platform.Foundation.dateWithTimeIntervalSinceNow
 
+private const val SECONDS_PER_HOUR = 60.0 * 60.0
+private const val CLEANUP_INTERVAL_HOURS = 24
+
 /**
  * Schedules the "empty the trash" job via BGTaskScheduler. To actually execute, [TASK_IDENTIFIER]
  * must be listed in Info.plist (BGTaskSchedulerPermittedIdentifiers) and a handler installed in the
@@ -35,7 +38,7 @@ class IosTrashCleanupScheduler : TrashCleanupScheduler {
             request.requiresNetworkConnectivity = true
             request.requiresExternalPower = false
             // Earliest one day out; the OS decides the actual run time.
-            request.earliestBeginDate = NSDate.dateWithTimeIntervalSinceNow(60.0 * 60.0 * 24)
+            request.earliestBeginDate = NSDate.dateWithTimeIntervalSinceNow(SECONDS_PER_HOUR * CLEANUP_INTERVAL_HOURS)
             BGTaskScheduler.sharedScheduler.submitTaskRequest(request, error = null)
         }
     }

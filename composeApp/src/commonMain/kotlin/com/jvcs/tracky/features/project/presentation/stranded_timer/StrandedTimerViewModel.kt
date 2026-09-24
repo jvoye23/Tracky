@@ -21,6 +21,8 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 
+private const val MAX_MINUTES = 59
+
 class StrandedTimerViewModel(private val strandedTimerRepository: StrandedTimerRepository) : ViewModel() {
 
     private val eventChannel = Channel<StrandedTimerEvent>()
@@ -135,7 +137,7 @@ class StrandedTimerViewModel(private val strandedTimerRepository: StrandedTimerR
             if (parts.size > 2) return null
             val hours = parts[0].toLongOrNull() ?: return null
             val minutes = if (parts.size == 2) parts[1].toLongOrNull() ?: return null else 0L
-            if (hours < 0 || minutes < 0 || minutes > 59) return null
+            if (hours < 0 || minutes < 0 || minutes > MAX_MINUTES) return null
             return hours.hours + minutes.minutes
         }
     }

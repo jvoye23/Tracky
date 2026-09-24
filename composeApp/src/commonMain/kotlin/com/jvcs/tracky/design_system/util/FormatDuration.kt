@@ -6,6 +6,10 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
+private const val HMS_PARTS = 3
+private const val HMS_CENTIS_PARTS = 4
+private const val MILLIS_PER_CENTISECOND = 10
+
 /**
  * "HH:mm:ss", e.g. `02:16:09`. Hours are not wrapped at a day - a timer left running over a
  * weekend has to read as the 75 hours it was.
@@ -30,7 +34,7 @@ fun formatDuration(duration: Duration): String =
  */
 fun parseDuration(timeString: String): Duration {
     val parts = timeString.split(":")
-    if (parts.size != 3 && parts.size != 4) return Duration.ZERO
+    if (parts.size != HMS_PARTS && parts.size != HMS_CENTIS_PARTS) return Duration.ZERO
 
     val hours = parts[0].toLongOrNull() ?: return Duration.ZERO
     val minutes = parts[1].toLongOrNull() ?: return Duration.ZERO
@@ -42,7 +46,7 @@ fun parseDuration(timeString: String): Duration {
             0L
         }
 
-    return hours.hours + minutes.minutes + seconds.seconds + (centiseconds * 10).milliseconds
+    return hours.hours + minutes.minutes + seconds.seconds + (centiseconds * MILLIS_PER_CENTISECOND).milliseconds
 }
 
 /**
