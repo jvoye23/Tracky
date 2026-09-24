@@ -3,12 +3,13 @@ package com.jvcs.tracky.core.database
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.sqlite.execSQL
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 /**
  * Exercises [TrackyDatabase.MIGRATION_17_18], which adds a nullable `sortIndex` to `project_tasks`
@@ -124,8 +125,11 @@ class Migration17To18Test {
 
         TrackyDatabase.MIGRATION_17_18.migrate(connection)
 
-        assertTrue(columnExists("project_tasks", "sortIndex"), "project_tasks should gain sortIndex")
-        assertTrue(columnExists("project_sub_tasks", "sortIndex"), "project_sub_tasks should gain sortIndex")
+        assertThat(columnExists("project_tasks", "sortIndex"), name = "project_tasks should gain sortIndex").isTrue()
+        assertThat(
+            columnExists("project_sub_tasks", "sortIndex"),
+            name = "project_sub_tasks should gain sortIndex",
+        ).isTrue()
     }
 
     @Test
@@ -136,16 +140,14 @@ class Migration17To18Test {
 
         // Nullable is what makes the migration backfill-free: NULL means "never dragged", and the
         // sort rule falls back to creation order for those rows.
-        assertEquals(
-            0L,
+        assertThat(
             queryLong("SELECT \"notnull\" FROM pragma_table_info('project_tasks') WHERE name = 'sortIndex'"),
-        )
-        assertEquals(
-            0L,
+        ).isEqualTo(0L)
+        assertThat(
             queryLong("SELECT \"notnull\" FROM pragma_table_info('project_sub_tasks') WHERE name = 'sortIndex'"),
-        )
-        assertNull(queryLong("SELECT sortIndex FROM project_tasks WHERE projectTaskId = 't1'"))
-        assertNull(queryLong("SELECT sortIndex FROM project_sub_tasks WHERE projectSubTaskId = 's1'"))
+        ).isEqualTo(0L)
+        assertThat(queryLong("SELECT sortIndex FROM project_tasks WHERE projectTaskId = 't1'")).isNull()
+        assertThat(queryLong("SELECT sortIndex FROM project_sub_tasks WHERE projectSubTaskId = 's1'")).isNull()
     }
 
     @Test
@@ -154,11 +156,15 @@ class Migration17To18Test {
 
         TrackyDatabase.MIGRATION_17_18.migrate(connection)
 
-        assertEquals("Write the report", queryText("SELECT title FROM project_tasks WHERE projectTaskId = 't1'"))
-        assertEquals(90000L, queryLong("SELECT durationMillis FROM project_tasks WHERE projectTaskId = 't1'"))
-        assertEquals(4242L, queryLong("SELECT updatedAtEpochMs FROM project_tasks WHERE projectTaskId = 't1'"))
-        assertEquals("Draft it", queryText("SELECT title FROM project_sub_tasks WHERE projectSubTaskId = 's1'"))
-        assertEquals(5000L, queryLong("SELECT durationMillis FROM project_sub_tasks WHERE projectSubTaskId = 's1'"))
+        assertThat(
+            queryText("SELECT title FROM project_tasks WHERE projectTaskId = 't1'"),
+        ).isEqualTo("Write the report")
+        assertThat(queryLong("SELECT durationMillis FROM project_tasks WHERE projectTaskId = 't1'")).isEqualTo(90000L)
+        assertThat(queryLong("SELECT updatedAtEpochMs FROM project_tasks WHERE projectTaskId = 't1'")).isEqualTo(4242L)
+        assertThat(queryText("SELECT title FROM project_sub_tasks WHERE projectSubTaskId = 's1'")).isEqualTo("Draft it")
+        assertThat(
+            queryLong("SELECT durationMillis FROM project_sub_tasks WHERE projectSubTaskId = 's1'"),
+        ).isEqualTo(5000L)
     }
 
     @Test
@@ -169,7 +175,7 @@ class Migration17To18Test {
         connection.execSQL("UPDATE project_tasks SET sortIndex = 3 WHERE projectTaskId = 't1'")
         connection.execSQL("UPDATE project_sub_tasks SET sortIndex = 7 WHERE projectSubTaskId = 's1'")
 
-        assertEquals(3L, queryLong("SELECT sortIndex FROM project_tasks WHERE projectTaskId = 't1'"))
-        assertEquals(7L, queryLong("SELECT sortIndex FROM project_sub_tasks WHERE projectSubTaskId = 's1'"))
+        assertThat(queryLong("SELECT sortIndex FROM project_tasks WHERE projectTaskId = 't1'")).isEqualTo(3L)
+        assertThat(queryLong("SELECT sortIndex FROM project_sub_tasks WHERE projectSubTaskId = 's1'")).isEqualTo(7L)
     }
 }

@@ -3,11 +3,12 @@ package com.jvcs.tracky.core.database
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.sqlite.execSQL
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isTrue
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 /**
  * Exercises [TrackyDatabase.MIGRATION_13_14] against a real SQLite connection.
@@ -160,15 +161,12 @@ class Migration13To14Test {
 
         TrackyDatabase.MIGRATION_13_14.migrate(connection)
 
-        assertEquals(0, countRows("SELECT COUNT(*) FROM project_sub_tasks"))
-        assertEquals(0, countRows("SELECT COUNT(*) FROM sub_task_intervals"))
+        assertThat(countRows("SELECT COUNT(*) FROM project_sub_tasks")).isEqualTo(0)
+        assertThat(countRows("SELECT COUNT(*) FROM sub_task_intervals")).isEqualTo(0)
         // Nothing in the migration touches the pre-existing tree.
-        assertEquals(1, countRows("SELECT COUNT(*) FROM projects"))
-        assertEquals(1, countRows("SELECT COUNT(*) FROM project_records"))
-        assertEquals(
-            60_000,
-            countRows("SELECT durationMillis FROM task_intervals WHERE intervalId = 'i1'"),
-        )
+        assertThat(countRows("SELECT COUNT(*) FROM projects")).isEqualTo(1)
+        assertThat(countRows("SELECT COUNT(*) FROM project_records")).isEqualTo(1)
+        assertThat(countRows("SELECT durationMillis FROM task_intervals WHERE intervalId = 'i1'")).isEqualTo(60_000)
     }
 
     /** Running it twice must be a no-op — a half-applied upgrade gets retried on next launch. */
@@ -181,7 +179,7 @@ class Migration13To14Test {
 
         TrackyDatabase.MIGRATION_13_14.migrate(connection)
 
-        assertEquals(1, countRows("SELECT COUNT(*) FROM project_sub_tasks"))
+        assertThat(countRows("SELECT COUNT(*) FROM project_sub_tasks")).isEqualTo(1)
     }
 
     @Test
@@ -190,8 +188,8 @@ class Migration13To14Test {
 
         connection.execSQL("DELETE FROM project_records WHERE recordId = 't1'")
 
-        assertEquals(0, countRows("SELECT COUNT(*) FROM project_sub_tasks"))
-        assertEquals(0, countRows("SELECT COUNT(*) FROM sub_task_intervals"))
+        assertThat(countRows("SELECT COUNT(*) FROM project_sub_tasks")).isEqualTo(0)
+        assertThat(countRows("SELECT COUNT(*) FROM sub_task_intervals")).isEqualTo(0)
     }
 
     @Test
@@ -200,8 +198,8 @@ class Migration13To14Test {
 
         connection.execSQL("DELETE FROM projects WHERE projectId = 'p1'")
 
-        assertEquals(0, countRows("SELECT COUNT(*) FROM project_sub_tasks"))
-        assertEquals(0, countRows("SELECT COUNT(*) FROM sub_task_intervals"))
+        assertThat(countRows("SELECT COUNT(*) FROM project_sub_tasks")).isEqualTo(0)
+        assertThat(countRows("SELECT COUNT(*) FROM sub_task_intervals")).isEqualTo(0)
     }
 
     /**
@@ -215,15 +213,15 @@ class Migration13To14Test {
 
         connection.execSQL("DELETE FROM task_intervals WHERE intervalId = 'i1'")
 
-        assertEquals(0, countRows("SELECT COUNT(*) FROM sub_task_intervals"))
-        assertEquals(1, countRows("SELECT COUNT(*) FROM project_sub_tasks"))
+        assertThat(countRows("SELECT COUNT(*) FROM sub_task_intervals")).isEqualTo(0)
+        assertThat(countRows("SELECT COUNT(*) FROM project_sub_tasks")).isEqualTo(1)
     }
 
     @Test
     fun leavesNoForeignKeyViolations() {
         migrateAndSeedFullChain()
 
-        assertTrue(queryStrings("PRAGMA foreign_key_check").isEmpty())
+        assertThat(queryStrings("PRAGMA foreign_key_check").isEmpty()).isTrue()
     }
 
     @Test
@@ -242,7 +240,7 @@ class Migration13To14Test {
                     "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = '$table'",
                 )
             columns.forEach { column ->
-                assertTrue("index_${table}_$column" in actual, "missing $column index: $actual")
+                assertThat("index_${table}_$column" in actual, name = "missing $column index: $actual").isTrue()
             }
         }
     }

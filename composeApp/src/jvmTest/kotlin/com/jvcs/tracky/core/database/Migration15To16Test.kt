@@ -3,12 +3,13 @@ package com.jvcs.tracky.core.database
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.sqlite.execSQL
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 /**
  * Exercises [TrackyDatabase.MIGRATION_15_16], which renames `project_records` to `project_tasks`,
@@ -232,13 +233,12 @@ class Migration15To16Test {
 
         TrackyDatabase.MIGRATION_15_16.migrate(connection)
 
-        assertTrue(tableExists("project_tasks"), "project_tasks should exist after the migration")
-        assertTrue(!tableExists("project_records"), "project_records should be gone")
-        assertEquals(
-            listOf("projectTaskId"),
+        assertThat(tableExists("project_tasks"), name = "project_tasks should exist after the migration").isTrue()
+        assertThat(!tableExists("project_records"), name = "project_records should be gone").isTrue()
+        assertThat(
             queryStrings("SELECT name FROM pragma_table_info('project_tasks') WHERE pk = 1"),
-            "the primary key should have been renamed to projectTaskId",
-        )
+            name = "the primary key should have been renamed to projectTaskId",
+        ).isEqualTo(listOf("projectTaskId"))
     }
 
     @Test
@@ -247,28 +247,25 @@ class Migration15To16Test {
 
         TrackyDatabase.MIGRATION_15_16.migrate(connection)
 
-        assertEquals(
-            "Write the report",
+        assertThat(
             queryText("SELECT title FROM project_tasks WHERE projectTaskId = 't1'"),
-        )
+        ).isEqualTo("Write the report")
         // description held nothing but the title, so it starts the new schema empty rather than
         // carrying a duplicate the user never wrote.
-        assertNull(queryText("SELECT description FROM project_tasks WHERE projectTaskId = 't1'"))
+        assertThat(queryText("SELECT description FROM project_tasks WHERE projectTaskId = 't1'")).isNull()
     }
 
     @Test
     fun titleIsNotNullAndDescriptionIsNullable() {
         TrackyDatabase.MIGRATION_15_16.migrate(connection)
 
-        assertEquals(
-            1L,
+        assertThat(
             queryLong("SELECT \"notnull\" FROM pragma_table_info('project_tasks') WHERE name = 'title'"),
-            "a task without a title would be invisible in the list",
-        )
-        assertEquals(
-            0L,
+            name = "a task without a title would be invisible in the list",
+        ).isEqualTo(1L)
+        assertThat(
             queryLong("SELECT \"notnull\" FROM pragma_table_info('project_tasks') WHERE name = 'description'"),
-        )
+        ).isEqualTo(0L)
     }
 
     @Test
@@ -277,11 +274,15 @@ class Migration15To16Test {
 
         TrackyDatabase.MIGRATION_15_16.migrate(connection)
 
-        assertEquals(90_000L, queryLong("SELECT durationMillis FROM project_tasks WHERE projectTaskId = 't1'"))
-        assertEquals(1_000L, queryLong("SELECT startDateTimeEpochMs FROM project_tasks WHERE projectTaskId = 't1'"))
-        assertEquals(91_000L, queryLong("SELECT endDateTimeEpochMs FROM project_tasks WHERE projectTaskId = 't1'"))
-        assertEquals(1L, queryLong("SELECT isTimerRunning FROM project_tasks WHERE projectTaskId = 't1'"))
-        assertEquals(4_242L, queryLong("SELECT updatedAtEpochMs FROM project_tasks WHERE projectTaskId = 't1'"))
+        assertThat(queryLong("SELECT durationMillis FROM project_tasks WHERE projectTaskId = 't1'")).isEqualTo(90_000L)
+        assertThat(
+            queryLong("SELECT startDateTimeEpochMs FROM project_tasks WHERE projectTaskId = 't1'"),
+        ).isEqualTo(1_000L)
+        assertThat(
+            queryLong("SELECT endDateTimeEpochMs FROM project_tasks WHERE projectTaskId = 't1'"),
+        ).isEqualTo(91_000L)
+        assertThat(queryLong("SELECT isTimerRunning FROM project_tasks WHERE projectTaskId = 't1'")).isEqualTo(1L)
+        assertThat(queryLong("SELECT updatedAtEpochMs FROM project_tasks WHERE projectTaskId = 't1'")).isEqualTo(4_242L)
     }
 
     @Test
@@ -290,17 +291,18 @@ class Migration15To16Test {
 
         TrackyDatabase.MIGRATION_15_16.migrate(connection)
 
-        assertEquals(1, countRows("SELECT count(*) FROM task_intervals"))
-        assertEquals(90_000L, queryLong("SELECT durationMillis FROM task_intervals WHERE intervalId = 'i1'"))
-        assertEquals(1, countRows("SELECT count(*) FROM project_sub_tasks"))
-        assertEquals("sub-s1", queryText("SELECT title FROM project_sub_tasks WHERE projectSubTaskId = 's1'"))
-        assertEquals("note-s1", queryText("SELECT description FROM project_sub_tasks WHERE projectSubTaskId = 's1'"))
+        assertThat(countRows("SELECT count(*) FROM task_intervals")).isEqualTo(1)
+        assertThat(queryLong("SELECT durationMillis FROM task_intervals WHERE intervalId = 'i1'")).isEqualTo(90_000L)
+        assertThat(countRows("SELECT count(*) FROM project_sub_tasks")).isEqualTo(1)
+        assertThat(queryText("SELECT title FROM project_sub_tasks WHERE projectSubTaskId = 's1'")).isEqualTo("sub-s1")
+        assertThat(
+            queryText("SELECT description FROM project_sub_tasks WHERE projectSubTaskId = 's1'"),
+        ).isEqualTo("note-s1")
         // sub_task_intervals is not rebuilt at all, so its local-only flag has to be untouched.
-        assertEquals(1, countRows("SELECT count(*) FROM sub_task_intervals"))
-        assertEquals(
-            1L,
+        assertThat(countRows("SELECT count(*) FROM sub_task_intervals")).isEqualTo(1)
+        assertThat(
             queryLong("SELECT startedParentTimer FROM sub_task_intervals WHERE subTaskIntervalId = 'si1'"),
-        )
+        ).isEqualTo(1L)
     }
 
     @Test
@@ -309,21 +311,21 @@ class Migration15To16Test {
 
         // This is the assertion that catches a bare ALTER TABLE ... RENAME TO: with foreign keys
         // off, SQLite leaves these clauses pointing at the old table name.
-        assertTrue(
+        assertThat(
             queryStrings("SELECT \"table\" FROM pragma_foreign_key_list('task_intervals')")
                 .contains("project_tasks"),
-            "task_intervals should cascade from project_tasks",
-        )
-        assertTrue(
+            name = "task_intervals should cascade from project_tasks",
+        ).isTrue()
+        assertThat(
             queryStrings("SELECT \"table\" FROM pragma_foreign_key_list('project_sub_tasks')")
                 .contains("project_tasks"),
-            "project_sub_tasks should cascade from project_tasks",
-        )
-        assertTrue(
+            name = "project_sub_tasks should cascade from project_tasks",
+        ).isTrue()
+        assertThat(
             queryStrings("SELECT \"table\" FROM pragma_foreign_key_list('task_intervals')")
                 .none { it == "project_records" },
-            "no foreign key should still name project_records",
-        )
+            name = "no foreign key should still name project_records",
+        ).isTrue()
     }
 
     @Test
@@ -334,10 +336,10 @@ class Migration15To16Test {
         connection.execSQL("PRAGMA foreign_keys = ON")
         connection.execSQL("DELETE FROM projects WHERE projectId = 'p1'")
 
-        assertEquals(0, countRows("SELECT count(*) FROM project_tasks"))
-        assertEquals(0, countRows("SELECT count(*) FROM task_intervals"))
-        assertEquals(0, countRows("SELECT count(*) FROM project_sub_tasks"))
-        assertEquals(0, countRows("SELECT count(*) FROM sub_task_intervals"))
+        assertThat(countRows("SELECT count(*) FROM project_tasks")).isEqualTo(0)
+        assertThat(countRows("SELECT count(*) FROM task_intervals")).isEqualTo(0)
+        assertThat(countRows("SELECT count(*) FROM project_sub_tasks")).isEqualTo(0)
+        assertThat(countRows("SELECT count(*) FROM sub_task_intervals")).isEqualTo(0)
     }
 
     @Test
@@ -348,11 +350,11 @@ class Migration15To16Test {
         connection.execSQL("PRAGMA foreign_keys = ON")
         connection.execSQL("DELETE FROM project_tasks WHERE projectTaskId = 't1'")
 
-        assertEquals(0, countRows("SELECT count(*) FROM task_intervals"))
-        assertEquals(0, countRows("SELECT count(*) FROM project_sub_tasks"))
-        assertEquals(0, countRows("SELECT count(*) FROM sub_task_intervals"))
+        assertThat(countRows("SELECT count(*) FROM task_intervals")).isEqualTo(0)
+        assertThat(countRows("SELECT count(*) FROM project_sub_tasks")).isEqualTo(0)
+        assertThat(countRows("SELECT count(*) FROM sub_task_intervals")).isEqualTo(0)
         // The project itself is not a child of anything here and must stay.
-        assertEquals(1, countRows("SELECT count(*) FROM projects"))
+        assertThat(countRows("SELECT count(*) FROM projects")).isEqualTo(1)
     }
 
     @Test
@@ -360,14 +362,16 @@ class Migration15To16Test {
         TrackyDatabase.MIGRATION_15_16.migrate(connection)
 
         val indices = queryStrings("SELECT name FROM sqlite_master WHERE type = 'index' AND name LIKE 'index_%'")
-        assertTrue(indices.contains("index_project_tasks_parentProjectId"), "got: $indices")
-        assertTrue(indices.contains("index_task_intervals_parentTaskId"), "got: $indices")
-        assertTrue(indices.contains("index_task_intervals_parentProjectId"), "got: $indices")
-        assertTrue(indices.contains("index_project_sub_tasks_parentProjectTaskId"), "got: $indices")
-        assertTrue(indices.contains("index_project_sub_tasks_parentProjectId"), "got: $indices")
-        assertTrue(
-            indices.none { it.contains("project_records") },
-            "the old index name should not survive the rename: $indices",
-        )
+        assertThat(indices.contains("index_project_tasks_parentProjectId"), name = "got: $indices").isTrue()
+        assertThat(indices.contains("index_task_intervals_parentTaskId"), name = "got: $indices").isTrue()
+        assertThat(indices.contains("index_task_intervals_parentProjectId"), name = "got: $indices").isTrue()
+        assertThat(indices.contains("index_project_sub_tasks_parentProjectTaskId"), name = "got: $indices").isTrue()
+        assertThat(indices.contains("index_project_sub_tasks_parentProjectId"), name = "got: $indices").isTrue()
+        assertThat(
+            indices.none {
+                it.contains("project_records")
+            },
+            name = "the old index name should not survive the rename: $indices",
+        ).isTrue()
     }
 }

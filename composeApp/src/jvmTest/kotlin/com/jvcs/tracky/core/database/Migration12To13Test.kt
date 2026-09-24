@@ -3,12 +3,13 @@ package com.jvcs.tracky.core.database
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.sqlite.execSQL
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 /**
  * Exercises [TrackyDatabase.MIGRATION_12_13] against a real SQLite connection.
@@ -128,13 +129,10 @@ class Migration12To13Test {
 
         TrackyDatabase.MIGRATION_12_13.migrate(connection)
 
-        assertEquals("p1", parentProjectIdOf("i1"))
-        assertEquals("p2", parentProjectIdOf("i2"))
+        assertThat(parentProjectIdOf("i1")).isEqualTo("p1")
+        assertThat(parentProjectIdOf("i2")).isEqualTo("p2")
         // The tracked time itself must survive untouched — that is the data users care about.
-        assertEquals(
-            60_000,
-            countRows("SELECT durationMillis FROM task_intervals WHERE intervalId = 'i1'"),
-        )
+        assertThat(countRows("SELECT durationMillis FROM task_intervals WHERE intervalId = 'i1'")).isEqualTo(60_000)
     }
 
     /** Intervals whose task was deleted pre-13 cannot satisfy the new FK, so they are dropped. */
@@ -147,9 +145,9 @@ class Migration12To13Test {
 
         TrackyDatabase.MIGRATION_12_13.migrate(connection)
 
-        assertEquals("p1", parentProjectIdOf("i1"))
-        assertNull(parentProjectIdOf("i-orphan"))
-        assertEquals(1, countRows("SELECT COUNT(*) FROM task_intervals"))
+        assertThat(parentProjectIdOf("i1")).isEqualTo("p1")
+        assertThat(parentProjectIdOf("i-orphan")).isNull()
+        assertThat(countRows("SELECT COUNT(*) FROM task_intervals")).isEqualTo(1)
     }
 
     /**
@@ -164,8 +162,8 @@ class Migration12To13Test {
 
         TrackyDatabase.MIGRATION_12_13.migrate(connection)
 
-        assertNull(parentProjectIdOf("i-ghost"))
-        assertEquals(0, countRows("SELECT COUNT(*) FROM task_intervals"))
+        assertThat(parentProjectIdOf("i-ghost")).isNull()
+        assertThat(countRows("SELECT COUNT(*) FROM task_intervals")).isEqualTo(0)
     }
 
     /** Nothing may be left behind that would trip enforcement once Room turns FKs back on. */
@@ -181,7 +179,7 @@ class Migration12To13Test {
         TrackyDatabase.MIGRATION_12_13.migrate(connection)
         connection.execSQL("DELETE FROM project_records WHERE parentProjectId = 'deleted-project'")
 
-        assertTrue(queryStrings("PRAGMA foreign_key_check").isEmpty())
+        assertThat(queryStrings("PRAGMA foreign_key_check").isEmpty()).isTrue()
     }
 
     @Test
@@ -192,7 +190,7 @@ class Migration12To13Test {
             queryStrings(
                 "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'task_intervals'",
             )
-        assertTrue("index_task_intervals_parentTaskId" in indices, "missing task index: $indices")
-        assertTrue("index_task_intervals_parentProjectId" in indices, "missing project index: $indices")
+        assertThat("index_task_intervals_parentTaskId" in indices, name = "missing task index: $indices").isTrue()
+        assertThat("index_task_intervals_parentProjectId" in indices, name = "missing project index: $indices").isTrue()
     }
 }
