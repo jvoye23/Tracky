@@ -49,6 +49,7 @@ internal class RoomLocalSubTaskDataSourceStartTest {
         dataSource =
             RoomLocalSubTaskDataSource(
                 db.projectDao,
+                db.subTaskIntervalDao,
                 db.taskIntervalDao,
                 db.strandedIntervalDao,
                 FakeDeviceIdProvider(),
@@ -178,8 +179,8 @@ internal class RoomLocalSubTaskDataSourceStartTest {
             dataSource.startSubTask("s2")
 
             // s1 is closed at exactly the instant s2 starts, so the two never overlap.
-            assertThat(db.projectDao.getOpenSubTaskInterval("s1")).isNull()
-            assertThat(db.projectDao.getOpenSubTaskInterval("s2")).isNotNull()
+            assertThat(db.subTaskIntervalDao.getOpenSubTaskInterval("s1")).isNull()
+            assertThat(db.subTaskIntervalDao.getOpenSubTaskInterval("s2")).isNotNull()
             assertThat(subTaskIsRunning("s1")).isFalse()
             assertThat(subTaskIsRunning("s2")).isTrue()
             assertThat(db.projectDao.getSubTaskById("s1")!!.durationMillis).isEqualTo(30_000L)

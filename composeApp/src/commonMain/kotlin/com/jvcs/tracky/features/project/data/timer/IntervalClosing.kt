@@ -1,6 +1,7 @@
 package com.jvcs.tracky.features.project.data.timer
 
 import com.jvcs.tracky.core.database.dao.ProjectDao
+import com.jvcs.tracky.core.database.dao.SubTaskIntervalDao
 import com.jvcs.tracky.core.database.dao.TaskIntervalDao
 import com.jvcs.tracky.core.database.entity.SubTaskIntervalEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
@@ -36,17 +37,18 @@ internal suspend fun TaskIntervalDao.closeTaskInterval(
 }
 
 /** The same for a subtask interval, likewise returning the row it closed. */
-internal suspend fun ProjectDao.closeSubTaskInterval(
+internal suspend fun SubTaskIntervalDao.closeSubTaskInterval(
     interval: SubTaskIntervalEntity,
     now: Instant,
+    subTaskDao: ProjectDao,
 ): SubTaskIntervalEntity {
     val duration = interval.elapsedAt(now)
     val closed =
         interval.copy(endDateTimeEpochMs = now.toEpochMilliseconds(), durationMillis = duration)
 
     upsertSubTaskInterval(closed)
-    addSubTaskDuration(interval.parentSubTaskId, duration)
-    updateSubTaskTimerStatus(interval.parentSubTaskId, false)
+    subTaskDao.addSubTaskDuration(interval.parentSubTaskId, duration)
+    subTaskDao.updateSubTaskTimerStatus(interval.parentSubTaskId, false)
     return closed
 }
 

@@ -170,7 +170,7 @@ class ServerTreeWriter(private val database: TrackyDatabase) {
             // Two cascading parents, so two ways to dangle.
             if (database.projectDao.getSubTaskById(incoming.parentSubTaskId) == null) return@forEach
             if (database.taskIntervalDao.getIntervalById(incoming.parentTaskIntervalId) == null) return@forEach
-            val local = database.projectDao.getSubTaskIntervalById(incoming.subTaskIntervalId)
+            val local = database.subTaskIntervalDao.getSubTaskIntervalById(incoming.subTaskIntervalId)
             val serverWins =
                 local == null ||
                     serverWinsOnPullForInterval(
@@ -184,7 +184,7 @@ class ServerTreeWriter(private val database: TrackyDatabase) {
                 // has never seen gets false, which is what it should have. startedByDeviceId does
                 // travel, so the incoming value wins and only falls back to the local one for a
                 // row the server still has null for.
-                database.projectDao.upsertSubTaskInterval(
+                database.subTaskIntervalDao.upsertSubTaskInterval(
                     incoming.copy(
                         startedParentTimer = local?.startedParentTimer ?: false,
                         startedByDeviceId = incoming.startedByDeviceId ?: local?.startedByDeviceId,
@@ -201,6 +201,12 @@ class ServerTreeWriter(private val database: TrackyDatabase) {
         deletions.taskIds.forEach { if (it !in pending) database.projectDao.deleteProjectTask(it) }
         deletions.intervalIds.forEach { if (it !in pending) database.taskIntervalDao.deleteTaskInterval(it) }
         deletions.subTaskIds.forEach { if (it !in pending) database.projectDao.deleteProjectSubTask(it) }
-        deletions.subTaskIntervalIds.forEach { if (it !in pending) database.projectDao.deleteSubTaskInterval(it) }
+        deletions.subTaskIntervalIds.forEach {
+            if (it !in
+                pending
+            ) {
+                database.subTaskIntervalDao.deleteSubTaskInterval(it)
+            }
+        }
     }
 }

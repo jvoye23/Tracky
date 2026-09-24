@@ -47,7 +47,13 @@ internal class OfflineFirstRunningTimerRepositoryTest {
                 .setDriver(BundledSQLiteDriver())
                 .setQueryCoroutineContext(Dispatchers.IO)
                 .build()
-        repository = OfflineFirstRunningTimerRepository(db.projectDao, db.taskIntervalDao, FakeDeviceIdProvider())
+        repository =
+            OfflineFirstRunningTimerRepository(
+                db.projectDao,
+                db.subTaskIntervalDao,
+                db.taskIntervalDao,
+                FakeDeviceIdProvider(),
+            )
     }
 
     @AfterTest
@@ -119,7 +125,7 @@ internal class OfflineFirstRunningTimerRepositoryTest {
                 updatedAtEpochMs = null,
             ),
         )
-        db.projectDao.upsertSubTaskInterval(
+        db.subTaskIntervalDao.upsertSubTaskInterval(
             SubTaskIntervalEntity(
                 subTaskIntervalId = "si1",
                 parentSubTaskId = "s1",
@@ -148,7 +154,7 @@ internal class OfflineFirstRunningTimerRepositoryTest {
     }
 
     private suspend fun closedSubTaskInterval(id: String, millis: Long) {
-        db.projectDao.upsertSubTaskInterval(
+        db.subTaskIntervalDao.upsertSubTaskInterval(
             SubTaskIntervalEntity(
                 subTaskIntervalId = id,
                 parentSubTaskId = "s1",

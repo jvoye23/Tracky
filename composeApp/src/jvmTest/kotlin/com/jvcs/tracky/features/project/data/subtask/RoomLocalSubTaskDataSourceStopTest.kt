@@ -51,6 +51,7 @@ internal class RoomLocalSubTaskDataSourceStopTest {
         subTasks =
             RoomLocalSubTaskDataSource(
                 db.projectDao,
+                db.subTaskIntervalDao,
                 db.taskIntervalDao,
                 db.strandedIntervalDao,
                 FakeDeviceIdProvider(),
@@ -59,6 +60,7 @@ internal class RoomLocalSubTaskDataSourceStopTest {
         tasks =
             RoomLocalTaskDataSource(
                 db.projectDao,
+                db.subTaskIntervalDao,
                 db.taskIntervalDao,
                 FakeDeviceIdProvider(),
                 testServerClock(timeProvider),
@@ -135,7 +137,7 @@ internal class RoomLocalSubTaskDataSourceStopTest {
             val result = subTasks.stopSubTask("s1")
 
             assertThat(result is Result.Success).isTrue()
-            assertThat(db.projectDao.getOpenSubTaskInterval("s1")).isNull()
+            assertThat(db.subTaskIntervalDao.getOpenSubTaskInterval("s1")).isNull()
             assertThat(db.taskIntervalDao.getOpenIntervalBySessionId("t1")).isNull()
             assertThat(subTaskIsRunning("s1")).isFalse()
             assertThat(taskIsRunning()).isFalse()
@@ -156,7 +158,7 @@ internal class RoomLocalSubTaskDataSourceStopTest {
 
             subTasks.stopSubTask("s1")
 
-            assertThat(db.projectDao.getOpenSubTaskInterval("s1")).isNull()
+            assertThat(db.subTaskIntervalDao.getOpenSubTaskInterval("s1")).isNull()
             // The task timer was not this subtask's to stop.
             assertThat(db.taskIntervalDao.getOpenIntervalBySessionId("t1")).isNotNull()
             assertThat(taskIsRunning()).isTrue()
@@ -199,7 +201,7 @@ internal class RoomLocalSubTaskDataSourceStopTest {
             tasks.stopTask("t1")
 
             // Neither may be left open — and both are banked at the same instant.
-            assertThat(db.projectDao.getOpenSubTaskInterval("s1")).isNull()
+            assertThat(db.subTaskIntervalDao.getOpenSubTaskInterval("s1")).isNull()
             assertThat(db.taskIntervalDao.getOpenIntervalBySessionId("t1")).isNull()
             assertThat(subTaskIsRunning("s1")).isFalse()
             assertThat(taskIsRunning()).isFalse()

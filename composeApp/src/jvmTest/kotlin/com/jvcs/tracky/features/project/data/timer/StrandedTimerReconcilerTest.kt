@@ -53,6 +53,7 @@ internal class StrandedTimerReconcilerTest {
         reconciler =
             StrandedTimerReconciler(
                 db.projectDao,
+                db.subTaskIntervalDao,
                 db.taskIntervalDao,
                 db.strandedIntervalDao,
                 testServerClock(timeProvider),
@@ -140,7 +141,7 @@ internal class StrandedTimerReconcilerTest {
         parentTaskIntervalId: String = "i1",
         startedByDeviceId: String? = FakeDeviceIdProvider.THIS_DEVICE,
     ) {
-        db.projectDao.upsertSubTaskInterval(
+        db.subTaskIntervalDao.upsertSubTaskInterval(
             SubTaskIntervalEntity(
                 subTaskIntervalId = id,
                 parentSubTaskId = "s1",
@@ -249,7 +250,7 @@ internal class StrandedTimerReconcilerTest {
         runBlocking {
             seed(withSubTask = true)
             openTaskInterval()
-            db.projectDao.upsertSubTaskInterval(
+            db.subTaskIntervalDao.upsertSubTaskInterval(
                 SubTaskIntervalEntity(
                     subTaskIntervalId = "si1",
                     parentSubTaskId = "s1",

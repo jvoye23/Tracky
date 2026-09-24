@@ -3,6 +3,7 @@ package com.jvcs.tracky.features.project.data.task
 import androidx.sqlite.SQLiteException
 import co.touchlab.kermit.Logger
 import com.jvcs.tracky.core.database.dao.ProjectDao
+import com.jvcs.tracky.core.database.dao.SubTaskIntervalDao
 import com.jvcs.tracky.core.database.dao.TaskIntervalDao
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 import com.jvcs.tracky.core.domain.device.DeviceIdProvider
@@ -30,6 +31,7 @@ import kotlin.uuid.Uuid
 
 class RoomLocalTaskDataSource(
     private val projectDao: ProjectDao,
+    private val subTaskIntervalDao: SubTaskIntervalDao,
     private val taskIntervalDao: TaskIntervalDao,
     private val deviceIdProvider: DeviceIdProvider,
     /**
@@ -150,9 +152,9 @@ class RoomLocalTaskDataSource(
                             // A subtask cannot outlive the interval it sits in: leaving it open would strand
                             // a running subtask inside a closed task interval, which the foreign key permits
                             // but nothing could ever reconcile. It closes at the same instant the task does.
-                            projectDao
+                            subTaskIntervalDao
                                 .getOpenSubTaskIntervalForTask(taskId)
-                                ?.let { projectDao.closeSubTaskInterval(it, now) }
+                                ?.let { subTaskIntervalDao.closeSubTaskInterval(it, now, projectDao) }
 
                             taskIntervalDao.closeTaskInterval(openInterval, now, projectDao)
                         } else {

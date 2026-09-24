@@ -418,14 +418,14 @@ class ServerTreeWriterPullMergeTest {
             )
 
             // The last thing a fresh install could not recover.
-            assertThat(dao.getSubTaskIntervalById("si1")?.durationMillis).isEqualTo(600L)
+            assertThat(db.subTaskIntervalDao.getSubTaskIntervalById("si1")?.durationMillis).isEqualTo(600L)
         }
 
     @Test
     fun preservesTheLocalStartedParentTimerFlagAcrossAPull() =
         runBlocking {
             seedSubTask()
-            dao.upsertSubTaskInterval(
+            db.subTaskIntervalDao.upsertSubTaskInterval(
                 subTaskIntervalEntity("si1", "s1", "ti1", end = 600, startedParentTimer = true),
             )
 
@@ -439,15 +439,15 @@ class ServerTreeWriterPullMergeTest {
             )
 
             // Losing this would break "stopping this subtask also stops its parent task".
-            assertThat(dao.getSubTaskIntervalById("si1")?.startedParentTimer).isEqualTo(true)
-            assertThat(dao.getSubTaskIntervalById("si1")?.endDateTimeEpochMs).isEqualTo(900L)
+            assertThat(db.subTaskIntervalDao.getSubTaskIntervalById("si1")?.startedParentTimer).isEqualTo(true)
+            assertThat(db.subTaskIntervalDao.getSubTaskIntervalById("si1")?.endDateTimeEpochMs).isEqualTo(900L)
         }
 
     @Test
     fun closesASubTaskIntervalTheServerSaysWasStoppedElsewhere() =
         runBlocking {
             seedSubTask()
-            dao.upsertSubTaskInterval(subTaskIntervalEntity("si1", "s1", "ti1", end = null))
+            db.subTaskIntervalDao.upsertSubTaskInterval(subTaskIntervalEntity("si1", "s1", "ti1", end = null))
 
             writer.upsertServerTree(
                 projects = emptyList(),
@@ -457,14 +457,14 @@ class ServerTreeWriterPullMergeTest {
                 subTaskIntervals = listOf(subTaskIntervalEntity("si1", "s1", "ti1", end = 60_000)),
             )
 
-            assertThat(dao.getSubTaskIntervalById("si1")?.endDateTimeEpochMs).isEqualTo(60_000L)
+            assertThat(db.subTaskIntervalDao.getSubTaskIntervalById("si1")?.endDateTimeEpochMs).isEqualTo(60_000L)
         }
 
     @Test
     fun doesNotCloseASubTaskIntervalWhoseOwnChangeIsStillQueued() =
         runBlocking {
             seedSubTask()
-            dao.upsertSubTaskInterval(subTaskIntervalEntity("si1", "s1", "ti1", end = null))
+            db.subTaskIntervalDao.upsertSubTaskInterval(subTaskIntervalEntity("si1", "s1", "ti1", end = null))
             queuePush("si1", entityType = "sub_task_interval")
 
             writer.upsertServerTree(
@@ -475,14 +475,14 @@ class ServerTreeWriterPullMergeTest {
                 subTaskIntervals = listOf(subTaskIntervalEntity("si1", "s1", "ti1", end = 60_000)),
             )
 
-            assertThat(dao.getSubTaskIntervalById("si1")?.endDateTimeEpochMs).isNull()
+            assertThat(db.subTaskIntervalDao.getSubTaskIntervalById("si1")?.endDateTimeEpochMs).isNull()
         }
 
     @Test
     fun aQueuedTaskIntervalDoesNotShieldAnUnrelatedSubTaskInterval() =
         runBlocking {
             seedSubTask()
-            dao.upsertSubTaskInterval(subTaskIntervalEntity("si1", "s1", "ti1", end = null))
+            db.subTaskIntervalDao.upsertSubTaskInterval(subTaskIntervalEntity("si1", "s1", "ti1", end = null))
             // Same id space, different level: the guard is per id, and these must not collide.
             queuePush("unrelated")
 
@@ -494,7 +494,7 @@ class ServerTreeWriterPullMergeTest {
                 subTaskIntervals = listOf(subTaskIntervalEntity("si1", "s1", "ti1", end = 60_000)),
             )
 
-            assertThat(dao.getSubTaskIntervalById("si1")?.endDateTimeEpochMs).isEqualTo(60_000L)
+            assertThat(db.subTaskIntervalDao.getSubTaskIntervalById("si1")?.endDateTimeEpochMs).isEqualTo(60_000L)
         }
 
     @Test
@@ -516,16 +516,16 @@ class ServerTreeWriterPullMergeTest {
             )
 
             // Either dangling reference would throw inside the transaction and lose the whole pull.
-            assertThat(dao.getSubTaskIntervalById("no-subtask")).isNull()
-            assertThat(dao.getSubTaskIntervalById("no-interval")).isNull()
-            assertThat(dao.getSubTaskIntervalById("fine")).isNotNull()
+            assertThat(db.subTaskIntervalDao.getSubTaskIntervalById("no-subtask")).isNull()
+            assertThat(db.subTaskIntervalDao.getSubTaskIntervalById("no-interval")).isNull()
+            assertThat(db.subTaskIntervalDao.getSubTaskIntervalById("fine")).isNotNull()
         }
 
     @Test
     fun neverDeletesALocalOnlySubTaskInterval() =
         runBlocking<Unit> {
             seedSubTask()
-            dao.upsertSubTaskInterval(subTaskIntervalEntity("local-only", "s1", "ti1", end = 1))
+            db.subTaskIntervalDao.upsertSubTaskInterval(subTaskIntervalEntity("local-only", "s1", "ti1", end = 1))
 
             writer.upsertServerTree(
                 projects = emptyList(),
@@ -535,6 +535,6 @@ class ServerTreeWriterPullMergeTest {
                 subTaskIntervals = emptyList(),
             )
 
-            assertThat(dao.getSubTaskIntervalById("local-only")).isNotNull()
+            assertThat(db.subTaskIntervalDao.getSubTaskIntervalById("local-only")).isNotNull()
         }
 }

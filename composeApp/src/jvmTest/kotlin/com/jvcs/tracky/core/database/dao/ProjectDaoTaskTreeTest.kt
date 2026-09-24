@@ -122,7 +122,7 @@ class ProjectDaoTaskTreeTest {
                 ),
             )
         }
-        dao.upsertSubTaskInterval(
+        db.subTaskIntervalDao.upsertSubTaskInterval(
             SubTaskIntervalEntity(
                 subTaskIntervalId = "si1",
                 parentSubTaskId = "s1",

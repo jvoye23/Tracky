@@ -2,6 +2,7 @@ package com.jvcs.tracky.features.project.data.timer
 
 import com.jvcs.tracky.core.database.dao.ProjectDao
 import com.jvcs.tracky.core.database.dao.StrandedIntervalDao
+import com.jvcs.tracky.core.database.dao.SubTaskIntervalDao
 import com.jvcs.tracky.core.database.dao.TaskIntervalDao
 import com.jvcs.tracky.core.database.entity.StrandedIntervalEntity
 import com.jvcs.tracky.core.domain.device.DeviceIdProvider
@@ -35,6 +36,7 @@ import kotlinx.coroutines.launch
  */
 class StrandedTimerReconciler(
     private val projectDao: ProjectDao,
+    private val subTaskIntervalDao: SubTaskIntervalDao,
     private val taskIntervalDao: TaskIntervalDao,
     private val strandedIntervalDao: StrandedIntervalDao,
     /**
@@ -75,7 +77,7 @@ class StrandedTimerReconciler(
         val deviceId = deviceIdProvider.deviceId()
 
         // Children first, so a subtask interval is never left counted under a parked parent.
-        projectDao.getAllOpenSubTaskIntervalsForDevice(deviceId).forEach { interval ->
+        subTaskIntervalDao.getAllOpenSubTaskIntervalsForDevice(deviceId).forEach { interval ->
             park(interval.subTaskIntervalId, isSubTaskInterval = true, detectedAt)
             projectDao.updateSubTaskTimerStatus(interval.parentSubTaskId, false)
         }

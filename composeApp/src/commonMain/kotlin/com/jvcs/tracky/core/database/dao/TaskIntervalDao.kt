@@ -32,7 +32,7 @@ interface TaskIntervalDao {
     )
     suspend fun getOpenIntervalBySessionId(sessionId: String): TaskIntervalEntity?
 
-    // The running timer's two inputs (this and its subtask twin, observeOpenSubTaskInterval),
+    // The running timer's two inputs (this and SubTaskIntervalDao.observeOpenSubTaskInterval),
     // mirroring the reconciler's pair below but filtered the other way: parked rows are open and
     // timing nothing, so they must never look like a running timer. Global rather than per-task -
     // only one timer runs at a time - and newest-first for the same reason getOpenIntervalBySessionId
