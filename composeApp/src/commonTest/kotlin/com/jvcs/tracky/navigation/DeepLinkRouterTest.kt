@@ -1,8 +1,9 @@
 package com.jvcs.tracky.navigation
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
 
 class DeepLinkRouterTest {
 
@@ -19,7 +20,7 @@ class DeepLinkRouterTest {
         var received: Route? = null
         router.listener = { received = it }
 
-        assertEquals(detail("p1"), received)
+        assertThat(received).isEqualTo(detail("p1"))
     }
 
     @Test
@@ -29,7 +30,7 @@ class DeepLinkRouterTest {
 
         router.request(detail("p1"))
 
-        assertEquals(detail("p1"), received)
+        assertThat(received).isEqualTo(detail("p1"))
     }
 
     @Test
@@ -40,7 +41,7 @@ class DeepLinkRouterTest {
         var received: Route? = null
         router.listener = { received = it }
 
-        assertEquals(detail("p2"), received)
+        assertThat(received).isEqualTo(detail("p2"))
     }
 
     @Test
@@ -54,6 +55,6 @@ class DeepLinkRouterTest {
         var received: Route? = null
         router.listener = { received = it }
 
-        assertNull(received)
+        assertThat(received).isNull()
     }
 }

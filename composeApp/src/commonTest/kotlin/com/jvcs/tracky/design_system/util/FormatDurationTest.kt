@@ -1,7 +1,8 @@
 package com.jvcs.tracky.design_system.util
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
 import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.milliseconds
@@ -14,38 +15,38 @@ class FormatDurationTest {
     fun aDurationReadsAsWholeSeconds() {
         // The notification cannot redraw a hundred times a second, and the two clocks have to
         // show the same characters, so the app reads in seconds too.
-        assertEquals("02:16:09", formatDuration(2.hours + 16.minutes + 9.seconds))
+        assertThat(formatDuration(2.hours + 16.minutes + 9.seconds)).isEqualTo("02:16:09")
     }
 
     @Test
     fun secondsAreTruncatedNeverRounded() {
         // Rounding up would claim time that was never tracked.
-        assertEquals("00:00:00", formatDuration(999.milliseconds))
-        assertEquals("00:00:59", formatDuration(59.seconds + 999.milliseconds))
+        assertThat(formatDuration(999.milliseconds)).isEqualTo("00:00:00")
+        assertThat(formatDuration(59.seconds + 999.milliseconds)).isEqualTo("00:00:59")
     }
 
     @Test
     fun hoursAreNotWrappedAtADay() {
-        assertEquals("75:21:00", formatDuration(75.hours + 21.minutes))
+        assertThat(formatDuration(75.hours + 21.minutes)).isEqualTo("75:21:00")
     }
 
     @Test
     fun aFormattedDurationParsesBackToItself() {
         val duration = 2.hours + 16.minutes + 9.seconds
 
-        assertEquals(duration, parseDuration(formatDuration(duration)))
+        assertThat(parseDuration(formatDuration(duration))).isEqualTo(duration)
     }
 
     @Test
     fun theOldCentisecondFormatStillParses() {
         // Strings written by an earlier build, and anything still rendering four segments.
-        assertEquals(2.hours + 16.minutes + 9.seconds + 430.milliseconds, parseDuration("02:16:09:43"))
+        assertThat(parseDuration("02:16:09:43")).isEqualTo(2.hours + 16.minutes + 9.seconds + 430.milliseconds)
     }
 
     @Test
     fun anUnparseableStringIsZeroRatherThanACrash() {
-        assertEquals(Duration.ZERO, parseDuration("not a duration"))
-        assertEquals(Duration.ZERO, parseDuration(""))
+        assertThat(parseDuration("not a duration")).isEqualTo(Duration.ZERO)
+        assertThat(parseDuration("")).isEqualTo(Duration.ZERO)
     }
 
     @Test
@@ -53,9 +54,9 @@ class FormatDurationTest {
         // Unlike the strings above, these survive the segment count check and reach the parsing,
         // so they pin the guards themselves. The same damage has to give the same answer
         // wherever it sits - the fourth segment included.
-        assertEquals(Duration.ZERO, parseDuration("aa:16:09"))
-        assertEquals(Duration.ZERO, parseDuration("02:bb:09"))
-        assertEquals(Duration.ZERO, parseDuration("02:16:cc"))
-        assertEquals(Duration.ZERO, parseDuration("02:16:09:dd"))
+        assertThat(parseDuration("aa:16:09")).isEqualTo(Duration.ZERO)
+        assertThat(parseDuration("02:bb:09")).isEqualTo(Duration.ZERO)
+        assertThat(parseDuration("02:16:cc")).isEqualTo(Duration.ZERO)
+        assertThat(parseDuration("02:16:09:dd")).isEqualTo(Duration.ZERO)
     }
 }

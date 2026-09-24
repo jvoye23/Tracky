@@ -1,5 +1,9 @@
 package com.jvcs.tracky.core.domain.util
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.domain.sync.SyncRecency
 import com.jvcs.tracky.features.project.domain.timer.ProjectRef
 import com.jvcs.tracky.features.project.domain.timer.RunningTimer
@@ -10,9 +14,6 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.yield
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
@@ -60,7 +61,7 @@ internal class TimeManagerTest {
             val timeManager = timeManager()
             settle()
 
-            assertEquals(emptyMap(), timeManager.taskStates.value)
+            assertThat(timeManager.taskStates.value).isEqualTo(emptyMap())
         }
 
     @Test
@@ -70,12 +71,12 @@ internal class TimeManagerTest {
             val timeManager = timeManager()
             settle()
 
-            assertEquals(setOf("t1"), timeManager.taskStates.value.keys)
-            assertTrue(
+            assertThat(timeManager.taskStates.value.keys).isEqualTo(setOf("t1"))
+            assertThat(
                 timeManager.taskStates.value
                     .getValue("t1")
                     .isRunning,
-            )
+            ).isTrue()
         }
 
     @Test
@@ -86,7 +87,7 @@ internal class TimeManagerTest {
             val timeManager = timeManager()
             settle()
 
-            assertEquals(setOf("s1"), timeManager.taskStates.value.keys)
+            assertThat(timeManager.taskStates.value.keys).isEqualTo(setOf("s1"))
         }
 
     @Test
@@ -98,18 +99,16 @@ internal class TimeManagerTest {
             settle()
 
             // The notification derives its number the same way, from the same row.
-            assertEquals(
-                3.minutes + 30.seconds,
+            assertThat(
                 timeManager.taskStates.value
                     .getValue("t1")
                     .totalDuration,
-            )
-            assertEquals(
-                "00:03:30",
+            ).isEqualTo(3.minutes + 30.seconds)
+            assertThat(
                 timeManager.taskStates.value
                     .getValue("t1")
                     .formattedTime,
-            )
+            ).isEqualTo("00:03:30")
         }
 
     @Test
@@ -119,12 +118,12 @@ internal class TimeManagerTest {
             running.startTimer(taskTimer)
             val timeManager = timeManager()
             settle()
-            assertTrue(timeManager.taskStates.value.isNotEmpty())
+            assertThat(timeManager.taskStates.value.isNotEmpty()).isTrue()
 
             running.stopTimer()
             settle()
 
-            assertEquals(emptyMap(), timeManager.taskStates.value)
+            assertThat(timeManager.taskStates.value).isEqualTo(emptyMap())
 
             // Reading straight after the row clears only proves the map went empty - the null wins
             // that read even if the old ticker is still looping. Advancing past several tick
@@ -132,7 +131,7 @@ internal class TimeManagerTest {
             advanceTimeBy(5_000)
             settle()
 
-            assertEquals(emptyMap(), timeManager.taskStates.value)
+            assertThat(timeManager.taskStates.value).isEqualTo(emptyMap())
         }
 
     @Test
@@ -141,23 +140,21 @@ internal class TimeManagerTest {
             running.startTimer(taskTimer)
             val timeManager = timeManager()
             settle()
-            assertEquals(
-                "00:02:00",
+            assertThat(
                 timeManager.taskStates.value
                     .getValue("t1")
                     .formattedTime,
-            )
+            ).isEqualTo("00:02:00")
 
             timeProvider.now = Instant.fromEpochMilliseconds(1_000)
             advanceTimeBy(1_001)
             settle()
 
-            assertEquals(
-                "00:02:01",
+            assertThat(
                 timeManager.taskStates.value
                     .getValue("t1")
                     .formattedTime,
-            )
+            ).isEqualTo("00:02:01")
         }
 
     @Test
@@ -177,9 +174,9 @@ internal class TimeManagerTest {
             settle()
 
             val tick = timeManager.tick.value!!
-            assertTrue(tick.isStale)
+            assertThat(tick.isStale).isTrue()
             // Frozen at what it read when the server was last heard from, not at "now".
-            assertEquals(2.minutes, tick.elapsed)
+            assertThat(tick.elapsed).isEqualTo(2.minutes)
         }
 
     @Test
@@ -196,8 +193,8 @@ internal class TimeManagerTest {
             settle()
 
             val tick = timeManager.tick.value!!
-            assertFalse(tick.isStale)
-            assertEquals(7.minutes, tick.elapsed)
+            assertThat(tick.isStale).isFalse()
+            assertThat(tick.elapsed).isEqualTo(7.minutes)
         }
 
     @Test
@@ -215,8 +212,8 @@ internal class TimeManagerTest {
             settle()
 
             val tick = timeManager.tick.value!!
-            assertFalse(tick.isStale)
-            assertEquals(62.minutes, tick.elapsed)
+            assertThat(tick.isStale).isFalse()
+            assertThat(tick.elapsed).isEqualTo(62.minutes)
         }
 
     @Test
@@ -232,6 +229,6 @@ internal class TimeManagerTest {
             advanceTimeBy(60.minutes.inWholeMilliseconds + 1)
             settle()
 
-            assertFalse(timeManager.tick.value!!.isStale)
+            assertThat(timeManager.tick.value!!.isStale).isFalse()
         }
 }

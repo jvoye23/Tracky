@@ -2,14 +2,15 @@
 
 package com.jvcs.tracky.core.domain.sync
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -38,7 +39,7 @@ internal class SyncPullCoordinatorTest {
             advanceTimeBy(1.seconds)
             advanceUntilIdle()
 
-            assertEquals(1, remote.calls)
+            assertThat(remote.calls).isEqualTo(1)
         }
 
     @Test
@@ -53,7 +54,7 @@ internal class SyncPullCoordinatorTest {
             advanceTimeBy(1.seconds)
             advanceUntilIdle()
 
-            assertEquals(2, remote.calls)
+            assertThat(remote.calls).isEqualTo(2)
         }
 
     /** Two callers asking at once must not have their pulls interleave. */
@@ -69,8 +70,8 @@ internal class SyncPullCoordinatorTest {
             advanceUntilIdle()
 
             // Both ran — nothing was dropped — and the feed was never asked by two callers at once.
-            assertEquals(2, remote.calls)
-            assertTrue(remote.maxConcurrent <= 1, "two pulls overlapped: ${remote.maxConcurrent}")
+            assertThat(remote.calls).isEqualTo(2)
+            assertThat(remote.maxConcurrent <= 1, name = "two pulls overlapped: ${remote.maxConcurrent}").isTrue()
         }
 
     @Test
@@ -83,7 +84,7 @@ internal class SyncPullCoordinatorTest {
             advanceTimeBy(1.seconds)
             advanceUntilIdle()
 
-            assertTrue(remote.maxConcurrent <= 1, "two pulls overlapped: ${remote.maxConcurrent}")
+            assertThat(remote.maxConcurrent <= 1, name = "two pulls overlapped: ${remote.maxConcurrent}").isTrue()
         }
 
     /** Nothing asked, nothing pulled: the coordinator is not itself a clock. */
@@ -95,6 +96,6 @@ internal class SyncPullCoordinatorTest {
             advanceTimeBy(10.seconds)
             advanceUntilIdle()
 
-            assertEquals(0, remote.calls)
+            assertThat(remote.calls).isEqualTo(0)
         }
 }

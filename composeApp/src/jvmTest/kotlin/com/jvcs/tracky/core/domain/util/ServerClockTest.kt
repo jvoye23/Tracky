@@ -1,8 +1,9 @@
 package com.jvcs.tracky.core.domain.util
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
@@ -16,7 +17,7 @@ internal class ServerClockTest {
         runTest {
             val clock = ServerClock(timeProvider, FakeServerClockOffsetStore())
 
-            assertEquals(deviceNow, clock.now())
+            assertThat(clock.now()).isEqualTo(deviceNow)
         }
 
     @Test
@@ -27,7 +28,7 @@ internal class ServerClockTest {
             // The device is 40 seconds behind the server.
             clock.observe(serverNow = deviceNow + 40.seconds, receivedAt = deviceNow)
 
-            assertEquals(deviceNow + 40.seconds, clock.now())
+            assertThat(clock.now()).isEqualTo(deviceNow + 40.seconds)
         }
 
     @Test
@@ -37,7 +38,7 @@ internal class ServerClockTest {
 
             clock.observe(serverNow = deviceNow - 25.seconds, receivedAt = deviceNow)
 
-            assertEquals(deviceNow - 25.seconds, clock.now())
+            assertThat(clock.now()).isEqualTo(deviceNow - 25.seconds)
         }
 
     @Test
@@ -46,7 +47,7 @@ internal class ServerClockTest {
             val store = FakeServerClockOffsetStore()
             ServerClock(timeProvider, store).observe(deviceNow + 40.seconds, deviceNow)
 
-            assertEquals(40_000L, store.offsetMillis())
+            assertThat(store.offsetMillis()).isEqualTo(40_000L)
         }
 
     @Test
@@ -56,7 +57,7 @@ internal class ServerClockTest {
             // a far better guess than assuming zero — and it works with no network at all.
             val clock = ServerClock(timeProvider, FakeServerClockOffsetStore(millis = 40_000))
 
-            assertEquals(deviceNow + 40.seconds, clock.now())
+            assertThat(clock.now()).isEqualTo(deviceNow + 40.seconds)
         }
 
     @Test
@@ -68,7 +69,7 @@ internal class ServerClockTest {
 
             // Not averaged: the newest sample is the best estimate of the current skew, and a user
             // who has just fixed their clock should not be corrected towards the old error.
-            assertEquals(deviceNow + 5.seconds, clock.now())
+            assertThat(clock.now()).isEqualTo(deviceNow + 5.seconds)
         }
 
     @Test
@@ -79,6 +80,6 @@ internal class ServerClockTest {
             timeProvider.now = deviceNow + 10.seconds
 
             // The offset is a constant correction, not a frozen timestamp; the timer still ticks.
-            assertEquals(deviceNow + 50.seconds, clock.now())
+            assertThat(clock.now()).isEqualTo(deviceNow + 50.seconds)
         }
 }

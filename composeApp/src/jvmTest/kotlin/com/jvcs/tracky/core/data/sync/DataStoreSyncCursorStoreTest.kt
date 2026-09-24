@@ -1,19 +1,20 @@
 package com.jvcs.tracky.core.data.sync
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
 import com.jvcs.tracky.core.data.createTestDataStore
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
 
 internal class DataStoreSyncCursorStoreTest {
 
     @Test
     fun aDeviceThatHasNeverPulledHasNoCursor() =
         runTest {
-            assertNull(DataStoreSyncCursorStore(createTestDataStore()).cursor())
+            assertThat(DataStoreSyncCursorStore(createTestDataStore()).cursor()).isNull()
         }
 
     @Test
@@ -23,7 +24,7 @@ internal class DataStoreSyncCursorStoreTest {
 
             store.setCursor(84_213)
 
-            assertEquals(84_213L, store.cursor())
+            assertThat(store.cursor()).isEqualTo(84_213L)
         }
 
     @Test
@@ -34,7 +35,7 @@ internal class DataStoreSyncCursorStoreTest {
 
             // No in-memory cache to fall back on, so this is what survives a process restart. A
             // cursor that reset on launch would make every cold start a full resync.
-            assertEquals(84_213L, DataStoreSyncCursorStore(dataStore).cursor())
+            assertThat(DataStoreSyncCursorStore(dataStore).cursor()).isEqualTo(84_213L)
         }
 
     @Test
@@ -47,7 +48,7 @@ internal class DataStoreSyncCursorStoreTest {
 
             // Two pulls racing: the slower one holds an older cursor, and letting it rewind would
             // replay a change set that already landed.
-            assertEquals(84_213L, store.cursor())
+            assertThat(store.cursor()).isEqualTo(84_213L)
         }
 
     @Test
@@ -57,7 +58,7 @@ internal class DataStoreSyncCursorStoreTest {
 
             (1..16).map { async { store.setCursor(it.toLong()) } }.awaitAll()
 
-            assertEquals(16L, store.cursor())
+            assertThat(store.cursor()).isEqualTo(16L)
         }
 
     @Test
@@ -70,7 +71,7 @@ internal class DataStoreSyncCursorStoreTest {
 
             // Logout. The next account has its own feed, and a stale cursor would skip everything
             // below that sequence number.
-            assertNull(store.cursor())
+            assertThat(store.cursor()).isNull()
         }
 
     @Test
@@ -84,6 +85,6 @@ internal class DataStoreSyncCursorStoreTest {
 
             // The no-going-backwards guard must not outlive the cursor it was guarding, or the next
             // account could never sync at all.
-            assertEquals(7L, store.cursor())
+            assertThat(store.cursor()).isEqualTo(7L)
         }
 }

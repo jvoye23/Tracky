@@ -1,12 +1,13 @@
 package com.jvcs.tracky.core.data.device
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.data.createTestDataStore
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import kotlin.uuid.Uuid
 
 internal class DataStoreDeviceIdProviderTest {
@@ -19,7 +20,7 @@ internal class DataStoreDeviceIdProviderTest {
             val id = provider.deviceId()
 
             // Parses as a UUID, which is what the backend's `deviceId` validation expects.
-            assertEquals(id, Uuid.parse(id).toString())
+            assertThat(Uuid.parse(id).toString()).isEqualTo(id)
         }
 
     @Test
@@ -27,7 +28,7 @@ internal class DataStoreDeviceIdProviderTest {
         runTest {
             val provider = DataStoreDeviceIdProvider(createTestDataStore())
 
-            assertEquals(provider.deviceId(), provider.deviceId())
+            assertThat(provider.deviceId()).isEqualTo(provider.deviceId())
         }
 
     @Test
@@ -38,7 +39,7 @@ internal class DataStoreDeviceIdProviderTest {
 
             // A second provider has an empty cache, so the only way it can agree is by reading the
             // persisted value — which is what survives a process restart.
-            assertEquals(first, DataStoreDeviceIdProvider(store).deviceId())
+            assertThat(DataStoreDeviceIdProvider(store).deviceId()).isEqualTo(first)
         }
 
     @Test
@@ -47,7 +48,7 @@ internal class DataStoreDeviceIdProviderTest {
             val one = DataStoreDeviceIdProvider(createTestDataStore()).deviceId()
             val other = DataStoreDeviceIdProvider(createTestDataStore()).deviceId()
 
-            assertTrue(one != other)
+            assertThat(one != other).isTrue()
         }
 
     @Test
@@ -59,7 +60,7 @@ internal class DataStoreDeviceIdProviderTest {
 
             // A mint that raced would hand different callers different ids and persist only one of
             // them, leaving intervals stamped with an id no later launch recognises as its own.
-            assertEquals(1, ids.toSet().size)
+            assertThat(ids.toSet().size).isEqualTo(1)
         }
 
     @Test
@@ -71,6 +72,6 @@ internal class DataStoreDeviceIdProviderTest {
             // `edit` can prevent.
             val ids = (1..8).map { async { DataStoreDeviceIdProvider(store).deviceId() } }.awaitAll()
 
-            assertEquals(1, ids.toSet().size)
+            assertThat(ids.toSet().size).isEqualTo(1)
         }
 }

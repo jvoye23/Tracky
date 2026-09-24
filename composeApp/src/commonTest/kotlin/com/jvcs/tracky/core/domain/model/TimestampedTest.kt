@@ -2,13 +2,14 @@
 
 package com.jvcs.tracky.core.domain.model
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
@@ -27,7 +28,7 @@ class TimestampedTest {
     fun projectWithoutTasksRollsUpToItsOwnStamp() {
         val project = project(ownUpdatedAt = t200, projectTasks = emptyList())
 
-        assertEquals(t200, project.lastUpdatedAt)
+        assertThat(project.lastUpdatedAt).isEqualTo(t200)
     }
 
     @Test
@@ -35,7 +36,7 @@ class TimestampedTest {
         // projectTasks == null means "not loaded" (ProjectEntity.toProject), not "no tasks".
         val project = project(ownUpdatedAt = t200, projectTasks = null)
 
-        assertEquals(t200, project.lastUpdatedAt)
+        assertThat(project.lastUpdatedAt).isEqualTo(t200)
     }
 
     @Test
@@ -46,8 +47,8 @@ class TimestampedTest {
                 projectTasks = listOf(task("t1", ownUpdatedAt = t300)),
             )
 
-        assertEquals(t300, project.lastUpdatedAt)
-        assertEquals(t100, project.ownUpdatedAt) // own stamp is untouched by the roll-up
+        assertThat(project.lastUpdatedAt).isEqualTo(t300)
+        assertThat(project.ownUpdatedAt).isEqualTo(t100) // own stamp is untouched by the roll-up
     }
 
     @Test
@@ -58,7 +59,7 @@ class TimestampedTest {
                 projectTasks = listOf(task("t1", ownUpdatedAt = t100), task("t2", ownUpdatedAt = t200)),
             )
 
-        assertEquals(t300, project.lastUpdatedAt)
+        assertThat(project.lastUpdatedAt).isEqualTo(t300)
     }
 
     @Test
@@ -74,7 +75,7 @@ class TimestampedTest {
                     ),
             )
 
-        assertEquals(t300, project.lastUpdatedAt)
+        assertThat(project.lastUpdatedAt).isEqualTo(t300)
     }
 
     @Test
@@ -85,7 +86,7 @@ class TimestampedTest {
                 projectTasks = listOf(task("t1", ownUpdatedAt = null), task("t2", ownUpdatedAt = t200)),
             )
 
-        assertEquals(t200, project.lastUpdatedAt)
+        assertThat(project.lastUpdatedAt).isEqualTo(t200)
     }
 
     @Test
@@ -96,7 +97,7 @@ class TimestampedTest {
                 projectTasks = listOf(task("t1", ownUpdatedAt = null)),
             )
 
-        assertNull(project.lastUpdatedAt)
+        assertThat(project.lastUpdatedAt).isNull()
     }
 
     @Test
@@ -104,9 +105,9 @@ class TimestampedTest {
         // TaskInterval has no stamp of its own, so a task's roll-up is just the task's own stamp.
         val task = task("t1", ownUpdatedAt = t100, intervals = listOf(interval("i1"), interval("i2")))
 
-        assertNull(interval("i1").lastUpdatedAt)
-        assertEquals(t100, task.lastUpdatedAt)
-        assertEquals(t100, project(ownUpdatedAt = null, projectTasks = listOf(task)).lastUpdatedAt)
+        assertThat(interval("i1").lastUpdatedAt).isNull()
+        assertThat(task.lastUpdatedAt).isEqualTo(t100)
+        assertThat(project(ownUpdatedAt = null, projectTasks = listOf(task)).lastUpdatedAt).isEqualTo(t100)
     }
 
     @Test
@@ -121,10 +122,10 @@ class TimestampedTest {
                 subTasks = listOf(subTask("s1", ownUpdatedAt = t300)),
             )
 
-        assertEquals(t300, task.lastUpdatedAt)
-        assertEquals(t100, task.ownUpdatedAt) // own stamp is untouched by the roll-up
-        assertEquals(2, task.children.size) // the interval branch is still there
-        assertEquals(t300, project(ownUpdatedAt = null, projectTasks = listOf(task)).lastUpdatedAt)
+        assertThat(task.lastUpdatedAt).isEqualTo(t300)
+        assertThat(task.ownUpdatedAt).isEqualTo(t100) // own stamp is untouched by the roll-up
+        assertThat(task.children.size).isEqualTo(2) // the interval branch is still there
+        assertThat(project(ownUpdatedAt = null, projectTasks = listOf(task)).lastUpdatedAt).isEqualTo(t300)
     }
 
     // ---------------------------------------------------------------------------------------------

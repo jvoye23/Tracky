@@ -3,11 +3,12 @@ package com.jvcs.tracky.navigation
 import androidx.navigation3.runtime.NavKey
 import androidx.savedstate.serialization.decodeFromSavedState
 import androidx.savedstate.serialization.encodeToSavedState
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
 import com.jvcs.tracky.features.project.presentation.edit_text.EditTextTarget
 import kotlinx.serialization.PolymorphicSerializer
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 /**
  * These names are the polymorphic discriminators written into the saved back stack. Changing one
@@ -79,28 +80,28 @@ class RouteSerialNameTest {
     @Test
     fun `route serial names are stable`() {
         expectedSerialNames.forEach { (expected, actual) ->
-            assertEquals(expected, actual)
+            assertThat(actual).isEqualTo(expected)
         }
     }
 
     @Test
     fun `every route is covered by this test`() {
-        assertEquals(14, expectedSerialNames.size)
+        assertThat(expectedSerialNames.size).isEqualTo(14)
     }
 
     @Test
     fun `route serial names are unique`() {
         val actualNames = expectedSerialNames.values
-        assertEquals(actualNames.size, actualNames.toSet().size)
+        assertThat(actualNames.toSet().size).isEqualTo(actualNames.size)
     }
 
     @Test
     fun `no route serial name falls back to the fully qualified class name`() {
         expectedSerialNames.values.forEach { name ->
-            assertTrue(
-                !name.contains('.'),
-                "Serial name '$name' looks package-derived - it is missing an explicit @SerialName",
-            )
+            assertThat(
+                name.contains('.'),
+                name = "Serial name '$name' looks package-derived - it is missing an explicit @SerialName",
+            ).isFalse()
         }
     }
 
@@ -138,7 +139,7 @@ class RouteSerialNameTest {
             )
 
         // One extra entry: the edit-text route is round-tripped once per shape it is opened with.
-        assertEquals(expectedSerialNames.size + 1, routes.size)
+        assertThat(routes.size).isEqualTo(expectedSerialNames.size + 1)
 
         routes.forEach { route ->
             val encoded =
@@ -154,7 +155,7 @@ class RouteSerialNameTest {
                     configuration = routeSavedStateConfiguration,
                 )
 
-            assertEquals(route, decoded)
+            assertThat(decoded).isEqualTo(route)
         }
     }
 }

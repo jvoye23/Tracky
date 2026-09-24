@@ -1,59 +1,60 @@
 package com.jvcs.tracky.core.domain.validation
 
+import assertk.assertThat
+import assertk.assertions.isFalse
+import assertk.assertions.isTrue
 import com.jvcs.tracky.features.auth.domain.EmailValidator
 import kotlin.test.Test
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 
 class EmailValidatorTest {
 
     @Test
     fun validEmail() {
-        assertTrue(EmailValidator.validate("user@example.com"))
+        assertThat(EmailValidator.validate("user@example.com")).isTrue()
     }
 
     @Test
     fun validEmailWithSubdomain() {
-        assertTrue(EmailValidator.validate("user@mail.example.com"))
+        assertThat(EmailValidator.validate("user@mail.example.com")).isTrue()
     }
 
     @Test
     fun validEmailWithPlus() {
-        assertTrue(EmailValidator.validate("user+tag@example.com"))
+        assertThat(EmailValidator.validate("user+tag@example.com")).isTrue()
     }
 
     @Test
     fun emptyStringIsInvalid() {
-        assertFalse(EmailValidator.validate(""))
+        assertThat(EmailValidator.validate("")).isFalse()
     }
 
     @Test
     fun missingAtSymbol() {
-        assertFalse(EmailValidator.validate("userexample.com"))
+        assertThat(EmailValidator.validate("userexample.com")).isFalse()
     }
 
     @Test
     fun missingDomain() {
-        assertFalse(EmailValidator.validate("user@"))
+        assertThat(EmailValidator.validate("user@")).isFalse()
     }
 
     @Test
     fun missingTld() {
-        assertFalse(EmailValidator.validate("user@example"))
+        assertThat(EmailValidator.validate("user@example")).isFalse()
     }
 
     @Test
     fun singleCharTld() {
-        assertFalse(EmailValidator.validate("user@example.c"))
+        assertThat(EmailValidator.validate("user@example.c")).isFalse()
     }
 
     @Test
     fun missingLocalPart() {
-        assertFalse(EmailValidator.validate("@example.com"))
+        assertThat(EmailValidator.validate("@example.com")).isFalse()
     }
 
     @Test
     fun spacesInEmail() {
-        assertFalse(EmailValidator.validate("user @example.com"))
+        assertThat(EmailValidator.validate("user @example.com")).isFalse()
     }
 }

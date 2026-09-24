@@ -2,6 +2,10 @@
 
 package com.jvcs.tracky.core.domain.realtime
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.data.networking.dto.RealtimeEnvelopeParser
 import com.jvcs.tracky.core.domain.device.FakeDeviceIdProvider
 import com.jvcs.tracky.core.domain.sync.CountingRemoteSyncDataSource
@@ -18,9 +22,6 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlin.random.Random
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -70,8 +71,8 @@ internal class RealtimeTimerConnectionTest {
             connection(backgroundScope).start()
             settleConnect(this)
 
-            assertEquals(1, channel.opens)
-            assertEquals(RealtimeConnectionState.Connected, connectivity.state.value)
+            assertThat(channel.opens).isEqualTo(1)
+            assertThat(connectivity.state.value).isEqualTo(RealtimeConnectionState.Connected)
         }
 
     @Test
@@ -81,7 +82,7 @@ internal class RealtimeTimerConnectionTest {
             connection(backgroundScope).start()
             settleConnect(this)
 
-            assertEquals(0, channel.opens)
+            assertThat(channel.opens).isEqualTo(0)
         }
 
     @Test
@@ -91,7 +92,7 @@ internal class RealtimeTimerConnectionTest {
             connection(backgroundScope).start()
             settleConnect(this)
 
-            assertEquals(0, channel.opens)
+            assertThat(channel.opens).isEqualTo(0)
         }
 
     @Test
@@ -106,7 +107,7 @@ internal class RealtimeTimerConnectionTest {
             advanceTimeBy(3.seconds)
             advanceUntilIdle()
 
-            assertTrue(session.closed, "backgrounding must tear the socket down, not leave it open")
+            assertThat(session.closed, name = "backgrounding must tear the socket down, not leave it open").isTrue()
         }
 
     // --- the handshake -----------------------------------------------------------------------
@@ -118,10 +119,10 @@ internal class RealtimeTimerConnectionTest {
             connection(backgroundScope).start()
             settleConnect(this)
 
-            assertEquals(1, channel.current.sent.size)
+            assertThat(channel.current.sent.size).isEqualTo(1)
             val hello = channel.current.sent.single()
-            assertTrue(hello.contains(""""type":"hello""""), hello)
-            assertTrue(hello.contains(""""cursor":84213"""), hello)
+            assertThat(hello.contains(""""type":"hello""""), name = hello).isTrue()
+            assertThat(hello.contains(""""cursor":84213"""), name = hello).isTrue()
         }
 
     /** Zero rather than absent, so the server's "are you behind" comparison is true. */
@@ -131,11 +132,11 @@ internal class RealtimeTimerConnectionTest {
             connection(backgroundScope).start()
             settleConnect(this)
 
-            assertTrue(
+            assertThat(
                 channel.current.sent
                     .single()
                     .contains(""""cursor":0"""),
-            )
+            ).isTrue()
         }
 
     // --- envelopes become pulls --------------------------------------------------------------
@@ -151,7 +152,7 @@ internal class RealtimeTimerConnectionTest {
             advanceTimeBy(1.seconds)
             advanceUntilIdle()
 
-            assertEquals(before + 1, remote.calls)
+            assertThat(remote.calls).isEqualTo(before + 1)
         }
 
     @Test
@@ -165,7 +166,7 @@ internal class RealtimeTimerConnectionTest {
             advanceTimeBy(1.seconds)
             advanceUntilIdle()
 
-            assertEquals(before + 1, remote.calls)
+            assertThat(remote.calls).isEqualTo(before + 1)
         }
 
     /** A future backend addition must not be able to break an old client. */
@@ -180,8 +181,8 @@ internal class RealtimeTimerConnectionTest {
             advanceTimeBy(1.seconds)
             advanceUntilIdle()
 
-            assertEquals(before + 1, remote.calls)
-            assertEquals(1, channel.opens, "an unknown type must not drop the connection")
+            assertThat(remote.calls).isEqualTo(before + 1)
+            assertThat(channel.opens, name = "an unknown type must not drop the connection").isEqualTo(1)
         }
 
     @Test
@@ -195,9 +196,9 @@ internal class RealtimeTimerConnectionTest {
             advanceTimeBy(1.seconds)
             advanceUntilIdle()
 
-            assertEquals(before, remote.calls, "a bad frame must not cause a pull")
-            assertEquals(1, channel.opens, "a bad frame must not drop the connection")
-            assertFalse(channel.current.closed)
+            assertThat(remote.calls, name = "a bad frame must not cause a pull").isEqualTo(before)
+            assertThat(channel.opens, name = "a bad frame must not drop the connection").isEqualTo(1)
+            assertThat(channel.current.closed).isFalse()
         }
 
     /** A burst is one pull, because the coordinator coalesces — see SyncPullCoordinator. */
@@ -214,7 +215,7 @@ internal class RealtimeTimerConnectionTest {
 
             // Not necessarily exactly one — a request landing after a pull has begun earns the next
             // one — but nothing like five.
-            assertTrue(remote.calls - before <= 2, "burst cost ${remote.calls - before} pulls")
+            assertThat(remote.calls - before <= 2, name = "burst cost ${remote.calls - before} pulls").isTrue()
         }
 
     // --- reconnection ------------------------------------------------------------------------
@@ -229,7 +230,7 @@ internal class RealtimeTimerConnectionTest {
             advanceTimeBy(5.seconds)
             advanceUntilIdle()
 
-            assertTrue(channel.opens >= 2, "expected a reconnect, saw ${channel.opens} opens")
+            assertThat(channel.opens >= 2, name = "expected a reconnect, saw ${channel.opens} opens").isTrue()
         }
 
     /** Backoff must grow, or a server that is down gets hammered. */
@@ -254,10 +255,10 @@ internal class RealtimeTimerConnectionTest {
             val laterOpens = channel.opens - earlyOpens
 
             // The same two seconds buys fewer attempts later than it did at the start.
-            assertTrue(
+            assertThat(
                 laterOpens < earlyOpens,
-                "backoff did not grow: $earlyOpens attempts in the first window, $laterOpens in the second",
-            )
+                name = "backoff did not grow: $earlyOpens attempts in the first window, $laterOpens in the second",
+            ).isTrue()
         }
 
     @Test
@@ -272,10 +273,10 @@ internal class RealtimeTimerConnectionTest {
             advanceTimeBy(2.minutesAsSeconds())
             advanceUntilIdle()
 
-            assertTrue(
+            assertThat(
                 channel.opens > opensByTenMinutes,
-                "a capped backoff must keep retrying; stalled at $opensByTenMinutes",
-            )
+                name = "a capped backoff must keep retrying; stalled at $opensByTenMinutes",
+            ).isTrue()
         }
 
     // --- auth ---------------------------------------------------------------------------------
@@ -292,8 +293,8 @@ internal class RealtimeTimerConnectionTest {
             advanceTimeBy(6.seconds)
             advanceUntilIdle()
 
-            assertTrue(remote.calls >= 1, "a 401 upgrade should have driven a REST pull to refresh")
-            assertTrue(channel.opens >= 2, "and then retried the socket")
+            assertThat(remote.calls >= 1, name = "a 401 upgrade should have driven a REST pull to refresh").isTrue()
+            assertThat(channel.opens >= 2, name = "and then retried the socket").isTrue()
         }
 
     @Test
@@ -306,7 +307,7 @@ internal class RealtimeTimerConnectionTest {
 
             // Capped at MAX_AUTH_RETRIES; everything after is plain backoff, so pulls stay bounded
             // even though attempts continue.
-            assertTrue(remote.calls <= 3, "refresh storm: ${remote.calls} pulls")
+            assertThat(remote.calls <= 3, name = "refresh storm: ${remote.calls} pulls").isTrue()
         }
 
     // --- lifecycle -----------------------------------------------------------------------------
@@ -319,7 +320,7 @@ internal class RealtimeTimerConnectionTest {
             connection.start()
             settleConnect(this)
 
-            assertEquals(1, channel.opens, "a second start() must not open a second socket")
+            assertThat(channel.opens, name = "a second start() must not open a second socket").isEqualTo(1)
         }
 
     @Test
@@ -333,8 +334,8 @@ internal class RealtimeTimerConnectionTest {
             advanceTimeBy(10.seconds)
             advanceUntilIdle()
 
-            assertEquals(1, channel.opens, "stop() must not leave the retry loop running")
-            assertEquals(RealtimeConnectionState.Idle, connectivity.state.value)
+            assertThat(channel.opens, name = "stop() must not leave the retry loop running").isEqualTo(1)
+            assertThat(connectivity.state.value).isEqualTo(RealtimeConnectionState.Idle)
         }
 }
 

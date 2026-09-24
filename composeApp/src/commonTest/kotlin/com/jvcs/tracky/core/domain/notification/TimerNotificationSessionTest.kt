@@ -1,9 +1,10 @@
 package com.jvcs.tracky.core.domain.notification
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
 import com.jvcs.tracky.features.project.domain.timer.ProjectRef
 import com.jvcs.tracky.features.project.domain.timer.TaskRef
 import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
@@ -25,20 +26,20 @@ class TimerNotificationSessionTest {
     fun aRunningClockKeepsCountingPastTheInstantItWasBuilt() {
         val now = Instant.fromEpochMilliseconds(30.seconds.inWholeMilliseconds)
 
-        assertEquals(2.minutes + 30.seconds, session(isRunning = true).elapsedAt(now))
+        assertThat(session(isRunning = true).elapsedAt(now)).isEqualTo(2.minutes + 30.seconds)
     }
 
     @Test
     fun aPausedClockStaysWhereItWasFrozen() {
         val now = Instant.fromEpochMilliseconds(30.seconds.inWholeMilliseconds)
 
-        assertEquals(2.minutes, session(isRunning = false).elapsedAt(now))
+        assertThat(session(isRunning = false).elapsedAt(now)).isEqualTo(2.minutes)
     }
 
     @Test
     fun aClockThatWentBackwardsNeverRunsBackwards() {
         val running = session(isRunning = true)
 
-        assertEquals(2.minutes, running.elapsedAt(Instant.fromEpochMilliseconds(-5_000)))
+        assertThat(running.elapsedAt(Instant.fromEpochMilliseconds(-5_000))).isEqualTo(2.minutes)
     }
 }
