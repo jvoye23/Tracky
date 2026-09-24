@@ -147,12 +147,12 @@ class RealtimeTimerConnection(
                                     authRetries = 0
                                 }
                             }
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
+                        } catch (exception: CancellationException) {
+                            throw exception
+                        } catch (exception: Exception) {
                             // A socket that died under us is the ordinary case, not an error worth
                             // surfacing. Reconnect.
-                            e.printStackTrace()
+                            exception.printStackTrace()
                         } finally {
                             // The scope may already be cancelled — the gate closing is exactly that —
                             // and the close frame is still worth sending.

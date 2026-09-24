@@ -40,9 +40,9 @@ class KtorRemoteActiveTimerDataSource(private val httpClient: HttpClient) : Remo
 
     override suspend fun getActive(): Result<ActiveTimer?, DataError.Remote> {
         val response =
-            when (val r = safeResponse { httpClient.get { url(constructRoute(ACTIVE_ROUTE)) } }) {
-                is Result.Success -> r.data
-                is Result.Error -> return Result.Error(r.error)
+            when (val result = safeResponse { httpClient.get { url(constructRoute(ACTIVE_ROUTE)) } }) {
+                is Result.Success -> result.data
+                is Result.Error -> return Result.Error(result.error)
             }
         return when {
             response.status.value == NO_CONTENT -> {
@@ -89,9 +89,9 @@ class KtorRemoteActiveTimerDataSource(private val httpClient: HttpClient) : Remo
         crossinline execute: suspend () -> HttpResponse,
     ): Result<ActiveTimerChange, DataError.Remote> {
         val response =
-            when (val r = safeResponse { execute() }) {
-                is Result.Success -> r.data
-                is Result.Error -> return Result.Error(r.error)
+            when (val result = safeResponse { execute() }) {
+                is Result.Success -> result.data
+                is Result.Error -> return Result.Error(result.error)
             }
         return when {
             response.status.value in SUCCESS -> {

@@ -344,8 +344,8 @@ class OfflineFirstProjectRepository(
                 when (op.operationType) {
                     PendingSyncOperation.OP_CREATE, PendingSyncOperation.OP_UPDATE -> {
                         val project =
-                            when (val r = localProjectDataSource.getProjectById(op.entityId)) {
-                                is Result.Success -> r.data ?: return SyncOutcome.DROP
+                            when (val result = localProjectDataSource.getProjectById(op.entityId)) {
+                                is Result.Success -> result.data ?: return SyncOutcome.DROP
                                 is Result.Error -> return SyncOutcome.RETRY
                             }
                         val result =
@@ -378,8 +378,8 @@ class OfflineFirstProjectRepository(
             // so projects deleted meanwhile drop out and repeated offline reorders collapse into one push.
             PendingSyncOperation.ENTITY_PROJECT_ORDER -> {
                 val indices =
-                    when (val r = localProjectDataSource.getSortIndices()) {
-                        is Result.Success -> r.data.mapNotNull { (id, index) -> index?.let { id to it } }.toMap()
+                    when (val result = localProjectDataSource.getSortIndices()) {
+                        is Result.Success -> result.data.mapNotNull { (id, index) -> index?.let { id to it } }.toMap()
                         is Result.Error -> return SyncOutcome.RETRY
                     }
                 if (indices.isEmpty()) return SyncOutcome.DROP
@@ -398,9 +398,9 @@ class OfflineFirstProjectRepository(
 
     private suspend fun resolveProjectConflict(local: Project): EmptyResult<DataError> {
         val server =
-            when (val r = remoteProjectDataSource.getProjects()) {
-                is Result.Success -> r.data.find { it.projectId == local.projectId }
-                is Result.Error -> return r.asEmptyDataResult()
+            when (val result = remoteProjectDataSource.getProjects()) {
+                is Result.Success -> result.data.find { it.projectId == local.projectId }
+                is Result.Error -> return result.asEmptyDataResult()
             } ?: return remoteProjectDataSource.postProject(local).asEmptyDataResult() // server has none → push local
 
         // Last-write-wins compares this project row against the same row on the server, so it must

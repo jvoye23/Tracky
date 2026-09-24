@@ -201,8 +201,8 @@ class OfflineFirstIntervalRepository(
         return when (op.operationType) {
             PendingSyncOperation.OP_CREATE, PendingSyncOperation.OP_UPDATE -> {
                 val interval =
-                    when (val r = localIntervalDataSource.getIntervalById(op.entityId)) {
-                        is Result.Success -> r.data ?: return SyncOutcome.DROP
+                    when (val result = localIntervalDataSource.getIntervalById(op.entityId)) {
+                        is Result.Success -> result.data ?: return SyncOutcome.DROP
 
                         // deleted meanwhile
                         is Result.Error -> return SyncOutcome.RETRY

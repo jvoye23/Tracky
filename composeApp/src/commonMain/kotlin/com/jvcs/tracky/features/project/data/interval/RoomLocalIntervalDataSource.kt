@@ -40,9 +40,9 @@ class RoomLocalIntervalDataSource(private val projectDao: ProjectDao) : LocalInt
     private inline fun <T> read(block: () -> T): Result<T, DataError.Local> =
         try {
             Result.Success(block())
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
+        } catch (exception: CancellationException) {
+            throw exception
+        } catch (exception: Exception) {
             Result.Error(DataError.Local.UNKNOWN)
         }
 
@@ -50,9 +50,9 @@ class RoomLocalIntervalDataSource(private val projectDao: ProjectDao) : LocalInt
         try {
             withContext(dbWriteDispatcher) { block() }
             Result.Success(Unit)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
+        } catch (exception: CancellationException) {
+            throw exception
+        } catch (exception: Exception) {
             Result.Error(DataError.Local.DISK_FULL)
         }
 }

@@ -26,9 +26,9 @@ class TrashCleanupWorker(context: Context, params: WorkerParameters) :
         try {
             projectRepository.purgeExpiredTrashedProjects(TrashRetention.cutoff(timeProvider.nowInstant))
             Result.success()
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
+        } catch (exception: CancellationException) {
+            throw exception
+        } catch (exception: Exception) {
             if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()
         }
 

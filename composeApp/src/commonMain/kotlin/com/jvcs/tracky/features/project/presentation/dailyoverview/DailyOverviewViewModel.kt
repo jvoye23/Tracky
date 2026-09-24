@@ -125,7 +125,7 @@ class DailyOverviewViewModel(
                 // Selecting a day inside the visible month must not page the calendar; only a day
                 // reached some other way moves it.
                 visibleMonthIndex =
-                    it.months.indexOfMonthOf(date).takeIf { i -> i >= 0 }
+                    it.months.indexOfMonthOf(date).takeIf { index -> index >= 0 }
                         ?: it.visibleMonthIndex,
                 dayDetail = loaded.toDayDetailUi(date, timeZone),
             )

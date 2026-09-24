@@ -889,10 +889,10 @@ class ProjectDetailViewModel(
 }
 
 private fun Color.toHex(): String {
-    val r = (red * 255).toInt().toString(16).padStart(2, '0')
-    val g = (green * 255).toInt().toString(16).padStart(2, '0')
-    val b = (blue * 255).toInt().toString(16).padStart(2, '0')
-    return "#$r$g$b".uppercase()
+    val redHex = (red * 255).toInt().toString(16).padStart(2, '0')
+    val greenHex = (green * 255).toInt().toString(16).padStart(2, '0')
+    val blueHex = (blue * 255).toInt().toString(16).padStart(2, '0')
+    return "#$redHex$greenHex$blueHex".uppercase()
 }
 
 /**

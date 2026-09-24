@@ -98,9 +98,9 @@ fun runTrashCleanup(onComplete: (Boolean) -> Unit) {
                     .get<ProjectRepository>()
                     .purgeExpiredTrashedProjects(TrashRetention.cutoff(koin.get<TimeProvider>().nowInstant))
                 true
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Throwable) {
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (exception: Throwable) {
                 false
             }
         // BGProcessingTask requests are one-shot; queue the next run.
@@ -121,9 +121,9 @@ fun runSync(onComplete: (Boolean) -> Unit) {
             try {
                 koin.get<SyncRepository>().syncPendingOperations()
                 true
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Throwable) {
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (exception: Throwable) {
                 false
             }
         // BGAppRefreshTask requests are one-shot; queue the next run.

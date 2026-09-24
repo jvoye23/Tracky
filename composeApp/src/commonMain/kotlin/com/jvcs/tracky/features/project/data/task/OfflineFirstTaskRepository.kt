@@ -354,8 +354,8 @@ class OfflineFirstTaskRepository(
         return when (op.operationType) {
             PendingSyncOperation.OP_CREATE, PendingSyncOperation.OP_UPDATE -> {
                 val task =
-                    when (val r = localTaskDataSource.getTaskById(op.entityId)) {
-                        is Result.Success -> r.data ?: return SyncOutcome.DROP
+                    when (val result = localTaskDataSource.getTaskById(op.entityId)) {
+                        is Result.Success -> result.data ?: return SyncOutcome.DROP
 
                         // deleted meanwhile
                         is Result.Error -> return SyncOutcome.RETRY
@@ -397,9 +397,9 @@ class OfflineFirstTaskRepository(
 
     private suspend fun resolveTaskConflict(local: ProjectTask): EmptyResult<DataError> {
         val server =
-            when (val r = remoteTaskDataSource.getTasksByProjectId(local.parentProjectId)) {
-                is Result.Success -> r.data.find { it.projectTaskId == local.projectTaskId }
-                is Result.Error -> return r.asEmptyDataResult()
+            when (val result = remoteTaskDataSource.getTasksByProjectId(local.parentProjectId)) {
+                is Result.Success -> result.data.find { it.projectTaskId == local.projectTaskId }
+                is Result.Error -> return result.asEmptyDataResult()
             } ?: return remoteTaskDataSource // server has none → push local
                 .postTaskByProjectId(local.parentProjectId, local)
                 .asEmptyDataResult()
@@ -471,8 +471,8 @@ class OfflineFirstTaskRepository(
             return SyncOutcome.RETRY
         }
         val indices =
-            when (val r = localTaskDataSource.getTaskSortIndices(projectId)) {
-                is Result.Success -> r.data.mapNotNull { (id, index) -> index?.let { id to it } }.toMap()
+            when (val result = localTaskDataSource.getTaskSortIndices(projectId)) {
+                is Result.Success -> result.data.mapNotNull { (id, index) -> index?.let { id to it } }.toMap()
                 is Result.Error -> return SyncOutcome.RETRY
             }
         if (indices.isEmpty()) return SyncOutcome.DROP

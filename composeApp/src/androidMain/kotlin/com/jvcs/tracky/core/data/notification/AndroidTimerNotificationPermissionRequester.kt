@@ -93,11 +93,11 @@ class AndroidTimerNotificationPermissionRequester(
             // and does not reconsider once it is granted, so it has to be put up again.
             notificationController.repost()
             TimerNotificationPermission.Granted
-        } catch (e: DeniedAlwaysException) {
+        } catch (exception: DeniedAlwaysException) {
             refused(TimerNotificationPermission.DeniedAlways)
-        } catch (e: DeniedException) {
+        } catch (exception: DeniedException) {
             refused(TimerNotificationPermission.Denied)
-        } catch (e: RequestCanceledException) {
+        } catch (exception: RequestCanceledException) {
             // Dismissed without an answer. Counted as a decline: the timer still runs, it just has
             // nowhere to show itself, which is what the dialog says either way.
             refused(TimerNotificationPermission.Denied)

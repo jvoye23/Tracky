@@ -127,8 +127,8 @@ class RoomLocalSubTaskDataSource(
                     )
                 } ?: return Result.Error(DataError.Local.NOT_FOUND)
             Result.Success(change)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
+        } catch (exception: Exception) {
+            if (exception is CancellationException) throw exception
             Result.Error(DataError.Local.DISK_FULL)
         }
     }
@@ -166,8 +166,8 @@ class RoomLocalSubTaskDataSource(
                     )
                 }
             Result.Success(change)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
+        } catch (exception: Exception) {
+            if (exception is CancellationException) throw exception
             Result.Error(DataError.Local.DISK_FULL)
         }
     }
@@ -175,9 +175,9 @@ class RoomLocalSubTaskDataSource(
     private inline fun <T> read(block: () -> T): Result<T, DataError.Local> =
         try {
             Result.Success(block())
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
+        } catch (exception: CancellationException) {
+            throw exception
+        } catch (exception: Exception) {
             Result.Error(DataError.Local.UNKNOWN)
         }
 
@@ -185,9 +185,9 @@ class RoomLocalSubTaskDataSource(
         try {
             withContext(dbWriteDispatcher) { block() }
             Result.Success(Unit)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
+        } catch (exception: CancellationException) {
+            throw exception
+        } catch (exception: Exception) {
             Result.Error(DataError.Local.DISK_FULL)
         }
 }
