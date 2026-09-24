@@ -105,6 +105,7 @@ val coreDataModule =
         single { get<TrackyDatabase>().projectDao }
 
         single { get<TrackyDatabase>().taskIntervalDao }
+        single { get<TrackyDatabase>().subTaskIntervalDao }
         single { get<TrackyDatabase>().strandedIntervalDao }
 
         singleOf(::RoomPendingSyncDataSource) bind PendingSyncDataSource::class
@@ -205,6 +206,7 @@ val coreDataModule =
         single {
             OfflineFirstStrandedTimerRepository(
                 projectDao = get(),
+                subTaskIntervalDao = get(),
                 taskIntervalDao = get(),
                 strandedIntervalDao = get(),
                 intervalRepository = get(),
@@ -216,7 +218,12 @@ val coreDataModule =
 
         // The read-only counterpart to the parked-timer repository above: same join, opposite filter.
         single {
-            OfflineFirstRunningTimerRepository(projectDao = get(), taskIntervalDao = get(), deviceIdProvider = get())
+            OfflineFirstRunningTimerRepository(
+                projectDao = get(),
+                subTaskIntervalDao = get(),
+                taskIntervalDao = get(),
+                deviceIdProvider = get(),
+            )
         } bind RunningTimerRepository::class
 
         // The one place the projects → tasks → intervals → subtasks → subtask intervals sync order
@@ -237,6 +244,7 @@ val coreDataModule =
         single(createdAtStart = true) {
             StrandedTimerReconciler(
                 projectDao = get(),
+                subTaskIntervalDao = get(),
                 taskIntervalDao = get(),
                 strandedIntervalDao = get(),
                 serverClock = get(),

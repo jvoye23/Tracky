@@ -49,7 +49,14 @@ internal class RoomLocalTaskDataSourceStartTest {
                 .setDriver(BundledSQLiteDriver())
                 .setQueryCoroutineContext(Dispatchers.IO)
                 .build()
-        dataSource = RoomLocalTaskDataSource(db.projectDao, db.taskIntervalDao, FakeDeviceIdProvider(), serverClock)
+        dataSource =
+            RoomLocalTaskDataSource(
+                db.projectDao,
+                db.subTaskIntervalDao,
+                db.taskIntervalDao,
+                FakeDeviceIdProvider(),
+                serverClock,
+            )
     }
 
     @AfterTest

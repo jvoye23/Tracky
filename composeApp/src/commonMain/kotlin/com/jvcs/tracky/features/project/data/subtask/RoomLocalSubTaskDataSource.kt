@@ -4,6 +4,7 @@ import androidx.sqlite.SQLiteException
 import co.touchlab.kermit.Logger
 import com.jvcs.tracky.core.database.dao.ProjectDao
 import com.jvcs.tracky.core.database.dao.StrandedIntervalDao
+import com.jvcs.tracky.core.database.dao.SubTaskIntervalDao
 import com.jvcs.tracky.core.database.dao.TaskIntervalDao
 import com.jvcs.tracky.core.database.entity.SubTaskIntervalEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
@@ -31,6 +32,7 @@ import kotlin.uuid.Uuid
 
 class RoomLocalSubTaskDataSource(
     private val projectDao: ProjectDao,
+    private val subTaskIntervalDao: SubTaskIntervalDao,
     private val taskIntervalDao: TaskIntervalDao,
     private val strandedIntervalDao: StrandedIntervalDao,
     private val deviceIdProvider: DeviceIdProvider,
@@ -86,9 +88,9 @@ class RoomLocalSubTaskDataSource(
 
                     // One subtask at a time: whichever sibling is still running gets closed at the same
                     // instant this one starts, so their durations never overlap.
-                    projectDao
+                    subTaskIntervalDao
                         .getOpenSubTaskIntervalForTask(taskId)
-                        ?.let { projectDao.closeSubTaskInterval(it, now) }
+                        ?.let { subTaskIntervalDao.closeSubTaskInterval(it, now, projectDao) }
 
                     // The enclosing task interval. Reusing the open one keeps a manually started task
                     // timer intact; opening one makes this subtask the reason the task is running, which
@@ -123,7 +125,7 @@ class RoomLocalSubTaskDataSource(
                             startedParentTimer = opened != null,
                             startedByDeviceId = deviceId,
                         )
-                    projectDao.upsertSubTaskInterval(interval)
+                    subTaskIntervalDao.upsertSubTaskInterval(interval)
                     projectDao.updateSubTaskTimerStatus(subTaskId, true)
 
                     SubTaskTimerChange(
@@ -143,9 +145,9 @@ class RoomLocalSubTaskDataSource(
             val endedAt = serverClock.now()
             val change =
                 withContext(dbWriteDispatcher) {
-                    val open = projectDao.getOpenSubTaskInterval(subTaskId) ?: return@withContext null
+                    val open = subTaskIntervalDao.getOpenSubTaskInterval(subTaskId) ?: return@withContext null
                     val now = endedAt
-                    val closed = projectDao.closeSubTaskInterval(open, now)
+                    val closed = subTaskIntervalDao.closeSubTaskInterval(open, now, projectDao)
 
                     // Only the subtask that opened the task's interval may close it again. A task the
                     // user started stays running, and a sibling that merely nested inside it never

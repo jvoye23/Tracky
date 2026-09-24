@@ -71,6 +71,7 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
         repository =
             OfflineFirstStrandedTimerRepository(
                 projectDao = db.projectDao,
+                subTaskIntervalDao = db.subTaskIntervalDao,
                 taskIntervalDao = db.taskIntervalDao,
                 strandedIntervalDao = db.strandedIntervalDao,
                 intervalRepository = FakeIntervalRepository(),
@@ -143,7 +144,7 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
                     updatedAtEpochMs = null,
                 ),
             )
-            db.projectDao.upsertSubTaskInterval(
+            db.subTaskIntervalDao.upsertSubTaskInterval(
                 SubTaskIntervalEntity(
                     subTaskIntervalId = "si1",
                     parentSubTaskId = "s1",
@@ -159,6 +160,7 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
         timeProvider.now = Instant.fromEpochMilliseconds(detectedAt)
         StrandedTimerReconciler(
             db.projectDao,
+            db.subTaskIntervalDao,
             db.taskIntervalDao,
             db.strandedIntervalDao,
             testServerClock(timeProvider),
@@ -250,7 +252,7 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
 
             repository.keep(timer)
 
-            assertThat(db.projectDao.getSubTaskIntervalById("si1")!!.endDateTimeEpochMs).isEqualTo(detectedAt)
+            assertThat(db.subTaskIntervalDao.getSubTaskIntervalById("si1")!!.endDateTimeEpochMs).isEqualTo(detectedAt)
             assertThat(db.taskIntervalDao.getIntervalById("i1")!!.endDateTimeEpochMs).isEqualTo(detectedAt)
             assertThat(db.strandedIntervalDao.getStrandedInterval("si1")).isNull()
             assertThat(db.strandedIntervalDao.getStrandedInterval("i1")).isNull()
@@ -291,8 +293,8 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
         runBlocking {
             seedParkedTaskInterval(withSubTask = true)
             // Push the subtask's start past where a one-hour edit would place the end.
-            db.projectDao.upsertSubTaskInterval(
-                db.projectDao.getSubTaskIntervalById("si1")!!.copy(startDateTimeEpochMs = 5 * 60 * 60 * 1000L),
+            db.subTaskIntervalDao.upsertSubTaskInterval(
+                db.subTaskIntervalDao.getSubTaskIntervalById("si1")!!.copy(startDateTimeEpochMs = 5 * 60 * 60 * 1000L),
             )
             val timer = repository.observeStrandedTimers().first().single()
 

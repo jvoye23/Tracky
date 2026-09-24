@@ -1,6 +1,7 @@
 package com.jvcs.tracky.features.project.data.timer
 
 import com.jvcs.tracky.core.database.dao.ProjectDao
+import com.jvcs.tracky.core.database.dao.SubTaskIntervalDao
 import com.jvcs.tracky.core.database.dao.TaskIntervalDao
 import com.jvcs.tracky.core.database.entity.SubTaskIntervalEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
@@ -32,13 +33,14 @@ import kotlin.time.Instant
  */
 class OfflineFirstRunningTimerRepository(
     private val projectDao: ProjectDao,
+    private val subTaskIntervalDao: SubTaskIntervalDao,
     private val taskIntervalDao: TaskIntervalDao,
     private val deviceIdProvider: DeviceIdProvider,
 ) : RunningTimerRepository {
 
     override fun observeRunningTimer(): Flow<RunningTimer?> =
         combine(
-            projectDao.observeOpenSubTaskInterval(),
+            subTaskIntervalDao.observeOpenSubTaskInterval(),
             taskIntervalDao.observeOpenTaskInterval(),
             ::Pair,
         )

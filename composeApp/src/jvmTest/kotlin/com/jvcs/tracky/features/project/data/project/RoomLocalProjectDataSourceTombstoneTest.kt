@@ -114,7 +114,7 @@ internal class RoomLocalProjectDataSourceTombstoneTest {
                 isFinished = false,
             ),
         )
-        db.projectDao.upsertSubTaskInterval(
+        db.subTaskIntervalDao.upsertSubTaskInterval(
             SubTaskIntervalEntity(
                 subTaskIntervalId = "si1",
                 parentSubTaskId = "s1",
@@ -172,7 +172,7 @@ internal class RoomLocalProjectDataSourceTombstoneTest {
 
             assertThat(db.projectDao.getSubTaskById("s1"), name = "the subtask row survived its tombstone").isNull()
             assertThat(
-                db.projectDao.getSubTaskIntervalById("si1"),
+                db.subTaskIntervalDao.getSubTaskIntervalById("si1"),
                 name = "the subtask's interval was left orphaned",
             ).isNull()
         }
@@ -208,7 +208,7 @@ internal class RoomLocalProjectDataSourceTombstoneTest {
 
             applyTombstones(Tombstone("sub_task_interval", "si1"))
 
-            assertThat(db.projectDao.getSubTaskIntervalById("si1")).isNull()
+            assertThat(db.subTaskIntervalDao.getSubTaskIntervalById("si1")).isNull()
             assertThat(db.projectDao.getSubTaskById("s1")).isNotNull()
         }
 
@@ -230,7 +230,7 @@ internal class RoomLocalProjectDataSourceTombstoneTest {
             assertThat(db.projectDao.getTaskById("t1")).isNull()
             assertThat(db.taskIntervalDao.getIntervalById("i1")).isNull()
             assertThat(db.projectDao.getSubTaskById("s1")).isNull()
-            assertThat(db.projectDao.getSubTaskIntervalById("si1")).isNull()
+            assertThat(db.subTaskIntervalDao.getSubTaskIntervalById("si1")).isNull()
         }
 
     // --- the guard this fix must not trample ---------------------------------------------------

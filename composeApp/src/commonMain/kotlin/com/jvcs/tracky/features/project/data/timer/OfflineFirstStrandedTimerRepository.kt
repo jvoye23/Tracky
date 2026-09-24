@@ -2,6 +2,7 @@ package com.jvcs.tracky.features.project.data.timer
 
 import com.jvcs.tracky.core.database.dao.ProjectDao
 import com.jvcs.tracky.core.database.dao.StrandedIntervalDao
+import com.jvcs.tracky.core.database.dao.SubTaskIntervalDao
 import com.jvcs.tracky.core.database.dao.TaskIntervalDao
 import com.jvcs.tracky.core.database.entity.StrandedIntervalEntity
 import com.jvcs.tracky.core.domain.util.DataError
@@ -31,6 +32,7 @@ import kotlin.time.Instant
  */
 class OfflineFirstStrandedTimerRepository(
     private val projectDao: ProjectDao,
+    private val subTaskIntervalDao: SubTaskIntervalDao,
     private val taskIntervalDao: TaskIntervalDao,
     private val strandedIntervalDao: StrandedIntervalDao,
     private val intervalRepository: IntervalRepository,
@@ -55,7 +57,7 @@ class OfflineFirstStrandedTimerRepository(
         val claimedTaskIntervalIds = mutableSetOf<String>()
         val fromSubTasks =
             subTaskParked.mapNotNull { parked ->
-                val interval = projectDao.getSubTaskIntervalById(parked.intervalId) ?: return@mapNotNull null
+                val interval = subTaskIntervalDao.getSubTaskIntervalById(parked.intervalId) ?: return@mapNotNull null
                 val subTask = projectDao.getSubTaskById(interval.parentSubTaskId) ?: return@mapNotNull null
                 val task = projectDao.getTaskById(subTask.parentProjectTaskId) ?: return@mapNotNull null
                 val project = projectDao.getProjectById(task.parentProjectId) ?: return@mapNotNull null
@@ -123,7 +125,7 @@ class OfflineFirstStrandedTimerRepository(
         // subtask cannot outlive the task interval it sits in.
         val closedSubTaskInterval =
             timer.subTaskIntervalId?.let { id ->
-                val interval = projectDao.getSubTaskIntervalById(id) ?: return@let null
+                val interval = subTaskIntervalDao.getSubTaskIntervalById(id) ?: return@let null
                 // An edited duration shorter than the subtask's own start would write a negative span.
                 // Nothing defensible is left to keep, so the row goes instead.
                 if (endAt.toEpochMilliseconds() < interval.startDateTimeEpochMs) {
@@ -131,7 +133,7 @@ class OfflineFirstStrandedTimerRepository(
                     subTaskIntervalRepository.deleteSubTaskInterval(id)
                     null
                 } else {
-                    projectDao.closeSubTaskInterval(interval, endAt).also {
+                    subTaskIntervalDao.closeSubTaskInterval(interval, endAt, projectDao).also {
                         strandedIntervalDao.deleteStrandedInterval(id)
                     }
                 }

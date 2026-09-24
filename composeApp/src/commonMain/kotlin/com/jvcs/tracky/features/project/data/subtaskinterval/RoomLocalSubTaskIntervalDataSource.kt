@@ -2,7 +2,7 @@ package com.jvcs.tracky.features.project.data.subtaskinterval
 
 import androidx.sqlite.SQLiteException
 import co.touchlab.kermit.Logger
-import com.jvcs.tracky.core.database.dao.ProjectDao
+import com.jvcs.tracky.core.database.dao.SubTaskIntervalDao
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
@@ -14,29 +14,30 @@ import com.jvcs.tracky.features.project.domain.subtaskinterval.LocalSubTaskInter
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withContext
 
-class RoomLocalSubTaskIntervalDataSource(private val projectDao: ProjectDao) : LocalSubTaskIntervalDataSource {
+class RoomLocalSubTaskIntervalDataSource(private val subTaskIntervalDao: SubTaskIntervalDao) :
+    LocalSubTaskIntervalDataSource {
 
     // Same single-writer funnel as the other Room data sources — see RoomLocalProjectDataSource.
     private val dbWriteDispatcher = platformIoDispatcher.limitedParallelism(1)
 
     override suspend fun upsertSubTaskInterval(interval: SubTaskInterval): EmptyResult<DataError.Local> =
         write {
-            projectDao.upsertSubTaskInterval(interval.toSubTaskIntervalEntity())
+            subTaskIntervalDao.upsertSubTaskInterval(interval.toSubTaskIntervalEntity())
         }
 
     override suspend fun getSubTaskIntervalById(intervalId: String): Result<SubTaskInterval?, DataError.Local> =
         read {
-            projectDao.getSubTaskIntervalById(intervalId)?.toSubTaskInterval()
+            subTaskIntervalDao.getSubTaskIntervalById(intervalId)?.toSubTaskInterval()
         }
 
     override suspend fun getOpenIntervalBySubTaskId(subTaskId: String): Result<SubTaskInterval?, DataError.Local> =
         read {
-            projectDao.getOpenSubTaskInterval(subTaskId)?.toSubTaskInterval()
+            subTaskIntervalDao.getOpenSubTaskInterval(subTaskId)?.toSubTaskInterval()
         }
 
     override suspend fun deleteSubTaskInterval(intervalId: String): EmptyResult<DataError.Local> =
         write {
-            projectDao.deleteSubTaskInterval(intervalId)
+            subTaskIntervalDao.deleteSubTaskInterval(intervalId)
         }
 
     private inline fun <T> read(block: () -> T): Result<T, DataError.Local> =
