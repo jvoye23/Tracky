@@ -1,7 +1,8 @@
 @file:OptIn(ExperimentalForeignApi::class)
 
-package com.jvcs.tracky.core.domain.connectivity
+package com.jvcs.tracky.core.data.connectivity
 
+import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -16,9 +17,9 @@ import platform.Network.nw_path_monitor_start
 import platform.Network.nw_path_status_satisfied
 import platform.darwin.dispatch_queue_create
 
-actual class ConnectivityObserver {
+class IosConnectivityObserver : ConnectivityObserver {
 
-    actual val isConnected: Flow<Boolean> =
+    override val isConnected: Flow<Boolean> =
         callbackFlow {
             val monitor = nw_path_monitor_create()
             val queue = dispatch_queue_create("com.jvcs.tracky.connectivity", null)

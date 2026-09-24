@@ -1,5 +1,6 @@
-package com.jvcs.tracky.core.domain.lifecycle
+package com.jvcs.tracky.core.data.lifecycle
 
+import com.jvcs.tracky.core.domain.lifecycle.AppLifecycleObserver
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -8,9 +9,9 @@ import platform.Foundation.NSNotificationCenter
 import platform.UIKit.UIApplicationDidBecomeActiveNotification
 import platform.UIKit.UIApplicationDidEnterBackgroundNotification
 
-actual class AppLifecycleObserver {
+class IosAppLifecycleObserver : AppLifecycleObserver {
 
-    actual val isInForeground: Flow<Boolean> =
+    override val isInForeground: Flow<Boolean> =
         callbackFlow {
             val center = NSNotificationCenter.defaultCenter
 

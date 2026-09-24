@@ -3,6 +3,8 @@ package com.jvcs.tracky.core.data.di
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import com.jvcs.tracky.core.data.connectivity.JvmConnectivityObserver
+import com.jvcs.tracky.core.data.lifecycle.JvmAppLifecycleObserver
 import com.jvcs.tracky.core.data.sync.JvmSyncScheduler
 import com.jvcs.tracky.core.data.sync.JvmTrashCleanupScheduler
 import com.jvcs.tracky.core.database.DatabaseFactory
@@ -24,8 +26,8 @@ import org.koin.dsl.module
 actual val platformCoreDataModule =
     module {
         singleOf(::DatabaseFactory)
-        singleOf(::ConnectivityObserver)
-        singleOf(::AppLifecycleObserver)
+        singleOf(::JvmConnectivityObserver) bind ConnectivityObserver::class
+        singleOf(::JvmAppLifecycleObserver) bind AppLifecycleObserver::class
 
         single { JvmSyncScheduler() } bind SyncScheduler::class
         single { JvmTrashCleanupScheduler() } bind TrashCleanupScheduler::class

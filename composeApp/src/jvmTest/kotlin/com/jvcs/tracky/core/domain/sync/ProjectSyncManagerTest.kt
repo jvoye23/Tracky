@@ -5,8 +5,8 @@ package com.jvcs.tracky.core.domain.sync
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isTrue
-import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
-import com.jvcs.tracky.core.domain.lifecycle.AppLifecycleObserver
+import com.jvcs.tracky.core.domain.connectivity.FakeConnectivityObserver
+import com.jvcs.tracky.core.domain.lifecycle.FakeAppLifecycleObserver
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -28,8 +28,7 @@ private class RecordingSyncRepository : SyncRepository {
 }
 
 /**
- * The JVM actuals of [ConnectivityObserver] and [AppLifecycleObserver] are both `flowOf(true)` —
- * always online, always foregrounded. That is exactly the device-B case these tests are about: an
+ * The connectivity and lifecycle fakes default to online and foregrounded. That is exactly the device-B case these tests are about: an
  * app sitting open while another device changes something.
  */
 internal class ProjectSyncManagerTest {
@@ -40,8 +39,8 @@ internal class ProjectSyncManagerTest {
 
     private fun manager(remote: CountingRemoteSyncDataSource, scope: CoroutineScope) =
         ProjectSyncManager(
-            connectivityObserver = ConnectivityObserver(),
-            appLifecycleObserver = AppLifecycleObserver(),
+            connectivityObserver = FakeConnectivityObserver(),
+            appLifecycleObserver = FakeAppLifecycleObserver(),
             syncRepository = syncRepository,
             pullCoordinator =
                 SyncPullCoordinator(

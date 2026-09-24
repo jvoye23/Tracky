@@ -9,7 +9,7 @@ import assertk.assertions.isFalse
 import assertk.assertions.isTrue
 import com.jvcs.tracky.core.domain.auth.FakeAuthService
 import com.jvcs.tracky.core.domain.auth.FakeSessionStorage
-import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
+import com.jvcs.tracky.core.domain.connectivity.FakeConnectivityObserver
 import com.jvcs.tracky.core.domain.sync.FakeSyncCursorStore
 import com.jvcs.tracky.core.domain.sync.testDeltaSyncApplier
 import com.jvcs.tracky.core.domain.util.DataError
@@ -93,8 +93,7 @@ class ProjectOverviewViewModelTest {
             timeProvider = FakeTimeProvider(),
             sessionStorage = sessionStorage,
             authService = authService,
-            // An `expect class`, so it cannot be faked; the JVM actual is already always-connected.
-            connectivityObserver = ConnectivityObserver(),
+            connectivityObserver = FakeConnectivityObserver(),
             syncCursorStore = FakeSyncCursorStore(),
             deltaSyncApplier = testDeltaSyncApplier(),
             // Shares the test scheduler, so `advanceUntilIdle` drives the logout teardown and the
