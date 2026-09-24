@@ -1,5 +1,9 @@
 package com.jvcs.tracky.core.data.networking.dto
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.data.networking.CreateProjectTaskRequest
 import com.jvcs.tracky.core.data.networking.mappers.toProjectTask
 import com.jvcs.tracky.core.data.networking.mappers.toProjectTaskDto
@@ -7,9 +11,6 @@ import com.jvcs.tracky.features.project.data.mappers.toCreateProjectTaskRequest
 import com.jvcs.tracky.features.project.data.mappers.toUpdateProjectTaskRequest
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 /**
  * Guards the task title contract, which API 1.6.0 changed underneath the client.
@@ -45,9 +46,9 @@ class ProjectTaskDtoTest {
                 """.trimIndent(),
             )
 
-        assertEquals("Work task", dto.title)
-        assertEquals("Quarterly report", dto.description)
-        assertEquals("Work task", dto.toProjectTask("p1").title)
+        assertThat(dto.title).isEqualTo("Work task")
+        assertThat(dto.description).isEqualTo("Quarterly report")
+        assertThat(dto.toProjectTask("p1").title).isEqualTo("Work task")
     }
 
     @Test
@@ -74,14 +75,13 @@ class ProjectTaskDtoTest {
                 """.trimIndent(),
             )
 
-        assertEquals(
-            "d41c7f90-0000-4000-8000-00000000000a",
+        assertThat(
             dto
                 .toProjectTask("p1")
                 .intervals
                 .single()
                 .startedByDeviceId,
-        )
+        ).isEqualTo("d41c7f90-0000-4000-8000-00000000000a")
     }
 
     @Test
@@ -98,11 +98,11 @@ class ProjectTaskDtoTest {
                 """.trimIndent(),
             )
 
-        assertEquals("", dto.title)
-        assertEquals("Work task", dto.toProjectTask("p1").title)
+        assertThat(dto.title).isEqualTo("")
+        assertThat(dto.toProjectTask("p1").title).isEqualTo("Work task")
         // The title was only ever in description because the deployment is old; it must not also
         // land in the task's description, or the fallback re-creates the conflation.
-        assertNull(dto.toProjectTask("p1").description)
+        assertThat(dto.toProjectTask("p1").description).isNull()
     }
 
     @Test
@@ -115,9 +115,9 @@ class ProjectTaskDtoTest {
 
         val encoded = json.encodeToString(task.toProjectTaskDto())
 
-        assertTrue(encoded.contains(""""title":"Work task""""), encoded)
+        assertThat(encoded.contains(""""title":"Work task""""), name = encoded).isTrue()
         // Nothing supplied a description, so none is invented to fill the field.
-        assertNull(task.toProjectTaskDto().description)
+        assertThat(task.toProjectTaskDto().description).isNull()
     }
 
     @Test
@@ -131,16 +131,16 @@ class ProjectTaskDtoTest {
                         """"startDateTimeUtc":"2026-03-28T15:16:40Z"}""",
                 ).toProjectTask("p1")
 
-        assertEquals("Work task", task.title)
-        assertEquals("Quarterly report", task.description)
+        assertThat(task.title).isEqualTo("Work task")
+        assertThat(task.description).isEqualTo("Quarterly report")
 
         val dto = task.toProjectTaskDto()
-        assertEquals("Work task", dto.title)
-        assertEquals("Quarterly report", dto.description)
+        assertThat(dto.title).isEqualTo("Work task")
+        assertThat(dto.description).isEqualTo("Quarterly report")
 
         // The update body carries it too, so editing a task no longer blanks its description.
-        assertEquals("Quarterly report", task.toUpdateProjectTaskRequest().description)
-        assertEquals("Quarterly report", task.toCreateProjectTaskRequest().description)
+        assertThat(task.toUpdateProjectTaskRequest().description).isEqualTo("Quarterly report")
+        assertThat(task.toCreateProjectTaskRequest().description).isEqualTo("Quarterly report")
     }
 
     @Test
@@ -154,8 +154,8 @@ class ProjectTaskDtoTest {
         val body: CreateProjectTaskRequest = task.toCreateProjectTaskRequest()
 
         // The exact condition the server's @NotBlank enforces.
-        assertTrue(body.title.isNotBlank())
-        assertEquals("Work task", body.title)
-        assertEquals("t1", body.id)
+        assertThat(body.title.isNotBlank()).isTrue()
+        assertThat(body.title).isEqualTo("Work task")
+        assertThat(body.id).isEqualTo("t1")
     }
 }

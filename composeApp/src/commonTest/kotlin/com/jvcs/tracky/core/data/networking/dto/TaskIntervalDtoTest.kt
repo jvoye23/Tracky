@@ -1,10 +1,11 @@
 package com.jvcs.tracky.core.data.networking.dto
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 /**
  * Guards the wire contract for task intervals against the documented server response
@@ -36,12 +37,12 @@ class TaskIntervalDtoTest {
                 """.trimIndent(),
             )
 
-        assertEquals("9c1f0b52-6a4e-4f0d-9d16-2b5b0f8c9a31", dto.intervalId)
-        assertEquals("fe316e35-bd3f-4c6f-9d7d-23d6b6e8877e", dto.parentSessionId)
-        assertEquals("2026-03-28T15:16:40Z", dto.startDateTimeUtc)
-        assertEquals("2026-03-28T16:16:40Z", dto.endDateTimeUtc)
-        assertEquals(3600000L, dto.durationMillis)
-        assertEquals("2026-03-28T16:16:40.402000000Z", dto.updatedAt)
+        assertThat(dto.intervalId).isEqualTo("9c1f0b52-6a4e-4f0d-9d16-2b5b0f8c9a31")
+        assertThat(dto.parentSessionId).isEqualTo("fe316e35-bd3f-4c6f-9d7d-23d6b6e8877e")
+        assertThat(dto.startDateTimeUtc).isEqualTo("2026-03-28T15:16:40Z")
+        assertThat(dto.endDateTimeUtc).isEqualTo("2026-03-28T16:16:40Z")
+        assertThat(dto.durationMillis).isEqualTo(3600000L)
+        assertThat(dto.updatedAt).isEqualTo("2026-03-28T16:16:40.402000000Z")
     }
 
     @Test
@@ -58,9 +59,9 @@ class TaskIntervalDtoTest {
                 """.trimIndent(),
             )
 
-        assertNull(dto.endDateTimeUtc)
-        assertEquals(0L, dto.durationMillis)
-        assertNull(dto.updatedAt)
+        assertThat(dto.endDateTimeUtc).isNull()
+        assertThat(dto.durationMillis).isEqualTo(0L)
+        assertThat(dto.updatedAt).isNull()
     }
 
     @Test
@@ -92,8 +93,8 @@ class TaskIntervalDtoTest {
                 """.trimIndent(),
             )
 
-        assertEquals(1, task.intervals.size)
-        assertEquals("9c1f0b52-6a4e-4f0d-9d16-2b5b0f8c9a31", task.intervals.first().intervalId)
+        assertThat(task.intervals.size).isEqualTo(1)
+        assertThat(task.intervals.first().intervalId).isEqualTo("9c1f0b52-6a4e-4f0d-9d16-2b5b0f8c9a31")
     }
 
     @Test
@@ -109,8 +110,11 @@ class TaskIntervalDtoTest {
                 ),
             )
 
-        assertTrue(encoded.contains("\"id\""), "expected the server's \"id\" key in: $encoded")
-        assertTrue(encoded.contains("\"parentTaskId\""), "expected the server's \"parentTaskId\" key in: $encoded")
-        assertTrue(!encoded.contains("\"intervalId\""), "leaked the Kotlin property name in: $encoded")
+        assertThat(encoded.contains("\"id\""), name = "expected the server's \"id\" key in: $encoded").isTrue()
+        assertThat(
+            encoded.contains("\"parentTaskId\""),
+            name = "expected the server's \"parentTaskId\" key in: $encoded",
+        ).isTrue()
+        assertThat(!encoded.contains("\"intervalId\""), name = "leaked the Kotlin property name in: $encoded").isTrue()
     }
 }
