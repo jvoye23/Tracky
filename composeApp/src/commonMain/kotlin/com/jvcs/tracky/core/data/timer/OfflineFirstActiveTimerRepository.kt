@@ -20,7 +20,7 @@ import com.jvcs.tracky.core.domain.util.isMissingOrForbidden
 import com.jvcs.tracky.core.domain.util.isTransient
 import com.jvcs.tracky.features.project.domain.models.SubTaskInterval
 import com.jvcs.tracky.features.project.domain.models.TaskInterval
-import com.jvcs.tracky.features.project.domain.project.LocalProjectDataSource
+import com.jvcs.tracky.features.project.domain.project.LocalServerTreeDataSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlin.time.Instant
@@ -45,7 +45,7 @@ import kotlin.time.Instant
  */
 class OfflineFirstActiveTimerRepository(
     private val remoteActiveTimerDataSource: RemoteActiveTimerDataSource,
-    private val localProjectDataSource: LocalProjectDataSource,
+    private val localServerTreeDataSource: LocalServerTreeDataSource,
     private val deviceIdProvider: DeviceIdProvider,
     private val pendingSyncDataSource: PendingSyncDataSource,
     private val deltaSyncApplier: DeltaSyncApplier,
@@ -154,7 +154,7 @@ class OfflineFirstActiveTimerRepository(
 
         return when (change) {
             is ActiveTimerChange.Applied -> {
-                localProjectDataSource
+                localServerTreeDataSource
                     .applyTimerEcho(
                         taskIntervals = change.touchedTaskIntervals,
                         subTaskIntervals = change.touchedSubTaskIntervals,

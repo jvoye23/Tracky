@@ -72,10 +72,12 @@ internal class DeltaSyncApplierTest {
     private fun applier(remote: FakeRemoteSyncDataSource) =
         DeltaSyncApplier(
             remoteSyncDataSource = remote,
-            localProjectDataSource = local,
+            localServerTreeDataSource = local,
             projectRepository =
                 OfflineFirstProjectRepository(
                     localProjectDataSource = local,
+                    localProjectOrganizationDataSource = local,
+                    localServerTreeDataSource = local,
                     remoteProjectDataSource = remoteProjects,
                     pendingSyncDataSource = FakePendingSyncDataSource(),
                     syncScheduler = FakeSyncScheduler(),

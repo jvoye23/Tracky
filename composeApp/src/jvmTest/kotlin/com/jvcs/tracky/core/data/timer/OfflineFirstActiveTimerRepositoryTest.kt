@@ -94,16 +94,18 @@ class OfflineFirstActiveTimerRepositoryTest {
     private val repository =
         OfflineFirstActiveTimerRepository(
             remoteActiveTimerDataSource = remote,
-            localProjectDataSource = local,
+            localServerTreeDataSource = local,
             deviceIdProvider = FakeDeviceIdProvider(),
             pendingSyncDataSource = queue,
             deltaSyncApplier =
                 DeltaSyncApplier(
                     remoteSyncDataSource = syncRemote,
-                    localProjectDataSource = local,
+                    localServerTreeDataSource = local,
                     projectRepository =
                         OfflineFirstProjectRepository(
                             localProjectDataSource = local,
+                            localProjectOrganizationDataSource = local,
+                            localServerTreeDataSource = local,
                             remoteProjectDataSource = FakeRemoteProjectDataSource(),
                             pendingSyncDataSource = FakePendingSyncDataSource(),
                             syncScheduler = FakeSyncScheduler(),

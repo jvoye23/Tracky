@@ -34,6 +34,8 @@ class OfflineFirstProjectRepositoryTest {
         time: FakeTimeProvider = FakeTimeProvider(),
     ) = OfflineFirstProjectRepository(
         localProjectDataSource = local,
+        localProjectOrganizationDataSource = local,
+        localServerTreeDataSource = local,
         remoteProjectDataSource = remote,
         pendingSyncDataSource = queue,
         syncScheduler = scheduler,

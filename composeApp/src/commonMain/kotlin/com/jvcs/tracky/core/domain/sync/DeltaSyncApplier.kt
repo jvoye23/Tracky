@@ -5,7 +5,7 @@ import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.ServerClock
 import com.jvcs.tracky.core.domain.util.TimeProvider
-import com.jvcs.tracky.features.project.domain.project.LocalProjectDataSource
+import com.jvcs.tracky.features.project.domain.project.LocalServerTreeDataSource
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
 import kotlin.time.Instant
 
@@ -26,7 +26,7 @@ import kotlin.time.Instant
  */
 class DeltaSyncApplier(
     private val remoteSyncDataSource: RemoteSyncDataSource,
-    private val localProjectDataSource: LocalProjectDataSource,
+    private val localServerTreeDataSource: LocalServerTreeDataSource,
     private val projectRepository: ProjectRepository,
     private val syncCursorStore: SyncCursorStore,
     private val serverClock: ServerClock,
@@ -102,7 +102,7 @@ class DeltaSyncApplier(
     /** Applies one page and advances the cursor past it. Null means there is another page. */
     private suspend fun storePage(changes: SyncChanges, since: Long?): EmptyResult<DataError>? {
         if (!changes.isEmpty) {
-            val applied = localProjectDataSource.applyDelta(changes)
+            val applied = localServerTreeDataSource.applyDelta(changes)
             if (applied is Result.Error) return Result.Error(applied.error)
         }
 

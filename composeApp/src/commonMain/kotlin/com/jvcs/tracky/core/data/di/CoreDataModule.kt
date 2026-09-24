@@ -50,6 +50,8 @@ import com.jvcs.tracky.features.project.data.interval.RoomLocalIntervalDataSourc
 import com.jvcs.tracky.features.project.data.project.KtorRemoteProjectDataSource
 import com.jvcs.tracky.features.project.data.project.OfflineFirstProjectRepository
 import com.jvcs.tracky.features.project.data.project.RoomLocalProjectDataSource
+import com.jvcs.tracky.features.project.data.project.RoomLocalProjectOrganizationDataSource
+import com.jvcs.tracky.features.project.data.project.RoomLocalServerTreeDataSource
 import com.jvcs.tracky.features.project.data.subtask.KtorRemoteSubTaskDataSource
 import com.jvcs.tracky.features.project.data.subtask.OfflineFirstSubTaskRepository
 import com.jvcs.tracky.features.project.data.subtask.RoomLocalSubTaskDataSource
@@ -66,6 +68,8 @@ import com.jvcs.tracky.features.project.domain.interval.IntervalRepository
 import com.jvcs.tracky.features.project.domain.interval.LocalIntervalDataSource
 import com.jvcs.tracky.features.project.domain.interval.RemoteIntervalDataSource
 import com.jvcs.tracky.features.project.domain.project.LocalProjectDataSource
+import com.jvcs.tracky.features.project.domain.project.LocalProjectOrganizationDataSource
+import com.jvcs.tracky.features.project.domain.project.LocalServerTreeDataSource
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
 import com.jvcs.tracky.features.project.domain.project.RemoteProjectDataSource
 import com.jvcs.tracky.features.project.domain.subtask.LocalSubTaskDataSource
@@ -115,6 +119,9 @@ val coreDataModule =
         singleOf(::RoomPendingSyncDataSource) bind PendingSyncDataSource::class
 
         singleOf(::RoomLocalProjectDataSource) bind LocalProjectDataSource::class
+        singleOf(::RoomLocalProjectOrganizationDataSource) bind LocalProjectOrganizationDataSource::class
+        singleOf(::RoomLocalServerTreeDataSource) bind LocalServerTreeDataSource::class
+
         singleOf(::RoomLocalTaskDataSource) bind LocalTaskDataSource::class
         singleOf(::RoomLocalSubTaskDataSource) bind LocalSubTaskDataSource::class
         singleOf(::RoomLocalIntervalDataSource) bind LocalIntervalDataSource::class
@@ -129,6 +136,8 @@ val coreDataModule =
         single {
             OfflineFirstProjectRepository(
                 localProjectDataSource = get(),
+                localProjectOrganizationDataSource = get(),
+                localServerTreeDataSource = get(),
                 remoteProjectDataSource = get(),
                 pendingSyncDataSource = get(),
                 syncScheduler = get(),
@@ -373,7 +382,7 @@ val coreDataModule =
         single {
             DeltaSyncApplier(
                 remoteSyncDataSource = get(),
-                localProjectDataSource = get(),
+                localServerTreeDataSource = get(),
                 projectRepository = get(),
                 syncCursorStore = get(),
                 serverClock = get(),
@@ -389,7 +398,7 @@ val coreDataModule =
         single {
             OfflineFirstActiveTimerRepository(
                 remoteActiveTimerDataSource = get(),
-                localProjectDataSource = get(),
+                localServerTreeDataSource = get(),
                 deviceIdProvider = get(),
                 pendingSyncDataSource = get(),
                 deltaSyncApplier = get(),
