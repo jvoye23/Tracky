@@ -320,7 +320,7 @@ val coreDataModule =
                 isAuthenticated =
                     get<SessionStorage>()
                         .observeAuthInfo()
-                        .map { !it?.accessToken.isNullOrBlank() }
+                        .map { authInfo -> !authInfo?.accessToken.isNullOrBlank() }
                         .distinctUntilChanged(),
                 applicationScope = get(qualifier = named("AppScope")),
             )

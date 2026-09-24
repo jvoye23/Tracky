@@ -168,7 +168,7 @@ class RealtimeTimerConnection(
             }
         }
 
-    private suspend fun onEvent(frame: String, onHandshake: () -> Unit) {
+    private fun onEvent(frame: String, onHandshake: () -> Unit) {
         when (parser.parse(frame)) {
             // Unreadable. Logged by the parser; dropping a healthy connection over one bad frame
             // would be a far worse answer than ignoring it.

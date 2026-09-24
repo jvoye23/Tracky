@@ -22,6 +22,8 @@ sealed interface UiText {
     }
 
     @Composable
+    // Compose resources take format args only as varargs, and UiText stores them as an array.
+    @Suppress("SpreadOperator")
     fun asString(): String =
         when (this) {
             is DynamicString -> {
@@ -36,6 +38,8 @@ sealed interface UiText {
             }
         }
 
+    // Compose resources take format args only as varargs, and UiText stores them as an array.
+    @Suppress("SpreadOperator")
     suspend fun asStringAsync(): String =
         when (this) {
             is DynamicString -> {

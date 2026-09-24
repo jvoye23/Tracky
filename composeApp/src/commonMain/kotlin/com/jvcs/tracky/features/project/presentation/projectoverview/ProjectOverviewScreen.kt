@@ -681,7 +681,6 @@ private fun LazyItemScope.ProjectListCard(
 private fun ProjectOverviewState.withPreviewSections(): ProjectOverviewState {
     val visible =
         projects
-            .orEmpty()
             .filter { searchQuery.isBlank() || it.title.contains(searchQuery, ignoreCase = true) }
     return copy(
         pinnedProjects = visible.filter { it.isPinned },

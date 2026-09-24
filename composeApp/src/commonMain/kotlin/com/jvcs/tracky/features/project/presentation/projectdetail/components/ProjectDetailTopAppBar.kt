@@ -37,6 +37,7 @@ fun ProjectDetailTopAppBar(
     project: ProjectUi?,
 ) {
     TopAppBar(
+        modifier = modifier,
         title = {
             Row(
                 modifier =

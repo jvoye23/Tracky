@@ -26,6 +26,8 @@ class EmailVerificationViewModel(private val authService: AuthService, private v
                 }
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), EmailVerificationState())
 
+    // The MVI contract requires onAction; every action here is navigation, handled in the Root.
+    @Suppress("UnusedParameter")
     fun onAction(action: EmailVerificationAction) {
         // Navigation-only actions handled in Root composable
     }
@@ -35,9 +37,9 @@ class EmailVerificationViewModel(private val authService: AuthService, private v
             _state.update { it.copy(isVerifying = true) }
             authService
                 .verifyEmail(token)
-                .onSuccess {
+                .onSuccess { _ ->
                     _state.update { it.copy(isVerifying = false, isVerified = true) }
-                }.onFailure {
+                }.onFailure { _ ->
                     _state.update { it.copy(isVerifying = false, hasFailed = true) }
                 }
         }

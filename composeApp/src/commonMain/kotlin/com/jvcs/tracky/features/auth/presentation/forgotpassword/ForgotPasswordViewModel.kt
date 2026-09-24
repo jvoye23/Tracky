@@ -73,7 +73,7 @@ class ForgotPasswordViewModel(private val authService: AuthService) : ViewModel(
                     email =
                         state.value.emailTextFieldState.text
                             .toString(),
-                ).onSuccess {
+                ).onSuccess { _ ->
                     _state.update { it.copy(isLoading = false, isEmailSentSuccessfully = true) }
                 }.onFailure { error ->
                     _state.update { it.copy(errorText = error.toUiText(), isLoading = false) }

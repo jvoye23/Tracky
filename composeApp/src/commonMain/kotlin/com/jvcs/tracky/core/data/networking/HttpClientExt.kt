@@ -105,7 +105,7 @@ suspend inline fun <reified Response : Any> safeCall(execute: () -> HttpResponse
  * For callers that have to read a non-2xx body, or tell `204 No Content` apart from a body that
  * failed to decode — [safeCall] reports both as an error.
  */
-suspend inline fun safeResponse(execute: () -> HttpResponse): Result<HttpResponse, DataError.Remote> {
+inline fun safeResponse(execute: () -> HttpResponse): Result<HttpResponse, DataError.Remote> {
     // Order is load-bearing: on JVM, Ktor's ConnectTimeoutException subclasses
     // java.net.ConnectException, so the timeout branches must precede anything that treats a
     // connect/socket failure as "offline" — otherwise timeouts get reported as NO_INTERNET.

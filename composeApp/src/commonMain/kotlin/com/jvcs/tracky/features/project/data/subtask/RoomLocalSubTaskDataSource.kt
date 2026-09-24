@@ -90,11 +90,9 @@ class RoomLocalSubTaskDataSource(
                     // timer intact; opening one makes this subtask the reason the task is running, which
                     // startedParentTimer records so stopping it can undo exactly that.
                     val openTaskInterval = projectDao.getOpenIntervalBySessionId(taskId)
-                    val opened =
-                        if (openTaskInterval != null) {
-                            null
-                        } else {
-                            TaskIntervalEntity(
+                    val parentTaskInterval =
+                        openTaskInterval
+                            ?: TaskIntervalEntity(
                                 intervalId = Uuid.random().toString(),
                                 parentTaskId = taskId,
                                 parentProjectId = subTask.parentProjectId,
@@ -106,13 +104,14 @@ class RoomLocalSubTaskDataSource(
                                 projectDao.upsertTaskInterval(it)
                                 projectDao.updateSessionTimerStatus(taskId, true)
                             }
-                        }
+                    // Non-null only when this subtask opened the task's interval.
+                    val opened = parentTaskInterval.takeIf { openTaskInterval == null }
 
                     val interval =
                         SubTaskIntervalEntity(
                             subTaskIntervalId = Uuid.random().toString(),
                             parentSubTaskId = subTaskId,
-                            parentTaskIntervalId = (openTaskInterval ?: opened!!).intervalId,
+                            parentTaskIntervalId = parentTaskInterval.intervalId,
                             parentProjectId = subTask.parentProjectId,
                             startDateTimeEpochMs = now.toEpochMilliseconds(),
                             endDateTimeEpochMs = null,

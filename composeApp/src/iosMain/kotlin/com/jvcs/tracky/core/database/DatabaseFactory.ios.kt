@@ -2,6 +2,7 @@ package com.jvcs.tracky.core.database
 
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import co.touchlab.kermit.Logger
 import kotlinx.cinterop.ExperimentalForeignApi
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
@@ -12,7 +13,7 @@ actual class DatabaseFactory {
     actual fun create(): RoomDatabase.Builder<TrackyDatabase> {
         val dbFile = documentDirectory() + "/${TrackyDatabase.DB_NAME}"
 
-        print("ios db file: $dbFile")
+        Logger.withTag("DatabaseFactory").d { "ios db file: $dbFile" }
 
         return Room.databaseBuilder(dbFile)
     }
