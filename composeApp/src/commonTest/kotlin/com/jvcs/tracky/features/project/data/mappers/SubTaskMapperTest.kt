@@ -2,6 +2,9 @@
 
 package com.jvcs.tracky.features.project.data.mappers
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
 import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
 import com.jvcs.tracky.core.database.entity.SubTaskIntervalEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
@@ -10,8 +13,6 @@ import com.jvcs.tracky.core.database.relation.TaskWithSubTasks
 import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import com.jvcs.tracky.features.project.domain.models.SubTaskInterval
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
@@ -61,7 +62,7 @@ class SubTaskMapperTest {
     fun subTaskSurvivesARoundTrip() {
         val original = subTask()
 
-        assertEquals(original, original.toProjectSubTaskEntity().toProjectSubTask())
+        assertThat(original.toProjectSubTaskEntity().toProjectSubTask()).isEqualTo(original)
     }
 
     @Test
@@ -73,18 +74,18 @@ class SubTaskMapperTest {
 
         val roundTripped = original.toProjectSubTaskEntity().toProjectSubTask()
 
-        assertEquals(original, roundTripped)
-        assertNull(roundTripped.durationMillis)
-        assertNull(roundTripped.description)
-        assertNull(roundTripped.endDateTimeUtc)
-        assertNull(roundTripped.ownUpdatedAt)
+        assertThat(roundTripped).isEqualTo(original)
+        assertThat(roundTripped.durationMillis).isNull()
+        assertThat(roundTripped.description).isNull()
+        assertThat(roundTripped.endDateTimeUtc).isNull()
+        assertThat(roundTripped.ownUpdatedAt).isNull()
     }
 
     @Test
     fun subTaskIntervalSurvivesARoundTrip() {
         val original = interval()
 
-        assertEquals(original, original.toSubTaskIntervalEntity().toSubTaskInterval())
+        assertThat(original.toSubTaskIntervalEntity().toSubTaskInterval()).isEqualTo(original)
     }
 
     @Test
@@ -93,7 +94,7 @@ class SubTaskMapperTest {
         // a pull think the interval was closed.
         val roundTripped = interval(endDateTimeUtc = null).toSubTaskIntervalEntity().toSubTaskInterval()
 
-        assertNull(roundTripped.endDateTimeUtc)
+        assertThat(roundTripped.endDateTimeUtc).isNull()
     }
 
     @Test
@@ -106,7 +107,7 @@ class SubTaskMapperTest {
 
         val mapped = relation.toProjectSubTask()
 
-        assertEquals(subTask(intervals = listOf(interval("si1"), interval("si2"))), mapped)
+        assertThat(mapped).isEqualTo(subTask(intervals = listOf(interval("si1"), interval("si2"))))
     }
 
     /** A subtask interval carries no stamp of its own, so the task rolls up to the subtask's. */
@@ -142,18 +143,17 @@ class SubTaskMapperTest {
 
         val mapped = relation.toProjectTask()
 
-        assertEquals("task title", mapped.title) // the entity column is named `description`
-        assertEquals(listOf("i1"), mapped.intervals.map { it.intervalId })
-        assertEquals(listOf("s1"), mapped.subTasks?.map { it.projectSubTaskId })
-        assertEquals(
-            listOf("si1"),
+        assertThat(mapped.title).isEqualTo("task title") // the entity column is named `description`
+        assertThat(mapped.intervals.map { it.intervalId }).isEqualTo(listOf("i1"))
+        assertThat(mapped.subTasks?.map { it.projectSubTaskId }).isEqualTo(listOf("s1"))
+        assertThat(
             mapped.subTasks
                 ?.single()
                 ?.subTaskIntervals
                 ?.map { it.subTaskIntervalId },
-        )
+        ).isEqualTo(listOf("si1"))
         // Both branches stay visible to the Timestamped roll-up.
-        assertEquals(2, mapped.children.size)
-        assertEquals(t300, mapped.lastUpdatedAt)
+        assertThat(mapped.children.size).isEqualTo(2)
+        assertThat(mapped.lastUpdatedAt).isEqualTo(t300)
     }
 }

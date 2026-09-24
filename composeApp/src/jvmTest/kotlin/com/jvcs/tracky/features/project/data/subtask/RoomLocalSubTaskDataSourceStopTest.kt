@@ -2,6 +2,12 @@ package com.jvcs.tracky.features.project.data.subtask
 
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isNotNull
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.database.TrackyDatabase
 import com.jvcs.tracky.core.database.entity.ProjectEntity
 import com.jvcs.tracky.core.database.entity.ProjectSubTaskEntity
@@ -17,11 +23,6 @@ import kotlinx.coroutines.runBlocking
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 import kotlin.time.Instant
 
 /**
@@ -120,13 +121,13 @@ internal class RoomLocalSubTaskDataSourceStopTest {
 
             val result = subTasks.stopSubTask("s1")
 
-            assertTrue(result is Result.Success)
-            assertNull(db.projectDao.getOpenSubTaskInterval("s1"))
-            assertNull(db.projectDao.getOpenIntervalBySessionId("t1"))
-            assertFalse(subTaskIsRunning("s1"))
-            assertFalse(taskIsRunning())
-            assertEquals(60_000L, db.projectDao.getSubTaskById("s1")!!.durationMillis)
-            assertEquals(60_000L, db.projectDao.getTaskById("t1")!!.durationMillis)
+            assertThat(result is Result.Success).isTrue()
+            assertThat(db.projectDao.getOpenSubTaskInterval("s1")).isNull()
+            assertThat(db.projectDao.getOpenIntervalBySessionId("t1")).isNull()
+            assertThat(subTaskIsRunning("s1")).isFalse()
+            assertThat(taskIsRunning()).isFalse()
+            assertThat(db.projectDao.getSubTaskById("s1")!!.durationMillis).isEqualTo(60_000L)
+            assertThat(db.projectDao.getTaskById("t1")!!.durationMillis).isEqualTo(60_000L)
         }
 
     @Test
@@ -142,10 +143,10 @@ internal class RoomLocalSubTaskDataSourceStopTest {
 
             subTasks.stopSubTask("s1")
 
-            assertNull(db.projectDao.getOpenSubTaskInterval("s1"))
+            assertThat(db.projectDao.getOpenSubTaskInterval("s1")).isNull()
             // The task timer was not this subtask's to stop.
-            assertNotNull(db.projectDao.getOpenIntervalBySessionId("t1"))
-            assertTrue(taskIsRunning())
+            assertThat(db.projectDao.getOpenIntervalBySessionId("t1")).isNotNull()
+            assertThat(taskIsRunning()).isTrue()
         }
 
     @Test
@@ -159,8 +160,8 @@ internal class RoomLocalSubTaskDataSourceStopTest {
 
             subTasks.stopSubTask("s2")
 
-            assertNotNull(db.projectDao.getOpenIntervalBySessionId("t1"))
-            assertTrue(taskIsRunning())
+            assertThat(db.projectDao.getOpenIntervalBySessionId("t1")).isNotNull()
+            assertThat(taskIsRunning()).isTrue()
         }
 
     @Test
@@ -170,9 +171,9 @@ internal class RoomLocalSubTaskDataSourceStopTest {
 
             val result = subTasks.stopSubTask("s1")
 
-            assertTrue(result is Result.Success)
-            assertNull(result.data)
-            assertFalse(taskIsRunning())
+            check(result is Result.Success)
+            assertThat(result.data).isNull()
+            assertThat(taskIsRunning()).isFalse()
         }
 
     @Test
@@ -185,12 +186,12 @@ internal class RoomLocalSubTaskDataSourceStopTest {
             tasks.stopTask("t1")
 
             // Neither may be left open — and both are banked at the same instant.
-            assertNull(db.projectDao.getOpenSubTaskInterval("s1"))
-            assertNull(db.projectDao.getOpenIntervalBySessionId("t1"))
-            assertFalse(subTaskIsRunning("s1"))
-            assertFalse(taskIsRunning())
-            assertEquals(60_000L, db.projectDao.getSubTaskById("s1")!!.durationMillis)
-            assertEquals(60_000L, db.projectDao.getTaskById("t1")!!.durationMillis)
+            assertThat(db.projectDao.getOpenSubTaskInterval("s1")).isNull()
+            assertThat(db.projectDao.getOpenIntervalBySessionId("t1")).isNull()
+            assertThat(subTaskIsRunning("s1")).isFalse()
+            assertThat(taskIsRunning()).isFalse()
+            assertThat(db.projectDao.getSubTaskById("s1")!!.durationMillis).isEqualTo(60_000L)
+            assertThat(db.projectDao.getTaskById("t1")!!.durationMillis).isEqualTo(60_000L)
         }
 
     @Test
@@ -203,8 +204,8 @@ internal class RoomLocalSubTaskDataSourceStopTest {
 
             val result = tasks.stopTask("t1")
 
-            assertTrue(result is Result.Success)
-            assertEquals(60_000L, result.data?.durationMillis)
-            assertFalse(taskIsRunning())
+            check(result is Result.Success)
+            assertThat(result.data?.durationMillis).isEqualTo(60_000L)
+            assertThat(taskIsRunning()).isFalse()
         }
 }

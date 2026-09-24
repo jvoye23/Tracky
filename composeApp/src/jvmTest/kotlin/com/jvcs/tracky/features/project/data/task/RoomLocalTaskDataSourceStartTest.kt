@@ -2,6 +2,11 @@ package com.jvcs.tracky.features.project.data.task
 
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNotNull
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.database.TrackyDatabase
 import com.jvcs.tracky.core.database.entity.ProjectEntity
 import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
@@ -17,10 +22,6 @@ import kotlinx.coroutines.runBlocking
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 import kotlin.time.Instant
 
 /**
@@ -104,16 +105,15 @@ internal class RoomLocalTaskDataSourceStartTest {
 
             val result = dataSource.startTask("t1")
 
-            assertTrue(result is Result.Success)
-            assertEquals(1, intervalCount())
-            assertEquals(
-                1_000L,
+            check(result is Result.Success)
+            assertThat(intervalCount()).isEqualTo(1)
+            assertThat(
                 result.data.interval.startDateTimeUtc
                     .toEpochMilliseconds(),
-            )
+            ).isEqualTo(1_000L)
             // A brand-new row, so it is the caller's job to push it.
-            assertNotNull(result.data.openedInterval)
-            assertTrue(db.projectDao.getTaskById("t1")!!.isTimerRunning)
+            assertThat(result.data.openedInterval).isNotNull()
+            assertThat(db.projectDao.getTaskById("t1")!!.isTimerRunning).isTrue()
         }
 
     @Test
@@ -127,20 +127,19 @@ internal class RoomLocalTaskDataSourceStartTest {
 
             val second = dataSource.startTask("t1")
 
-            assertTrue(first is Result.Success && second is Result.Success)
-            assertEquals(1, intervalCount())
-            assertEquals(first.data.interval.intervalId, second.data.interval.intervalId)
+            check(first is Result.Success && second is Result.Success)
+            assertThat(intervalCount()).isEqualTo(1)
+            assertThat(second.data.interval.intervalId).isEqualTo(first.data.interval.intervalId)
             // The reused row keeps its original start: inventing a new one would silently discard the
             // time already tracked against it.
-            assertEquals(
-                1_000L,
+            assertThat(
                 second.data.interval.startDateTimeUtc
                     .toEpochMilliseconds(),
-            )
+            ).isEqualTo(1_000L)
             // Nothing new to push: that row is already on the server, or queued for it. Pushing a
             // CREATE again would duplicate it.
-            assertNull(second.data.openedInterval)
-            assertTrue(db.projectDao.getTaskById("t1")!!.isTimerRunning)
+            assertThat(second.data.openedInterval).isNull()
+            assertThat(db.projectDao.getTaskById("t1")!!.isTimerRunning).isTrue()
         }
 
     @Test
@@ -172,12 +171,12 @@ internal class RoomLocalTaskDataSourceStartTest {
 
             val closed = dataSource.stopTask("t1")
 
-            assertTrue(closed is Result.Success)
-            assertNotNull(closed.data)
+            check(closed is Result.Success)
+            checkNotNull(closed.data)
             // Newest-first, so the 5s the user just tracked is banked rather than the whole 15s span
             // of a row nothing was tracking.
-            assertEquals("i-recent", closed.data.intervalId)
-            assertEquals(5_000L, closed.data.durationMillis)
+            assertThat(closed.data.intervalId).isEqualTo("i-recent")
+            assertThat(closed.data.durationMillis).isEqualTo(5_000L)
         }
 
     // --- clock basis ---------------------------------------------------------------------------
@@ -198,12 +197,11 @@ internal class RoomLocalTaskDataSourceStartTest {
 
             val result = dataSource.startTask("t1")
 
-            assertTrue(result is Result.Success)
-            assertEquals(
-                50_000L,
+            check(result is Result.Success)
+            assertThat(
                 result.data.interval.startDateTimeUtc
                     .toEpochMilliseconds(),
-            )
+            ).isEqualTo(50_000L)
         }
 
     @Test
@@ -217,11 +215,11 @@ internal class RoomLocalTaskDataSourceStartTest {
 
             val closed = dataSource.stopTask("t1")
 
-            assertTrue(closed is Result.Success)
-            assertNotNull(closed.data)
-            assertEquals(55_000L, closed.data.endDateTimeUtc!!.toEpochMilliseconds())
+            check(closed is Result.Success)
+            checkNotNull(closed.data)
+            assertThat(closed.data.endDateTimeUtc!!.toEpochMilliseconds()).isEqualTo(55_000L)
             // Both ends on one basis, so the offset cancels and the banked figure is the real one.
-            assertEquals(5_000L, closed.data.durationMillis)
+            assertThat(closed.data.durationMillis).isEqualTo(5_000L)
         }
 
     /**
@@ -248,10 +246,10 @@ internal class RoomLocalTaskDataSourceStartTest {
 
             val closed = dataSource.stopTask("t1")
 
-            assertTrue(closed is Result.Success)
-            assertNotNull(closed.data)
-            assertEquals(0L, closed.data.durationMillis)
-            assertEquals(0L, db.projectDao.getTaskById("t1")!!.durationMillis)
+            check(closed is Result.Success)
+            checkNotNull(closed.data)
+            assertThat(closed.data.durationMillis).isEqualTo(0L)
+            assertThat(db.projectDao.getTaskById("t1")!!.durationMillis).isEqualTo(0L)
         }
 
     /**
@@ -266,8 +264,8 @@ internal class RoomLocalTaskDataSourceStartTest {
             timeProvider.now = Instant.fromEpochMilliseconds(1_000)
             val result = dataSource.startTask("t1")
 
-            assertTrue(result is Result.Success)
+            check(result is Result.Success)
             val startedAt = result.data.interval.startDateTimeUtc
-            assertEquals(0L, (serverClock.now() - startedAt).inWholeMilliseconds)
+            assertThat((serverClock.now() - startedAt).inWholeMilliseconds).isEqualTo(0L)
         }
 }

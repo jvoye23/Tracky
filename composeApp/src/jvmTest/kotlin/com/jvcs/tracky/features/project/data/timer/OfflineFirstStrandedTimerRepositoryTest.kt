@@ -2,6 +2,11 @@ package com.jvcs.tracky.features.project.data.timer
 
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNotNull
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.database.TrackyDatabase
 import com.jvcs.tracky.core.database.entity.ProjectEntity
 import com.jvcs.tracky.core.database.entity.ProjectSubTaskEntity
@@ -30,10 +35,6 @@ import kotlinx.coroutines.runBlocking
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
@@ -169,15 +170,15 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
 
             val timers = repository.observeStrandedTimers().first()
 
-            assertEquals(1, timers.size)
+            assertThat(timers.size).isEqualTo(1)
             val timer = timers.single()
-            assertEquals("Project Detail Screen", timer.taskTitle)
-            assertEquals("Tracky App", timer.projectTitle)
-            assertEquals(detectedAt, timer.proposedEndAt.toEpochMilliseconds())
+            assertThat(timer.taskTitle).isEqualTo("Project Detail Screen")
+            assertThat(timer.projectTitle).isEqualTo("Tracky App")
+            assertThat(timer.proposedEndAt.toEpochMilliseconds()).isEqualTo(detectedAt)
             // The reported number: 75h21m, offered but not banked.
-            assertEquals(75.hours + 21.minutes, timer.proposedDuration)
-            assertNotNull(db.projectDao.getStrandedInterval("i1"))
-            assertEquals(0L, db.projectDao.getTaskById("t1")!!.durationMillis)
+            assertThat(timer.proposedDuration).isEqualTo(75.hours + 21.minutes)
+            assertThat(db.projectDao.getStrandedInterval("i1")).isNotNull()
+            assertThat(db.projectDao.getTaskById("t1")!!.durationMillis).isEqualTo(0L)
         }
 
     @Test
@@ -188,17 +189,17 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
 
             val result = repository.keep(timer)
 
-            assertTrue(result is Result.Success)
+            assertThat(result is Result.Success).isTrue()
             val closed = db.projectDao.getIntervalById("i1")!!
-            assertEquals(detectedAt, closed.endDateTimeEpochMs)
-            assertEquals(detectedAt, closed.durationMillis)
-            assertEquals(detectedAt, db.projectDao.getTaskById("t1")!!.durationMillis)
+            assertThat(closed.endDateTimeEpochMs).isEqualTo(detectedAt)
+            assertThat(closed.durationMillis).isEqualTo(detectedAt)
+            assertThat(db.projectDao.getTaskById("t1")!!.durationMillis).isEqualTo(detectedAt)
             // Resolved once, gone for good.
-            assertNull(db.projectDao.getStrandedInterval("i1"))
-            assertTrue(repository.observeStrandedTimers().first().isEmpty())
+            assertThat(db.projectDao.getStrandedInterval("i1")).isNull()
+            assertThat(repository.observeStrandedTimers().first().isEmpty()).isTrue()
             // And the closed row reaches the server.
-            assertEquals(listOf("i1"), pushedIntervalUpdates.map { it.intervalId })
-            assertEquals(listOf("t1"), pushedTasks.map { it.projectTaskId })
+            assertThat(pushedIntervalUpdates.map { it.intervalId }).isEqualTo(listOf("i1"))
+            assertThat(pushedTasks.map { it.projectTaskId }).isEqualTo(listOf("t1"))
         }
 
     @Test
@@ -210,9 +211,9 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
             repository.keepWithDuration(timer, 2.hours)
 
             val closed = db.projectDao.getIntervalById("i1")!!
-            assertEquals(2 * 60 * 60 * 1000L, closed.durationMillis)
-            assertEquals(2 * 60 * 60 * 1000L, closed.endDateTimeEpochMs)
-            assertEquals(2 * 60 * 60 * 1000L, db.projectDao.getTaskById("t1")!!.durationMillis)
+            assertThat(closed.durationMillis).isEqualTo(2 * 60 * 60 * 1000L)
+            assertThat(closed.endDateTimeEpochMs).isEqualTo(2 * 60 * 60 * 1000L)
+            assertThat(db.projectDao.getTaskById("t1")!!.durationMillis).isEqualTo(2 * 60 * 60 * 1000L)
         }
 
     @Test
@@ -223,11 +224,11 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
 
             repository.discard(timer)
 
-            assertNull(db.projectDao.getStrandedInterval("i1"))
+            assertThat(db.projectDao.getStrandedInterval("i1")).isNull()
             // Remote too: upsertServerTree re-inserts an interval the local side no longer has, so a
             // local-only delete would come back on the next pull.
-            assertEquals(listOf("i1"), deletedIntervalIds)
-            assertEquals(0L, db.projectDao.getTaskById("t1")!!.durationMillis)
+            assertThat(deletedIntervalIds).isEqualTo(listOf("i1"))
+            assertThat(db.projectDao.getTaskById("t1")!!.durationMillis).isEqualTo(0L)
         }
 
     @Test
@@ -237,19 +238,19 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
 
             val timers = repository.observeStrandedTimers().first()
 
-            assertEquals(1, timers.size, "the nested pair is one stretch of wall clock, not two")
+            assertThat(timers.size, name = "the nested pair is one stretch of wall clock, not two").isEqualTo(1)
             val timer = timers.single()
-            assertEquals("si1", timer.subTaskIntervalId)
-            assertEquals("i1", timer.taskIntervalId)
-            assertEquals("Per-day strip", timer.subTaskTitle)
+            assertThat(timer.subTaskIntervalId).isEqualTo("si1")
+            assertThat(timer.taskIntervalId).isEqualTo("i1")
+            assertThat(timer.subTaskTitle).isEqualTo("Per-day strip")
 
             repository.keep(timer)
 
-            assertEquals(detectedAt, db.projectDao.getSubTaskIntervalById("si1")!!.endDateTimeEpochMs)
-            assertEquals(detectedAt, db.projectDao.getIntervalById("i1")!!.endDateTimeEpochMs)
-            assertNull(db.projectDao.getStrandedInterval("si1"))
-            assertNull(db.projectDao.getStrandedInterval("i1"))
-            assertTrue(repository.observeStrandedTimers().first().isEmpty())
+            assertThat(db.projectDao.getSubTaskIntervalById("si1")!!.endDateTimeEpochMs).isEqualTo(detectedAt)
+            assertThat(db.projectDao.getIntervalById("i1")!!.endDateTimeEpochMs).isEqualTo(detectedAt)
+            assertThat(db.projectDao.getStrandedInterval("si1")).isNull()
+            assertThat(db.projectDao.getStrandedInterval("i1")).isNull()
+            assertThat(repository.observeStrandedTimers().first().isEmpty()).isTrue()
         }
 
     @Test
@@ -275,10 +276,10 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
 
             val timer = repository.observeStrandedTimers().first().single()
 
-            assertTrue(
+            assertThat(
                 timer.keepingWouldNotBeCounted,
-                "rule 1 counts subtasks only, so this time would inflate totals and render nowhere",
-            )
+                name = "rule 1 counts subtasks only, so this time would inflate totals and render nowhere",
+            ).isTrue()
         }
 
     @Test
@@ -293,10 +294,10 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
 
             repository.keepWithDuration(timer, 1.hours)
 
-            assertEquals(listOf("si1"), deletedSubTaskIntervalIds)
-            assertNull(db.projectDao.getStrandedInterval("si1"))
+            assertThat(deletedSubTaskIntervalIds).isEqualTo(listOf("si1"))
+            assertThat(db.projectDao.getStrandedInterval("si1")).isNull()
             // The task interval still closes at the edited end.
-            assertEquals(60 * 60 * 1000L, db.projectDao.getIntervalById("i1")!!.durationMillis)
+            assertThat(db.projectDao.getIntervalById("i1")!!.durationMillis).isEqualTo(60 * 60 * 1000L)
         }
 
     // --- fakes: the push side, recorded rather than performed ------------------------------------
