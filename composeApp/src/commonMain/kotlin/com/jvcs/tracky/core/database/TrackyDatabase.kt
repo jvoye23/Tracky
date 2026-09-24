@@ -72,101 +72,111 @@ abstract class TrackyDatabase : RoomDatabase() {
         val MIGRATION_4_5 =
             object : Migration(4, 5) {
                 override fun migrate(connection: SQLiteConnection) {
-                    // projects: rebuild with TEXT columns for startDateTimeUtc / endDateTimeUtc
-                    connection.execSQL(
-                        """
-                        CREATE TABLE projects_new (
-                            projectId TEXT NOT NULL PRIMARY KEY,
-                            title TEXT NOT NULL,
-                            description TEXT,
-                            color INTEGER,
-                            totalDuration INTEGER,
-                            startDateTimeUtc TEXT NOT NULL,
-                            isFinished INTEGER NOT NULL,
-                            useLightTextColor INTEGER NOT NULL DEFAULT 0,
-                            endDateTimeUtc TEXT
-                        )
-                        """.trimIndent(),
-                    )
-                    connection.execSQL(
-                        """
-                        INSERT INTO projects_new
-                          (projectId, title, description, color, totalDuration,
-                           startDateTimeUtc, isFinished, useLightTextColor, endDateTimeUtc)
-                        SELECT projectId, title, description, color, totalDuration,
-                               strftime('%Y-%m-%dT%H:%M:%fZ', startDateTimeEpochMs/1000.0, 'unixepoch'),
-                               isFinished, useLightTextColor,
-                               CASE WHEN endDateTimeEpochMs IS NULL THEN NULL
-                                    ELSE strftime('%Y-%m-%dT%H:%M:%fZ', endDateTimeEpochMs/1000.0, 'unixepoch') END
-                        FROM projects
-                        """.trimIndent(),
-                    )
-                    connection.execSQL("DROP TABLE projects")
-                    connection.execSQL("ALTER TABLE projects_new RENAME TO projects")
-
-                    // project_records (ProjectTaskEntity)
-                    connection.execSQL(
-                        """
-                        CREATE TABLE project_records_new (
-                            recordId TEXT NOT NULL PRIMARY KEY,
-                            parentProjectId TEXT NOT NULL,
-                            description TEXT NOT NULL,
-                            durationMillis INTEGER NOT NULL,
-                            startDateTimeUtc TEXT NOT NULL,
-                            endDateTimeUtc TEXT,
-                            isFinished INTEGER NOT NULL,
-                            isTimerRunning INTEGER NOT NULL,
-                            FOREIGN KEY(parentProjectId) REFERENCES projects(projectId) ON DELETE CASCADE
-                        )
-                        """.trimIndent(),
-                    )
-                    connection.execSQL(
-                        """
-                        INSERT INTO project_records_new
-                          (recordId, parentProjectId, description, durationMillis,
-                           startDateTimeUtc, endDateTimeUtc, isFinished, isTimerRunning)
-                        SELECT recordId, parentProjectId, description, durationMillis,
-                               strftime('%Y-%m-%dT%H:%M:%fZ', startDateTimeEpochMs/1000.0, 'unixepoch'),
-                               CASE WHEN endDateTimeEpochMs IS NULL THEN NULL
-                                    ELSE strftime('%Y-%m-%dT%H:%M:%fZ', endDateTimeEpochMs/1000.0, 'unixepoch') END,
-                               isFinished, isTimerRunning
-                        FROM project_records
-                        """.trimIndent(),
-                    )
-                    connection.execSQL("DROP TABLE project_records")
-                    connection.execSQL("ALTER TABLE project_records_new RENAME TO project_records")
-                    connection.execSQL(
-                        "CREATE INDEX IF NOT EXISTS index_project_records_parentProjectId ON project_records(parentProjectId)",
-                    )
-
-                    // task_intervals
-                    connection.execSQL(
-                        """
-                        CREATE TABLE task_intervals_new (
-                            intervalId INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                            parentTaskId TEXT NOT NULL,
-                            startDateTimeUtc TEXT NOT NULL,
-                            endDateTimeUtc TEXT,
-                            durationMillis INTEGER NOT NULL
-                        )
-                        """.trimIndent(),
-                    )
-                    connection.execSQL(
-                        """
-                        INSERT INTO task_intervals_new
-                          (intervalId, parentTaskId, startDateTimeUtc, endDateTimeUtc, durationMillis)
-                        SELECT intervalId, parentTaskId,
-                               strftime('%Y-%m-%dT%H:%M:%fZ', startDateTimeEpochMs/1000.0, 'unixepoch'),
-                               CASE WHEN endDateTimeEpochMs IS NULL THEN NULL
-                                    ELSE strftime('%Y-%m-%dT%H:%M:%fZ', endDateTimeEpochMs/1000.0, 'unixepoch') END,
-                               durationMillis
-                        FROM task_intervals
-                        """.trimIndent(),
-                    )
-                    connection.execSQL("DROP TABLE task_intervals")
-                    connection.execSQL("ALTER TABLE task_intervals_new RENAME TO task_intervals")
+                    rebuildProjectsWithIsoDates(connection)
+                    rebuildProjectRecordsWithIsoDates(connection)
+                    rebuildTaskIntervalsWithIsoDates(connection)
                 }
             }
+
+        private fun rebuildProjectsWithIsoDates(connection: SQLiteConnection) {
+            // projects: rebuild with TEXT columns for startDateTimeUtc / endDateTimeUtc
+            connection.execSQL(
+                """
+                CREATE TABLE projects_new (
+                    projectId TEXT NOT NULL PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    description TEXT,
+                    color INTEGER,
+                    totalDuration INTEGER,
+                    startDateTimeUtc TEXT NOT NULL,
+                    isFinished INTEGER NOT NULL,
+                    useLightTextColor INTEGER NOT NULL DEFAULT 0,
+                    endDateTimeUtc TEXT
+                )
+                """.trimIndent(),
+            )
+            connection.execSQL(
+                """
+                INSERT INTO projects_new
+                  (projectId, title, description, color, totalDuration,
+                   startDateTimeUtc, isFinished, useLightTextColor, endDateTimeUtc)
+                SELECT projectId, title, description, color, totalDuration,
+                       strftime('%Y-%m-%dT%H:%M:%fZ', startDateTimeEpochMs/1000.0, 'unixepoch'),
+                       isFinished, useLightTextColor,
+                       CASE WHEN endDateTimeEpochMs IS NULL THEN NULL
+                            ELSE strftime('%Y-%m-%dT%H:%M:%fZ', endDateTimeEpochMs/1000.0, 'unixepoch') END
+                FROM projects
+                """.trimIndent(),
+            )
+            connection.execSQL("DROP TABLE projects")
+            connection.execSQL("ALTER TABLE projects_new RENAME TO projects")
+        }
+
+        private fun rebuildProjectRecordsWithIsoDates(connection: SQLiteConnection) {
+            // project_records (ProjectTaskEntity)
+            connection.execSQL(
+                """
+                CREATE TABLE project_records_new (
+                    recordId TEXT NOT NULL PRIMARY KEY,
+                    parentProjectId TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    durationMillis INTEGER NOT NULL,
+                    startDateTimeUtc TEXT NOT NULL,
+                    endDateTimeUtc TEXT,
+                    isFinished INTEGER NOT NULL,
+                    isTimerRunning INTEGER NOT NULL,
+                    FOREIGN KEY(parentProjectId) REFERENCES projects(projectId) ON DELETE CASCADE
+                )
+                """.trimIndent(),
+            )
+            connection.execSQL(
+                """
+                INSERT INTO project_records_new
+                  (recordId, parentProjectId, description, durationMillis,
+                   startDateTimeUtc, endDateTimeUtc, isFinished, isTimerRunning)
+                SELECT recordId, parentProjectId, description, durationMillis,
+                       strftime('%Y-%m-%dT%H:%M:%fZ', startDateTimeEpochMs/1000.0, 'unixepoch'),
+                       CASE WHEN endDateTimeEpochMs IS NULL THEN NULL
+                            ELSE strftime('%Y-%m-%dT%H:%M:%fZ', endDateTimeEpochMs/1000.0, 'unixepoch') END,
+                       isFinished, isTimerRunning
+                FROM project_records
+                """.trimIndent(),
+            )
+            connection.execSQL("DROP TABLE project_records")
+            connection.execSQL("ALTER TABLE project_records_new RENAME TO project_records")
+            connection.execSQL(
+                "CREATE INDEX IF NOT EXISTS index_project_records_parentProjectId ON project_records(parentProjectId)",
+            )
+        }
+
+        private fun rebuildTaskIntervalsWithIsoDates(connection: SQLiteConnection) {
+            // task_intervals
+            connection.execSQL(
+                """
+                CREATE TABLE task_intervals_new (
+                    intervalId INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    parentTaskId TEXT NOT NULL,
+                    startDateTimeUtc TEXT NOT NULL,
+                    endDateTimeUtc TEXT,
+                    durationMillis INTEGER NOT NULL
+                )
+                """.trimIndent(),
+            )
+            connection.execSQL(
+                """
+                INSERT INTO task_intervals_new
+                  (intervalId, parentTaskId, startDateTimeUtc, endDateTimeUtc, durationMillis)
+                SELECT intervalId, parentTaskId,
+                       strftime('%Y-%m-%dT%H:%M:%fZ', startDateTimeEpochMs/1000.0, 'unixepoch'),
+                       CASE WHEN endDateTimeEpochMs IS NULL THEN NULL
+                            ELSE strftime('%Y-%m-%dT%H:%M:%fZ', endDateTimeEpochMs/1000.0, 'unixepoch') END,
+                       durationMillis
+                FROM task_intervals
+                """.trimIndent(),
+            )
+            connection.execSQL("DROP TABLE task_intervals")
+            connection.execSQL("ALTER TABLE task_intervals_new RENAME TO task_intervals")
+        }
 
         val MIGRATION_5_6 =
             object : Migration(5, 6) {
@@ -206,105 +216,115 @@ abstract class TrackyDatabase : RoomDatabase() {
                     // trashedAtEpochMs columns. ISO strings are converted via julianday so
                     // millisecond precision is preserved.
 
-                    // projects
-                    connection.execSQL(
-                        """
-                        CREATE TABLE projects_new (
-                            projectId TEXT NOT NULL PRIMARY KEY,
-                            title TEXT NOT NULL,
-                            description TEXT,
-                            color INTEGER,
-                            totalDuration INTEGER,
-                            startDateTimeEpochMs INTEGER NOT NULL,
-                            isFinished INTEGER NOT NULL,
-                            useLightTextColor INTEGER NOT NULL DEFAULT 0,
-                            endDateTimeEpochMs INTEGER,
-                            isArchived INTEGER NOT NULL DEFAULT 0,
-                            trashedAtEpochMs INTEGER
-                        )
-                        """.trimIndent(),
-                    )
-                    connection.execSQL(
-                        """
-                        INSERT INTO projects_new
-                          (projectId, title, description, color, totalDuration,
-                           startDateTimeEpochMs, isFinished, useLightTextColor, endDateTimeEpochMs,
-                           isArchived, trashedAtEpochMs)
-                        SELECT projectId, title, description, color, totalDuration,
-                               CAST(round((julianday(startDateTimeUtc) - 2440587.5) * 86400000) AS INTEGER),
-                               isFinished, useLightTextColor,
-                               CASE WHEN endDateTimeUtc IS NULL THEN NULL
-                                    ELSE CAST(round((julianday(endDateTimeUtc) - 2440587.5) * 86400000) AS INTEGER) END,
-                               0, NULL
-                        FROM projects
-                        """.trimIndent(),
-                    )
-                    connection.execSQL("DROP TABLE projects")
-                    connection.execSQL("ALTER TABLE projects_new RENAME TO projects")
-
-                    // project_records (ProjectTaskEntity)
-                    connection.execSQL(
-                        """
-                        CREATE TABLE project_records_new (
-                            recordId TEXT NOT NULL PRIMARY KEY,
-                            parentProjectId TEXT NOT NULL,
-                            description TEXT NOT NULL,
-                            durationMillis INTEGER NOT NULL,
-                            startDateTimeEpochMs INTEGER NOT NULL,
-                            endDateTimeEpochMs INTEGER,
-                            isFinished INTEGER NOT NULL,
-                            isTimerRunning INTEGER NOT NULL,
-                            FOREIGN KEY(parentProjectId) REFERENCES projects(projectId) ON DELETE CASCADE
-                        )
-                        """.trimIndent(),
-                    )
-                    connection.execSQL(
-                        """
-                        INSERT INTO project_records_new
-                          (recordId, parentProjectId, description, durationMillis,
-                           startDateTimeEpochMs, endDateTimeEpochMs, isFinished, isTimerRunning)
-                        SELECT recordId, parentProjectId, description, durationMillis,
-                               CAST(round((julianday(startDateTimeUtc) - 2440587.5) * 86400000) AS INTEGER),
-                               CASE WHEN endDateTimeUtc IS NULL THEN NULL
-                                    ELSE CAST(round((julianday(endDateTimeUtc) - 2440587.5) * 86400000) AS INTEGER) END,
-                               isFinished, isTimerRunning
-                        FROM project_records
-                        """.trimIndent(),
-                    )
-                    connection.execSQL("DROP TABLE project_records")
-                    connection.execSQL("ALTER TABLE project_records_new RENAME TO project_records")
-                    connection.execSQL(
-                        "CREATE INDEX IF NOT EXISTS index_project_records_parentProjectId ON project_records(parentProjectId)",
-                    )
-
-                    // task_intervals
-                    connection.execSQL(
-                        """
-                        CREATE TABLE task_intervals_new (
-                            intervalId TEXT NOT NULL PRIMARY KEY,
-                            parentTaskId TEXT NOT NULL,
-                            startDateTimeEpochMs INTEGER NOT NULL,
-                            endDateTimeEpochMs INTEGER,
-                            durationMillis INTEGER NOT NULL
-                        )
-                        """.trimIndent(),
-                    )
-                    connection.execSQL(
-                        """
-                        INSERT INTO task_intervals_new
-                          (intervalId, parentTaskId, startDateTimeEpochMs, endDateTimeEpochMs, durationMillis)
-                        SELECT intervalId, parentTaskId,
-                               CAST(round((julianday(startDateTimeUtc) - 2440587.5) * 86400000) AS INTEGER),
-                               CASE WHEN endDateTimeUtc IS NULL THEN NULL
-                                    ELSE CAST(round((julianday(endDateTimeUtc) - 2440587.5) * 86400000) AS INTEGER) END,
-                               durationMillis
-                        FROM task_intervals
-                        """.trimIndent(),
-                    )
-                    connection.execSQL("DROP TABLE task_intervals")
-                    connection.execSQL("ALTER TABLE task_intervals_new RENAME TO task_intervals")
+                    rebuildProjectsWithEpochMs(connection)
+                    rebuildProjectRecordsWithEpochMs(connection)
+                    rebuildTaskIntervalsWithEpochMs(connection)
                 }
             }
+
+        private fun rebuildProjectsWithEpochMs(connection: SQLiteConnection) {
+            // projects
+            connection.execSQL(
+                """
+                CREATE TABLE projects_new (
+                    projectId TEXT NOT NULL PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    description TEXT,
+                    color INTEGER,
+                    totalDuration INTEGER,
+                    startDateTimeEpochMs INTEGER NOT NULL,
+                    isFinished INTEGER NOT NULL,
+                    useLightTextColor INTEGER NOT NULL DEFAULT 0,
+                    endDateTimeEpochMs INTEGER,
+                    isArchived INTEGER NOT NULL DEFAULT 0,
+                    trashedAtEpochMs INTEGER
+                )
+                """.trimIndent(),
+            )
+            connection.execSQL(
+                """
+                INSERT INTO projects_new
+                  (projectId, title, description, color, totalDuration,
+                   startDateTimeEpochMs, isFinished, useLightTextColor, endDateTimeEpochMs,
+                   isArchived, trashedAtEpochMs)
+                SELECT projectId, title, description, color, totalDuration,
+                       CAST(round((julianday(startDateTimeUtc) - 2440587.5) * 86400000) AS INTEGER),
+                       isFinished, useLightTextColor,
+                       CASE WHEN endDateTimeUtc IS NULL THEN NULL
+                            ELSE CAST(round((julianday(endDateTimeUtc) - 2440587.5) * 86400000) AS INTEGER) END,
+                       0, NULL
+                FROM projects
+                """.trimIndent(),
+            )
+            connection.execSQL("DROP TABLE projects")
+            connection.execSQL("ALTER TABLE projects_new RENAME TO projects")
+        }
+
+        private fun rebuildProjectRecordsWithEpochMs(connection: SQLiteConnection) {
+            // project_records (ProjectTaskEntity)
+            connection.execSQL(
+                """
+                CREATE TABLE project_records_new (
+                    recordId TEXT NOT NULL PRIMARY KEY,
+                    parentProjectId TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    durationMillis INTEGER NOT NULL,
+                    startDateTimeEpochMs INTEGER NOT NULL,
+                    endDateTimeEpochMs INTEGER,
+                    isFinished INTEGER NOT NULL,
+                    isTimerRunning INTEGER NOT NULL,
+                    FOREIGN KEY(parentProjectId) REFERENCES projects(projectId) ON DELETE CASCADE
+                )
+                """.trimIndent(),
+            )
+            connection.execSQL(
+                """
+                INSERT INTO project_records_new
+                  (recordId, parentProjectId, description, durationMillis,
+                   startDateTimeEpochMs, endDateTimeEpochMs, isFinished, isTimerRunning)
+                SELECT recordId, parentProjectId, description, durationMillis,
+                       CAST(round((julianday(startDateTimeUtc) - 2440587.5) * 86400000) AS INTEGER),
+                       CASE WHEN endDateTimeUtc IS NULL THEN NULL
+                            ELSE CAST(round((julianday(endDateTimeUtc) - 2440587.5) * 86400000) AS INTEGER) END,
+                       isFinished, isTimerRunning
+                FROM project_records
+                """.trimIndent(),
+            )
+            connection.execSQL("DROP TABLE project_records")
+            connection.execSQL("ALTER TABLE project_records_new RENAME TO project_records")
+            connection.execSQL(
+                "CREATE INDEX IF NOT EXISTS index_project_records_parentProjectId ON project_records(parentProjectId)",
+            )
+        }
+
+        private fun rebuildTaskIntervalsWithEpochMs(connection: SQLiteConnection) {
+            // task_intervals
+            connection.execSQL(
+                """
+                CREATE TABLE task_intervals_new (
+                    intervalId TEXT NOT NULL PRIMARY KEY,
+                    parentTaskId TEXT NOT NULL,
+                    startDateTimeEpochMs INTEGER NOT NULL,
+                    endDateTimeEpochMs INTEGER,
+                    durationMillis INTEGER NOT NULL
+                )
+                """.trimIndent(),
+            )
+            connection.execSQL(
+                """
+                INSERT INTO task_intervals_new
+                  (intervalId, parentTaskId, startDateTimeEpochMs, endDateTimeEpochMs, durationMillis)
+                SELECT intervalId, parentTaskId,
+                       CAST(round((julianday(startDateTimeUtc) - 2440587.5) * 86400000) AS INTEGER),
+                       CASE WHEN endDateTimeUtc IS NULL THEN NULL
+                            ELSE CAST(round((julianday(endDateTimeUtc) - 2440587.5) * 86400000) AS INTEGER) END,
+                       durationMillis
+                FROM task_intervals
+                """.trimIndent(),
+            )
+            connection.execSQL("DROP TABLE task_intervals")
+            connection.execSQL("ALTER TABLE task_intervals_new RENAME TO task_intervals")
+        }
 
         val MIGRATION_7_8 =
             object : Migration(7, 8) {
@@ -531,122 +551,132 @@ abstract class TrackyDatabase : RoomDatabase() {
                     // would reject the database on open. sub_task_intervals needs no such treatment: it
                     // names project_sub_tasks and task_intervals, and neither of those names changes.
 
-                    // project_tasks (was project_records)
-                    connection.execSQL(
-                        """
-                        CREATE TABLE project_tasks_new (
-                            projectTaskId TEXT NOT NULL PRIMARY KEY,
-                            parentProjectId TEXT NOT NULL,
-                            title TEXT NOT NULL,
-                            description TEXT,
-                            durationMillis INTEGER NOT NULL,
-                            startDateTimeEpochMs INTEGER NOT NULL,
-                            endDateTimeEpochMs INTEGER,
-                            isFinished INTEGER NOT NULL,
-                            isTimerRunning INTEGER NOT NULL,
-                            updatedAtEpochMs INTEGER,
-                            FOREIGN KEY(parentProjectId) REFERENCES projects(projectId) ON DELETE CASCADE
-                        )
-                        """.trimIndent(),
-                    )
-                    connection.execSQL(
-                        """
-                        INSERT INTO project_tasks_new
-                          (projectTaskId, parentProjectId, title, description, durationMillis,
-                           startDateTimeEpochMs, endDateTimeEpochMs, isFinished, isTimerRunning,
-                           updatedAtEpochMs)
-                        SELECT recordId, parentProjectId, description, NULL, durationMillis,
-                               startDateTimeEpochMs, endDateTimeEpochMs, isFinished, isTimerRunning,
-                               updatedAtEpochMs
-                        FROM project_records
-                        """.trimIndent(),
-                    )
-                    connection.execSQL("DROP TABLE project_records")
-                    connection.execSQL("ALTER TABLE project_tasks_new RENAME TO project_tasks")
-                    connection.execSQL(
-                        "CREATE INDEX IF NOT EXISTS index_project_tasks_parentProjectId ON project_tasks(parentProjectId)",
-                    )
-
-                    // task_intervals: same columns, foreign key repointed at project_tasks.
-                    connection.execSQL(
-                        """
-                        CREATE TABLE task_intervals_new (
-                            intervalId TEXT NOT NULL PRIMARY KEY,
-                            parentTaskId TEXT NOT NULL,
-                            parentProjectId TEXT NOT NULL,
-                            startDateTimeEpochMs INTEGER NOT NULL,
-                            endDateTimeEpochMs INTEGER,
-                            durationMillis INTEGER NOT NULL,
-                            FOREIGN KEY(parentTaskId) REFERENCES project_tasks(projectTaskId) ON DELETE CASCADE,
-                            FOREIGN KEY(parentProjectId) REFERENCES projects(projectId) ON DELETE CASCADE
-                        )
-                        """.trimIndent(),
-                    )
-                    connection.execSQL(
-                        """
-                        INSERT INTO task_intervals_new
-                          (intervalId, parentTaskId, parentProjectId,
-                           startDateTimeEpochMs, endDateTimeEpochMs, durationMillis)
-                        SELECT intervalId, parentTaskId, parentProjectId,
-                               startDateTimeEpochMs, endDateTimeEpochMs, durationMillis
-                        FROM task_intervals
-                        """.trimIndent(),
-                    )
-
-                    connection.execSQL("DROP TABLE task_intervals")
-                    connection.execSQL("ALTER TABLE task_intervals_new RENAME TO task_intervals")
-
-                    connection.execSQL(
-                        "CREATE INDEX IF NOT EXISTS index_task_intervals_parentTaskId ON task_intervals(parentTaskId)",
-                    )
-                    connection.execSQL(
-                        "CREATE INDEX IF NOT EXISTS index_task_intervals_parentProjectId ON task_intervals(parentProjectId)",
-                    )
-
-                    // project_sub_tasks: likewise, only the foreign key moves.
-                    connection.execSQL(
-                        """
-                        CREATE TABLE project_sub_tasks_new (
-                            projectSubTaskId TEXT NOT NULL PRIMARY KEY,
-                            parentProjectTaskId TEXT NOT NULL,
-                            parentProjectId TEXT NOT NULL,
-                            title TEXT NOT NULL,
-                            description TEXT,
-                            durationMillis INTEGER,
-                            isTimerRunning INTEGER NOT NULL,
-                            startDateTimeEpochMs INTEGER NOT NULL,
-                            endDateTimeEpochMs INTEGER,
-                            isFinished INTEGER NOT NULL,
-                            updatedAtEpochMs INTEGER,
-                            FOREIGN KEY(parentProjectTaskId) REFERENCES project_tasks(projectTaskId) ON DELETE CASCADE,
-                            FOREIGN KEY(parentProjectId) REFERENCES projects(projectId) ON DELETE CASCADE
-                        )
-                        """.trimIndent(),
-                    )
-                    connection.execSQL(
-                        """
-                        INSERT INTO project_sub_tasks_new
-                          (projectSubTaskId, parentProjectTaskId, parentProjectId, title, description,
-                           durationMillis, isTimerRunning, startDateTimeEpochMs, endDateTimeEpochMs,
-                           isFinished, updatedAtEpochMs)
-                        SELECT projectSubTaskId, parentProjectTaskId, parentProjectId, title, description,
-                               durationMillis, isTimerRunning, startDateTimeEpochMs, endDateTimeEpochMs,
-                               isFinished, updatedAtEpochMs
-                        FROM project_sub_tasks
-                        """.trimIndent(),
-                    )
-
-                    connection.execSQL("DROP TABLE project_sub_tasks")
-                    connection.execSQL("ALTER TABLE project_sub_tasks_new RENAME TO project_sub_tasks")
-
-                    connection.execSQL(
-                        "CREATE INDEX IF NOT EXISTS index_project_sub_tasks_parentProjectTaskId ON project_sub_tasks(parentProjectTaskId)",
-                    )
-                    connection.execSQL(
-                        "CREATE INDEX IF NOT EXISTS index_project_sub_tasks_parentProjectId ON project_sub_tasks(parentProjectId)",
-                    )
+                    renameProjectRecordsToProjectTasks(connection)
+                    repointTaskIntervalsAtProjectTasks(connection)
+                    repointSubTasksAtProjectTasks(connection)
                 }
             }
+
+        private fun renameProjectRecordsToProjectTasks(connection: SQLiteConnection) {
+            // project_tasks (was project_records)
+            connection.execSQL(
+                """
+                CREATE TABLE project_tasks_new (
+                    projectTaskId TEXT NOT NULL PRIMARY KEY,
+                    parentProjectId TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    description TEXT,
+                    durationMillis INTEGER NOT NULL,
+                    startDateTimeEpochMs INTEGER NOT NULL,
+                    endDateTimeEpochMs INTEGER,
+                    isFinished INTEGER NOT NULL,
+                    isTimerRunning INTEGER NOT NULL,
+                    updatedAtEpochMs INTEGER,
+                    FOREIGN KEY(parentProjectId) REFERENCES projects(projectId) ON DELETE CASCADE
+                )
+                """.trimIndent(),
+            )
+            connection.execSQL(
+                """
+                INSERT INTO project_tasks_new
+                  (projectTaskId, parentProjectId, title, description, durationMillis,
+                   startDateTimeEpochMs, endDateTimeEpochMs, isFinished, isTimerRunning,
+                   updatedAtEpochMs)
+                SELECT recordId, parentProjectId, description, NULL, durationMillis,
+                       startDateTimeEpochMs, endDateTimeEpochMs, isFinished, isTimerRunning,
+                       updatedAtEpochMs
+                FROM project_records
+                """.trimIndent(),
+            )
+            connection.execSQL("DROP TABLE project_records")
+            connection.execSQL("ALTER TABLE project_tasks_new RENAME TO project_tasks")
+            connection.execSQL(
+                "CREATE INDEX IF NOT EXISTS index_project_tasks_parentProjectId ON project_tasks(parentProjectId)",
+            )
+        }
+
+        private fun repointTaskIntervalsAtProjectTasks(connection: SQLiteConnection) {
+            // task_intervals: same columns, foreign key repointed at project_tasks.
+            connection.execSQL(
+                """
+                CREATE TABLE task_intervals_new (
+                    intervalId TEXT NOT NULL PRIMARY KEY,
+                    parentTaskId TEXT NOT NULL,
+                    parentProjectId TEXT NOT NULL,
+                    startDateTimeEpochMs INTEGER NOT NULL,
+                    endDateTimeEpochMs INTEGER,
+                    durationMillis INTEGER NOT NULL,
+                    FOREIGN KEY(parentTaskId) REFERENCES project_tasks(projectTaskId) ON DELETE CASCADE,
+                    FOREIGN KEY(parentProjectId) REFERENCES projects(projectId) ON DELETE CASCADE
+                )
+                """.trimIndent(),
+            )
+            connection.execSQL(
+                """
+                INSERT INTO task_intervals_new
+                  (intervalId, parentTaskId, parentProjectId,
+                   startDateTimeEpochMs, endDateTimeEpochMs, durationMillis)
+                SELECT intervalId, parentTaskId, parentProjectId,
+                       startDateTimeEpochMs, endDateTimeEpochMs, durationMillis
+                FROM task_intervals
+                """.trimIndent(),
+            )
+
+            connection.execSQL("DROP TABLE task_intervals")
+            connection.execSQL("ALTER TABLE task_intervals_new RENAME TO task_intervals")
+
+            connection.execSQL(
+                "CREATE INDEX IF NOT EXISTS index_task_intervals_parentTaskId ON task_intervals(parentTaskId)",
+            )
+            connection.execSQL(
+                "CREATE INDEX IF NOT EXISTS index_task_intervals_parentProjectId ON task_intervals(parentProjectId)",
+            )
+        }
+
+        private fun repointSubTasksAtProjectTasks(connection: SQLiteConnection) {
+            // project_sub_tasks: likewise, only the foreign key moves.
+            connection.execSQL(
+                """
+                CREATE TABLE project_sub_tasks_new (
+                    projectSubTaskId TEXT NOT NULL PRIMARY KEY,
+                    parentProjectTaskId TEXT NOT NULL,
+                    parentProjectId TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    description TEXT,
+                    durationMillis INTEGER,
+                    isTimerRunning INTEGER NOT NULL,
+                    startDateTimeEpochMs INTEGER NOT NULL,
+                    endDateTimeEpochMs INTEGER,
+                    isFinished INTEGER NOT NULL,
+                    updatedAtEpochMs INTEGER,
+                    FOREIGN KEY(parentProjectTaskId) REFERENCES project_tasks(projectTaskId) ON DELETE CASCADE,
+                    FOREIGN KEY(parentProjectId) REFERENCES projects(projectId) ON DELETE CASCADE
+                )
+                """.trimIndent(),
+            )
+            connection.execSQL(
+                """
+                INSERT INTO project_sub_tasks_new
+                  (projectSubTaskId, parentProjectTaskId, parentProjectId, title, description,
+                   durationMillis, isTimerRunning, startDateTimeEpochMs, endDateTimeEpochMs,
+                   isFinished, updatedAtEpochMs)
+                SELECT projectSubTaskId, parentProjectTaskId, parentProjectId, title, description,
+                       durationMillis, isTimerRunning, startDateTimeEpochMs, endDateTimeEpochMs,
+                       isFinished, updatedAtEpochMs
+                FROM project_sub_tasks
+                """.trimIndent(),
+            )
+
+            connection.execSQL("DROP TABLE project_sub_tasks")
+            connection.execSQL("ALTER TABLE project_sub_tasks_new RENAME TO project_sub_tasks")
+
+            connection.execSQL(
+                "CREATE INDEX IF NOT EXISTS index_project_sub_tasks_parentProjectTaskId ON project_sub_tasks(parentProjectTaskId)",
+            )
+            connection.execSQL(
+                "CREATE INDEX IF NOT EXISTS index_project_sub_tasks_parentProjectId ON project_sub_tasks(parentProjectId)",
+            )
+        }
 
         val MIGRATION_16_17 =
             object : Migration(16, 17) {
