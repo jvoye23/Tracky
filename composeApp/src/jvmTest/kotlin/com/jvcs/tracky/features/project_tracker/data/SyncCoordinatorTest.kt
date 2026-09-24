@@ -18,15 +18,16 @@ import kotlin.time.Instant
  */
 internal class SyncCoordinatorTest {
 
-    private fun task(taskId: String, projectId: String) = ProjectTask(
-        projectTaskId = taskId,
-        title = "task-$taskId",
-        description = null,
-        durationMillis = 0,
-        startDateTimeUtc = Instant.fromEpochMilliseconds(0),
-        parentProjectId = projectId,
-        isTimerRunning = false,
-    )
+    private fun task(taskId: String, projectId: String) =
+        ProjectTask(
+            projectTaskId = taskId,
+            title = "task-$taskId",
+            description = null,
+            durationMillis = 0,
+            startDateTimeUtc = Instant.fromEpochMilliseconds(0),
+            parentProjectId = projectId,
+            isTimerRunning = false,
+        )
 
     /**
      * Creates a project, a task under it, one tracked interval, one subtask and one subtask
@@ -58,79 +59,83 @@ internal class SyncCoordinatorTest {
     }
 
     @Test
-    fun syncPendingOperations_pushesTheWholeOfflineSession_parentsBeforeChildren() = runBlocking<Unit> {
-        val f = RepoFixture()
-        f.recordAnOfflineSession()
-        f.goOnline()
+    fun syncPendingOperations_pushesTheWholeOfflineSession_parentsBeforeChildren() =
+        runBlocking<Unit> {
+            val f = RepoFixture()
+            f.recordAnOfflineSession()
+            f.goOnline()
 
-        f.syncCoordinator.syncPendingOperations()
+            f.syncCoordinator.syncPendingOperations()
 
-        assertEquals(listOf("p1"), f.remoteProject.postedProjectIds)
-        assertEquals(listOf("t1"), f.remoteTask.postedTaskIds)
-        assertEquals(listOf("i1"), f.remoteInterval.postedIntervalIds)
-        assertEquals(listOf("s1"), f.remoteSubTask.postedSubTaskIds)
-        assertEquals(listOf("si1"), f.remoteSubTaskInterval.postedIntervalIds)
-        assertTrue(f.queue.all().isEmpty())
-    }
-
-    @Test
-    fun syncPendingOperations_holdsBackTasksAndIntervals_whileTheProjectPushKeepsFailing() = runBlocking<Unit> {
-        val f = RepoFixture()
-        f.recordAnOfflineSession()
-        // Tasks and intervals could go through now, but their project still cannot.
-        f.remoteTask.failWith = null
-        f.remoteInterval.postFailWith = null
-        f.remoteSubTask.postFailWith = null
-        f.remoteSubTaskInterval.postFailWith = null
-
-        f.syncCoordinator.syncPendingOperations()
-
-        assertTrue(f.remoteTask.postedTaskIds.isEmpty())
-        assertTrue(f.remoteInterval.postedIntervalIds.isEmpty())
-        // A subtask is two levels below the project, so it is held back just as far.
-        assertTrue(f.remoteSubTask.postedSubTaskIds.isEmpty())
-        // Three levels below the project, and held back just as far.
-        assertTrue(f.remoteSubTaskInterval.postedIntervalIds.isEmpty())
-        // Nothing was dropped — all five are still queued for the next attempt.
-        assertEquals(5, f.queue.all().size)
-    }
+            assertEquals(listOf("p1"), f.remoteProject.postedProjectIds)
+            assertEquals(listOf("t1"), f.remoteTask.postedTaskIds)
+            assertEquals(listOf("i1"), f.remoteInterval.postedIntervalIds)
+            assertEquals(listOf("s1"), f.remoteSubTask.postedSubTaskIds)
+            assertEquals(listOf("si1"), f.remoteSubTaskInterval.postedIntervalIds)
+            assertTrue(f.queue.all().isEmpty())
+        }
 
     @Test
-    fun syncPendingOperations_holdsBackTheInterval_whileItsTaskPushKeepsFailing() = runBlocking<Unit> {
-        val f = RepoFixture()
-        f.recordAnOfflineSession()
-        f.goOnline()
-        f.remoteTask.failWith = DataError.Remote.NO_INTERNET // only the task route is still down
+    fun syncPendingOperations_holdsBackTasksAndIntervals_whileTheProjectPushKeepsFailing() =
+        runBlocking<Unit> {
+            val f = RepoFixture()
+            f.recordAnOfflineSession()
+            // Tasks and intervals could go through now, but their project still cannot.
+            f.remoteTask.failWith = null
+            f.remoteInterval.postFailWith = null
+            f.remoteSubTask.postFailWith = null
+            f.remoteSubTaskInterval.postFailWith = null
 
-        f.syncCoordinator.syncPendingOperations()
+            f.syncCoordinator.syncPendingOperations()
 
-        assertEquals(listOf("p1"), f.remoteProject.postedProjectIds)
-        assertTrue(f.remoteInterval.postedIntervalIds.isEmpty())
-        // The subtask hangs off the same failing task.
-        assertTrue(f.remoteSubTask.postedSubTaskIds.isEmpty())
-        assertTrue(f.remoteSubTaskInterval.postedIntervalIds.isEmpty())
-        // Project drained; task, interval, subtask and subtask interval remain.
-        assertEquals(4, f.queue.all().size)
-    }
+            assertTrue(f.remoteTask.postedTaskIds.isEmpty())
+            assertTrue(f.remoteInterval.postedIntervalIds.isEmpty())
+            // A subtask is two levels below the project, so it is held back just as far.
+            assertTrue(f.remoteSubTask.postedSubTaskIds.isEmpty())
+            // Three levels below the project, and held back just as far.
+            assertTrue(f.remoteSubTaskInterval.postedIntervalIds.isEmpty())
+            // Nothing was dropped — all five are still queued for the next attempt.
+            assertEquals(5, f.queue.all().size)
+        }
 
     @Test
-    fun syncPendingOperations_recoversOnASecondPass_onceTheProjectLands() = runBlocking<Unit> {
-        val f = RepoFixture()
-        f.recordAnOfflineSession()
-        f.remoteTask.failWith = null
-        f.remoteInterval.postFailWith = null
-        f.remoteSubTask.postFailWith = null
-        f.remoteSubTaskInterval.postFailWith = null
+    fun syncPendingOperations_holdsBackTheInterval_whileItsTaskPushKeepsFailing() =
+        runBlocking<Unit> {
+            val f = RepoFixture()
+            f.recordAnOfflineSession()
+            f.goOnline()
+            f.remoteTask.failWith = DataError.Remote.NO_INTERNET // only the task route is still down
 
-        f.syncCoordinator.syncPendingOperations() // project still down: nothing drains
-        f.goOnline()
-        f.syncCoordinator.syncPendingOperations()
+            f.syncCoordinator.syncPendingOperations()
 
-        assertEquals(listOf("p1"), f.remoteProject.postedProjectIds)
-        assertEquals(listOf("t1"), f.remoteTask.postedTaskIds)
-        assertEquals(listOf("i1"), f.remoteInterval.postedIntervalIds)
-        assertEquals(listOf("s1"), f.remoteSubTask.postedSubTaskIds)
-        assertEquals(listOf("si1"), f.remoteSubTaskInterval.postedIntervalIds)
-        assertTrue(f.queue.all().isEmpty())
-    }
+            assertEquals(listOf("p1"), f.remoteProject.postedProjectIds)
+            assertTrue(f.remoteInterval.postedIntervalIds.isEmpty())
+            // The subtask hangs off the same failing task.
+            assertTrue(f.remoteSubTask.postedSubTaskIds.isEmpty())
+            assertTrue(f.remoteSubTaskInterval.postedIntervalIds.isEmpty())
+            // Project drained; task, interval, subtask and subtask interval remain.
+            assertEquals(4, f.queue.all().size)
+        }
+
+    @Test
+    fun syncPendingOperations_recoversOnASecondPass_onceTheProjectLands() =
+        runBlocking<Unit> {
+            val f = RepoFixture()
+            f.recordAnOfflineSession()
+            f.remoteTask.failWith = null
+            f.remoteInterval.postFailWith = null
+            f.remoteSubTask.postFailWith = null
+            f.remoteSubTaskInterval.postFailWith = null
+
+            f.syncCoordinator.syncPendingOperations() // project still down: nothing drains
+            f.goOnline()
+            f.syncCoordinator.syncPendingOperations()
+
+            assertEquals(listOf("p1"), f.remoteProject.postedProjectIds)
+            assertEquals(listOf("t1"), f.remoteTask.postedTaskIds)
+            assertEquals(listOf("i1"), f.remoteInterval.postedIntervalIds)
+            assertEquals(listOf("s1"), f.remoteSubTask.postedSubTaskIds)
+            assertEquals(listOf("si1"), f.remoteSubTaskInterval.postedIntervalIds)
+            assertTrue(f.queue.all().isEmpty())
+        }
 }

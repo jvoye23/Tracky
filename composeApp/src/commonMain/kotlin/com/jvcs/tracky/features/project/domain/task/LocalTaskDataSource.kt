@@ -16,18 +16,18 @@ interface LocalTaskDataSource {
     suspend fun getTaskById(taskId: String): Result<ProjectTask?, DataError.Local>
 
     suspend fun upsertProjectTask(projectTask: ProjectTask): EmptyResult<DataError.Local>
+
     suspend fun deleteProjectTask(taskId: String): EmptyResult<DataError.Local>
+
     suspend fun updateTaskDuration(taskId: String, newDurationMillis: Long): EmptyResult<DataError.Local>
+
     suspend fun updateTaskTitle(taskId: String, title: String): EmptyResult<DataError.Local>
 
     /** The tasks of one project and their current indices, for diffing a reorder. */
     suspend fun getTaskSortIndices(projectId: String): Result<Map<String, Long?>, DataError.Local>
 
     /** Writes a whole reorder in one transaction — a half-applied one cannot be repaired by retry. */
-    suspend fun updateTaskSortIndices(
-        indices: Map<String, Long>,
-        updatedAt: Instant
-    ): EmptyResult<DataError.Local>
+    suspend fun updateTaskSortIndices(indices: Map<String, Long>, updatedAt: Instant): EmptyResult<DataError.Local>
 
     /**
      * Opens a new interval and flags the task's timer as running.

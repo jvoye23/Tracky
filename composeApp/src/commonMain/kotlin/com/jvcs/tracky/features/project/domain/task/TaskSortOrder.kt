@@ -16,12 +16,14 @@ import com.jvcs.tracky.features.project.domain.models.ProjectTask
  * cannot carry an ORDER BY: without them the order of a task tree is whatever SQLite happens to
  * return, which a sync pull that rewrites rows can visibly shuffle.
  */
-fun List<ProjectTask>.sortedByTaskOrder(): List<ProjectTask> = sortedWith(
-    compareBy<ProjectTask, Long?>(nullsLast<Long>()) { it.sortIndex }
-        .thenBy { it.startDateTimeUtc }
-)
+fun List<ProjectTask>.sortedByTaskOrder(): List<ProjectTask> =
+    sortedWith(
+        compareBy<ProjectTask, Long?>(nullsLast<Long>()) { it.sortIndex }
+            .thenBy { it.startDateTimeUtc },
+    )
 
-fun List<ProjectSubTask>.sortedBySubTaskOrder(): List<ProjectSubTask> = sortedWith(
-    compareBy<ProjectSubTask, Long?>(nullsLast<Long>()) { it.sortIndex }
-        .thenBy { it.startDateTimeUtc }
-)
+fun List<ProjectSubTask>.sortedBySubTaskOrder(): List<ProjectSubTask> =
+    sortedWith(
+        compareBy<ProjectSubTask, Long?>(nullsLast<Long>()) { it.sortIndex }
+            .thenBy { it.startDateTimeUtc },
+    )

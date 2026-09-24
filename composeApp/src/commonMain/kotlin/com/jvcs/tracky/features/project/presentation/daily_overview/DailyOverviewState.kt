@@ -14,5 +14,5 @@ data class DailyOverviewState(
     val months: List<CalendarMonthUi> = emptyList(),
     val visibleMonthIndex: Int = 0,
     val dayDetail: DayDetailUi? = null,
-    val isLoading: Boolean = true
+    val isLoading: Boolean = true,
 )

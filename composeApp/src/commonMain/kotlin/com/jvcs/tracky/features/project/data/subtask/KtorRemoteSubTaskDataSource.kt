@@ -25,66 +25,64 @@ import kotlin.time.Instant
  * The project id never appears in a subtask payload — the server derives it from the parent task —
  * so it is handed back down to the mapper from the route.
  */
-class KtorRemoteSubTaskDataSource(
-    private val httpClient: HttpClient
-) : RemoteSubTaskDataSource {
+class KtorRemoteSubTaskDataSource(private val httpClient: HttpClient) : RemoteSubTaskDataSource {
 
     override suspend fun getSubTasksByTaskId(
         projectId: String,
-        taskId: String
-    ): Result<List<ProjectSubTask>, DataError.Remote> {
-        return httpClient.get<List<ProjectSubTaskDto>>(
-            route = "/api/projects/$projectId/tasks/$taskId/subtasks"
-        ).map { dtos -> dtos.map { it.toProjectSubTask(projectId) } }
-    }
+        taskId: String,
+    ): Result<List<ProjectSubTask>, DataError.Remote> =
+        httpClient
+            .get<List<ProjectSubTaskDto>>(
+                route = "/api/projects/$projectId/tasks/$taskId/subtasks",
+            ).map { dtos -> dtos.map { it.toProjectSubTask(projectId) } }
 
     override suspend fun postSubTask(
         projectId: String,
         taskId: String,
-        subTask: ProjectSubTask
-    ): Result<ProjectSubTask, DataError.Remote> {
-        return httpClient.post<CreateSubTaskRequest, ProjectSubTaskDto>(
-            route = "/api/projects/$projectId/tasks/$taskId/subtasks",
-            body = subTask.toCreateSubTaskRequest()
-        ).map { it.toProjectSubTask(projectId) }
-    }
+        subTask: ProjectSubTask,
+    ): Result<ProjectSubTask, DataError.Remote> =
+        httpClient
+            .post<CreateSubTaskRequest, ProjectSubTaskDto>(
+                route = "/api/projects/$projectId/tasks/$taskId/subtasks",
+                body = subTask.toCreateSubTaskRequest(),
+            ).map { it.toProjectSubTask(projectId) }
 
     override suspend fun updateSubTask(
         projectId: String,
         taskId: String,
-        subTask: ProjectSubTask
-    ): Result<ProjectSubTask, DataError.Remote> {
-        return httpClient.put<UpdateSubTaskRequest, ProjectSubTaskDto>(
-            route = "/api/projects/$projectId/tasks/$taskId/subtasks/${subTask.projectSubTaskId}",
-            body = subTask.toUpdateSubTaskRequest()
-        ).map { it.toProjectSubTask(projectId) }
-    }
+        subTask: ProjectSubTask,
+    ): Result<ProjectSubTask, DataError.Remote> =
+        httpClient
+            .put<UpdateSubTaskRequest, ProjectSubTaskDto>(
+                route = "/api/projects/$projectId/tasks/$taskId/subtasks/${subTask.projectSubTaskId}",
+                body = subTask.toUpdateSubTaskRequest(),
+            ).map { it.toProjectSubTask(projectId) }
 
     override suspend fun deleteSubTask(
         projectId: String,
         taskId: String,
-        subTaskId: String
-    ): EmptyResult<DataError.Remote> {
-        return httpClient.delete(
-            route = "/api/projects/$projectId/tasks/$taskId/subtasks/$subTaskId"
+        subTaskId: String,
+    ): EmptyResult<DataError.Remote> =
+        httpClient.delete(
+            route = "/api/projects/$projectId/tasks/$taskId/subtasks/$subTaskId",
         )
-    }
 
     // The task-level reorder one level down; same 204-and-nothing-back contract.
     override suspend fun reorderSubTasks(
         projectId: String,
         taskId: String,
         indices: Map<String, Long>,
-        updatedAt: Instant
-    ): EmptyResult<DataError.Remote> {
-        return httpClient.put<ReorderTasksRequest, Unit>(
+        updatedAt: Instant,
+    ): EmptyResult<DataError.Remote> =
+        httpClient.put<ReorderTasksRequest, Unit>(
             route = "/api/projects/$projectId/tasks/$taskId/subtasks/sort",
-            body = ReorderTasksRequest(
-                updatedAtUtc = updatedAt.toString(),
-                items = indices.map { (subTaskId, sortIndex) ->
-                    TaskSortOrderDto(id = subTaskId, sortIndex = sortIndex)
-                }
-            )
+            body =
+                ReorderTasksRequest(
+                    updatedAtUtc = updatedAt.toString(),
+                    items =
+                        indices.map { (subTaskId, sortIndex) ->
+                            TaskSortOrderDto(id = subTaskId, sortIndex = sortIndex)
+                        },
+                ),
         )
-    }
 }

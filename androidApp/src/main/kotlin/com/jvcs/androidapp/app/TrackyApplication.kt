@@ -6,8 +6,8 @@ import com.jvcs.tracky.core.domain.realtime.RealtimeTimerConnection
 import com.jvcs.tracky.core.domain.sync.ProjectSyncManager
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
 import com.jvcs.tracky.core.domain.sync.TrashCleanupScheduler
-import com.jvcs.tracky.features.project.data.timer.StrandedTimerReconciler
 import com.jvcs.tracky.di.initKoin
+import com.jvcs.tracky.features.project.data.timer.StrandedTimerReconciler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.get
@@ -15,9 +15,7 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.qualifier.named
 
-
-
-class TrackyApplication: Application() {
+class TrackyApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()

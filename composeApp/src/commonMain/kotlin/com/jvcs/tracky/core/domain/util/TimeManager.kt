@@ -1,5 +1,6 @@
 package com.jvcs.tracky.core.domain.util
 
+import com.jvcs.tracky.core.domain.sync.SyncRecency
 import com.jvcs.tracky.design_system.util.formatDuration
 import com.jvcs.tracky.features.project.domain.timer.RunningTimer
 import com.jvcs.tracky.features.project.domain.timer.RunningTimerRepository
@@ -13,7 +14,6 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import com.jvcs.tracky.core.domain.sync.SyncRecency
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 
@@ -29,7 +29,7 @@ data class TimerState(
      */
     val isForeign: Boolean = false,
     /** True when [totalDuration] is frozen at the last figure the server confirmed. */
-    val isStale: Boolean = false
+    val isStale: Boolean = false,
 )
 
 /** The running timer together with its live elapsed value. */
@@ -43,7 +43,7 @@ data class RunningTimerTick(
      * A surface should say so rather than showing the number as if it were live — it is the last
      * thing known to be true, not the current truth.
      */
-    val isStale: Boolean = false
+    val isStale: Boolean = false,
 ) {
     val formatted: String get() = formatDuration(elapsed)
 }
@@ -68,62 +68,64 @@ class TimeManager(
     private val runningTimerRepository: RunningTimerRepository,
     private val serverClock: ServerClock,
     private val syncRecency: SyncRecency,
-    scope: CoroutineScope
+    scope: CoroutineScope,
 ) {
-    val tick: StateFlow<RunningTimerTick?> = runningTimerRepository
-        .observeRunningTimer()
-        .flatMapLatest { timer ->
-            if (timer == null) {
-                flowOf<RunningTimerTick?>(null)
-            } else {
-                flow {
-                    while (true) {
-                        // Corrected, not the raw device clock: startedAt may have come from the
-                        // user's other phone, and the two clocks disagreeing shows up directly as
-                        // a wrong duration.
-                        val now = serverClock.now()
-                        val lastSync = syncRecency.lastSuccessfulSync.value
-                        // Only a foreign timer can go stale. One this device started is running
-                        // because this device is running it — there is nothing to confirm.
-                        val stale = timer.isForeign && lastSync != null && now - lastSync > STALE_AFTER
-                        val elapsed = timer.elapsedAt(if (stale) lastSync else now)
-                        emit(RunningTimerTick(timer, elapsed, isStale = stale))
-                        if (stale) {
-                            // Nothing to animate, but keep looking: the next pull un-freezes it.
-                            delay(STALE_RECHECK_MILLIS)
-                        } else {
-                            // Sleep to the next whole second of elapsed rather than a flat second
-                            // from an arbitrary moment, so the digits turn over at the same instant
-                            // the notification's do.
-                            delay(TICK_MILLIS - elapsed.inWholeMilliseconds % TICK_MILLIS)
+    val tick: StateFlow<RunningTimerTick?> =
+        runningTimerRepository
+            .observeRunningTimer()
+            .flatMapLatest { timer ->
+                if (timer == null) {
+                    flowOf<RunningTimerTick?>(null)
+                } else {
+                    flow {
+                        while (true) {
+                            // Corrected, not the raw device clock: startedAt may have come from the
+                            // user's other phone, and the two clocks disagreeing shows up directly as
+                            // a wrong duration.
+                            val now = serverClock.now()
+                            val lastSync = syncRecency.lastSuccessfulSync.value
+                            // Only a foreign timer can go stale. One this device started is running
+                            // because this device is running it — there is nothing to confirm.
+                            val stale = timer.isForeign && lastSync != null && now - lastSync > STALE_AFTER
+                            val elapsed = timer.elapsedAt(if (stale) lastSync else now)
+                            emit(RunningTimerTick(timer, elapsed, isStale = stale))
+                            if (stale) {
+                                // Nothing to animate, but keep looking: the next pull un-freezes it.
+                                delay(STALE_RECHECK_MILLIS)
+                            } else {
+                                // Sleep to the next whole second of elapsed rather than a flat second
+                                // from an arbitrary moment, so the digits turn over at the same instant
+                                // the notification's do.
+                                delay(TICK_MILLIS - elapsed.inWholeMilliseconds % TICK_MILLIS)
+                            }
                         }
                     }
                 }
             }
-        }
-        // Eagerly, on the app scope: the clock has to be right the moment a screen composes, not a
-        // second later, and it is one coroutine for the whole app.
-        .stateIn(scope, SharingStarted.Eagerly, null)
+            // Eagerly, on the app scope: the clock has to be right the moment a screen composes, not a
+            // second later, and it is one coroutine for the whole app.
+            .stateIn(scope, SharingStarted.Eagerly, null)
 
-    val taskStates: StateFlow<Map<String, TimerState>> = tick
-        .map { tick ->
-            if (tick == null) {
-                emptyMap()
-            } else {
-                mapOf(
-                    tick.timer.timedEntityId to TimerState(
-                        isRunning = true,
-                        totalDuration = tick.elapsed,
-                        formattedTime = tick.formatted,
-                        // Carried through rather than dropped here: this projection is what every
-                        // screen reads, so anything it leaves out is invisible to the whole UI.
-                        isForeign = tick.timer.isForeign,
-                        isStale = tick.isStale
+    val taskStates: StateFlow<Map<String, TimerState>> =
+        tick
+            .map { tick ->
+                if (tick == null) {
+                    emptyMap()
+                } else {
+                    mapOf(
+                        tick.timer.timedEntityId to
+                            TimerState(
+                                isRunning = true,
+                                totalDuration = tick.elapsed,
+                                formattedTime = tick.formatted,
+                                // Carried through rather than dropped here: this projection is what every
+                                // screen reads, so anything it leaves out is invisible to the whole UI.
+                                isForeign = tick.timer.isForeign,
+                                isStale = tick.isStale,
+                            ),
                     )
-                )
-            }
-        }
-        .stateIn(scope, SharingStarted.Eagerly, emptyMap())
+                }
+            }.stateIn(scope, SharingStarted.Eagerly, emptyMap())
 
     private companion object {
         const val TICK_MILLIS = 1_000L

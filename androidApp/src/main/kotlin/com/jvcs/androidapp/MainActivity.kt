@@ -23,7 +23,7 @@ class MainActivity : ComponentActivity() {
     // Application.onCreate, long before anything composes, so binding in composition would be too
     // late for a timer that is already running when the app opens.
     private val timerNotificationPermissionRequester:
-            AndroidTimerNotificationPermissionRequester by inject()
+        AndroidTimerNotificationPermissionRequester by inject()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         var shouldShowSplashScreen = true
@@ -41,7 +41,7 @@ class MainActivity : ComponentActivity() {
             App(
                 onAuthenticationChecked = {
                     shouldShowSplashScreen = false
-                }
+                },
             )
         }
     }
@@ -55,15 +55,16 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun routeDeepLink(intent: Intent?) {
-        val projectId = intent
-            ?.getStringExtra(TimerNotificationIntents.EXTRA_PROJECT_ID)
-            ?: return
+        val projectId =
+            intent
+                ?.getStringExtra(TimerNotificationIntents.EXTRA_PROJECT_ID)
+                ?: return
         // Taken off as it is read. The activity keeps this intent for its whole life and there is
         // no configChanges, so a rotation runs onCreate against it again - without this the deep
         // link fires a second time and throws the user back out of wherever they had got to.
         intent.removeExtra(TimerNotificationIntents.EXTRA_PROJECT_ID)
         deepLinkRouter.request(
-            Route.ProjectRoute.ProjectDetail(isEditMode = false, projectId = projectId)
+            Route.ProjectRoute.ProjectDetail(isEditMode = false, projectId = projectId),
         )
     }
 }

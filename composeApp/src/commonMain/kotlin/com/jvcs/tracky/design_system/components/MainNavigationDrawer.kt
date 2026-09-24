@@ -59,20 +59,23 @@ fun MainNavigationDrawer(
         drawerContent = {
             ModalDrawerSheet {
                 Wordmark(
-                    modifier = Modifier.padding(horizontal = 28.dp, vertical = 24.dp)
+                    modifier = Modifier.padding(horizontal = 28.dp, vertical = 24.dp),
                 )
 
                 DrawerItem(
                     label = Res.string.drawer_projects,
                     icon = Icons.Outlined.FolderOpen,
                     selected = selectedItem == MainNavDrawerItem.PROJECTS,
-                    onClick = { closeDrawer(); onProjectsClick() }
+                    onClick = {
+                        closeDrawer()
+                        onProjectsClick()
+                    },
                 )
                 DrawerItem(
                     label = Res.string.drawer_reminders,
                     icon = Icons.Outlined.Notifications,
                     selected = false,
-                    onClick = closeDrawer
+                    onClick = closeDrawer,
                 )
 
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 28.dp, vertical = 8.dp))
@@ -81,29 +84,35 @@ fun MainNavigationDrawer(
                     label = Res.string.drawer_archive,
                     icon = Icon_Archive,
                     selected = selectedItem == MainNavDrawerItem.ARCHIVE,
-                    onClick = { closeDrawer(); onArchiveClick() }
+                    onClick = {
+                        closeDrawer()
+                        onArchiveClick()
+                    },
                 )
                 DrawerItem(
                     label = Res.string.drawer_trash,
                     icon = Icon_Delete,
                     selected = selectedItem == MainNavDrawerItem.TRASH,
-                    onClick = { closeDrawer(); onTrashClick() }
+                    onClick = {
+                        closeDrawer()
+                        onTrashClick()
+                    },
                 )
                 DrawerItem(
                     label = Res.string.drawer_settings,
                     icon = Icon_Settings,
                     selected = false,
-                    onClick = closeDrawer
+                    onClick = closeDrawer,
                 )
                 DrawerItem(
                     label = Res.string.drawer_about_feedback,
                     icon = Icon_Help,
                     selected = false,
-                    onClick = closeDrawer
+                    onClick = closeDrawer,
                 )
             }
         },
-        content = content
+        content = content,
     )
 }
 
@@ -119,7 +128,7 @@ private fun DrawerItem(
         icon = { Icon(imageVector = icon, contentDescription = null) },
         selected = selected,
         onClick = onClick,
-        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
     )
 }
 
@@ -129,7 +138,7 @@ private fun MainNavigationDrawerPreview() {
     TrackyTheme {
         MainNavigationDrawer(
             drawerState = rememberDrawerState(DrawerValue.Open),
-            selectedItem = MainNavDrawerItem.PROJECTS
+            selectedItem = MainNavDrawerItem.PROJECTS,
         ) {
             Spacer(modifier = Modifier.height(0.dp))
         }

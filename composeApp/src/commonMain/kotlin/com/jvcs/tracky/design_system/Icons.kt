@@ -31,9 +31,9 @@ import tracky.composeapp.generated.resources.phone_filled
 import tracky.composeapp.generated.resources.pin_icon
 import tracky.composeapp.generated.resources.plus
 import tracky.composeapp.generated.resources.settings_icon
+import tracky.composeapp.generated.resources.swap_vert_down_icon
 import tracky.composeapp.generated.resources.swap_vert_icon
 import tracky.composeapp.generated.resources.swap_vert_up_icon
-import tracky.composeapp.generated.resources.swap_vert_down_icon
 import tracky.composeapp.generated.resources.timer
 import tracky.composeapp.generated.resources.tracky_icon
 import tracky.composeapp.generated.resources.trash_04
@@ -43,16 +43,13 @@ val Icon_Minus: ImageVector
     @Composable
     get() = vectorResource(Res.drawable.minus)
 
-
 val Icon_Plus: ImageVector
     @Composable
     get() = vectorResource(Res.drawable.plus)
 
-
 val Icon_Phone: ImageVector
     @Composable
     get() = vectorResource(Res.drawable.phone)
-
 
 val Icon_Trash: ImageVector
     @Composable
@@ -61,7 +58,6 @@ val Icon_Trash: ImageVector
 val Icon_PhoneFilled: ImageVector
     @Composable
     get() = vectorResource(Res.drawable.phone_filled)
-
 
 val Icon_ArrowLeft: ImageVector
     @Composable
@@ -90,7 +86,6 @@ val Icon_ChevronLeft: ImageVector
 val Icon_ChevronRight: ImageVector
     @Composable
     get() = vectorResource(Res.drawable.chevron_right)
-
 
 val Icon_User: ImageVector
     @Composable

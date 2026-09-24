@@ -23,18 +23,18 @@ import org.koin.compose.viewmodel.koinViewModel
 fun App(
     isDarkTheme: Boolean = isSystemInDarkTheme(),
     onAuthenticationChecked: () -> Unit = {},
-    mainViewModel: MainViewModel = koinViewModel()
+    mainViewModel: MainViewModel = koinViewModel(),
 ) {
     val state by mainViewModel.state.collectAsStateWithLifecycle()
 
     LaunchedEffect(state.isCheckingAuth) {
-        if(!state.isCheckingAuth) {
+        if (!state.isCheckingAuth) {
             onAuthenticationChecked()
         }
     }
 
     TrackyTheme(
-        darkTheme = isDarkTheme
+        darkTheme = isDarkTheme,
     ) {
         // AppNavHost is withheld until the read of session storages finishes. rememberNavBackStack
         // captures its start destination in a rememberSaveable initializer that runs once
@@ -62,23 +62,22 @@ fun App(
 }
 
 @Composable
-private fun AppNavHost(
-    isLoggedIn: Boolean,
-    events: Flow<MainEvent>
-) {
-    val startDestination = if (isLoggedIn) {
-        Route.ProjectRoute.ProjectOverview
-    } else {
-        Route.AuthRoute.Login
-    }
+private fun AppNavHost(isLoggedIn: Boolean, events: Flow<MainEvent>) {
+    val startDestination =
+        if (isLoggedIn) {
+            Route.ProjectRoute.ProjectOverview
+        } else {
+            Route.AuthRoute.Login
+        }
 
-    val backStack = rememberNavBackStack(
-        configuration = routeSavedStateConfiguration,
-        startDestination
-    )
+    val backStack =
+        rememberNavBackStack(
+            configuration = routeSavedStateConfiguration,
+            startDestination,
+        )
 
     ObserveAsEvents(events) { event ->
-        when(event) {
+        when (event) {
             is MainEvent.OnSessionExpired -> {
                 backStack.removeAll { true }
                 backStack.add(Route.AuthRoute.Login)
@@ -89,6 +88,6 @@ private fun AppNavHost(
     DeepLinkListener(backStack = backStack, isLoggedIn = isLoggedIn)
 
     NavigationRoot(
-        backStack = backStack
+        backStack = backStack,
     )
 }

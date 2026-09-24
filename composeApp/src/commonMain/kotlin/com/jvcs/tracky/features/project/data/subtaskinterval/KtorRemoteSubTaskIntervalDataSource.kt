@@ -17,45 +17,45 @@ import com.jvcs.tracky.features.project.domain.models.SubTaskInterval
 import com.jvcs.tracky.features.project.domain.subtaskinterval.RemoteSubTaskIntervalDataSource
 import io.ktor.client.HttpClient
 
-class KtorRemoteSubTaskIntervalDataSource(
-    private val httpClient: HttpClient
-) : RemoteSubTaskIntervalDataSource {
+class KtorRemoteSubTaskIntervalDataSource(private val httpClient: HttpClient) : RemoteSubTaskIntervalDataSource {
 
     override suspend fun postInterval(
         projectId: String,
         taskId: String,
-        interval: SubTaskInterval
-    ): Result<SubTaskInterval, DataError.Remote> {
-        return httpClient.post<CreateSubTaskIntervalRequest, SubTaskIntervalDto>(
-            route = intervalsRoute(projectId, taskId, interval.parentSubTaskId),
-            body = interval.toCreateSubTaskIntervalRequest()
-        ).map { it.toDomain(interval) }
-    }
+        interval: SubTaskInterval,
+    ): Result<SubTaskInterval, DataError.Remote> =
+        httpClient
+            .post<CreateSubTaskIntervalRequest, SubTaskIntervalDto>(
+                route = intervalsRoute(projectId, taskId, interval.parentSubTaskId),
+                body = interval.toCreateSubTaskIntervalRequest(),
+            ).map { it.toDomain(interval) }
 
     override suspend fun updateInterval(
         projectId: String,
         taskId: String,
-        interval: SubTaskInterval
-    ): Result<SubTaskInterval, DataError.Remote> {
-        return httpClient.put<UpdateSubTaskIntervalRequest, SubTaskIntervalDto>(
-            route = "${intervalsRoute(projectId, taskId, interval.parentSubTaskId)}/${interval.subTaskIntervalId}",
-            body = interval.toUpdateSubTaskIntervalRequest()
-        ).map { it.toDomain(interval) }
-    }
+        interval: SubTaskInterval,
+    ): Result<SubTaskInterval, DataError.Remote> =
+        httpClient
+            .put<UpdateSubTaskIntervalRequest, SubTaskIntervalDto>(
+                route = "${intervalsRoute(projectId, taskId, interval.parentSubTaskId)}/${interval.subTaskIntervalId}",
+                body = interval.toUpdateSubTaskIntervalRequest(),
+            ).map { it.toDomain(interval) }
 
     override suspend fun deleteInterval(
         projectId: String,
         taskId: String,
         subTaskId: String,
-        intervalId: String
-    ): EmptyResult<DataError.Remote> {
-        return httpClient.delete(
-            route = "${intervalsRoute(projectId, taskId, subTaskId)}/$intervalId"
+        intervalId: String,
+    ): EmptyResult<DataError.Remote> =
+        httpClient.delete(
+            route = "${intervalsRoute(projectId, taskId, subTaskId)}/$intervalId",
         )
-    }
 
-    private fun intervalsRoute(projectId: String, taskId: String, subTaskId: String) =
-        "/api/projects/$projectId/tasks/$taskId/subtasks/$subTaskId/intervals"
+    private fun intervalsRoute(
+        projectId: String,
+        taskId: String,
+        subTaskId: String,
+    ) = "/api/projects/$projectId/tasks/$taskId/subtasks/$subTaskId/intervals"
 
     /**
      * The server echoes back `parentTaskIntervalId` but never `startedParentTimer` or
@@ -67,6 +67,6 @@ class KtorRemoteSubTaskIntervalDataSource(
         toSubTaskInterval(
             parentProjectId = sent.parentProjectId,
             startedParentTimer = sent.startedParentTimer,
-            startedByDeviceId = sent.startedByDeviceId
+            startedByDeviceId = sent.startedByDeviceId,
         )
 }

@@ -39,7 +39,7 @@ internal data class CountedInterval(
     val taskId: String,
     val taskTitle: String,
     /** The subtask that owns this interval, or `null` when the task timed it directly. */
-    val subTaskTitle: String?
+    val subTaskTitle: String?,
 )
 
 /**
@@ -75,52 +75,56 @@ internal fun Project.countedDayIntervals(timeZone: TimeZone): List<CountedInterv
  * its own enclosing intervals as well would double every figure on the screen.
  */
 @OptIn(ExperimentalTime::class)
-internal fun ProjectTask.countedDayIntervals(timeZone: TimeZone): List<CountedInterval> = buildList {
-    // Closes over the task, so both interval kinds are recorded against the owning task's title —
-    // the list shows that on the card and the subtask beside the time range.
-    fun record(
-        intervalId: String,
-        startedAt: Instant,
-        endedAt: Instant?,
-        durationMillis: Long,
-        subTaskTitle: String?
-    ) {
-        // Rule 2.
-        val ended = endedAt ?: return
-        // Rule 3.
-        splitAcrossLocalDays(startedAt, ended, durationMillis, timeZone).forEach { slice ->
-            add(
-                CountedInterval(
-                    intervalId = intervalId,
-                    date = slice.date,
-                    start = slice.start,
-                    end = slice.end,
-                    endsAtMidnight = slice.endsAtMidnight,
-                    durationMillis = slice.durationMillis,
-                    sliceIndex = slice.sliceIndex,
-                    sliceCount = slice.sliceCount,
-                    taskId = projectTaskId,
-                    taskTitle = title,
-                    subTaskTitle = subTaskTitle
-                )
-            )
-        }
-    }
-
-    // Rule 1.
-    val subTasks = subTasks.orEmpty()
-    if (subTasks.isEmpty()) {
-        intervals.forEach {
-            record(it.intervalId, it.startDateTimeUtc, it.endDateTimeUtc, it.durationMillis, null)
-        }
-    } else {
-        subTasks.forEach { subTask ->
-            subTask.subTaskIntervals.forEach {
-                record(
-                    it.subTaskIntervalId, it.startDateTimeUtc, it.endDateTimeUtc,
-                    it.durationMillis, subTask.title
+internal fun ProjectTask.countedDayIntervals(timeZone: TimeZone): List<CountedInterval> =
+    buildList {
+        // Closes over the task, so both interval kinds are recorded against the owning task's title —
+        // the list shows that on the card and the subtask beside the time range.
+        fun record(
+            intervalId: String,
+            startedAt: Instant,
+            endedAt: Instant?,
+            durationMillis: Long,
+            subTaskTitle: String?,
+        ) {
+            // Rule 2.
+            val ended = endedAt ?: return
+            // Rule 3.
+            splitAcrossLocalDays(startedAt, ended, durationMillis, timeZone).forEach { slice ->
+                add(
+                    CountedInterval(
+                        intervalId = intervalId,
+                        date = slice.date,
+                        start = slice.start,
+                        end = slice.end,
+                        endsAtMidnight = slice.endsAtMidnight,
+                        durationMillis = slice.durationMillis,
+                        sliceIndex = slice.sliceIndex,
+                        sliceCount = slice.sliceCount,
+                        taskId = projectTaskId,
+                        taskTitle = title,
+                        subTaskTitle = subTaskTitle,
+                    ),
                 )
             }
         }
+
+        // Rule 1.
+        val subTasks = subTasks.orEmpty()
+        if (subTasks.isEmpty()) {
+            intervals.forEach {
+                record(it.intervalId, it.startDateTimeUtc, it.endDateTimeUtc, it.durationMillis, null)
+            }
+        } else {
+            subTasks.forEach { subTask ->
+                subTask.subTaskIntervals.forEach {
+                    record(
+                        it.subTaskIntervalId,
+                        it.startDateTimeUtc,
+                        it.endDateTimeUtc,
+                        it.durationMillis,
+                        subTask.title,
+                    )
+                }
+            }
+        }
     }
-}

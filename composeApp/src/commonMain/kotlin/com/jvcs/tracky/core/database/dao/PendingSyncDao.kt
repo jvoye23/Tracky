@@ -21,12 +21,16 @@ interface PendingSyncDao {
     suspend fun enqueueDeduped(op: PendingSyncEntity) {
         val existing = getOperationsByEntityId(op.entityId)
         when (op.operationType) {
-            OP_CREATE -> upsertOperation(op)
+            OP_CREATE -> {
+                upsertOperation(op)
+            }
+
             OP_UPDATE -> {
                 // A pending CREATE/UPDATE already pushes the latest local state — no new op needed.
                 val alreadyQueued = existing.any { it.operationType == OP_CREATE || it.operationType == OP_UPDATE }
                 if (!alreadyQueued) upsertOperation(op)
             }
+
             OP_DELETE -> {
                 val hadPendingCreate = existing.any { it.operationType == OP_CREATE }
                 deleteOperationsByEntityId(op.entityId)

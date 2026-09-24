@@ -79,7 +79,7 @@ fun openProjectFromTimerNotification(projectId: String) {
     val koin = KoinPlatform.getKoin()
     koin.get<CoroutineScope>(named("AppScope")).launch(Dispatchers.Main) {
         koin.get<DeepLinkRouter>().request(
-            Route.ProjectRoute.ProjectDetail(isEditMode = false, projectId = projectId)
+            Route.ProjectRoute.ProjectDetail(isEditMode = false, projectId = projectId),
         )
     }
 }
@@ -92,15 +92,17 @@ fun openProjectFromTimerNotification(projectId: String) {
 fun runTrashCleanup(onComplete: (Boolean) -> Unit) {
     val koin = KoinPlatform.getKoin()
     koin.get<CoroutineScope>(named("AppScope")).launch {
-        val success = try {
-            koin.get<ProjectRepository>()
-                .purgeExpiredTrashedProjects(TrashRetention.cutoff(koin.get<TimeProvider>().nowInstant))
-            true
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Throwable) {
-            false
-        }
+        val success =
+            try {
+                koin
+                    .get<ProjectRepository>()
+                    .purgeExpiredTrashedProjects(TrashRetention.cutoff(koin.get<TimeProvider>().nowInstant))
+                true
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                false
+            }
         // BGProcessingTask requests are one-shot; queue the next run.
         koin.get<TrashCleanupScheduler>().scheduleCleanup()
         onComplete(success)
@@ -115,14 +117,15 @@ fun runTrashCleanup(onComplete: (Boolean) -> Unit) {
 fun runSync(onComplete: (Boolean) -> Unit) {
     val koin = KoinPlatform.getKoin()
     koin.get<CoroutineScope>(named("AppScope")).launch {
-        val success = try {
-            koin.get<SyncRepository>().syncPendingOperations()
-            true
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Throwable) {
-            false
-        }
+        val success =
+            try {
+                koin.get<SyncRepository>().syncPendingOperations()
+                true
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                false
+            }
         // BGAppRefreshTask requests are one-shot; queue the next run.
         koin.get<SyncScheduler>().schedulePeriodicSync()
         onComplete(success)

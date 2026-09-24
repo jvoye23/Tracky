@@ -35,7 +35,7 @@ sealed interface ActiveTimerChange {
         override val active: ActiveTimer?,
         val touchedTaskIntervals: List<TaskInterval>,
         val touchedSubTaskIntervals: List<SubTaskInterval>,
-        override val serverNow: Instant?
+        override val serverNow: Instant?,
     ) : ActiveTimerChange
 
     /**
@@ -45,8 +45,5 @@ sealed interface ActiveTimerChange {
      * that is no longer true. [active] is what is actually running, so the caller can converge on
      * it immediately rather than guessing or waiting for a pull.
      */
-    data class Rejected(
-        override val active: ActiveTimer?,
-        override val serverNow: Instant?
-    ) : ActiveTimerChange
+    data class Rejected(override val active: ActiveTimer?, override val serverNow: Instant?) : ActiveTimerChange
 }

@@ -44,7 +44,7 @@ class IosTimerNotificationControllerTest {
         subTask: TaskRef? = TaskRef(id = "sub-1", title = "Auth endpoints"),
         elapsed: Duration = 90.minutes,
         isRunning: Boolean = true,
-        isForeign: Boolean = false
+        isForeign: Boolean = false,
     ) = TimerNotificationSession(
         project = ProjectRef(id = "p-1", title = "Tracky App Redesign", colorArgb = colorArgb),
         useLightTextColor = useLightTextColor,
@@ -53,7 +53,7 @@ class IosTimerNotificationControllerTest {
         elapsed = elapsed,
         asOf = asOf,
         isRunning = isRunning,
-        isForeign = isForeign
+        isForeign = isForeign,
     )
 
     /** The widget hides its toggle off this flag, so it has to survive the crossing into Swift. */
@@ -120,34 +120,37 @@ class IosTimerNotificationControllerTest {
     }
 
     @Test
-    fun showBeforeSwiftHasRegisteredABridgeIsHarmless() = runTest {
-        // startKoinIos() starts the coordinator, and a timer left running by a previous launch
-        // reaches the controller straight away, so this ordering really happens on a cold start.
-        val controller = IosTimerNotificationController(bridge = { null })
+    fun showBeforeSwiftHasRegisteredABridgeIsHarmless() =
+        runTest {
+            // startKoinIos() starts the coordinator, and a timer left running by a previous launch
+            // reaches the controller straight away, so this ordering really happens on a cold start.
+            val controller = IosTimerNotificationController(bridge = { null })
 
-        controller.show(session())
-        controller.dismiss()
-    }
-
-    @Test
-    fun showHandsTheMappedStateToTheBridge() = runTest {
-        val bridge = RecordingBridge()
-
-        IosTimerNotificationController(bridge = { bridge }).show(session(elapsed = 90.minutes))
-
-        assertEquals(1, bridge.shown.size)
-        assertEquals("Token refresh", bridge.shown.single().taskTitle)
-        assertEquals(asOf.epochSeconds - 5_400.0, bridge.shown.single().startedAtEpochSeconds)
-    }
+            controller.show(session())
+            controller.dismiss()
+        }
 
     @Test
-    fun dismissReachesTheBridge() = runTest {
-        val bridge = RecordingBridge()
+    fun showHandsTheMappedStateToTheBridge() =
+        runTest {
+            val bridge = RecordingBridge()
 
-        IosTimerNotificationController(bridge = { bridge }).dismiss()
+            IosTimerNotificationController(bridge = { bridge }).show(session(elapsed = 90.minutes))
 
-        assertEquals(1, bridge.dismissals)
-    }
+            assertEquals(1, bridge.shown.size)
+            assertEquals("Token refresh", bridge.shown.single().taskTitle)
+            assertEquals(asOf.epochSeconds - 5_400.0, bridge.shown.single().startedAtEpochSeconds)
+        }
+
+    @Test
+    fun dismissReachesTheBridge() =
+        runTest {
+            val bridge = RecordingBridge()
+
+            IosTimerNotificationController(bridge = { bridge }).dismiss()
+
+            assertEquals(1, bridge.dismissals)
+        }
 
     private class RecordingBridge : LiveActivityBridge {
         val shown = mutableListOf<LiveActivityState>()

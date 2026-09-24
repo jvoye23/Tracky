@@ -52,21 +52,20 @@ import tracky.composeapp.generated.resources.calendar_no_value
 import tracky.composeapp.generated.resources.daily_overview_title
 
 @Composable
-fun DailyOverviewScreenRoot(
-    navigateBack: () -> Unit,
-    viewModel: DailyOverviewViewModel = koinViewModel()
-) {
+fun DailyOverviewScreenRoot(navigateBack: () -> Unit, viewModel: DailyOverviewViewModel = koinViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
     ObserveAsEvents(viewModel.events) { event ->
         when (event) {
-            is DailyOverviewEvent.Error -> coroutineScope.launch {
-                snackbarHostState.showSnackbar(
-                    message = event.error.asStringAsync(),
-                    duration = SnackbarDuration.Short
-                )
+            is DailyOverviewEvent.Error -> {
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar(
+                        message = event.error.asStringAsync(),
+                        duration = SnackbarDuration.Short,
+                    )
+                }
             }
         }
     }
@@ -80,7 +79,7 @@ fun DailyOverviewScreenRoot(
             }
             viewModel.onAction(action)
         },
-        snackbarHostState = snackbarHostState
+        snackbarHostState = snackbarHostState,
     )
 }
 
@@ -89,7 +88,7 @@ fun DailyOverviewScreenRoot(
 private fun DailyOverviewScreen(
     state: DailyOverviewState,
     onAction: (DailyOverviewAction) -> Unit,
-    snackbarHostState: SnackbarHostState
+    snackbarHostState: SnackbarHostState,
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -99,14 +98,14 @@ private fun DailyOverviewScreen(
                 title = stringResource(Res.string.daily_overview_title).uppercase(),
                 onNavigateBack = { onAction(DailyOverviewAction.OnBackClick) },
                 projectColor = state.projectColor ?: MaterialTheme.colorScheme.primary,
-                showEditAction = false
+                showEditAction = false,
             )
-        }
+        },
     ) { innerPadding ->
         if (state.isLoading) {
             Box(
                 modifier = Modifier.fillMaxSize().padding(innerPadding),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
             ) {
                 CircularProgressIndicator()
             }
@@ -119,7 +118,7 @@ private fun DailyOverviewScreen(
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(innerPadding),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             item(key = "calendar") {
                 CalendarMonthCard(
@@ -129,7 +128,7 @@ private fun DailyOverviewScreen(
                     selectedDateLabel = state.dayDetail?.headlineLabel,
                     projectColor = projectColor,
                     onDateSelected = { onAction(DailyOverviewAction.OnDateSelected(it)) },
-                    onMonthChange = { onAction(DailyOverviewAction.OnMonthChanged(it)) }
+                    onMonthChange = { onAction(DailyOverviewAction.OnMonthChanged(it)) },
                 )
             }
 
@@ -141,13 +140,13 @@ private fun DailyOverviewScreen(
                             Modifier.weight(1f),
                             Icons.Outlined.LocalFireDepartment,
                             stringResource(Res.string.calendar_busiest_day_label),
-                            month.busiestDayLabel ?: stringResource(Res.string.calendar_no_value)
+                            month.busiestDayLabel ?: stringResource(Res.string.calendar_no_value),
                         )
                         InfoCard(
                             Modifier.weight(1f),
                             Icons.Outlined.Schedule,
                             stringResource(Res.string.calendar_month_total_label),
-                            month.monthTotalLabel ?: stringResource(Res.string.calendar_no_value)
+                            month.monthTotalLabel ?: stringResource(Res.string.calendar_no_value),
                         )
                     }
                 }
@@ -164,7 +163,7 @@ private fun DailyOverviewScreen(
                     items(day.intervals, key = { it.intervalId }) { interval ->
                         DayIntervalCard(
                             interval = interval,
-                            projectColor = projectColor
+                            projectColor = projectColor,
                         )
                     }
                 }
@@ -177,31 +176,39 @@ private fun DailyOverviewScreen(
 // Previews
 // ---------------------------------------------------------------------------
 
-private fun previewInterval(index: String, task: String, subTask: String?, range: String, duration: String) =
-    DayIntervalUi("id-$index", index, task, subTask, range, duration, Color(0xFF475D92))
+private fun previewInterval(
+    index: String,
+    task: String,
+    subTask: String?,
+    range: String,
+    duration: String,
+) = DayIntervalUi("id-$index", index, task, subTask, range, duration, Color(0xFF475D92))
 
-private fun previewState(dayDetail: DayDetailUi) = DailyOverviewState(
-    projectTitle = "Tracky",
-    projectColor = null,
-    selectedDate = LocalDate(2026, 9, 8),
-    months = listOf(previewCalendarMonth()),
-    visibleMonthIndex = 0,
-    dayDetail = dayDetail,
-    isLoading = false
-)
+private fun previewState(dayDetail: DayDetailUi) =
+    DailyOverviewState(
+        projectTitle = "Tracky",
+        projectColor = null,
+        selectedDate = LocalDate(2026, 9, 8),
+        months = listOf(previewCalendarMonth()),
+        visibleMonthIndex = 0,
+        dayDetail = dayDetail,
+        isLoading = false,
+    )
 
-private fun previewDay() = DayDetailUi(
-    dateLabel = "Tue, Sep 08",
-    headlineLabel = "Sep 8, 2026",
-    totalDuration = "03:26:58",
-    intervals = listOf(
-        previewInterval("01", "Design review", "Calendar spec", "09:30 – 10:12", "00:42:11"),
-        previewInterval("02", "Onboarding copy", null, "10:20 – 10:58", "00:38:22"),
-        previewInterval("03", "Auth endpoints", "Token refresh", "13:15 – 14:47", "01:32:07"),
-        previewInterval("04", "Testing Tasks", null, "15:30 – 16:04", "00:34:18")
-    ),
-    taskCount = 4
-)
+private fun previewDay() =
+    DayDetailUi(
+        dateLabel = "Tue, Sep 08",
+        headlineLabel = "Sep 8, 2026",
+        totalDuration = "03:26:58",
+        intervals =
+            listOf(
+                previewInterval("01", "Design review", "Calendar spec", "09:30 – 10:12", "00:42:11"),
+                previewInterval("02", "Onboarding copy", null, "10:20 – 10:58", "00:38:22"),
+                previewInterval("03", "Auth endpoints", "Token refresh", "13:15 – 14:47", "01:32:07"),
+                previewInterval("04", "Testing Tasks", null, "15:30 – 16:04", "00:34:18"),
+            ),
+        taskCount = 4,
+    )
 
 @Composable
 private fun ScreenPreview(state: DailyOverviewState) {

@@ -12,7 +12,7 @@ enum class TimerNotificationPermission {
     DeniedAlways,
 
     /** The platform has nothing to ask for. */
-    NotRequired
+    NotRequired,
 }
 
 /**
@@ -42,5 +42,6 @@ interface TimerNotificationPermissionRequester {
 /** For JVM and iOS, and for platforms before their surface is wired up. */
 class NoOpTimerNotificationPermissionRequester : TimerNotificationPermissionRequester {
     override suspend fun request() = TimerNotificationPermission.NotRequired
+
     override fun openAppSettings() = Unit
 }

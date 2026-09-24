@@ -15,8 +15,8 @@ import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
-fun ProjectDto.toProject(): Project {
-    return Project(
+fun ProjectDto.toProject(): Project =
+    Project(
         projectId = id,
         title = title,
         description = description,
@@ -31,12 +31,11 @@ fun ProjectDto.toProject(): Project {
         trashedAt = trashedAt?.let(Instant::parse),
         isPinned = isPinned,
         ownUpdatedAt = updatedAt?.let(Instant::parse),
-        sortIndex = sortIndex
+        sortIndex = sortIndex,
     )
-}
 
-fun ProjectTaskDto.toProjectTask(parentProjectId: String): ProjectTask {
-    return ProjectTask(
+fun ProjectTaskDto.toProjectTask(parentProjectId: String): ProjectTask =
+    ProjectTask(
         projectTaskId = id,
         // Before API 1.6.0 the wire had no title field and the client put the task's title in
         // description. The fallback keeps a device talking to an older deployment readable; against
@@ -57,12 +56,11 @@ fun ProjectTaskDto.toProjectTask(parentProjectId: String): ProjectTask {
         subTasks = subTasks.map { it.toProjectSubTask(parentProjectId) },
         sortIndex = sortIndex,
     )
-}
 
 // Like intervals, subtasks are nested inside their task on the wire and the project id is never
 // repeated, so it is handed down from the enclosing ProjectTaskDto.
-fun ProjectSubTaskDto.toProjectSubTask(parentProjectId: String): ProjectSubTask {
-    return ProjectSubTask(
+fun ProjectSubTaskDto.toProjectSubTask(parentProjectId: String): ProjectSubTask =
+    ProjectSubTask(
         projectSubTaskId = subTaskId,
         parentProjectTaskId = parentProjectTaskId,
         parentProjectId = parentProjectId,
@@ -76,13 +74,13 @@ fun ProjectSubTaskDto.toProjectSubTask(parentProjectId: String): ProjectSubTask 
         // startedParentTimer is unknowable from the wire; upsertServerTree keeps whatever the
         // local row already had, and false is safe for a row this device has never seen.
         // startedByDeviceId is on the wire, so it is carried across rather than invented.
-        subTaskIntervals = intervals.map {
-            it.toSubTaskInterval(parentProjectId, startedParentTimer = false, it.startedByDeviceId)
-        },
+        subTaskIntervals =
+            intervals.map {
+                it.toSubTaskInterval(parentProjectId, startedParentTimer = false, it.startedByDeviceId)
+            },
         ownUpdatedAt = updatedAt?.let(Instant::parse),
         sortIndex = sortIndex,
     )
-}
 
 /**
  * Rebuilds a subtask interval from a server payload missing one of its fields.
@@ -100,9 +98,9 @@ fun ProjectSubTaskDto.toProjectSubTask(parentProjectId: String): ProjectSubTask 
 fun SubTaskIntervalDto.toSubTaskInterval(
     parentProjectId: String,
     startedParentTimer: Boolean,
-    startedByDeviceId: String?
-): SubTaskInterval {
-    return SubTaskInterval(
+    startedByDeviceId: String?,
+): SubTaskInterval =
+    SubTaskInterval(
         subTaskIntervalId = subTaskIntervalId,
         parentTaskIntervalId = parentTaskIntervalId,
         parentSubTaskId = parentSubTaskId,
@@ -111,29 +109,24 @@ fun SubTaskIntervalDto.toSubTaskInterval(
         endDateTimeUtc = endDateTimeUtc?.let(Instant::parse),
         durationMillis = durationMillis,
         startedParentTimer = startedParentTimer,
-        startedByDeviceId = startedByDeviceId
+        startedByDeviceId = startedByDeviceId,
     )
-}
 
 // The wire payload nests intervals inside their task and never repeats the project id, so it is
 // handed down from the enclosing ProjectTaskDto rather than read off the interval itself.
-fun TaskIntervalDto.toTaskInterval(
-    parentProjectId: String,
-    startedByDeviceId: String?
-): TaskInterval {
-    return TaskInterval(
+fun TaskIntervalDto.toTaskInterval(parentProjectId: String, startedByDeviceId: String?): TaskInterval =
+    TaskInterval(
         intervalId = intervalId,
         parentTaskId = parentSessionId,
         parentProjectId = parentProjectId,
-        startDateTimeUtc = Instant.parse( startDateTimeUtc),
+        startDateTimeUtc = Instant.parse(startDateTimeUtc),
         endDateTimeUtc = endDateTimeUtc?.let(Instant::parse),
         durationMillis = durationMillis,
-        startedByDeviceId = startedByDeviceId
+        startedByDeviceId = startedByDeviceId,
     )
-}
 
-fun Project.toProjectDto(): ProjectDto {
-    return ProjectDto(
+fun Project.toProjectDto(): ProjectDto =
+    ProjectDto(
         id = projectId,
         title = title,
         description = description,
@@ -148,12 +141,11 @@ fun Project.toProjectDto(): ProjectDto {
         trashedAt = trashedAt?.toString(),
         isPinned = isPinned,
         updatedAt = ownUpdatedAt?.toString(),
-        sortIndex = sortIndex
+        sortIndex = sortIndex,
     )
-}
 
-fun ProjectTask.toProjectTaskDto(): ProjectTaskDto {
-    return ProjectTaskDto(
+fun ProjectTask.toProjectTaskDto(): ProjectTaskDto =
+    ProjectTaskDto(
         id = projectTaskId,
         title = title,
         description = description,
@@ -164,12 +156,11 @@ fun ProjectTask.toProjectTaskDto(): ProjectTaskDto {
         isTimerRunning = isTimerRunning,
         intervals = intervals.map { it.toTaskIntervalDto() },
         subTasks = subTasks.orEmpty().map { it.toProjectSubTaskDto() },
-        updatedAt = ownUpdatedAt?.toString()
+        updatedAt = ownUpdatedAt?.toString(),
     )
-}
 
-fun ProjectSubTask.toProjectSubTaskDto(): ProjectSubTaskDto {
-    return ProjectSubTaskDto(
+fun ProjectSubTask.toProjectSubTaskDto(): ProjectSubTaskDto =
+    ProjectSubTaskDto(
         subTaskId = projectSubTaskId,
         parentProjectTaskId = parentProjectTaskId,
         title = title,
@@ -180,27 +171,24 @@ fun ProjectSubTask.toProjectSubTaskDto(): ProjectSubTaskDto {
         isFinished = isFinished,
         isTimerRunning = isTimerRunning,
         intervals = subTaskIntervals.map { it.toSubTaskIntervalDto() },
-        updatedAt = ownUpdatedAt?.toString()
+        updatedAt = ownUpdatedAt?.toString(),
     )
-}
 
-fun SubTaskInterval.toSubTaskIntervalDto(): SubTaskIntervalDto {
-    return SubTaskIntervalDto(
+fun SubTaskInterval.toSubTaskIntervalDto(): SubTaskIntervalDto =
+    SubTaskIntervalDto(
         subTaskIntervalId = subTaskIntervalId,
         parentSubTaskId = parentSubTaskId,
         parentTaskIntervalId = parentTaskIntervalId,
         startDateTimeUtc = startDateTimeUtc.toString(),
         endDateTimeUtc = endDateTimeUtc?.toString(),
-        durationMillis = durationMillis
+        durationMillis = durationMillis,
     )
-}
 
-fun TaskInterval.toTaskIntervalDto(): TaskIntervalDto {
-    return TaskIntervalDto(
+fun TaskInterval.toTaskIntervalDto(): TaskIntervalDto =
+    TaskIntervalDto(
         intervalId = intervalId,
         parentSessionId = parentTaskId,
         startDateTimeUtc = startDateTimeUtc.toString(),
         endDateTimeUtc = endDateTimeUtc?.toString(),
-        durationMillis = durationMillis
+        durationMillis = durationMillis,
     )
-}

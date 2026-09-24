@@ -1,9 +1,7 @@
 package com.jvcs.tracky.core.domain.sync
 
 /** An in-memory cursor, with [clearCount] so a test can assert logout actually reached it. */
-internal class FakeSyncCursorStore(
-    private var cursor: Long? = null
-) : SyncCursorStore {
+internal class FakeSyncCursorStore(private var cursor: Long? = null) : SyncCursorStore {
 
     var clearCount = 0
         private set

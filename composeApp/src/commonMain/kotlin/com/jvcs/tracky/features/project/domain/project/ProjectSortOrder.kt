@@ -11,7 +11,8 @@ import com.jvcs.tracky.features.project.domain.models.Project
  * Shared by the overview ViewModel (what the user sees) and the repository (which re-indexes a
  * section when a project is pinned or unpinned), so both agree on what "the current order" means.
  */
-fun List<Project>.sortedByCustomOrder(): List<Project> = sortedWith(
-    compareBy<Project, Long?>(nullsFirst<Long>()) { it.sortIndex }
-        .thenByDescending { it.startDateTimeUtc }
-)
+fun List<Project>.sortedByCustomOrder(): List<Project> =
+    sortedWith(
+        compareBy<Project, Long?>(nullsFirst<Long>()) { it.sortIndex }
+            .thenByDescending { it.startDateTimeUtc },
+    )

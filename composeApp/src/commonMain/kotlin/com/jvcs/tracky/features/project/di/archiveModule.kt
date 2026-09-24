@@ -4,10 +4,11 @@ import com.jvcs.tracky.features.project.presentation.project_archive.ProjectArch
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
-val archiveModule = module {
-    viewModel {
-        ProjectArchiveViewModel(
-            projectRepository = get()
-        )
+val archiveModule =
+    module {
+        viewModel {
+            ProjectArchiveViewModel(
+                projectRepository = get(),
+            )
+        }
     }
-}

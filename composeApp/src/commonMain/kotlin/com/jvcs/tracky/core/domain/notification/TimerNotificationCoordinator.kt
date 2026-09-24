@@ -27,9 +27,13 @@ class TimerNotificationCoordinator(
     private val controller: TimerNotificationController,
     private val startupReconciliation: StartupReconciliation,
     private val serverClock: ServerClock,
-    private val applicationScope: CoroutineScope
+    private val applicationScope: CoroutineScope,
 ) {
-    private data class PausedTimer(val timer: RunningTimer, val elapsed: Duration, val asOf: Instant)
+    private data class PausedTimer(
+        val timer: RunningTimer,
+        val elapsed: Duration,
+        val asOf: Instant,
+    )
 
     private var started = false
 
@@ -58,10 +62,16 @@ class TimerNotificationCoordinator(
                     paused = null
                     controller.show(timer.toSession(serverClock.now()))
                 }
+
                 // Pause closed the interval itself. The card stays, frozen, or the user loses the
                 // only way to resume without reopening the app.
-                paused != null -> Unit
-                else -> controller.dismiss()
+                paused != null -> {
+                    Unit
+                }
+
+                else -> {
+                    controller.dismiss()
+                }
             }
         }
     }
@@ -105,16 +115,17 @@ class TimerNotificationCoordinator(
         }
     }
 
-    private fun RunningTimer.toSession(now: Instant) = TimerNotificationSession(
-        project = project,
-        useLightTextColor = useLightTextColor,
-        task = task,
-        subTask = subTask,
-        elapsed = elapsedAt(now),
-        asOf = now,
-        isRunning = true,
-        isForeign = isForeign
-    )
+    private fun RunningTimer.toSession(now: Instant) =
+        TimerNotificationSession(
+            project = project,
+            useLightTextColor = useLightTextColor,
+            task = task,
+            subTask = subTask,
+            elapsed = elapsedAt(now),
+            asOf = now,
+            isRunning = true,
+            isForeign = isForeign,
+        )
 
     private val PausedTimer.session: TimerNotificationSession
         get() = timer.toSession(asOf).copy(elapsed = elapsed, isRunning = false)

@@ -24,24 +24,24 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.serialization.json.Json
 
-class HttpClientFactory(
-    private val sessionStorage: SessionStorage
-) {
+class HttpClientFactory(private val sessionStorage: SessionStorage) {
     fun create(engine: HttpClientEngine): HttpClient {
         return HttpClient(engine) {
             install(ContentNegotiation) {
                 json(
-                    json = Json {
-                        ignoreUnknownKeys = true
-                    }
+                    json =
+                        Json {
+                            ignoreUnknownKeys = true
+                        },
                 )
             }
             install(Logging) {
-                logger = object : io.ktor.client.plugins.logging.Logger {
-                    override fun log(message: String) {
-                        Logger.withTag("HTTP").d(message)
+                logger =
+                    object : io.ktor.client.plugins.logging.Logger {
+                        override fun log(message: String) {
+                            Logger.withTag("HTTP").d(message)
+                        }
                     }
-                }
                 level = LogLevel.ALL
             }
             // No pingInterval here on purpose. The server already pings every thirty seconds and
@@ -61,14 +61,16 @@ class HttpClientFactory(
                         sessionStorage.observeAuthInfo().firstOrNull()?.let {
                             BearerTokens(
                                 accessToken = it.accessToken,
-                                refreshToken = it.refreshToken
+                                refreshToken = it.refreshToken,
                             )
                         }
                     }
                     refreshTokens {
                         // Never refresh on 401 from /api/auth/* (e.g. wrong password on login)
                         // — otherwise this would loop indefinitely.
-                        if (this.response.call.request.url.encodedPath.startsWith("/api/auth/")) {
+                        if (this.response.call.request.url.encodedPath
+                                .startsWith("/api/auth/")
+                        ) {
                             return@refreshTokens null
                         }
                         val authInfo = sessionStorage.observeAuthInfo().firstOrNull()
@@ -77,20 +79,22 @@ class HttpClientFactory(
                             return@refreshTokens null
                         }
                         var bearerTokens: BearerTokens? = null
-                        client.post<RefreshRequest, AuthInfoSerializable>(
-                            route = "/api/auth/refresh",
-                            body = RefreshRequest(refreshToken = authInfo.refreshToken),
-                            builder = { markAsRefreshTokenRequest() }
-                        ).onSuccess { newAuthInfo ->
-                            val newAuthInfoDomain = newAuthInfo.toDomain()
-                            sessionStorage.set(newAuthInfoDomain)
-                            bearerTokens = BearerTokens(
-                                accessToken = newAuthInfo.accessToken,
-                                refreshToken = newAuthInfo.refreshToken
-                            )
-                        }.onFailure {
-                            sessionStorage.set(null)
-                        }
+                        client
+                            .post<RefreshRequest, AuthInfoSerializable>(
+                                route = "/api/auth/refresh",
+                                body = RefreshRequest(refreshToken = authInfo.refreshToken),
+                                builder = { markAsRefreshTokenRequest() },
+                            ).onSuccess { newAuthInfo ->
+                                val newAuthInfoDomain = newAuthInfo.toDomain()
+                                sessionStorage.set(newAuthInfoDomain)
+                                bearerTokens =
+                                    BearerTokens(
+                                        accessToken = newAuthInfo.accessToken,
+                                        refreshToken = newAuthInfo.refreshToken,
+                                    )
+                            }.onFailure {
+                                sessionStorage.set(null)
+                            }
                         bearerTokens
                     }
                 }

@@ -16,9 +16,7 @@ import kotlin.uuid.Uuid
  * Not in Room: the id has to be readable before the database is usable, and it must survive
  * `deleteAllProjects()` on logout, which the project tables do not.
  */
-class DataStoreDeviceIdProvider(
-    private val dataStore: DataStore<Preferences>
-) : DeviceIdProvider {
+class DataStoreDeviceIdProvider(private val dataStore: DataStore<Preferences>) : DeviceIdProvider {
 
     private val deviceIdKey = stringPreferencesKey(KEY_DEVICE_ID)
 

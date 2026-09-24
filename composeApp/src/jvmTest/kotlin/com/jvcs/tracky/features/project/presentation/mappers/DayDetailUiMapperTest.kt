@@ -18,8 +18,11 @@ class DayDetailUiMapperTest {
 
     private val sep8 = LocalDate(2026, 9, 8)
 
-    private fun day(vararg tasks: ProjectTask, on: LocalDate = sep8, zone: TimeZone = TimeZone.UTC) =
-        project(tasks = tasks.toList()).toDayDetailUi(date = on, timeZone = zone)
+    private fun day(
+        vararg tasks: ProjectTask,
+        on: LocalDate = sep8,
+        zone: TimeZone = TimeZone.UTC,
+    ) = project(tasks = tasks.toList()).toDayDetailUi(date = on, timeZone = zone)
 
     // --- the empty day ------------------------------------------------------------------------
 
@@ -55,9 +58,10 @@ class DayDetailUiMapperTest {
 
     @Test
     fun `a card carries the task title, the range and the duration`() {
-        val detail = day(
-            task(title = "Design review", intervals = listOf(interval("2026-09-08T09:30:00Z", minutes = 42)))
-        )
+        val detail =
+            day(
+                task(title = "Design review", intervals = listOf(interval("2026-09-08T09:30:00Z", minutes = 42))),
+            )
 
         val card = detail.intervals.single()
         assertEquals("01", card.indexLabel)
@@ -69,12 +73,19 @@ class DayDetailUiMapperTest {
 
     @Test
     fun `a subtask interval names both the task and the subtask`() {
-        val detail = day(
-            task(
-                title = "Auth endpoints",
-                subTasks = listOf(subTask(title = "Token refresh", intervals = listOf(subInterval("2026-09-08T13:15:00Z", minutes = 92))))
+        val detail =
+            day(
+                task(
+                    title = "Auth endpoints",
+                    subTasks =
+                        listOf(
+                            subTask(
+                                title = "Token refresh",
+                                intervals = listOf(subInterval("2026-09-08T13:15:00Z", minutes = 92)),
+                            ),
+                        ),
+                ),
             )
-        )
 
         val card = detail.intervals.single()
         assertEquals("Auth endpoints", card.taskTitle)
@@ -85,15 +96,17 @@ class DayDetailUiMapperTest {
 
     @Test
     fun `cards run in the order the day happened and are numbered after sorting`() {
-        val detail = day(
-            task(
-                intervals = listOf(
-                    interval("2026-09-08T15:30:00Z", minutes = 34, id = "late"),
-                    interval("2026-09-08T09:30:00Z", minutes = 42, id = "early"),
-                    interval("2026-09-08T10:20:00Z", minutes = 38, id = "middle")
-                )
+        val detail =
+            day(
+                task(
+                    intervals =
+                        listOf(
+                            interval("2026-09-08T15:30:00Z", minutes = 34, id = "late"),
+                            interval("2026-09-08T09:30:00Z", minutes = 42, id = "early"),
+                            interval("2026-09-08T10:20:00Z", minutes = 38, id = "middle"),
+                        ),
+                ),
             )
-        )
 
         assertEquals(listOf("early", "middle", "late"), detail.intervals.map { it.intervalId })
         assertEquals(listOf("01", "02", "03"), detail.intervals.map { it.indexLabel })
@@ -137,29 +150,33 @@ class DayDetailUiMapperTest {
 
     @Test
     fun `the total sums the day's intervals`() {
-        val detail = day(
-            task(
-                intervals = listOf(
-                    interval("2026-09-08T09:30:00Z", minutes = 42, id = "a"),
-                    interval("2026-09-08T13:15:00Z", minutes = 92, id = "b"),
-                    interval("2026-09-08T15:30:00Z", minutes = 34, id = "c")
-                )
+        val detail =
+            day(
+                task(
+                    intervals =
+                        listOf(
+                            interval("2026-09-08T09:30:00Z", minutes = 42, id = "a"),
+                            interval("2026-09-08T13:15:00Z", minutes = 92, id = "b"),
+                            interval("2026-09-08T15:30:00Z", minutes = 34, id = "c"),
+                        ),
+                ),
             )
-        )
 
         assertEquals("02:48:00", detail.totalDuration)
     }
 
     @Test
     fun `the total and the cards carry seconds, and the seconds carry into minutes`() {
-        val detail = day(
-            task(
-                intervals = listOf(
-                    interval("2026-09-08T09:30:00Z", minutes = 1, seconds = 30, id = "a"),
-                    interval("2026-09-08T13:15:00Z", minutes = 1, seconds = 28, id = "b")
-                )
+        val detail =
+            day(
+                task(
+                    intervals =
+                        listOf(
+                            interval("2026-09-08T09:30:00Z", minutes = 1, seconds = 30, id = "a"),
+                            interval("2026-09-08T13:15:00Z", minutes = 1, seconds = 28, id = "b"),
+                        ),
+                ),
             )
-        )
 
         // 90s + 88s is 178s: the seconds roll over into a second minute rather than being dropped.
         assertEquals("00:02:58", detail.totalDuration)
@@ -168,10 +185,18 @@ class DayDetailUiMapperTest {
 
     @Test
     fun `taskCount counts distinct tasks, not intervals`() {
-        val detail = day(
-            task(id = "task-a", intervals = listOf(interval("2026-09-08T09:00:00Z", minutes = 10, id = "a1"), interval("2026-09-08T11:00:00Z", minutes = 10, id = "a2"))),
-            task(id = "task-b", intervals = listOf(interval("2026-09-08T13:00:00Z", minutes = 10, id = "b1")))
-        )
+        val detail =
+            day(
+                task(
+                    id = "task-a",
+                    intervals =
+                        listOf(
+                            interval("2026-09-08T09:00:00Z", minutes = 10, id = "a1"),
+                            interval("2026-09-08T11:00:00Z", minutes = 10, id = "a2"),
+                        ),
+                ),
+                task(id = "task-b", intervals = listOf(interval("2026-09-08T13:00:00Z", minutes = 10, id = "b1"))),
+            )
 
         assertEquals(3, detail.intervalCount)
         assertEquals(2, detail.taskCount)
@@ -179,15 +204,25 @@ class DayDetailUiMapperTest {
 
     @Test
     fun `two subtasks of one task count as one task`() {
-        val detail = day(
-            task(
-                id = "task-a",
-                subTasks = listOf(
-                    subTask(id = "sub-a", title = "A", intervals = listOf(subInterval("2026-09-08T09:00:00Z", minutes = 10, id = "a"))),
-                    subTask(id = "sub-b", title = "B", intervals = listOf(subInterval("2026-09-08T11:00:00Z", minutes = 10, id = "b")))
-                )
+        val detail =
+            day(
+                task(
+                    id = "task-a",
+                    subTasks =
+                        listOf(
+                            subTask(
+                                id = "sub-a",
+                                title = "A",
+                                intervals = listOf(subInterval("2026-09-08T09:00:00Z", minutes = 10, id = "a")),
+                            ),
+                            subTask(
+                                id = "sub-b",
+                                title = "B",
+                                intervals = listOf(subInterval("2026-09-08T11:00:00Z", minutes = 10, id = "b")),
+                            ),
+                        ),
+                ),
             )
-        )
 
         assertEquals(2, detail.intervalCount)
         assertEquals(1, detail.taskCount)
@@ -197,22 +232,24 @@ class DayDetailUiMapperTest {
 
     @Test
     fun `a task with subtasks is not double counted, so the day agrees with its calendar cell`() {
-        val tasks = arrayOf(
-            task(
-                intervals = listOf(interval("2026-09-08T09:00:00Z", minutes = 42)),
-                subTasks = listOf(subTask(intervals = listOf(subInterval("2026-09-08T09:00:00Z", minutes = 42))))
+        val tasks =
+            arrayOf(
+                task(
+                    intervals = listOf(interval("2026-09-08T09:00:00Z", minutes = 42)),
+                    subTasks = listOf(subTask(intervals = listOf(subInterval("2026-09-08T09:00:00Z", minutes = 42)))),
+                ),
             )
-        )
         val detail = day(*tasks)
 
         assertEquals(1, detail.intervalCount)
         assertEquals("00:42:00", detail.totalDuration)
 
         // The number the calendar tints that cell with must be the number the list totals.
-        val cell = project(tasks = tasks.toList())
-            .toCalendarMonthsUi(today = sep8, timeZone = TimeZone.UTC)
-            .flatMap { it.monthDays }
-            .single { it.date == sep8 }
+        val cell =
+            project(tasks = tasks.toList())
+                .toCalendarMonthsUi(today = sep8, timeZone = TimeZone.UTC)
+                .flatMap { it.monthDays }
+                .single { it.date == sep8 }
         assertEquals(detail.totalDuration, "00:42:00")
         assertEquals(42 * 60_000L, cell.trackedMillis)
     }
@@ -224,6 +261,9 @@ class DayDetailUiMapperTest {
 
         assertTrue(day(*tasks, on = LocalDate(2026, 9, 5)).intervalCount == 1)
         assertTrue(day(*tasks, on = LocalDate(2026, 9, 5), zone = ny).isEmpty)
-        assertEquals("22:00 – 22:30", day(*tasks, on = LocalDate(2026, 9, 4), zone = ny).intervals.single().timeRangeLabel)
+        assertEquals(
+            "22:00 – 22:30",
+            day(*tasks, on = LocalDate(2026, 9, 4), zone = ny).intervals.single().timeRangeLabel,
+        )
     }
 }

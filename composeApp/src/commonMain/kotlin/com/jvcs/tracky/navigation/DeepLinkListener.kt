@@ -16,7 +16,7 @@ import org.koin.compose.koinInject
 fun DeepLinkListener(
     backStack: NavBackStack<NavKey>,
     isLoggedIn: Boolean,
-    deepLinkRouter: DeepLinkRouter = koinInject()
+    deepLinkRouter: DeepLinkRouter = koinInject(),
 ) {
     DisposableEffect(isLoggedIn, backStack, deepLinkRouter) {
         if (isLoggedIn) {

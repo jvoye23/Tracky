@@ -1,19 +1,19 @@
 package com.jvcs.tracky.features.project.data.task
 
 import com.jvcs.tracky.core.domain.device.DeviceIdProvider
+import com.jvcs.tracky.core.domain.startup.StartupReconciliation
 import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource
-import com.jvcs.tracky.core.domain.timer.ActiveTimerKind
-import com.jvcs.tracky.core.domain.timer.ActiveTimerRepository
-import com.jvcs.tracky.core.domain.timer.isForeignTimer
-import com.jvcs.tracky.core.domain.util.ServerClock
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
 import com.jvcs.tracky.core.domain.sync.SyncOutcome
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
 import com.jvcs.tracky.core.domain.sync.toSyncOutcome
+import com.jvcs.tracky.core.domain.timer.ActiveTimerKind
+import com.jvcs.tracky.core.domain.timer.ActiveTimerRepository
+import com.jvcs.tracky.core.domain.timer.isForeignTimer
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
-import com.jvcs.tracky.core.domain.startup.StartupReconciliation
+import com.jvcs.tracky.core.domain.util.ServerClock
 import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.core.domain.util.asEmptyDataResult
 import com.jvcs.tracky.core.domain.util.getOrDefault
@@ -45,15 +45,16 @@ class OfflineFirstTaskRepository(
     private val serverClock: ServerClock,
     private val timeProvider: TimeProvider,
     private val applicationScope: CoroutineScope,
-    private val startupReconciliation: StartupReconciliation
+    private val startupReconciliation: StartupReconciliation,
 ) : ProjectTaskRepository {
 
     // CREATE/UPDATE task: local first (optimistic), then remote; on transient failure → queue.
     override suspend fun upsertProjectTask(projectTask: ProjectTask): EmptyResult<DataError> {
-        val isCreate = when (val existing = localTaskDataSource.getTaskById(projectTask.projectTaskId)) {
-            is Result.Success -> existing.data == null
-            is Result.Error -> return existing.asEmptyDataResult()
-        }
+        val isCreate =
+            when (val existing = localTaskDataSource.getTaskById(projectTask.projectTaskId)) {
+                is Result.Success -> existing.data == null
+                is Result.Error -> return existing.asEmptyDataResult()
+            }
         val stamped = projectTask.copy(ownUpdatedAt = timeProvider.nowInstant)
 
         val localResult = localTaskDataSource.upsertProjectTask(stamped)
@@ -71,23 +72,36 @@ class OfflineFirstTaskRepository(
             return queueForLater(stamped.projectTaskId, projectId, operation)
         }
 
-        val remoteResult = if (isCreate) {
-            remoteTaskDataSource.postTaskByProjectId(projectId, stamped)
-        } else {
-            remoteTaskDataSource.updateTaskByProjectId(projectId, stamped)
-        }
+        val remoteResult =
+            if (isCreate) {
+                remoteTaskDataSource.postTaskByProjectId(projectId, stamped)
+            } else {
+                remoteTaskDataSource.updateTaskByProjectId(projectId, stamped)
+            }
         return when (remoteResult) {
             // Server is canonical on the happy path, exactly like projects and intervals.
-            is Result.Success -> localTaskDataSource
-                .upsertProjectTask(remoteResult.data.withLocalSortIndexFallback(stamped))
-                .asEmptyDataResult()
-            is Result.Error -> when {
-                remoteResult.error == DataError.Remote.CONFLICT -> resolveTaskConflict(stamped)
-                // A miss means the parent project is not on the server after all — the backstop
-                // for a queue row that went missing. Queue rather than drop, or the task is lost.
-                remoteResult.error.isMissingOrForbidden() || remoteResult.error.isTransient() ->
-                    queueForLater(stamped.projectTaskId, projectId, operation)
-                else -> remoteResult.asEmptyDataResult()
+            is Result.Success -> {
+                localTaskDataSource
+                    .upsertProjectTask(remoteResult.data.withLocalSortIndexFallback(stamped))
+                    .asEmptyDataResult()
+            }
+
+            is Result.Error -> {
+                when {
+                    remoteResult.error == DataError.Remote.CONFLICT -> {
+                        resolveTaskConflict(stamped)
+                    }
+
+                    // A miss means the parent project is not on the server after all — the backstop
+                    // for a queue row that went missing. Queue rather than drop, or the task is lost.
+                    remoteResult.error.isMissingOrForbidden() || remoteResult.error.isTransient() -> {
+                        queueForLater(stamped.projectTaskId, projectId, operation)
+                    }
+
+                    else -> {
+                        remoteResult.asEmptyDataResult()
+                    }
+                }
             }
         }
     }
@@ -111,58 +125,72 @@ class OfflineFirstTaskRepository(
             return Result.Success(Unit)
         }
 
-        val remoteResult = applicationScope.async {
-            remoteTaskDataSource.deleteTask(projectId = projectId, taskId = taskId)
-        }.await()
+        val remoteResult =
+            applicationScope
+                .async {
+                    remoteTaskDataSource.deleteTask(projectId = projectId, taskId = taskId)
+                }.await()
         return when (remoteResult) {
-            is Result.Success -> Result.Success(Unit)
-            is Result.Error -> when {
-                remoteResult.error.isTransient() -> {
-                    // Local delete already succeeded; only surface an error if queuing the sync fails.
-                    queueForLater(taskId, projectId, PendingSyncOperation.OP_DELETE)
+            is Result.Success -> {
+                Result.Success(Unit)
+            }
+
+            is Result.Error -> {
+                when {
+                    remoteResult.error.isTransient() -> {
+                        // Local delete already succeeded; only surface an error if queuing the sync fails.
+                        queueForLater(taskId, projectId, PendingSyncOperation.OP_DELETE)
+                    }
+
+                    // Server already has no such task → the delete is effectively done.
+                    remoteResult.error.isMissingOrForbidden() -> {
+                        Result.Success(Unit)
+                    }
+
+                    else -> {
+                        remoteResult.asEmptyDataResult()
+                    }
                 }
-                // Server already has no such task → the delete is effectively done.
-                remoteResult.error.isMissingOrForbidden() -> Result.Success(Unit)
-                else -> remoteResult.asEmptyDataResult()
             }
         }
     }
 
     // Purely local: the duration is recomputed from the intervals the server already has, so there
     // is nothing to push for it.
-    override suspend fun updateProjectTaskDuration(
-        taskId: String,
-        newDurationMillis: Long
-    ): EmptyResult<DataError> {
-        return localTaskDataSource.updateTaskDuration(taskId, newDurationMillis).asEmptyDataResult()
-    }
+    override suspend fun updateProjectTaskDuration(taskId: String, newDurationMillis: Long): EmptyResult<DataError> =
+        localTaskDataSource.updateTaskDuration(taskId, newDurationMillis).asEmptyDataResult()
 
     // Title edits must reach the server too. Route through the offline-first upsert so the change
     // is pushed remotely (and queued for sync when offline) instead of staying local-only.
     override suspend fun updateProjectTaskTitle(taskId: String, title: String): EmptyResult<DataError> {
-        val task = when (val existing = localTaskDataSource.getTaskById(taskId)) {
-            is Result.Success -> existing.data ?: return Result.Success(Unit) // nothing to rename
-            is Result.Error -> return existing.asEmptyDataResult()
-        }
+        val task =
+            when (val existing = localTaskDataSource.getTaskById(taskId)) {
+                is Result.Success -> existing.data ?: return Result.Success(Unit)
+
+                // nothing to rename
+                is Result.Error -> return existing.asEmptyDataResult()
+            }
         return upsertProjectTask(task.copy(title = title))
     }
 
     override suspend fun updateProjectTaskText(
         taskId: String,
         title: String,
-        description: String?
+        description: String?,
     ): EmptyResult<DataError> {
         // From the stored row, like updateProjectTaskTitle, so the task keeps its sortIndex.
-        val task = when (val existing = localTaskDataSource.getTaskById(taskId)) {
-            is Result.Success -> existing.data ?: return Result.Success(Unit) // nothing to edit
-            is Result.Error -> return existing.asEmptyDataResult()
-        }
+        val task =
+            when (val existing = localTaskDataSource.getTaskById(taskId)) {
+                is Result.Success -> existing.data ?: return Result.Success(Unit)
+
+                // nothing to edit
+                is Result.Error -> return existing.asEmptyDataResult()
+            }
         return upsertProjectTask(task.copy(title = title, description = description))
     }
 
-    override fun getProjectTaskWithIntervalsById(taskId: String): Flow<ProjectTask?> {
-        return localTaskDataSource.getTaskWithIntervalsById(taskId)
-    }
+    override fun getProjectTaskWithIntervalsById(taskId: String): Flow<ProjectTask?> =
+        localTaskDataSource.getTaskWithIntervalsById(taskId)
 
     override suspend fun startProjectTask(taskId: String): EmptyResult<DataError> {
         // Before anything is opened: startTask reuses whatever interval is already open, so
@@ -170,10 +198,11 @@ class OfflineFirstTaskRepository(
         // next stop would bank every hour since it opened. Free once the pass has run.
         startupReconciliation.awaitReconciled()
 
-        val start = when (val started = localTaskDataSource.startTask(taskId)) {
-            is Result.Success -> started.data
-            is Result.Error -> return started.asEmptyDataResult()
-        }
+        val start =
+            when (val started = localTaskDataSource.startTask(taskId)) {
+                is Result.Success -> started.data
+                is Result.Error -> return started.asEmptyDataResult()
+            }
         // Null means an already-open interval was reused, so there is no new row to create.
         val openedInterval = start.openedInterval ?: return Result.Success(Unit)
 
@@ -196,26 +225,29 @@ class OfflineFirstTaskRepository(
             return stopForeignTimer(openInterval.intervalId)
         }
 
-        val closedInterval = when (val stopped = localTaskDataSource.stopTask(taskId)) {
-            is Result.Success -> stopped.data
-            is Result.Error -> return stopped.asEmptyDataResult()
-        }
+        val closedInterval =
+            when (val stopped = localTaskDataSource.stopTask(taskId)) {
+                is Result.Success -> stopped.data
+                is Result.Error -> return stopped.asEmptyDataResult()
+            }
         // The interval carries the measured span, the task carries the accumulated total and the
         // cleared timer flag; both have to reach the server. The interval goes first so that a
         // failure pushing the task cannot strand it.
-        val intervalResult = if (closedInterval?.endDateTimeUtc != null) {
-            // The same compare-and-swap a foreign stop uses. It is this device's own timer, so the
-            // local close above is right either way — the server is being told, not asked.
-            activeTimerRepository.stop(
-                intervalId = closedInterval.intervalId,
-                kind = ActiveTimerKind.TASK,
-                endedAt = closedInterval.endDateTimeUtc
-            )
-        } else {
-            Result.Success(Unit)
-        }
-        val task = localTaskDataSource.getTaskById(taskId).getOrDefault(null)
-            ?: return intervalResult
+        val intervalResult =
+            if (closedInterval?.endDateTimeUtc != null) {
+                // The same compare-and-swap a foreign stop uses. It is this device's own timer, so the
+                // local close above is right either way — the server is being told, not asked.
+                activeTimerRepository.stop(
+                    intervalId = closedInterval.intervalId,
+                    kind = ActiveTimerKind.TASK,
+                    endedAt = closedInterval.endDateTimeUtc,
+                )
+            } else {
+                Result.Success(Unit)
+            }
+        val task =
+            localTaskDataSource.getTaskById(taskId).getOrDefault(null)
+                ?: return intervalResult
         val taskResult = upsertProjectTask(task)
         return if (intervalResult is Result.Error) intervalResult else taskResult
     }
@@ -236,7 +268,7 @@ class OfflineFirstTaskRepository(
         activeTimerRepository.stop(
             intervalId = intervalId,
             kind = ActiveTimerKind.TASK,
-            endedAt = serverClock.now()
+            endedAt = serverClock.now(),
         )
 
     // REORDER: persist the manual order of one project's tasks. orderedTaskIds is the new order of
@@ -244,23 +276,22 @@ class OfflineFirstTaskRepository(
     // user, so it is one action here too: one read of the current indices, one transactional local
     // write, one network call. Writing task by task would let a failure halfway through leave two
     // tasks sharing an index, which no retry can repair.
-    override suspend fun reorderTasks(
-        projectId: String,
-        orderedTaskIds: List<String>
-    ): EmptyResult<DataError> {
-        val current = when (val existing = localTaskDataSource.getTaskSortIndices(projectId)) {
-            is Result.Success -> existing.data
-            is Result.Error -> return existing.asEmptyDataResult()
-        }
+    override suspend fun reorderTasks(projectId: String, orderedTaskIds: List<String>): EmptyResult<DataError> {
+        val current =
+            when (val existing = localTaskDataSource.getTaskSortIndices(projectId)) {
+                is Result.Success -> existing.data
+                is Result.Error -> return existing.asEmptyDataResult()
+            }
         // Only ids that still belong to this project and whose index actually moves.
-        val changed = buildMap {
-            orderedTaskIds.forEachIndexed { index, taskId ->
-                val newIndex = index.toLong()
-                if (current.containsKey(taskId) && current[taskId] != newIndex) {
-                    put(taskId, newIndex)
+        val changed =
+            buildMap {
+                orderedTaskIds.forEachIndexed { index, taskId ->
+                    val newIndex = index.toLong()
+                    if (current.containsKey(taskId) && current[taskId] != newIndex) {
+                        put(taskId, newIndex)
+                    }
                 }
             }
-        }
         if (changed.isEmpty()) return Result.Success(Unit)
 
         // One timestamp for both writes — reading the clock twice would stamp the local rows and the
@@ -278,13 +309,21 @@ class OfflineFirstTaskRepository(
         }
 
         return when (val remoteResult = remoteTaskDataSource.reorderTasks(projectId, changed, updatedAt)) {
-            is Result.Success -> Result.Success(Unit)
-            is Result.Error -> when {
-                remoteResult.error.isMissingOrForbidden() || remoteResult.error.isTransient() -> {
-                    // Local write already succeeded; only surface an error if queuing the sync fails.
-                    enqueueTaskOrderOperation(projectId)
+            is Result.Success -> {
+                Result.Success(Unit)
+            }
+
+            is Result.Error -> {
+                when {
+                    remoteResult.error.isMissingOrForbidden() || remoteResult.error.isTransient() -> {
+                        // Local write already succeeded; only surface an error if queuing the sync fails.
+                        enqueueTaskOrderOperation(projectId)
+                    }
+
+                    else -> {
+                        remoteResult.asEmptyDataResult()
+                    }
                 }
-                else -> remoteResult.asEmptyDataResult()
             }
         }
     }
@@ -300,8 +339,7 @@ class OfflineFirstTaskRepository(
             .filter {
                 it.entityType == PendingSyncOperation.ENTITY_TASK ||
                     it.entityType == PendingSyncOperation.ENTITY_TASK_ORDER
-            }
-            .forEach { op ->
+            }.forEach { op ->
                 when (runTaskOperation(op)) {
                     SyncOutcome.SUCCESS, SyncOutcome.DROP -> pendingSyncDataSource.deleteOperation(op.operationId)
                     SyncOutcome.RETRY -> Unit // leave queued for the next attempt
@@ -315,25 +353,30 @@ class OfflineFirstTaskRepository(
         }
         return when (op.operationType) {
             PendingSyncOperation.OP_CREATE, PendingSyncOperation.OP_UPDATE -> {
-                val task = when (val r = localTaskDataSource.getTaskById(op.entityId)) {
-                    is Result.Success -> r.data ?: return SyncOutcome.DROP // deleted meanwhile
-                    is Result.Error -> return SyncOutcome.RETRY
-                }
+                val task =
+                    when (val r = localTaskDataSource.getTaskById(op.entityId)) {
+                        is Result.Success -> r.data ?: return SyncOutcome.DROP
+
+                        // deleted meanwhile
+                        is Result.Error -> return SyncOutcome.RETRY
+                    }
                 // The project drain runs before this one, so a still-pending CREATE means that push
                 // failed too. Stay queued rather than burning a request that cannot succeed.
                 if (pendingSyncDataSource.hasPendingCreate(task.parentProjectId).getOrDefault(false)) {
                     return SyncOutcome.RETRY
                 }
-                val result = if (op.operationType == PendingSyncOperation.OP_CREATE) {
-                    remoteTaskDataSource.postTaskByProjectId(task.parentProjectId, task)
-                } else {
-                    remoteTaskDataSource.updateTaskByProjectId(task.parentProjectId, task)
-                }
+                val result =
+                    if (op.operationType == PendingSyncOperation.OP_CREATE) {
+                        remoteTaskDataSource.postTaskByProjectId(task.parentProjectId, task)
+                    } else {
+                        remoteTaskDataSource.updateTaskByProjectId(task.parentProjectId, task)
+                    }
                 result.toSyncOutcome(
                     onSuccess = { localTaskDataSource.upsertProjectTask(it.withLocalSortIndexFallback(task)) },
-                    onConflict = { resolveTaskConflict(task) }
+                    onConflict = { resolveTaskConflict(task) },
                 )
             }
+
             PendingSyncOperation.OP_DELETE -> {
                 val parentProjectId = op.parentEntityId ?: return SyncOutcome.DROP
                 if (pendingSyncDataSource.hasPendingCreate(parentProjectId).getOrDefault(false)) {
@@ -341,7 +384,10 @@ class OfflineFirstTaskRepository(
                 }
                 remoteTaskDataSource.deleteTask(parentProjectId, op.entityId).toSyncOutcome()
             }
-            else -> SyncOutcome.DROP
+
+            else -> {
+                SyncOutcome.DROP
+            }
         }
     }
 
@@ -350,23 +396,29 @@ class OfflineFirstTaskRepository(
     // ---------------------------------------------------------------------------------------------
 
     private suspend fun resolveTaskConflict(local: ProjectTask): EmptyResult<DataError> {
-        val server = when (val r = remoteTaskDataSource.getTasksByProjectId(local.parentProjectId)) {
-            is Result.Success -> r.data.find { it.projectTaskId == local.projectTaskId }
-            is Result.Error -> return r.asEmptyDataResult()
-        } ?: return remoteTaskDataSource // server has none → push local
-            .postTaskByProjectId(local.parentProjectId, local)
-            .asEmptyDataResult()
+        val server =
+            when (val r = remoteTaskDataSource.getTasksByProjectId(local.parentProjectId)) {
+                is Result.Success -> r.data.find { it.projectTaskId == local.projectTaskId }
+                is Result.Error -> return r.asEmptyDataResult()
+            } ?: return remoteTaskDataSource // server has none → push local
+                .postTaskByProjectId(local.parentProjectId, local)
+                .asEmptyDataResult()
 
         // Last-write-wins compares this task row against the same row on the server, so it must
         // read the row's own stamp — never the lastUpdatedAt roll-up over its intervals.
-        return if (local.ownUpdatedAt != null && (server.ownUpdatedAt == null || local.ownUpdatedAt > server.ownUpdatedAt)) {
+        return if (local.ownUpdatedAt != null &&
+            (server.ownUpdatedAt == null || local.ownUpdatedAt > server.ownUpdatedAt)
+        ) {
             when (val pushed = remoteTaskDataSource.updateTaskByProjectId(local.parentProjectId, local)) {
                 is Result.Success -> {
                     val merged = pushed.data.withLocalSortIndexFallback(local)
                     applicationScope.async { localTaskDataSource.upsertProjectTask(merged) }.await()
                     Result.Success(Unit)
                 }
-                is Result.Error -> pushed.asEmptyDataResult()
+
+                is Result.Error -> {
+                    pushed.asEmptyDataResult()
+                }
             }
         } else {
             // Server wins on freshness, but keep the local sortIndex when the server has none.
@@ -392,18 +444,19 @@ class OfflineFirstTaskRepository(
     private suspend fun queueForLater(
         taskId: String,
         parentProjectId: String,
-        operationType: String
+        operationType: String,
     ): EmptyResult<DataError> {
         // parentEntityId is only needed for DELETE (the task row is gone by drain time); for the
         // other ops the project id is re-read from the task itself.
         val parent = if (operationType == PendingSyncOperation.OP_DELETE) parentProjectId else null
-        val queued = pendingSyncDataSource.enqueue(
-            entityId = taskId,
-            entityType = PendingSyncOperation.ENTITY_TASK,
-            operationType = operationType,
-            parentEntityId = parent,
-            createdAt = timeProvider.nowInstant
-        )
+        val queued =
+            pendingSyncDataSource.enqueue(
+                entityId = taskId,
+                entityType = PendingSyncOperation.ENTITY_TASK,
+                operationType = operationType,
+                parentEntityId = parent,
+                createdAt = timeProvider.nowInstant,
+            )
         if (queued is Result.Success) scheduleSync()
         return queued
     }
@@ -417,10 +470,11 @@ class OfflineFirstTaskRepository(
         if (pendingSyncDataSource.hasPendingCreate(projectId).getOrDefault(false)) {
             return SyncOutcome.RETRY
         }
-        val indices = when (val r = localTaskDataSource.getTaskSortIndices(projectId)) {
-            is Result.Success -> r.data.mapNotNull { (id, index) -> index?.let { id to it } }.toMap()
-            is Result.Error -> return SyncOutcome.RETRY
-        }
+        val indices =
+            when (val r = localTaskDataSource.getTaskSortIndices(projectId)) {
+                is Result.Success -> r.data.mapNotNull { (id, index) -> index?.let { id to it } }.toMap()
+                is Result.Error -> return SyncOutcome.RETRY
+            }
         if (indices.isEmpty()) return SyncOutcome.DROP
         return remoteTaskDataSource
             .reorderTasks(projectId, indices, timeProvider.nowInstant)
@@ -429,15 +483,16 @@ class OfflineFirstTaskRepository(
 
     /** One queue row per project, so repeat reorders of the same project collapse. */
     private suspend fun enqueueTaskOrderOperation(projectId: String): EmptyResult<DataError> {
-        val queued = pendingSyncDataSource.enqueue(
-            entityId = PendingSyncOperation.taskOrderEntityId(projectId),
-            entityType = PendingSyncOperation.ENTITY_TASK_ORDER,
-            operationType = PendingSyncOperation.OP_UPDATE,
-            // Unlike the other ops there is no row to re-read the project from at drain time, so
-            // the parent is stored even though this is not a DELETE.
-            parentEntityId = projectId,
-            createdAt = timeProvider.nowInstant
-        )
+        val queued =
+            pendingSyncDataSource.enqueue(
+                entityId = PendingSyncOperation.taskOrderEntityId(projectId),
+                entityType = PendingSyncOperation.ENTITY_TASK_ORDER,
+                operationType = PendingSyncOperation.OP_UPDATE,
+                // Unlike the other ops there is no row to re-read the project from at drain time, so
+                // the parent is stored even though this is not a DELETE.
+                parentEntityId = projectId,
+                createdAt = timeProvider.nowInstant,
+            )
         if (queued is Result.Success) scheduleSync()
         return queued
     }

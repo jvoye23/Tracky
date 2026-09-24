@@ -8,14 +8,17 @@ import kotlin.time.Instant
 
 interface RemoteTaskDataSource {
     suspend fun getTasksByProjectId(projectId: String): Result<List<ProjectTask>, DataError.Remote>
+
     suspend fun postTaskByProjectId(projectId: String, task: ProjectTask): Result<ProjectTask, DataError.Remote>
+
     suspend fun updateTaskByProjectId(projectId: String, task: ProjectTask): Result<ProjectTask, DataError.Remote>
+
     suspend fun deleteTask(projectId: String, taskId: String): EmptyResult<DataError.Remote>
 
     /** One request for a whole reorder gesture — see RemoteProjectDataSource.reorderProjects. */
     suspend fun reorderTasks(
         projectId: String,
         indices: Map<String, Long>,
-        updatedAt: Instant
+        updatedAt: Instant,
     ): EmptyResult<DataError.Remote>
 }

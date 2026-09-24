@@ -10,8 +10,8 @@ import com.jvcs.tracky.design_system.util.UiText
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
 import com.jvcs.tracky.features.project.presentation.mappers.toCalendarMonthsUi
-import com.jvcs.tracky.features.project.presentation.models.CalendarMonthUi
 import com.jvcs.tracky.features.project.presentation.mappers.toDayDetailUi
+import com.jvcs.tracky.features.project.presentation.models.CalendarMonthUi
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,7 +50,7 @@ class DailyOverviewViewModel(
     private val timeProvider: TimeProvider,
     private val savedStateHandle: SavedStateHandle,
     // Injectable so tests can drive the initial load on their own scheduler; production keeps IO.
-    private val ioDispatcher: CoroutineDispatcher = platformIoDispatcher
+    private val ioDispatcher: CoroutineDispatcher = platformIoDispatcher,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(DailyOverviewState())
@@ -63,54 +63,58 @@ class DailyOverviewViewModel(
 
     private val timeZone = TimeZone.currentSystemDefault()
 
-    val state = _state
-        .onStart {
-            if (!hasLoadedInitialData) {
-                loadProject()
-                hasLoadedInitialData = true
-            }
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), _state.value)
+    val state =
+        _state
+            .onStart {
+                if (!hasLoadedInitialData) {
+                    loadProject()
+                    hasLoadedInitialData = true
+                }
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), _state.value)
 
     fun onAction(action: DailyOverviewAction) {
         when (action) {
             // Handled in the UI.
             DailyOverviewAction.OnBackClick -> Unit
+
             is DailyOverviewAction.OnDateSelected -> selectDate(action.date)
+
             is DailyOverviewAction.OnMonthChanged -> changeMonth(action.index)
         }
     }
 
-    private fun loadProject() = viewModelScope.launch {
-        val loaded = withContext(ioDispatcher) {
-            projectRepository.getProjectWithTasksByProjectId(projectId)
-        }
+    private fun loadProject() =
+        viewModelScope.launch {
+            val loaded =
+                withContext(ioDispatcher) {
+                    projectRepository.getProjectWithTasksByProjectId(projectId)
+                }
 
-        if (loaded == null) {
-            _state.update { it.copy(isLoading = false) }
-            eventChannel.send(DailyOverviewEvent.Error(UiText.Resource(Res.string.error_unknown)))
-            return@launch
-        }
+            if (loaded == null) {
+                _state.update { it.copy(isLoading = false) }
+                eventChannel.send(DailyOverviewEvent.Error(UiText.Resource(Res.string.error_unknown)))
+                return@launch
+            }
 
-        project = loaded
-        val today = timeProvider.nowInstant.toLocalDateTime(timeZone).date
-        val months = loaded.toCalendarMonthsUi(today = today, timeZone = timeZone)
-        // A date restored after process death outranks the one navigation supplied, so coming
-        // back to the screen returns to the day the user was actually looking at.
-        val selected = restoredDate() ?: preselectedDate() ?: today
+            project = loaded
+            val today = timeProvider.nowInstant.toLocalDateTime(timeZone).date
+            val months = loaded.toCalendarMonthsUi(today = today, timeZone = timeZone)
+            // A date restored after process death outranks the one navigation supplied, so coming
+            // back to the screen returns to the day the user was actually looking at.
+            val selected = restoredDate() ?: preselectedDate() ?: today
 
-        _state.update {
-            it.copy(
-                projectTitle = loaded.title,
-                projectColor = loaded.colorArgb?.let(::Color),
-                selectedDate = selected,
-                months = months,
-                visibleMonthIndex = months.indexOfMonthOf(selected).coerceAtLeast(0),
-                dayDetail = loaded.toDayDetailUi(selected, timeZone),
-                isLoading = false
-            )
+            _state.update {
+                it.copy(
+                    projectTitle = loaded.title,
+                    projectColor = loaded.colorArgb?.let(::Color),
+                    selectedDate = selected,
+                    months = months,
+                    visibleMonthIndex = months.indexOfMonthOf(selected).coerceAtLeast(0),
+                    dayDetail = loaded.toDayDetailUi(selected, timeZone),
+                    isLoading = false,
+                )
+            }
         }
-    }
 
     private fun selectDate(date: LocalDate) {
         val loaded = project ?: return
@@ -120,17 +124,19 @@ class DailyOverviewViewModel(
                 selectedDate = date,
                 // Selecting a day inside the visible month must not page the calendar; only a day
                 // reached some other way moves it.
-                visibleMonthIndex = it.months.indexOfMonthOf(date).takeIf { i -> i >= 0 }
-                    ?: it.visibleMonthIndex,
-                dayDetail = loaded.toDayDetailUi(date, timeZone)
+                visibleMonthIndex =
+                    it.months.indexOfMonthOf(date).takeIf { i -> i >= 0 }
+                        ?: it.visibleMonthIndex,
+                dayDetail = loaded.toDayDetailUi(date, timeZone),
             )
         }
     }
 
     /** Paging alone never changes the selected day — the day list keeps showing what was picked. */
-    private fun changeMonth(index: Int) = _state.update {
-        it.copy(visibleMonthIndex = index.coerceIn(it.months.indices))
-    }
+    private fun changeMonth(index: Int) =
+        _state.update {
+            it.copy(visibleMonthIndex = index.coerceIn(it.months.indices))
+        }
 
     private fun restoredDate(): LocalDate? =
         savedStateHandle.get<Long>(KEY_SELECTED_DATE)?.let(LocalDate::fromEpochDays)

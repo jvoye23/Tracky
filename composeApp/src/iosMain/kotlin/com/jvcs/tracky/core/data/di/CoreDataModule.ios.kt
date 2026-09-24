@@ -18,36 +18,38 @@ import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.darwin.Darwin
 import kotlinx.cinterop.ExperimentalForeignApi
 import okio.Path.Companion.toPath
+import org.koin.dsl.bind
+import org.koin.dsl.module
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSUserDomainMask
-import org.koin.dsl.bind
-import org.koin.dsl.module
 
 @OptIn(ExperimentalForeignApi::class)
-actual val platformCoreDataModule = module {
-    single { DatabaseFactory() }
-    single { ConnectivityObserver() }
-    single { AppLifecycleObserver() }
-    single { IosSyncScheduler() } bind SyncScheduler::class
-    single { IosTrashCleanupScheduler() } bind TrashCleanupScheduler::class
-    single { IosTimerNotificationController() } bind TimerNotificationController::class
-    // Live Activities are governed by a Settings toggle, not a runtime prompt, so there is still
-    // nothing to ask for even now that the Live Activity has landed.
-    single { NoOpTimerNotificationPermissionRequester() } bind TimerNotificationPermissionRequester::class
-    single<HttpClientEngine> { Darwin.create() }
-    single<DataStore<Preferences>> {
-        PreferenceDataStoreFactory.createWithPath(
-            produceFile = {
-                val documentDirectory = NSFileManager.defaultManager.URLForDirectory(
-                    directory = NSDocumentDirectory,
-                    inDomain = NSUserDomainMask,
-                    appropriateForURL = null,
-                    create = false,
-                    error = null
-                )
-                (documentDirectory!!.path + "/tracky_prefs.preferences_pb").toPath()
-            }
-        )
+actual val platformCoreDataModule =
+    module {
+        single { DatabaseFactory() }
+        single { ConnectivityObserver() }
+        single { AppLifecycleObserver() }
+        single { IosSyncScheduler() } bind SyncScheduler::class
+        single { IosTrashCleanupScheduler() } bind TrashCleanupScheduler::class
+        single { IosTimerNotificationController() } bind TimerNotificationController::class
+        // Live Activities are governed by a Settings toggle, not a runtime prompt, so there is still
+        // nothing to ask for even now that the Live Activity has landed.
+        single { NoOpTimerNotificationPermissionRequester() } bind TimerNotificationPermissionRequester::class
+        single<HttpClientEngine> { Darwin.create() }
+        single<DataStore<Preferences>> {
+            PreferenceDataStoreFactory.createWithPath(
+                produceFile = {
+                    val documentDirectory =
+                        NSFileManager.defaultManager.URLForDirectory(
+                            directory = NSDocumentDirectory,
+                            inDomain = NSUserDomainMask,
+                            appropriateForURL = null,
+                            create = false,
+                            error = null,
+                        )
+                    (documentDirectory!!.path + "/tracky_prefs.preferences_pb").toPath()
+                },
+            )
+        }
     }
-}

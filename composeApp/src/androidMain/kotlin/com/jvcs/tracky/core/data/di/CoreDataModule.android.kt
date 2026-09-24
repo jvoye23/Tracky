@@ -3,10 +3,10 @@ package com.jvcs.tracky.core.data.di
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
-import com.jvcs.tracky.core.data.sync.AndroidSyncScheduler
-import com.jvcs.tracky.core.data.sync.AndroidTrashCleanupScheduler
 import com.jvcs.tracky.core.data.notification.AndroidTimerNotificationController
 import com.jvcs.tracky.core.data.notification.AndroidTimerNotificationPermissionRequester
+import com.jvcs.tracky.core.data.sync.AndroidSyncScheduler
+import com.jvcs.tracky.core.data.sync.AndroidTrashCleanupScheduler
 import com.jvcs.tracky.core.database.DatabaseFactory
 import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
 import com.jvcs.tracky.core.domain.lifecycle.AppLifecycleObserver
@@ -21,25 +21,30 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.bind
 import org.koin.dsl.module
 
-actual val platformCoreDataModule = module {
-    single { DatabaseFactory(androidContext()) }
-    single { ConnectivityObserver(androidContext()) }
-    single { AppLifecycleObserver() }
-    single { AndroidSyncScheduler(androidContext()) } bind SyncScheduler::class
-    single { AndroidTrashCleanupScheduler(androidContext()) } bind TrashCleanupScheduler::class
-    single { AndroidTimerNotificationController(androidContext()) } bind TimerNotificationController::class
-    single {
-        AndroidTimerNotificationPermissionRequester(
-            applicationContext = androidContext(),
-            notificationController = get()
-        )
-    } bind TimerNotificationPermissionRequester::class
-    single<HttpClientEngine> { OkHttp.create() }
-    single<DataStore<Preferences>> {
-        PreferenceDataStoreFactory.createWithPath(
-            produceFile = {
-                androidContext().filesDir.resolve("tracky_prefs.preferences_pb").absolutePath.toPath()
-            }
-        )
+actual val platformCoreDataModule =
+    module {
+        single { DatabaseFactory(androidContext()) }
+        single { ConnectivityObserver(androidContext()) }
+        single { AppLifecycleObserver() }
+        single { AndroidSyncScheduler(androidContext()) } bind SyncScheduler::class
+        single { AndroidTrashCleanupScheduler(androidContext()) } bind TrashCleanupScheduler::class
+        single { AndroidTimerNotificationController(androidContext()) } bind TimerNotificationController::class
+        single {
+            AndroidTimerNotificationPermissionRequester(
+                applicationContext = androidContext(),
+                notificationController = get(),
+            )
+        } bind TimerNotificationPermissionRequester::class
+        single<HttpClientEngine> { OkHttp.create() }
+        single<DataStore<Preferences>> {
+            PreferenceDataStoreFactory.createWithPath(
+                produceFile = {
+                    androidContext()
+                        .filesDir
+                        .resolve("tracky_prefs.preferences_pb")
+                        .absolutePath
+                        .toPath()
+                },
+            )
+        }
     }
-}

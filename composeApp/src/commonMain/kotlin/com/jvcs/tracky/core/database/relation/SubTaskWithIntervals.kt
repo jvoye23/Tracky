@@ -9,7 +9,7 @@ data class SubTaskWithIntervals(
     @Embedded val subTask: ProjectSubTaskEntity,
     @Relation(
         parentColumn = "projectSubTaskId",
-        entityColumn = "parentSubTaskId"
+        entityColumn = "parentSubTaskId",
     )
-    val intervals: List<SubTaskIntervalEntity>
+    val intervals: List<SubTaskIntervalEntity>,
 )

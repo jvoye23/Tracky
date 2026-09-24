@@ -11,7 +11,7 @@ import androidx.room.PrimaryKey
 data class PendingSyncEntity(
     @PrimaryKey val operationId: String,
     val entityId: String,
-    val entityType: String,    // "project" | "project_task" | "task_interval" | "project_order"
+    val entityType: String, // "project" | "project_task" | "task_interval" | "project_order"
     val operationType: String, // "CREATE" | "UPDATE" | "DELETE"
     val createdAtEpochMs: Long,
     // For task DELETE ops we still need the parent project id after the task row is gone.

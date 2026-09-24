@@ -47,7 +47,7 @@ fun ProjectArchiveSearchTopAppBar(
                 Icon(
                     imageVector = Icons.Default.Menu,
                     contentDescription = stringResource(Res.string.navigation_menu),
-                    tint = MaterialTheme.colorScheme.onSurface
+                    tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
         },
@@ -57,14 +57,15 @@ fun ProjectArchiveSearchTopAppBar(
                 Icon(
                     imageVector = if (state.isSearchActive) Icons.Default.Close else Icons.Default.Search,
                     contentDescription = stringResource(Res.string.search_in_trash),
-                    tint = MaterialTheme.colorScheme.onSurface
+                    tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
         },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        ),
-        modifier = modifier
+        colors =
+            TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            ),
+        modifier = modifier,
     )
 }
 
@@ -89,9 +90,10 @@ private fun SearchActivePreview() {
         ProjectArchiveSearchTopAppBar(
             title = stringResource(Res.string.trash_title),
             onAction = {},
-            state = ProjectArchiveState(
-                isSearchActive = true
-            ),
+            state =
+                ProjectArchiveState(
+                    isSearchActive = true,
+                ),
             onMenuClick = {},
             scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(),
         )

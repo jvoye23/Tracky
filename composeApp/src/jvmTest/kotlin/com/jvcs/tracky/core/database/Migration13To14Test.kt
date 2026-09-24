@@ -46,7 +46,7 @@ class Migration13To14Test {
                 "`startDateTimeEpochMs` INTEGER NOT NULL, `isFinished` INTEGER NOT NULL, " +
                 "`useLightTextColor` INTEGER NOT NULL, `endDateTimeEpochMs` INTEGER, " +
                 "`isArchived` INTEGER NOT NULL, `trashedAtEpochMs` INTEGER, `isPinned` INTEGER NOT NULL, " +
-                "`updatedAtEpochMs` INTEGER, `sortIndex` INTEGER, PRIMARY KEY(`projectId`))"
+                "`updatedAtEpochMs` INTEGER, `sortIndex` INTEGER, PRIMARY KEY(`projectId`))",
         )
         connection.execSQL(
             "CREATE TABLE IF NOT EXISTS `project_records` (`recordId` TEXT NOT NULL, " +
@@ -55,7 +55,7 @@ class Migration13To14Test {
                 "`endDateTimeEpochMs` INTEGER, `isFinished` INTEGER NOT NULL, " +
                 "`isTimerRunning` INTEGER NOT NULL, `updatedAtEpochMs` INTEGER, PRIMARY KEY(`recordId`), " +
                 "FOREIGN KEY(`parentProjectId`) REFERENCES `projects`(`projectId`) " +
-                "ON UPDATE NO ACTION ON DELETE CASCADE )"
+                "ON UPDATE NO ACTION ON DELETE CASCADE )",
         )
         connection.execSQL(
             "CREATE TABLE IF NOT EXISTS `task_intervals` (`intervalId` TEXT NOT NULL, " +
@@ -65,14 +65,14 @@ class Migration13To14Test {
                 "FOREIGN KEY(`parentTaskId`) REFERENCES `project_records`(`recordId`) " +
                 "ON UPDATE NO ACTION ON DELETE CASCADE , " +
                 "FOREIGN KEY(`parentProjectId`) REFERENCES `projects`(`projectId`) " +
-                "ON UPDATE NO ACTION ON DELETE CASCADE )"
+                "ON UPDATE NO ACTION ON DELETE CASCADE )",
         )
     }
 
     private fun insertProject(id: String) {
         connection.execSQL(
             "INSERT INTO projects (projectId, title, startDateTimeEpochMs, isFinished, " +
-                "useLightTextColor, isArchived, isPinned) VALUES ('$id', 'title-$id', 0, 0, 0, 0, 0)"
+                "useLightTextColor, isArchived, isPinned) VALUES ('$id', 'title-$id', 0, 0, 0, 0, 0)",
         )
     }
 
@@ -80,23 +80,31 @@ class Migration13To14Test {
         connection.execSQL(
             "INSERT INTO project_records (recordId, parentProjectId, description, durationMillis, " +
                 "startDateTimeEpochMs, isFinished, isTimerRunning) " +
-                "VALUES ('$id', '$projectId', 'task-$id', 0, 0, 0, 0)"
+                "VALUES ('$id', '$projectId', 'task-$id', 0, 0, 0, 0)",
         )
     }
 
-    private fun insertInterval(id: String, taskId: String, projectId: String) {
+    private fun insertInterval(
+        id: String,
+        taskId: String,
+        projectId: String,
+    ) {
         connection.execSQL(
             "INSERT INTO task_intervals (intervalId, parentTaskId, parentProjectId, " +
                 "startDateTimeEpochMs, endDateTimeEpochMs, durationMillis) " +
-                "VALUES ('$id', '$taskId', '$projectId', 0, 60000, 60000)"
+                "VALUES ('$id', '$taskId', '$projectId', 0, 60000, 60000)",
         )
     }
 
-    private fun insertSubTask(id: String, taskId: String, projectId: String) {
+    private fun insertSubTask(
+        id: String,
+        taskId: String,
+        projectId: String,
+    ) {
         connection.execSQL(
             "INSERT INTO project_sub_tasks (projectSubTaskId, parentProjectTaskId, parentProjectId, " +
                 "title, durationMillis, isTimerRunning, startDateTimeEpochMs, isFinished) " +
-                "VALUES ('$id', '$taskId', '$projectId', 'sub-$id', 0, 0, 0, 0)"
+                "VALUES ('$id', '$taskId', '$projectId', 'sub-$id', 0, 0, 0, 0)",
         )
     }
 
@@ -104,12 +112,12 @@ class Migration13To14Test {
         id: String,
         subTaskId: String,
         taskIntervalId: String,
-        projectId: String
+        projectId: String,
     ) {
         connection.execSQL(
             "INSERT INTO sub_task_intervals (subTaskIntervalId, parentSubTaskId, " +
                 "parentTaskIntervalId, parentProjectId, startDateTimeEpochMs, endDateTimeEpochMs, " +
-                "durationMillis) VALUES ('$id', '$subTaskId', '$taskIntervalId', '$projectId', 0, 60000, 60000)"
+                "durationMillis) VALUES ('$id', '$subTaskId', '$taskIntervalId', '$projectId', 0, 60000, 60000)",
         )
     }
 
@@ -159,7 +167,7 @@ class Migration13To14Test {
         assertEquals(1, countRows("SELECT COUNT(*) FROM project_records"))
         assertEquals(
             60_000,
-            countRows("SELECT durationMillis FROM task_intervals WHERE intervalId = 'i1'")
+            countRows("SELECT durationMillis FROM task_intervals WHERE intervalId = 'i1'"),
         )
     }
 
@@ -222,15 +230,17 @@ class Migration13To14Test {
     fun createsAnIndexOnEachForeignKey() {
         TrackyDatabase.MIGRATION_13_14.migrate(connection)
 
-        val expected = mapOf(
-            "project_sub_tasks" to listOf("parentProjectTaskId", "parentProjectId"),
-            "sub_task_intervals" to
-                listOf("parentSubTaskId", "parentTaskIntervalId", "parentProjectId")
-        )
-        expected.forEach { (table, columns) ->
-            val actual = queryStrings(
-                "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = '$table'"
+        val expected =
+            mapOf(
+                "project_sub_tasks" to listOf("parentProjectTaskId", "parentProjectId"),
+                "sub_task_intervals" to
+                    listOf("parentSubTaskId", "parentTaskIntervalId", "parentProjectId"),
             )
+        expected.forEach { (table, columns) ->
+            val actual =
+                queryStrings(
+                    "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = '$table'",
+                )
             columns.forEach { column ->
                 assertTrue("index_${table}_$column" in actual, "missing $column index: $actual")
             }

@@ -31,7 +31,9 @@ import org.koin.core.component.inject
  * Dependencies come from the global Koin context the same way SyncWorker takes them, so there is
  * no factory to register.
  */
-class TimerNotificationService : Service(), KoinComponent {
+class TimerNotificationService :
+    Service(),
+    KoinComponent {
 
     private val controller: AndroidTimerNotificationController by inject()
     private val coordinator: TimerNotificationCoordinator by inject()
@@ -52,7 +54,11 @@ class TimerNotificationService : Service(), KoinComponent {
         }
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+    override fun onStartCommand(
+        intent: Intent?,
+        flags: Int,
+        startId: Int,
+    ): Int {
         when (intent?.action) {
             ACTION_PAUSE -> scope.launch { coordinator.onPause() }
             ACTION_RESUME -> scope.launch { coordinator.onResume() }
@@ -75,7 +81,7 @@ class TimerNotificationService : Service(), KoinComponent {
             this,
             TimerNotificationFactory.NOTIFICATION_ID,
             factory.build(session, session.elapsedAt(timeProvider.nowInstant)),
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
         )
     }
 

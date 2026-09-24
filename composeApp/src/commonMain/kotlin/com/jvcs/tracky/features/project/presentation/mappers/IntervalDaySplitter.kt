@@ -25,7 +25,7 @@ internal data class DaySlice(
     val endsAtMidnight: Boolean,
     val durationMillis: Long,
     val sliceIndex: Int,
-    val sliceCount: Int
+    val sliceCount: Int,
 )
 
 /**
@@ -54,7 +54,7 @@ internal fun splitAcrossLocalDays(
     startedAt: Instant,
     endedAt: Instant,
     totalDurationMillis: Long,
-    timeZone: TimeZone
+    timeZone: TimeZone,
 ): List<DaySlice> {
     val startLocal = startedAt.toLocalDateTime(timeZone)
     val endLocal = endedAt.toLocalDateTime(timeZone)
@@ -72,21 +72,22 @@ internal fun splitAcrossLocalDays(
                 endsAtMidnight = false,
                 durationMillis = totalDurationMillis,
                 sliceIndex = 0,
-                sliceCount = 1
-            )
+                sliceCount = 1,
+            ),
         )
     }
 
     // Every midnight strictly inside the interval, as instants.
-    val cuts = buildList {
-        var day = startLocal.date
-        while (true) {
-            day = day.plus(1, DateTimeUnit.DAY)
-            val midnight = day.atStartOfDayIn(timeZone)
-            if (midnight >= endedAt) break
-            add(midnight)
+    val cuts =
+        buildList {
+            var day = startLocal.date
+            while (true) {
+                day = day.plus(1, DateTimeUnit.DAY)
+                val midnight = day.atStartOfDayIn(timeZone)
+                if (midnight >= endedAt) break
+                add(midnight)
+            }
         }
-    }
 
     val edges = listOf(startedAt) + cuts + listOf(endedAt)
     val sliceCount = edges.size - 1
@@ -99,12 +100,13 @@ internal fun splitAcrossLocalDays(
         val isLast = index == sliceCount - 1
 
         // The last slice takes whatever is left, so rounding can never lose or invent a millisecond.
-        val duration = if (isLast) {
-            totalDurationMillis - apportioned
-        } else {
-            val sliceSpan = (to - from).inWholeMilliseconds
-            (totalDurationMillis * sliceSpan / spanMillis).also { apportioned += it }
-        }
+        val duration =
+            if (isLast) {
+                totalDurationMillis - apportioned
+            } else {
+                val sliceSpan = (to - from).inWholeMilliseconds
+                (totalDurationMillis * sliceSpan / spanMillis).also { apportioned += it }
+            }
 
         DaySlice(
             date = fromLocal.date,
@@ -113,7 +115,7 @@ internal fun splitAcrossLocalDays(
             endsAtMidnight = !isLast,
             durationMillis = duration,
             sliceIndex = index,
-            sliceCount = sliceCount
+            sliceCount = sliceCount,
         )
     }
 }

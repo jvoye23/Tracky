@@ -25,16 +25,17 @@ import kotlin.time.Duration
 class TimerNotificationFactory(private val context: Context) {
 
     fun createChannel() {
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            context.getString(R.string.timer_notification_channel_name),
-            // Low: the notification is a display surface, not an interruption. It still shows on
-            // the lock screen and in the shade, it just never buzzes.
-            NotificationManager.IMPORTANCE_LOW
-        ).apply {
-            description = context.getString(R.string.timer_notification_channel_description)
-            setShowBadge(false)
-        }
+        val channel =
+            NotificationChannel(
+                CHANNEL_ID,
+                context.getString(R.string.timer_notification_channel_name),
+                // Low: the notification is a display surface, not an interruption. It still shows on
+                // the lock screen and in the shade, it just never buzzes.
+                NotificationManager.IMPORTANCE_LOW,
+            ).apply {
+                description = context.getString(R.string.timer_notification_channel_description)
+                setShowBadge(false)
+            }
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
@@ -43,61 +44,72 @@ class TimerNotificationFactory(private val context: Context) {
         // The project supplies the accent, and the project already knows whether its own colour
         // needs light text on top - the same flag the task cards read.
         val onAccent = if (session.useLightTextColor) ON_ACCENT_LIGHT else ON_ACCENT_DARK
-        val action = if (session.isRunning) TimerNotificationService.ACTION_PAUSE
-        else TimerNotificationService.ACTION_RESUME
+        val action =
+            if (session.isRunning) {
+                TimerNotificationService.ACTION_PAUSE
+            } else {
+                TimerNotificationService.ACTION_RESUME
+            }
         val icon = if (session.isRunning) R.drawable.ic_pause else R.drawable.ic_play
-        val label = context.getString(
-            if (session.isRunning) R.string.timer_notification_pause
-            else R.string.timer_notification_resume
-        )
+        val label =
+            context.getString(
+                if (session.isRunning) {
+                    R.string.timer_notification_pause
+                } else {
+                    R.string.timer_notification_resume
+                },
+            )
 
-        val collapsed = RemoteViews(context.packageName, R.layout.notification_timer_collapsed).apply {
-            setTextViewText(R.id.timer_collapsed_title, (session.subTask ?: session.task).title)
-            clock(
-                R.id.timer_collapsed_chronometer,
-                R.id.timer_collapsed_clock,
-                session.isRunning,
-                elapsed,
-                accent
-            )
-            // Pause is stop-then-start, so pausing a timer another device is running would stop
-            // it globally. The coordinator refuses that; hiding the button is how the user finds
-            // out, instead of tapping something that silently does nothing.
-            setViewVisibility(
-                R.id.timer_collapsed_button,
-                if (session.isForeign) View.GONE else View.VISIBLE
-            )
-            setImageViewResource(R.id.timer_collapsed_button, icon)
-            tint(R.id.timer_collapsed_button, accent)
-            setInt(R.id.timer_collapsed_button, "setColorFilter", onAccent)
-            setContentDescription(R.id.timer_collapsed_button, label)
-            setOnClickPendingIntent(R.id.timer_collapsed_button, servicePendingIntent(action))
-        }
+        val collapsed =
+            RemoteViews(context.packageName, R.layout.notification_timer_collapsed).apply {
+                setTextViewText(R.id.timer_collapsed_title, (session.subTask ?: session.task).title)
+                clock(
+                    R.id.timer_collapsed_chronometer,
+                    R.id.timer_collapsed_clock,
+                    session.isRunning,
+                    elapsed,
+                    accent,
+                )
+                // Pause is stop-then-start, so pausing a timer another device is running would stop
+                // it globally. The coordinator refuses that; hiding the button is how the user finds
+                // out, instead of tapping something that silently does nothing.
+                setViewVisibility(
+                    R.id.timer_collapsed_button,
+                    if (session.isForeign) View.GONE else View.VISIBLE,
+                )
+                setImageViewResource(R.id.timer_collapsed_button, icon)
+                tint(R.id.timer_collapsed_button, accent)
+                setInt(R.id.timer_collapsed_button, "setColorFilter", onAccent)
+                setContentDescription(R.id.timer_collapsed_button, label)
+                setOnClickPendingIntent(R.id.timer_collapsed_button, servicePendingIntent(action))
+            }
 
-        val expanded = RemoteViews(context.packageName, R.layout.notification_timer_expanded).apply {
-            setTextViewText(R.id.timer_project, session.project.title)
-            setTextViewText(R.id.timer_task, session.task.title)
-            setTextViewText(R.id.timer_subtask, session.subTask?.title.orEmpty())
-            // Two lines when a task is timed directly, three when a subtask is.
-            setViewVisibility(
-                R.id.timer_subtask,
-                if (session.subTask == null) View.GONE else View.VISIBLE
-            )
-            clock(R.id.timer_chronometer, R.id.timer_clock, session.isRunning, elapsed, accent)
-            setViewVisibility(
-                R.id.timer_button,
-                if (session.isForeign) View.GONE else View.VISIBLE
-            )
-            setImageViewResource(R.id.timer_button_icon, icon)
-            setInt(R.id.timer_button_icon, "setColorFilter", onAccent)
-            setTextViewText(R.id.timer_button_label, label)
-            setTextColor(R.id.timer_button_label, onAccent)
-            tint(R.id.timer_button, accent)
-            setContentDescription(R.id.timer_button, label)
-            setOnClickPendingIntent(R.id.timer_button, servicePendingIntent(action))
-        }
+        val expanded =
+            RemoteViews(context.packageName, R.layout.notification_timer_expanded).apply {
+                setTextViewText(R.id.timer_project, session.project.title)
+                setTextViewText(R.id.timer_task, session.task.title)
+                setTextViewText(R.id.timer_subtask, session.subTask?.title.orEmpty())
+                // Two lines when a task is timed directly, three when a subtask is.
+                setViewVisibility(
+                    R.id.timer_subtask,
+                    if (session.subTask == null) View.GONE else View.VISIBLE,
+                )
+                clock(R.id.timer_chronometer, R.id.timer_clock, session.isRunning, elapsed, accent)
+                setViewVisibility(
+                    R.id.timer_button,
+                    if (session.isForeign) View.GONE else View.VISIBLE,
+                )
+                setImageViewResource(R.id.timer_button_icon, icon)
+                setInt(R.id.timer_button_icon, "setColorFilter", onAccent)
+                setTextViewText(R.id.timer_button_label, label)
+                setTextColor(R.id.timer_button_label, onAccent)
+                tint(R.id.timer_button, accent)
+                setContentDescription(R.id.timer_button, label)
+                setOnClickPendingIntent(R.id.timer_button, servicePendingIntent(action))
+            }
 
-        return NotificationCompat.Builder(context, CHANNEL_ID)
+        return NotificationCompat
+            .Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_timer_notification)
             .setCustomContentView(collapsed)
             .setCustomBigContentView(expanded)
@@ -127,7 +139,7 @@ class TimerNotificationFactory(private val context: Context) {
         textId: Int,
         isRunning: Boolean,
         elapsed: Duration,
-        color: Int
+        color: Int,
     ) {
         if (isRunning) {
             val base = SystemClock.elapsedRealtime() - elapsed.inWholeMilliseconds
@@ -151,21 +163,22 @@ class TimerNotificationFactory(private val context: Context) {
      * than naming the activity: MainActivity lives in the app module, which depends on this one.
      */
     private fun contentPendingIntent(projectId: String): PendingIntent? {
-        val launch = context.packageManager
-            .getLaunchIntentForPackage(context.packageName)
-            ?.apply {
-                // singleTop plus CLEAR_TOP so a tap reaches the running activity through
-                // onNewIntent instead of building a second copy of it.
-                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                putExtra(TimerNotificationIntents.EXTRA_PROJECT_ID, projectId)
-            }
-            ?: return null
+        val launch =
+            context.packageManager
+                .getLaunchIntentForPackage(context.packageName)
+                ?.apply {
+                    // singleTop plus CLEAR_TOP so a tap reaches the running activity through
+                    // onNewIntent instead of building a second copy of it.
+                    flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    putExtra(TimerNotificationIntents.EXTRA_PROJECT_ID, projectId)
+                }
+                ?: return null
 
         return PendingIntent.getActivity(
             context,
             projectId.hashCode(),
             launch,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
     }
 
@@ -174,7 +187,7 @@ class TimerNotificationFactory(private val context: Context) {
             context,
             action.hashCode(),
             Intent(context, TimerNotificationService::class.java).setAction(action),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
 
     companion object {

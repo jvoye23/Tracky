@@ -9,9 +9,9 @@ import com.jvcs.tracky.core.domain.auth.SocialAuthProvider
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.onFailure
 import com.jvcs.tracky.core.domain.util.onSuccess
+import com.jvcs.tracky.design_system.util.UiText
 import com.jvcs.tracky.features.auth.domain.EmailValidator
 import com.jvcs.tracky.features.project.presentation.util.toUiText
-import com.jvcs.tracky.design_system.util.UiText
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -40,39 +40,61 @@ class LoginViewModel(
     val events = eventChannel.receiveAsFlow()
 
     private val _state = MutableStateFlow(LoginState())
-    val state = _state
-        .onStart {
-            if (!hasLoadedInitialData) {
-                observeTextStates()
-                hasLoadedInitialData = true
-            }
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), LoginState())
+    val state =
+        _state
+            .onStart {
+                if (!hasLoadedInitialData) {
+                    observeTextStates()
+                    hasLoadedInitialData = true
+                }
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), LoginState())
 
-    private val isEmailValidFlow = snapshotFlow { _state.value.emailTextFieldState.text.toString() }
-        .map { email -> EmailValidator.validate(email) }
-        .distinctUntilChanged()
+    private val isEmailValidFlow =
+        snapshotFlow {
+            _state.value.emailTextFieldState.text
+                .toString()
+        }.map { email -> EmailValidator.validate(email) }
+            .distinctUntilChanged()
 
-    private val isPasswordNotBlankFlow = snapshotFlow { _state.value.passwordTextFieldState.text.toString() }
-        .map { it.isNotBlank() }
-        .distinctUntilChanged()
+    private val isPasswordNotBlankFlow =
+        snapshotFlow {
+            _state.value.passwordTextFieldState.text
+                .toString()
+        }.map { it.isNotBlank() }
+            .distinctUntilChanged()
 
     private val isLoggingInFlow = _state.map { it.isLoggingIn }.distinctUntilChanged()
 
     fun onAction(action: LoginAction) {
         when (action) {
-            LoginAction.OnLoginClick -> login()
+            LoginAction.OnLoginClick -> {
+                login()
+            }
+
             LoginAction.OnTogglePasswordVisibility -> {
                 _state.update { it.copy(isPasswordVisible = !it.isPasswordVisible) }
             }
-            LoginAction.OnGoogleSignInClick -> signInWithGoogle()
-            LoginAction.OnAppleSignInClick -> signInWithApple()
-            else -> Unit
+
+            LoginAction.OnGoogleSignInClick -> {
+                signInWithGoogle()
+            }
+
+            LoginAction.OnAppleSignInClick -> {
+                signInWithApple()
+            }
+
+            else -> {
+                Unit
+            }
         }
     }
 
     private fun observeTextStates() {
-        combine(isEmailValidFlow, isPasswordNotBlankFlow, isLoggingInFlow) { isEmailValid, isPasswordNotBlank, isLoggingIn ->
+        combine(
+            isEmailValidFlow,
+            isPasswordNotBlankFlow,
+            isLoggingInFlow,
+        ) { isEmailValid, isPasswordNotBlank, isLoggingIn ->
             _state.update { it.copy(canLogin = !isLoggingIn && isEmailValid && isPasswordNotBlank) }
         }.launchIn(viewModelScope)
     }
@@ -81,40 +103,46 @@ class LoginViewModel(
         if (!state.value.canLogin) return
         viewModelScope.launch {
             _state.update { it.copy(isLoggingIn = true, error = null) }
-            authService.login(
-                email = state.value.emailTextFieldState.text.toString(),
-                password = state.value.passwordTextFieldState.text.toString()
-            ).onSuccess { authInfo ->
-                sessionStorage.set(authInfo)
-                _state.update { it.copy(isLoggingIn = false) }
-                eventChannel.send(LoginEvent.Success)
-            }.onFailure { error ->
-                val errorMessage = when (error) {
-                    DataError.Remote.UNAUTHORIZED -> UiText.Resource(Res.string.error_invalid_credentials)
-                    DataError.Remote.FORBIDDEN -> UiText.Resource(Res.string.error_email_not_verified)
-                    else -> error.toUiText()
+            authService
+                .login(
+                    email =
+                        state.value.emailTextFieldState.text
+                            .toString(),
+                    password =
+                        state.value.passwordTextFieldState.text
+                            .toString(),
+                ).onSuccess { authInfo ->
+                    sessionStorage.set(authInfo)
+                    _state.update { it.copy(isLoggingIn = false) }
+                    eventChannel.send(LoginEvent.Success)
+                }.onFailure { error ->
+                    val errorMessage =
+                        when (error) {
+                            DataError.Remote.UNAUTHORIZED -> UiText.Resource(Res.string.error_invalid_credentials)
+                            DataError.Remote.FORBIDDEN -> UiText.Resource(Res.string.error_email_not_verified)
+                            else -> error.toUiText()
+                        }
+                    _state.update { it.copy(error = errorMessage, isLoggingIn = false) }
                 }
-                _state.update { it.copy(error = errorMessage, isLoggingIn = false) }
-            }
         }
     }
 
     private fun signInWithGoogle() {
         viewModelScope.launch {
             _state.update { it.copy(isLoggingIn = true, error = null) }
-            socialAuthProvider.signInWithGoogle()
+            socialAuthProvider
+                .signInWithGoogle()
                 .onSuccess { idToken ->
-                    authService.loginWithGoogle(idToken)
+                    authService
+                        .loginWithGoogle(idToken)
                         .onSuccess { authInfo ->
                             sessionStorage.set(authInfo)
                             _state.update { it.copy(isLoggingIn = false) }
                             eventChannel.send(LoginEvent.Success)
-                        }
-                        .onFailure { error ->
+                        }.onFailure { error ->
                             _state.update { it.copy(error = error.toUiText(), isLoggingIn = false) }
                         }
-                }
-                .onFailure { error ->
+                }.onFailure { error ->
                     _state.update { it.copy(error = error.toUiText(), isLoggingIn = false) }
                 }
         }
@@ -123,19 +151,19 @@ class LoginViewModel(
     private fun signInWithApple() {
         viewModelScope.launch {
             _state.update { it.copy(isLoggingIn = true, error = null) }
-            socialAuthProvider.signInWithApple()
+            socialAuthProvider
+                .signInWithApple()
                 .onSuccess { idToken ->
-                    authService.loginWithApple(idToken)
+                    authService
+                        .loginWithApple(idToken)
                         .onSuccess { authInfo ->
                             sessionStorage.set(authInfo)
                             _state.update { it.copy(isLoggingIn = false) }
                             eventChannel.send(LoginEvent.Success)
-                        }
-                        .onFailure { error ->
+                        }.onFailure { error ->
                             _state.update { it.copy(error = error.toUiText(), isLoggingIn = false) }
                         }
-                }
-                .onFailure { error ->
+                }.onFailure { error ->
                     _state.update { it.copy(error = error.toUiText(), isLoggingIn = false) }
                 }
         }

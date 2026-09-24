@@ -23,7 +23,7 @@ data class SubTaskInterval(
     // stops the parent task too; when the task timer was already running, it is left alone.
     val startedParentTimer: Boolean = false,
     // See TaskInterval.startedByDeviceId.
-    val startedByDeviceId: String? = null
+    val startedByDeviceId: String? = null,
 ) : Timestamped {
     // No stamp of its own, for the same reason TaskInterval has none: an interval is written by a
     // device's timer rather than edited by hand, so there is nothing to compare and nothing to

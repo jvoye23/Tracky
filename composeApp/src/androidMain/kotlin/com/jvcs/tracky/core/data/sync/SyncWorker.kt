@@ -12,15 +12,14 @@ import kotlin.coroutines.cancellation.CancellationException
  * Drains the pending-sync queue in the background. Resolves the repository from the global Koin
  * context (started in the Application) so no custom WorkerFactory / manifest changes are required.
  */
-class SyncWorker(
-    context: Context,
-    params: WorkerParameters
-) : CoroutineWorker(context, params), KoinComponent {
+class SyncWorker(context: Context, params: WorkerParameters) :
+    CoroutineWorker(context, params),
+    KoinComponent {
 
     private val syncRepository: SyncRepository by inject()
 
-    override suspend fun doWork(): Result {
-        return try {
+    override suspend fun doWork(): Result =
+        try {
             syncRepository.syncPendingOperations()
             Result.success()
         } catch (e: CancellationException) {
@@ -28,8 +27,6 @@ class SyncWorker(
         } catch (e: Exception) {
             if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()
         }
-
-    }
 
     companion object {
         const val WORK_NAME = "project_pending_sync"

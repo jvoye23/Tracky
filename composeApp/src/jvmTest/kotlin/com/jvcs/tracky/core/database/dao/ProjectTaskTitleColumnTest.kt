@@ -32,10 +32,12 @@ class ProjectTaskTitleColumnTest {
 
     @BeforeTest
     fun setUp() {
-        db = Room.inMemoryDatabaseBuilder<TrackyDatabase>()
-            .setDriver(BundledSQLiteDriver())
-            .setQueryCoroutineContext(Dispatchers.IO)
-            .build()
+        db =
+            Room
+                .inMemoryDatabaseBuilder<TrackyDatabase>()
+                .setDriver(BundledSQLiteDriver())
+                .setQueryCoroutineContext(Dispatchers.IO)
+                .build()
         dao = db.projectDao
     }
 
@@ -61,54 +63,58 @@ class ProjectTaskTitleColumnTest {
                 isPinned = false,
                 updatedAtEpochMs = null,
                 sortIndex = null,
-            )
+            ),
         )
     }
 
-    private fun task(title: String, description: String?) = ProjectTaskEntity(
-        projectTaskId = "t1",
-        parentProjectId = "p1",
-        title = title,
-        description = description,
-        durationMillis = 0,
-        startDateTimeEpochMs = 0,
-        endDateTimeEpochMs = null,
-        isFinished = false,
-        isTimerRunning = false,
-        updatedAtEpochMs = null,
-    )
+    private fun task(title: String, description: String?) =
+        ProjectTaskEntity(
+            projectTaskId = "t1",
+            parentProjectId = "p1",
+            title = title,
+            description = description,
+            durationMillis = 0,
+            startDateTimeEpochMs = 0,
+            endDateTimeEpochMs = null,
+            isFinished = false,
+            isTimerRunning = false,
+            updatedAtEpochMs = null,
+        )
 
     @Test
-    fun aTaskKeepsItsTitleAndDescriptionApart() = runBlocking {
-        seedProject()
+    fun aTaskKeepsItsTitleAndDescriptionApart() =
+        runBlocking {
+            seedProject()
 
-        dao.upsertProjectTask(task(title = "Write the report", description = "Quarterly, due Friday"))
+            dao.upsertProjectTask(task(title = "Write the report", description = "Quarterly, due Friday"))
 
-        val stored = dao.getTaskById("t1")
-        assertEquals("Write the report", stored?.title)
-        assertEquals("Quarterly, due Friday", stored?.description)
-    }
-
-    @Test
-    fun aTaskWithoutADescriptionStoresNullRatherThanACopyOfTheTitle() = runBlocking {
-        seedProject()
-
-        dao.upsertProjectTask(task(title = "Write the report", description = null))
-
-        assertEquals("Write the report", dao.getTaskById("t1")?.title)
-        assertNull(dao.getTaskById("t1")?.description)
-    }
+            val stored = dao.getTaskById("t1")
+            assertEquals("Write the report", stored?.title)
+            assertEquals("Quarterly, due Friday", stored?.description)
+        }
 
     @Test
-    fun renamingATaskLeavesItsDescriptionAlone() = runBlocking {
-        seedProject()
-        dao.upsertProjectTask(task(title = "Write the report", description = "Quarterly, due Friday"))
+    fun aTaskWithoutADescriptionStoresNullRatherThanACopyOfTheTitle() =
+        runBlocking {
+            seedProject()
 
-        dao.updateTaskTitle(taskId = "t1", title = "Write the summary")
+            dao.upsertProjectTask(task(title = "Write the report", description = null))
 
-        val stored = dao.getTaskById("t1")
-        assertEquals("Write the summary", stored?.title)
-        // The rename used to overwrite this column, because it *was* the title column.
-        assertEquals("Quarterly, due Friday", stored?.description)
-    }
+            assertEquals("Write the report", dao.getTaskById("t1")?.title)
+            assertNull(dao.getTaskById("t1")?.description)
+        }
+
+    @Test
+    fun renamingATaskLeavesItsDescriptionAlone() =
+        runBlocking {
+            seedProject()
+            dao.upsertProjectTask(task(title = "Write the report", description = "Quarterly, due Friday"))
+
+            dao.updateTaskTitle(taskId = "t1", title = "Write the summary")
+
+            val stored = dao.getTaskById("t1")
+            assertEquals("Write the summary", stored?.title)
+            // The rename used to overwrite this column, because it *was* the title column.
+            assertEquals("Quarterly, due Friday", stored?.description)
+        }
 }

@@ -1,8 +1,8 @@
 package com.jvcs.tracky.core.domain.util
 
+import com.jvcs.tracky.core.domain.sync.SyncRecency
 import com.jvcs.tracky.features.project.domain.timer.ProjectRef
 import com.jvcs.tracky.features.project.domain.timer.RunningTimer
-import com.jvcs.tracky.core.domain.sync.SyncRecency
 import com.jvcs.tracky.features.project.domain.timer.RunningTimerRepository
 import com.jvcs.tracky.features.project.domain.timer.TaskRef
 import kotlinx.coroutines.flow.Flow
@@ -14,6 +14,7 @@ import kotlin.time.Instant
 /** Drives TimeManager from a test: start and stop a timer the way the database row would. */
 internal class FakeRunningTimerRepository : RunningTimerRepository {
     private val running = MutableStateFlow<RunningTimer?>(null)
+
     override fun observeRunningTimer(): Flow<RunningTimer?> = running
 
     fun startTimer(timer: RunningTimer) {
@@ -32,12 +33,12 @@ internal class FakeRunningTimerRepository : RunningTimerRepository {
 internal fun TestScope.testTimeManager(
     repository: RunningTimerRepository = FakeRunningTimerRepository(),
     timeProvider: TimeProvider = FakeTimeProvider(),
-    syncRecency: SyncRecency = SyncRecency()
+    syncRecency: SyncRecency = SyncRecency(),
 ) = TimeManager(
     runningTimerRepository = repository,
     serverClock = testServerClock(timeProvider),
     syncRecency = syncRecency,
-    scope = backgroundScope
+    scope = backgroundScope,
 )
 
 /**
@@ -50,7 +51,7 @@ internal fun runningTimer(
     subTaskId: String? = null,
     startedAt: Instant = Instant.fromEpochMilliseconds(0),
     bankedDuration: Duration = Duration.ZERO,
-    isForeign: Boolean = false
+    isForeign: Boolean = false,
 ) = RunningTimer(
     project = ProjectRef(id = "project", title = "Project", colorArgb = null),
     useLightTextColor = false,
@@ -58,5 +59,5 @@ internal fun runningTimer(
     subTask = subTaskId?.let { TaskRef(id = it, title = "Sub task") },
     startedAt = startedAt,
     bankedDuration = bankedDuration,
-    isForeign = isForeign
+    isForeign = isForeign,
 )

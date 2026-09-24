@@ -28,7 +28,6 @@ import tracky.composeapp.generated.resources.edit_uppercase
 import tracky.composeapp.generated.resources.save
 import tracky.composeapp.generated.resources.title
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProjectDetailTopAppBar(
@@ -40,17 +39,21 @@ fun ProjectDetailTopAppBar(
     TopAppBar(
         title = {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center
+                modifier =
+                    Modifier
+                        .fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
             ) {
                 Text(
                     // TODO() Replace DateTime string to date set in Agenda Screen
-                    text = if (isEditMode){
-                        stringResource(Res.string.edit_uppercase) + " " + project?.title?.uppercase()
-                    } else project?.title?.uppercase() ?: stringResource(Res.string.title).uppercase(),
+                    text =
+                        if (isEditMode) {
+                            stringResource(Res.string.edit_uppercase) + " " + project?.title?.uppercase()
+                        } else {
+                            project?.title?.uppercase() ?: stringResource(Res.string.title).uppercase()
+                        },
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onBackground
+                    color = MaterialTheme.colorScheme.onBackground,
                 )
             }
         },
@@ -59,18 +62,19 @@ fun ProjectDetailTopAppBar(
                 TextButton(
                     onClick = { onAction(ProjectDetailAction.OnCloseAndCancelClick) },
                     modifier = Modifier,
-                    contentPadding = PaddingValues(16.dp)
+                    contentPadding = PaddingValues(16.dp),
                 ) {
                     Text(
                         text = stringResource(Res.string.cancel),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onBackground
+                        color = MaterialTheme.colorScheme.onBackground,
                     )
                 }
             } else {
                 IconButton(
-                    modifier = Modifier
-                        .size(40.dp),
+                    modifier =
+                        Modifier
+                            .size(40.dp),
                     onClick = {
                         onAction(ProjectDetailAction.OnCloseAndCancelClick)
                     },
@@ -78,29 +82,30 @@ fun ProjectDetailTopAppBar(
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onBackground
+                            tint = MaterialTheme.colorScheme.onBackground,
                         )
-                    }
+                    },
                 )
             }
         },
         actions = {
             if (isEditMode) {
                 TextButton(
-                    onClick = { onAction(ProjectDetailAction.OnSaveClick) } ,
+                    onClick = { onAction(ProjectDetailAction.OnSaveClick) },
                     modifier = Modifier,
-                    contentPadding = PaddingValues(16.dp)
+                    contentPadding = PaddingValues(16.dp),
                 ) {
                     Text(
                         text = stringResource(Res.string.save),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
                     )
                 }
             } else {
                 IconButton(
-                    modifier = Modifier
-                        .size(40.dp),
+                    modifier =
+                        Modifier
+                            .size(40.dp),
                     onClick = {
                         onAction(ProjectDetailAction.OnEditModeClick)
                     },
@@ -109,20 +114,19 @@ fun ProjectDetailTopAppBar(
                         Icon(
                             imageVector = Icons.Default.Edit,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onBackground
+                            tint = MaterialTheme.colorScheme.onBackground,
                         )
-                    }
+                    },
                 )
             }
         },
-        colors = TopAppBarColors(
-            containerColor = MaterialTheme.colorScheme.background,
-            scrolledContainerColor = MaterialTheme.colorScheme.background,
-            navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
-            titleContentColor = MaterialTheme.colorScheme.onPrimary,
-            actionIconContentColor = MaterialTheme.colorScheme.onPrimary
-        )
+        colors =
+            TopAppBarColors(
+                containerColor = MaterialTheme.colorScheme.background,
+                scrolledContainerColor = MaterialTheme.colorScheme.background,
+                navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                actionIconContentColor = MaterialTheme.colorScheme.onPrimary,
+            ),
     )
-
-
 }

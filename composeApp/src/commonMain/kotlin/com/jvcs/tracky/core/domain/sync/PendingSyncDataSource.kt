@@ -31,7 +31,7 @@ interface PendingSyncDataSource {
         entityType: String,
         operationType: String,
         parentEntityId: String?,
-        createdAt: Instant
+        createdAt: Instant,
     ): EmptyResult<DataError.Local>
 
     suspend fun deleteOperation(operationId: String): EmptyResult<DataError.Local>

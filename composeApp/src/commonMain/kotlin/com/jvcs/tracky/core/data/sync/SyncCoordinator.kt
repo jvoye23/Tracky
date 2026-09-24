@@ -27,14 +27,15 @@ class SyncCoordinator(
     private val taskRepository: ProjectTaskRepository,
     private val intervalRepository: IntervalRepository,
     private val subTaskRepository: SubTaskRepository,
-    private val subTaskIntervalRepository: SubTaskIntervalRepository
+    private val subTaskIntervalRepository: SubTaskIntervalRepository,
 ) : SyncRepository {
 
-    override suspend fun syncPendingOperations() = withContext(Dispatchers.Default) {
-        projectRepository.syncPendingProjects()
-        taskRepository.syncPendingTasks()
-        intervalRepository.syncPendingIntervals()
-        subTaskRepository.syncPendingSubTasks()
-        subTaskIntervalRepository.syncPendingSubTaskIntervals()
-    }
+    override suspend fun syncPendingOperations() =
+        withContext(Dispatchers.Default) {
+            projectRepository.syncPendingProjects()
+            taskRepository.syncPendingTasks()
+            intervalRepository.syncPendingIntervals()
+            subTaskRepository.syncPendingSubTasks()
+            subTaskIntervalRepository.syncPendingSubTaskIntervals()
+        }
 }

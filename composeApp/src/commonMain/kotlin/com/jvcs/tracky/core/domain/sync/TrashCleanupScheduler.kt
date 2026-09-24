@@ -12,6 +12,7 @@ import kotlin.time.Instant
  */
 interface TrashCleanupScheduler {
     suspend fun scheduleCleanup()
+
     suspend fun cancelCleanup()
 }
 

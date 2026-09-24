@@ -14,8 +14,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.Composable
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -68,15 +68,16 @@ internal fun CalendarMonthGrid(
     selectedDate: LocalDate?,
     projectColor: Color,
     onDateSelected: (LocalDate) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     // A plain Column of Rows, not a LazyVerticalGrid: a month is at most six rows, all of them on
     // screen at once, so laziness would only add nested-scroll trouble inside the outer list.
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         month.days.chunked(DAYS_PER_WEEK).forEach { week ->
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -87,7 +88,7 @@ internal fun CalendarMonthGrid(
                         isSelected = day.date == selectedDate,
                         projectColor = projectColor,
                         onClick = { onDateSelected(day.date) },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
                     )
                 }
             }
@@ -102,7 +103,7 @@ private fun DayCell(
     isSelected: Boolean,
     projectColor: Color,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     // A cell from a neighbouring month holds the grid's shape and draws nothing else. Every page
     // is six weeks, so a short month would otherwise finish on a whole row of another month's
@@ -112,67 +113,72 @@ private fun DayCell(
         return
     }
 
-    val intensity: Float? = when {
-        day.trackedMillis <= 0L || maxTrackedMillis <= 0L -> null
-        day.trackedMillis >= maxTrackedMillis -> 1f
-        else -> lerp(MIN_INTENSITY, MAX_INTENSITY, day.trackedMillis.toFloat() / maxTrackedMillis)
-    }
+    val intensity: Float? =
+        when {
+            day.trackedMillis <= 0L || maxTrackedMillis <= 0L -> null
+            day.trackedMillis >= maxTrackedMillis -> 1f
+            else -> lerp(MIN_INTENSITY, MAX_INTENSITY, day.trackedMillis.toFloat() / maxTrackedMillis)
+        }
 
-    val background = if (intensity != null) {
-        projectColor.copy(alpha = intensity)
-    } else {
-        MaterialTheme.colorScheme.surfaceVariant
-    }
+    val background =
+        if (intensity != null) {
+            projectColor.copy(alpha = intensity)
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant
+        }
 
-    val onCell = if (intensity != null) {
-        onProjectColor(background)
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    }
+    val onCell =
+        if (intensity != null) {
+            onProjectColor(background)
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        }
 
-    val description = stringResource(
-        Res.string.calendar_day_description,
-        day.dayLabel,
-        day.trackedMillis.takeIf { it > 0L }
-            ?.let { formatDurationHoursMinutes(it.milliseconds) }
-            ?: stringResource(Res.string.calendar_day_untracked)
-    )
+    val description =
+        stringResource(
+            Res.string.calendar_day_description,
+            day.dayLabel,
+            day.trackedMillis
+                .takeIf { it > 0L }
+                ?.let { formatDurationHoursMinutes(it.milliseconds) }
+                ?: stringResource(Res.string.calendar_day_untracked),
+        )
 
     Box(
-        modifier = modifier
-            .aspectRatio(1f)
-            .clip(CircleShape)
-            .background(background)
-            .then(
-                when {
-                    isSelected -> Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
-                    day.isToday -> Modifier.border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
-                    else -> Modifier
-                }
-            )
-            .clickable(onClick = onClick)
-            .semantics(mergeDescendants = true) { contentDescription = description },
-        contentAlignment = Alignment.Center
+        modifier =
+            modifier
+                .aspectRatio(1f)
+                .clip(CircleShape)
+                .background(background)
+                .then(
+                    when {
+                        isSelected -> Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
+                        day.isToday -> Modifier.border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                        else -> Modifier
+                    },
+                ).clickable(onClick = onClick)
+                .semantics(mergeDescendants = true) { contentDescription = description },
+        contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = day.dayLabel,
                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                color = onCell
+                color = onCell,
             )
             // The dot repeats what the tint already says, for anyone who cannot separate the
             // tints by eye. An untracked day keeps the space so the numbers stay on one baseline.
             Box(
-                modifier = Modifier
-                    .padding(top = 2.dp)
-                    .size(3.dp)
-                    .clip(CircleShape)
-                    .background(if (intensity != null) onCell.copy(alpha = 0.6f) else Color.Transparent)
+                modifier =
+                    Modifier
+                        .padding(top = 2.dp)
+                        .size(3.dp)
+                        .clip(CircleShape)
+                        .background(if (intensity != null) onCell.copy(alpha = 0.6f) else Color.Transparent),
             )
         }
     }
 }
-
 
 // ---------------------------------------------------------------------------
 // Previews
@@ -185,37 +191,53 @@ private val PreviewAlternateProjectColor = Color(0xFF3E8E8A)
  * September 2026, drawn from the design reference: opens on a Tuesday, so one leading padding
  * cell, and the busiest day is Tue 08 at full tint.
  */
+
 /** Shared with [CalendarMonthCard]'s previews, so the fixture is written once. */
 internal fun previewCalendarMonth(
-    tracked: Map<Int, Long> = mapOf(
-        1 to 42L, 2 to 38L, 4 to 95L, 5 to 24L, 7 to 78L, 8 to 206L, 9 to 31L,
-        11 to 52L, 12 to 64L, 15 to 18L, 16 to 71L, 18 to 45L, 21 to 33L, 22 to 68L,
-        25 to 40L, 29 to 57L
-    ),
-    today: LocalDate = LocalDate(2026, 9, 9)
+    tracked: Map<Int, Long> =
+        mapOf(
+            1 to 42L,
+            2 to 38L,
+            4 to 95L,
+            5 to 24L,
+            7 to 78L,
+            8 to 206L,
+            9 to 31L,
+            11 to 52L,
+            12 to 64L,
+            15 to 18L,
+            16 to 71L,
+            18 to 45L,
+            21 to 33L,
+            22 to 68L,
+            25 to 40L,
+            29 to 57L,
+        ),
+    today: LocalDate = LocalDate(2026, 9, 9),
 ): CalendarMonthUi {
     val month = YearMonth(2026, 9)
     // One leading cell (Mon 31 Aug) then the 30 days, padded out to six whole weeks the way the
     // mapper does — the preview has to show the same fixed height the pager relies on.
     val gridStart = LocalDate(2026, 8, 31)
-    val days = (0 until 42).map { offset ->
-        val date = LocalDate.fromEpochDays(gridStart.toEpochDays() + offset)
-        val inMonth = date.year == 2026 && date.month == month.month
-        CalendarDayUi(
-            date = date,
-            dayLabel = date.day.toString().padStart(2, '0'),
-            trackedMillis = if (inMonth) (tracked[date.day] ?: 0L) * 60_000L else 0L,
-            isToday = date == today,
-            isInMonth = inMonth
-        )
-    }
+    val days =
+        (0 until 42).map { offset ->
+            val date = LocalDate.fromEpochDays(gridStart.toEpochDays() + offset)
+            val inMonth = date.year == 2026 && date.month == month.month
+            CalendarDayUi(
+                date = date,
+                dayLabel = date.day.toString().padStart(2, '0'),
+                trackedMillis = if (inMonth) (tracked[date.day] ?: 0L) * 60_000L else 0L,
+                isToday = date == today,
+                isInMonth = inMonth,
+            )
+        }
     return CalendarMonthUi(
         yearMonth = month,
         monthLabel = "September 2026",
         monthTotalLabel = "20:08",
         days = days,
         busiestDayLabel = "Tue 08",
-        maxTrackedMillis = days.maxOf { it.trackedMillis }
+        maxTrackedMillis = days.maxOf { it.trackedMillis },
     )
 }
 
@@ -236,7 +258,7 @@ private fun CalendarMonthGridDefaultPreview() {
             month = previewCalendarMonth(),
             selectedDate = LocalDate(2026, 9, 8),
             projectColor = PreviewProjectColor,
-            onDateSelected = {}
+            onDateSelected = {},
         )
     }
 }
@@ -250,7 +272,7 @@ private fun CalendarMonthGridEmptyPreview() {
             month = previewCalendarMonth(tracked = emptyMap()).copy(monthTotalLabel = null, busiestDayLabel = null),
             selectedDate = LocalDate(2026, 9, 8),
             projectColor = PreviewProjectColor,
-            onDateSelected = {}
+            onDateSelected = {},
         )
     }
 }
@@ -264,7 +286,7 @@ private fun CalendarMonthGridSingleTrackedDayPreview() {
             month = previewCalendarMonth(tracked = mapOf(8 to 27L)),
             selectedDate = LocalDate(2026, 9, 8),
             projectColor = PreviewProjectColor,
-            onDateSelected = {}
+            onDateSelected = {},
         )
     }
 }
@@ -277,7 +299,7 @@ private fun CalendarMonthGridAlternateColorPreview() {
             month = previewCalendarMonth(),
             selectedDate = LocalDate(2026, 9, 8),
             projectColor = PreviewAlternateProjectColor,
-            onDateSelected = {}
+            onDateSelected = {},
         )
     }
 }
@@ -290,7 +312,7 @@ private fun CalendarMonthGridCompactPreview() {
             month = previewCalendarMonth(),
             selectedDate = LocalDate(2026, 9, 8),
             projectColor = PreviewProjectColor,
-            onDateSelected = {}
+            onDateSelected = {},
         )
     }
 }
@@ -303,7 +325,7 @@ private fun CalendarMonthGridExpandedWidthPreview() {
             month = previewCalendarMonth(),
             selectedDate = LocalDate(2026, 9, 8),
             projectColor = PreviewProjectColor,
-            onDateSelected = {}
+            onDateSelected = {},
         )
     }
 }
@@ -317,7 +339,7 @@ private fun CalendarMonthGridFontScalePreview() {
             month = previewCalendarMonth(),
             selectedDate = LocalDate(2026, 9, 8),
             projectColor = PreviewProjectColor,
-            onDateSelected = {}
+            onDateSelected = {},
         )
     }
 }

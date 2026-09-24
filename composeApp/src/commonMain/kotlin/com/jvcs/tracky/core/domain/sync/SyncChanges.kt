@@ -29,12 +29,17 @@ data class SyncChanges(
     val taskIntervals: List<TaskInterval>,
     val subTasks: List<ProjectSubTask>,
     val subTaskIntervals: List<SubTaskInterval>,
-    val tombstones: List<Tombstone>
+    val tombstones: List<Tombstone>,
 ) {
     /** True when there is nothing to write — the common case on a quiet poll. */
     val isEmpty: Boolean
-        get() = projects.isEmpty() && tasks.isEmpty() && taskIntervals.isEmpty() &&
-            subTasks.isEmpty() && subTaskIntervals.isEmpty() && tombstones.isEmpty()
+        get() =
+            projects.isEmpty() &&
+                tasks.isEmpty() &&
+                taskIntervals.isEmpty() &&
+                subTasks.isEmpty() &&
+                subTaskIntervals.isEmpty() &&
+                tombstones.isEmpty()
 }
 
 /**
@@ -44,10 +49,7 @@ data class SyncChanges(
  * about a kind of row this build does not, and refusing the whole delta over it would strand the
  * device.
  */
-data class Tombstone(
-    val entityType: String,
-    val entityId: String
-) {
+data class Tombstone(val entityType: String, val entityId: String) {
     /**
      * The server's vocabulary for [entityType], transcribed from `backend-delta-sync-api.md` §3.
      *

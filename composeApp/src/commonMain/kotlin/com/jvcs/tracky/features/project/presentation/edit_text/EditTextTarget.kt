@@ -13,6 +13,7 @@ enum class EditTextTarget {
     PROJECT,
     TASK,
     SUBTASK,
+
     /** A subtask that does not exist yet; the first successful save creates it. */
-    NEW_SUBTASK
+    NEW_SUBTASK,
 }

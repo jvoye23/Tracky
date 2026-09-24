@@ -24,70 +24,79 @@ internal class OfflineFirstIntervalRepositoryTest {
     private fun fixture() = RepoFixture().apply { seedProjectWithTask() }
 
     @Test
-    fun startTask_postsTheNewIntervalToTheTasksRoute() = runBlocking<Unit> {
-        val f = fixture()
+    fun startTask_postsTheNewIntervalToTheTasksRoute() =
+        runBlocking<Unit> {
+            val f = fixture()
 
-        f.createIntervalForTask()
+            f.createIntervalForTask()
 
-        assertEquals(listOf("i1"), f.remoteInterval.postedIntervalIds)
-        // The route is built from the interval's own parentProjectId — no task lookup involved.
-        assertEquals(listOf("p1/t1"), f.remoteInterval.intervalRoutes)
-        assertTrue(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_INTERVAL })
-    }
-
-    @Test
-    fun stopTask_putsTheClosedInterval() = runBlocking<Unit> {
-        val f = fixture()
-
-        f.createIntervalForTask()
-        f.localTask.clock = Instant.fromEpochMilliseconds(70_000) // 60s after the default start
-        f.closeIntervalForTask()
-
-        assertEquals(listOf("i1"), f.remoteInterval.updatedIntervalIds)
-        assertEquals(60_000L, f.db.intervals.getValue("i1").durationMillis)
-    }
+            assertEquals(listOf("i1"), f.remoteInterval.postedIntervalIds)
+            // The route is built from the interval's own parentProjectId — no task lookup involved.
+            assertEquals(listOf("p1/t1"), f.remoteInterval.intervalRoutes)
+            assertTrue(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_INTERVAL })
+        }
 
     @Test
-    fun startTask_queuesTheInterval_whenOffline() = runBlocking<Unit> {
-        val f = fixture()
-        f.remoteInterval.postFailWith = DataError.Remote.NO_INTERNET
+    fun stopTask_putsTheClosedInterval() =
+        runBlocking<Unit> {
+            val f = fixture()
 
-        f.createIntervalForTask()
+            f.createIntervalForTask()
+            f.localTask.clock = Instant.fromEpochMilliseconds(70_000) // 60s after the default start
+            f.closeIntervalForTask()
 
-        // Local write stands regardless — the user keeps tracking time.
-        assertNotNull(f.db.intervals["i1"])
+            assertEquals(listOf("i1"), f.remoteInterval.updatedIntervalIds)
+            assertEquals(
+                60_000L,
+                f.db.intervals
+                    .getValue("i1")
+                    .durationMillis,
+            )
+        }
 
-        val ops = f.queue.all().filter { it.entityType == PendingSyncOperation.ENTITY_INTERVAL }
-        assertEquals(1, ops.size)
-        assertEquals(PendingSyncOperation.OP_CREATE, ops[0].operationType)
-        assertEquals("i1", ops[0].entityId)
-        // parentEntityId carries the TASK id for intervals; a queued DELETE has no local row left
-        // to read parentProjectId from, so it resolves the project through the task at drain time.
-        assertEquals("t1", ops[0].parentEntityId)
-        assertTrue(f.scheduler.scheduleCount > 0)
-    }
+    @Test
+    fun startTask_queuesTheInterval_whenOffline() =
+        runBlocking<Unit> {
+            val f = fixture()
+            f.remoteInterval.postFailWith = DataError.Remote.NO_INTERNET
+
+            f.createIntervalForTask()
+
+            // Local write stands regardless — the user keeps tracking time.
+            assertNotNull(f.db.intervals["i1"])
+
+            val ops = f.queue.all().filter { it.entityType == PendingSyncOperation.ENTITY_INTERVAL }
+            assertEquals(1, ops.size)
+            assertEquals(PendingSyncOperation.OP_CREATE, ops[0].operationType)
+            assertEquals("i1", ops[0].entityId)
+            // parentEntityId carries the TASK id for intervals; a queued DELETE has no local row left
+            // to read parentProjectId from, so it resolves the project through the task at drain time.
+            assertEquals("t1", ops[0].parentEntityId)
+            assertTrue(f.scheduler.scheduleCount > 0)
+        }
 
     /**
      * The gate: the task was created offline, so there is no `/tasks/{taskId}` to hang the interval
      * off. The interval is queued without a request ever being sent.
      */
     @Test
-    fun startTask_queuesTheInterval_withoutCallingTheServer_whenTheTaskIsStillPendingCreate() = runBlocking<Unit> {
-        val f = RepoFixture()
-        f.db.seedProject("p1")
-        f.remoteTask.failWith = DataError.Remote.NO_INTERNET
-        f.taskRepository.upsertProjectTask(f.db.newTask("t1", "p1")) // task CREATE queued
-        f.remoteTask.failWith = null
-        f.remoteInterval.intervalRoutes.clear()
+    fun startTask_queuesTheInterval_withoutCallingTheServer_whenTheTaskIsStillPendingCreate() =
+        runBlocking<Unit> {
+            val f = RepoFixture()
+            f.db.seedProject("p1")
+            f.remoteTask.failWith = DataError.Remote.NO_INTERNET
+            f.taskRepository.upsertProjectTask(f.db.newTask("t1", "p1")) // task CREATE queued
+            f.remoteTask.failWith = null
+            f.remoteInterval.intervalRoutes.clear()
 
-        f.createIntervalForTask()
+            f.createIntervalForTask()
 
-        // No request went out at all — the parent-pending check short-circuits before the network.
-        assertTrue(f.remoteInterval.intervalRoutes.isEmpty())
-        val ops = f.queue.all().filter { it.entityType == PendingSyncOperation.ENTITY_INTERVAL }
-        assertEquals(1, ops.size)
-        assertEquals(PendingSyncOperation.OP_CREATE, ops[0].operationType)
-    }
+            // No request went out at all — the parent-pending check short-circuits before the network.
+            assertTrue(f.remoteInterval.intervalRoutes.isEmpty())
+            val ops = f.queue.all().filter { it.entityType == PendingSyncOperation.ENTITY_INTERVAL }
+            assertEquals(1, ops.size)
+            assertEquals(PendingSyncOperation.OP_CREATE, ops[0].operationType)
+        }
 
     /**
      * The backstop for the same situation when the queue row is missing: the server answers 404,
@@ -95,152 +104,165 @@ internal class OfflineFirstIntervalRepositoryTest {
      * the interval after.
      */
     @Test
-    fun startTask_queuesTheInterval_whenTheServerSaysTheTaskIsNotThere() = runBlocking<Unit> {
-        val f = fixture()
-        f.remoteInterval.postFailWith = DataError.Remote.NOT_FOUND
+    fun startTask_queuesTheInterval_whenTheServerSaysTheTaskIsNotThere() =
+        runBlocking<Unit> {
+            val f = fixture()
+            f.remoteInterval.postFailWith = DataError.Remote.NOT_FOUND
 
-        f.createIntervalForTask()
+            f.createIntervalForTask()
 
-        val ops = f.queue.all().filter { it.entityType == PendingSyncOperation.ENTITY_INTERVAL }
-        assertEquals(1, ops.size)
-        assertEquals(PendingSyncOperation.OP_CREATE, ops[0].operationType)
-    }
+            val ops = f.queue.all().filter { it.entityType == PendingSyncOperation.ENTITY_INTERVAL }
+            assertEquals(1, ops.size)
+            assertEquals(PendingSyncOperation.OP_CREATE, ops[0].operationType)
+        }
 
     /** A 409 means the POST already landed and only its response was lost. */
     @Test
-    fun startTask_retriesAsUpdate_whenTheServerReportsADuplicate() = runBlocking<Unit> {
-        val f = fixture()
-        f.remoteInterval.postFailWith = DataError.Remote.CONFLICT
+    fun startTask_retriesAsUpdate_whenTheServerReportsADuplicate() =
+        runBlocking<Unit> {
+            val f = fixture()
+            f.remoteInterval.postFailWith = DataError.Remote.CONFLICT
 
-        f.createIntervalForTask()
+            f.createIntervalForTask()
 
-        assertEquals(listOf("i1"), f.remoteInterval.updatedIntervalIds)
-        assertTrue(f.remoteInterval.postedIntervalIds.isEmpty())
-        assertTrue(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_INTERVAL })
-    }
-
-    @Test
-    fun syncPendingIntervals_pushesQueuedInterval_andClearsQueue() = runBlocking<Unit> {
-        val f = fixture()
-        f.remoteInterval.postFailWith = DataError.Remote.NO_INTERNET
-
-        f.createIntervalForTask() // queued while offline
-        f.remoteInterval.postFailWith = null    // back online
-
-        f.intervalRepository.syncPendingIntervals()
-
-        assertEquals(listOf("i1"), f.remoteInterval.postedIntervalIds)
-        assertTrue(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_INTERVAL })
-    }
+            assertEquals(listOf("i1"), f.remoteInterval.updatedIntervalIds)
+            assertTrue(f.remoteInterval.postedIntervalIds.isEmpty())
+            assertTrue(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_INTERVAL })
+        }
 
     @Test
-    fun syncPendingIntervals_dropsQueuedInterval_whenItWasDeletedLocally() = runBlocking<Unit> {
-        val f = fixture()
-        f.remoteInterval.postFailWith = DataError.Remote.NO_INTERNET
+    fun syncPendingIntervals_pushesQueuedInterval_andClearsQueue() =
+        runBlocking<Unit> {
+            val f = fixture()
+            f.remoteInterval.postFailWith = DataError.Remote.NO_INTERNET
 
-        f.createIntervalForTask()
-        f.db.intervals.remove("i1")          // gone before the queue drained
-        f.remoteInterval.postFailWith = null
+            f.createIntervalForTask() // queued while offline
+            f.remoteInterval.postFailWith = null // back online
 
-        f.intervalRepository.syncPendingIntervals()
+            f.intervalRepository.syncPendingIntervals()
 
-        assertTrue(f.remoteInterval.postedIntervalIds.isEmpty())
-        // Dropped, not retried forever.
-        assertTrue(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_INTERVAL })
-    }
-
-    @Test
-    fun syncPendingIntervals_dropsQueuedInterval_whenItsTaskIsGone() = runBlocking<Unit> {
-        val f = fixture()
-        f.remoteInterval.postFailWith = DataError.Remote.NO_INTERNET
-
-        f.createIntervalForTask()
-        // Deleting the task cascades to its intervals, so the queued op has nothing left to push.
-        f.localTask.deleteProjectTask("t1")
-        f.remoteInterval.postFailWith = null
-
-        f.intervalRepository.syncPendingIntervals()
-
-        assertTrue(f.remoteInterval.postedIntervalIds.isEmpty())
-        assertTrue(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_INTERVAL })
-    }
+            assertEquals(listOf("i1"), f.remoteInterval.postedIntervalIds)
+            assertTrue(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_INTERVAL })
+        }
 
     @Test
-    fun syncPendingIntervals_retriesQueuedInterval_whenStillOffline() = runBlocking<Unit> {
-        val f = fixture()
-        f.remoteInterval.postFailWith = DataError.Remote.NO_INTERNET
+    fun syncPendingIntervals_dropsQueuedInterval_whenItWasDeletedLocally() =
+        runBlocking<Unit> {
+            val f = fixture()
+            f.remoteInterval.postFailWith = DataError.Remote.NO_INTERNET
 
-        f.createIntervalForTask()
-        f.intervalRepository.syncPendingIntervals() // still offline
+            f.createIntervalForTask()
+            f.db.intervals.remove("i1") // gone before the queue drained
+            f.remoteInterval.postFailWith = null
 
-        // Left queued for the next attempt.
-        assertEquals(1, f.queue.all().count { it.entityType == PendingSyncOperation.ENTITY_INTERVAL })
-    }
+            f.intervalRepository.syncPendingIntervals()
 
-    @Test
-    fun deleteTaskInterval_deletesLocallyAndRemotely() = runBlocking<Unit> {
-        val f = fixture()
-        f.createIntervalForTask()
-
-        f.intervalRepository.deleteTaskInterval("i1")
-
-        assertNull(f.db.intervals["i1"])
-        assertEquals(listOf("i1"), f.remoteInterval.deletedIntervalIds)
-    }
+            assertTrue(f.remoteInterval.postedIntervalIds.isEmpty())
+            // Dropped, not retried forever.
+            assertTrue(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_INTERVAL })
+        }
 
     @Test
-    fun deleteTaskInterval_dropsThePendingCreate_andSkipsTheServer() = runBlocking<Unit> {
-        val f = fixture()
-        f.remoteInterval.postFailWith = DataError.Remote.NO_INTERNET
+    fun syncPendingIntervals_dropsQueuedInterval_whenItsTaskIsGone() =
+        runBlocking<Unit> {
+            val f = fixture()
+            f.remoteInterval.postFailWith = DataError.Remote.NO_INTERNET
 
-        f.createIntervalForTask()    // create is queued, never reached the server
-        f.intervalRepository.deleteTaskInterval("i1")
+            f.createIntervalForTask()
+            // Deleting the task cascades to its intervals, so the queued op has nothing left to push.
+            f.localTask.deleteProjectTask("t1")
+            f.remoteInterval.postFailWith = null
 
-        // Nothing to delete server-side — the interval never got there.
-        assertTrue(f.remoteInterval.deletedIntervalIds.isEmpty())
-        assertTrue(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_INTERVAL })
-    }
+            f.intervalRepository.syncPendingIntervals()
 
-    @Test
-    fun deleteTaskInterval_queuesTheDelete_whenOffline() = runBlocking<Unit> {
-        val f = fixture()
-        f.createIntervalForTask()                       // succeeds online
-        f.remoteInterval.deleteFailWith = DataError.Remote.NO_INTERNET
-
-        f.intervalRepository.deleteTaskInterval("i1")
-
-        val ops = f.queue.all().filter { it.entityType == PendingSyncOperation.ENTITY_INTERVAL }
-        assertEquals(1, ops.size)
-        assertEquals(PendingSyncOperation.OP_DELETE, ops[0].operationType)
-        assertEquals("t1", ops[0].parentEntityId)
-    }
+            assertTrue(f.remoteInterval.postedIntervalIds.isEmpty())
+            assertTrue(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_INTERVAL })
+        }
 
     @Test
-    fun syncPendingIntervals_pushesQueuedIntervalDelete() = runBlocking<Unit> {
-        val f = fixture()
-        f.createIntervalForTask()
-        f.remoteInterval.deleteFailWith = DataError.Remote.NO_INTERNET
-        f.intervalRepository.deleteTaskInterval("i1")
+    fun syncPendingIntervals_retriesQueuedInterval_whenStillOffline() =
+        runBlocking<Unit> {
+            val f = fixture()
+            f.remoteInterval.postFailWith = DataError.Remote.NO_INTERNET
 
-        f.remoteInterval.deleteFailWith = null
-        f.intervalRepository.syncPendingIntervals()
+            f.createIntervalForTask()
+            f.intervalRepository.syncPendingIntervals() // still offline
 
-        // The interval row is gone locally, so the delete has to survive on the queued task id alone.
-        assertEquals(listOf("i1"), f.remoteInterval.deletedIntervalIds)
-        assertTrue(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_INTERVAL })
-    }
+            // Left queued for the next attempt.
+            assertEquals(1, f.queue.all().count { it.entityType == PendingSyncOperation.ENTITY_INTERVAL })
+        }
 
     @Test
-    fun upsertTaskInterval_updatesAnExistingIntervalRatherThanCreatingIt() = runBlocking<Unit> {
-        val f = fixture()
-        f.createIntervalForTask()
+    fun deleteTaskInterval_deletesLocallyAndRemotely() =
+        runBlocking<Unit> {
+            val f = fixture()
+            f.createIntervalForTask()
 
-        f.intervalRepository.updateTaskInterval(
-            f.db.intervals.getValue("i1").copy(durationMillis = 5_000)
-        )
+            f.intervalRepository.deleteTaskInterval("i1")
 
-        assertEquals(listOf("i1"), f.remoteInterval.updatedIntervalIds)
-        // Only the original startProjectTask create.
-        assertEquals(listOf("i1"), f.remoteInterval.postedIntervalIds)
-    }
+            assertNull(f.db.intervals["i1"])
+            assertEquals(listOf("i1"), f.remoteInterval.deletedIntervalIds)
+        }
+
+    @Test
+    fun deleteTaskInterval_dropsThePendingCreate_andSkipsTheServer() =
+        runBlocking<Unit> {
+            val f = fixture()
+            f.remoteInterval.postFailWith = DataError.Remote.NO_INTERNET
+
+            f.createIntervalForTask() // create is queued, never reached the server
+            f.intervalRepository.deleteTaskInterval("i1")
+
+            // Nothing to delete server-side — the interval never got there.
+            assertTrue(f.remoteInterval.deletedIntervalIds.isEmpty())
+            assertTrue(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_INTERVAL })
+        }
+
+    @Test
+    fun deleteTaskInterval_queuesTheDelete_whenOffline() =
+        runBlocking<Unit> {
+            val f = fixture()
+            f.createIntervalForTask() // succeeds online
+            f.remoteInterval.deleteFailWith = DataError.Remote.NO_INTERNET
+
+            f.intervalRepository.deleteTaskInterval("i1")
+
+            val ops = f.queue.all().filter { it.entityType == PendingSyncOperation.ENTITY_INTERVAL }
+            assertEquals(1, ops.size)
+            assertEquals(PendingSyncOperation.OP_DELETE, ops[0].operationType)
+            assertEquals("t1", ops[0].parentEntityId)
+        }
+
+    @Test
+    fun syncPendingIntervals_pushesQueuedIntervalDelete() =
+        runBlocking<Unit> {
+            val f = fixture()
+            f.createIntervalForTask()
+            f.remoteInterval.deleteFailWith = DataError.Remote.NO_INTERNET
+            f.intervalRepository.deleteTaskInterval("i1")
+
+            f.remoteInterval.deleteFailWith = null
+            f.intervalRepository.syncPendingIntervals()
+
+            // The interval row is gone locally, so the delete has to survive on the queued task id alone.
+            assertEquals(listOf("i1"), f.remoteInterval.deletedIntervalIds)
+            assertTrue(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_INTERVAL })
+        }
+
+    @Test
+    fun upsertTaskInterval_updatesAnExistingIntervalRatherThanCreatingIt() =
+        runBlocking<Unit> {
+            val f = fixture()
+            f.createIntervalForTask()
+
+            f.intervalRepository.updateTaskInterval(
+                f.db.intervals
+                    .getValue("i1")
+                    .copy(durationMillis = 5_000),
+            )
+
+            assertEquals(listOf("i1"), f.remoteInterval.updatedIntervalIds)
+            // Only the original startProjectTask create.
+            assertEquals(listOf("i1"), f.remoteInterval.postedIntervalIds)
+        }
 }

@@ -14,7 +14,4 @@ import com.jvcs.tracky.features.project.domain.models.TaskInterval
  * @param openedInterval the same row when this call created it, or null when an already-open one
  *   was reused — that row is already on the server, or already queued for it.
  */
-data class TaskTimerStart(
-    val interval: TaskInterval,
-    val openedInterval: TaskInterval?
-)
+data class TaskTimerStart(val interval: TaskInterval, val openedInterval: TaskInterval?)

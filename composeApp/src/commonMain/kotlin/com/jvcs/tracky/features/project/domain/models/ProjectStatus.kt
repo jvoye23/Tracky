@@ -4,13 +4,14 @@ enum class ProjectStatus {
     ACTIVE,
     FINISHED,
     ARCHIVED,
-    TRASHED
+    TRASHED,
 }
 
 val Project.status: ProjectStatus
-    get() = when {
-        trashedAt != null -> ProjectStatus.TRASHED
-        isFinished -> ProjectStatus.FINISHED
-        isArchived -> ProjectStatus.ARCHIVED
-        else -> ProjectStatus.ACTIVE
-    }
+    get() =
+        when {
+            trashedAt != null -> ProjectStatus.TRASHED
+            isFinished -> ProjectStatus.FINISHED
+            isArchived -> ProjectStatus.ARCHIVED
+            else -> ProjectStatus.ACTIVE
+        }

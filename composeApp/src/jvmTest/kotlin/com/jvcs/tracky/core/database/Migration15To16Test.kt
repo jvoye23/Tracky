@@ -51,7 +51,7 @@ class Migration15To16Test {
                 "`startDateTimeEpochMs` INTEGER NOT NULL, `isFinished` INTEGER NOT NULL, " +
                 "`useLightTextColor` INTEGER NOT NULL, `endDateTimeEpochMs` INTEGER, " +
                 "`isArchived` INTEGER NOT NULL, `trashedAtEpochMs` INTEGER, `isPinned` INTEGER NOT NULL, " +
-                "`updatedAtEpochMs` INTEGER, `sortIndex` INTEGER, PRIMARY KEY(`projectId`))"
+                "`updatedAtEpochMs` INTEGER, `sortIndex` INTEGER, PRIMARY KEY(`projectId`))",
         )
         connection.execSQL(
             "CREATE TABLE IF NOT EXISTS `project_records` (`recordId` TEXT NOT NULL, " +
@@ -60,11 +60,11 @@ class Migration15To16Test {
                 "`endDateTimeEpochMs` INTEGER, `isFinished` INTEGER NOT NULL, " +
                 "`isTimerRunning` INTEGER NOT NULL, `updatedAtEpochMs` INTEGER, PRIMARY KEY(`recordId`), " +
                 "FOREIGN KEY(`parentProjectId`) REFERENCES `projects`(`projectId`) " +
-                "ON UPDATE NO ACTION ON DELETE CASCADE )"
+                "ON UPDATE NO ACTION ON DELETE CASCADE )",
         )
         connection.execSQL(
             "CREATE INDEX IF NOT EXISTS `index_project_records_parentProjectId` " +
-                "ON `project_records` (`parentProjectId`)"
+                "ON `project_records` (`parentProjectId`)",
         )
         connection.execSQL(
             "CREATE TABLE IF NOT EXISTS `task_intervals` (`intervalId` TEXT NOT NULL, " +
@@ -74,15 +74,15 @@ class Migration15To16Test {
                 "FOREIGN KEY(`parentTaskId`) REFERENCES `project_records`(`recordId`) " +
                 "ON UPDATE NO ACTION ON DELETE CASCADE , " +
                 "FOREIGN KEY(`parentProjectId`) REFERENCES `projects`(`projectId`) " +
-                "ON UPDATE NO ACTION ON DELETE CASCADE )"
+                "ON UPDATE NO ACTION ON DELETE CASCADE )",
         )
         connection.execSQL(
             "CREATE INDEX IF NOT EXISTS `index_task_intervals_parentTaskId` " +
-                "ON `task_intervals` (`parentTaskId`)"
+                "ON `task_intervals` (`parentTaskId`)",
         )
         connection.execSQL(
             "CREATE INDEX IF NOT EXISTS `index_task_intervals_parentProjectId` " +
-                "ON `task_intervals` (`parentProjectId`)"
+                "ON `task_intervals` (`parentProjectId`)",
         )
         connection.execSQL(
             "CREATE TABLE IF NOT EXISTS `project_sub_tasks` (`projectSubTaskId` TEXT NOT NULL, " +
@@ -94,15 +94,15 @@ class Migration15To16Test {
                 "FOREIGN KEY(`parentProjectTaskId`) REFERENCES `project_records`(`recordId`) " +
                 "ON UPDATE NO ACTION ON DELETE CASCADE , " +
                 "FOREIGN KEY(`parentProjectId`) REFERENCES `projects`(`projectId`) " +
-                "ON UPDATE NO ACTION ON DELETE CASCADE )"
+                "ON UPDATE NO ACTION ON DELETE CASCADE )",
         )
         connection.execSQL(
             "CREATE INDEX IF NOT EXISTS `index_project_sub_tasks_parentProjectTaskId` " +
-                "ON `project_sub_tasks` (`parentProjectTaskId`)"
+                "ON `project_sub_tasks` (`parentProjectTaskId`)",
         )
         connection.execSQL(
             "CREATE INDEX IF NOT EXISTS `index_project_sub_tasks_parentProjectId` " +
-                "ON `project_sub_tasks` (`parentProjectId`)"
+                "ON `project_sub_tasks` (`parentProjectId`)",
         )
         connection.execSQL(
             "CREATE TABLE IF NOT EXISTS `sub_task_intervals` (`subTaskIntervalId` TEXT NOT NULL, " +
@@ -115,7 +115,7 @@ class Migration15To16Test {
                 "FOREIGN KEY(`parentTaskIntervalId`) REFERENCES `task_intervals`(`intervalId`) " +
                 "ON UPDATE NO ACTION ON DELETE CASCADE , " +
                 "FOREIGN KEY(`parentProjectId`) REFERENCES `projects`(`projectId`) " +
-                "ON UPDATE NO ACTION ON DELETE CASCADE )"
+                "ON UPDATE NO ACTION ON DELETE CASCADE )",
         )
     }
 
@@ -124,41 +124,59 @@ class Migration15To16Test {
     private fun insertProject(id: String) {
         connection.execSQL(
             "INSERT INTO projects (projectId, title, startDateTimeEpochMs, isFinished, " +
-                "useLightTextColor, isArchived, isPinned) VALUES ('$id', 'project-$id', 0, 0, 0, 0, 0)"
+                "useLightTextColor, isArchived, isPinned) VALUES ('$id', 'project-$id', 0, 0, 0, 0, 0)",
         )
     }
 
     /** v15 has no title column, so the task's title goes where it always went: description. */
-    private fun insertTask(id: String, projectId: String, title: String, updatedAt: Long?) {
+    private fun insertTask(
+        id: String,
+        projectId: String,
+        title: String,
+        updatedAt: Long?,
+    ) {
         connection.execSQL(
             "INSERT INTO project_records (recordId, parentProjectId, description, durationMillis, " +
                 "startDateTimeEpochMs, endDateTimeEpochMs, isFinished, isTimerRunning, updatedAtEpochMs) " +
-                "VALUES ('$id', '$projectId', '$title', 90000, 1000, 91000, 0, 1, ${updatedAt ?: "NULL"})"
+                "VALUES ('$id', '$projectId', '$title', 90000, 1000, 91000, 0, 1, ${updatedAt ?: "NULL"})",
         )
     }
 
-    private fun insertInterval(id: String, taskId: String, projectId: String) {
+    private fun insertInterval(
+        id: String,
+        taskId: String,
+        projectId: String,
+    ) {
         connection.execSQL(
             "INSERT INTO task_intervals (intervalId, parentTaskId, parentProjectId, " +
                 "startDateTimeEpochMs, endDateTimeEpochMs, durationMillis) " +
-                "VALUES ('$id', '$taskId', '$projectId', 1000, 91000, 90000)"
+                "VALUES ('$id', '$taskId', '$projectId', 1000, 91000, 90000)",
         )
     }
 
-    private fun insertSubTask(id: String, taskId: String, projectId: String) {
+    private fun insertSubTask(
+        id: String,
+        taskId: String,
+        projectId: String,
+    ) {
         connection.execSQL(
             "INSERT INTO project_sub_tasks (projectSubTaskId, parentProjectTaskId, parentProjectId, " +
                 "title, description, durationMillis, isTimerRunning, startDateTimeEpochMs, isFinished) " +
-                "VALUES ('$id', '$taskId', '$projectId', 'sub-$id', 'note-$id', 5000, 0, 0, 0)"
+                "VALUES ('$id', '$taskId', '$projectId', 'sub-$id', 'note-$id', 5000, 0, 0, 0)",
         )
     }
 
-    private fun insertSubTaskInterval(id: String, subTaskId: String, taskIntervalId: String, projectId: String) {
+    private fun insertSubTaskInterval(
+        id: String,
+        subTaskId: String,
+        taskIntervalId: String,
+        projectId: String,
+    ) {
         connection.execSQL(
             "INSERT INTO sub_task_intervals (subTaskIntervalId, parentSubTaskId, " +
                 "parentTaskIntervalId, parentProjectId, startDateTimeEpochMs, endDateTimeEpochMs, " +
                 "durationMillis, startedParentTimer) " +
-                "VALUES ('$id', '$subTaskId', '$taskIntervalId', '$projectId', 0, 5000, 5000, 1)"
+                "VALUES ('$id', '$subTaskId', '$taskIntervalId', '$projectId', 0, 5000, 5000, 1)",
         )
     }
 
@@ -219,7 +237,7 @@ class Migration15To16Test {
         assertEquals(
             listOf("projectTaskId"),
             queryStrings("SELECT name FROM pragma_table_info('project_tasks') WHERE pk = 1"),
-            "the primary key should have been renamed to projectTaskId"
+            "the primary key should have been renamed to projectTaskId",
         )
     }
 
@@ -231,7 +249,7 @@ class Migration15To16Test {
 
         assertEquals(
             "Write the report",
-            queryText("SELECT title FROM project_tasks WHERE projectTaskId = 't1'")
+            queryText("SELECT title FROM project_tasks WHERE projectTaskId = 't1'"),
         )
         // description held nothing but the title, so it starts the new schema empty rather than
         // carrying a duplicate the user never wrote.
@@ -245,11 +263,11 @@ class Migration15To16Test {
         assertEquals(
             1L,
             queryLong("SELECT \"notnull\" FROM pragma_table_info('project_tasks') WHERE name = 'title'"),
-            "a task without a title would be invisible in the list"
+            "a task without a title would be invisible in the list",
         )
         assertEquals(
             0L,
-            queryLong("SELECT \"notnull\" FROM pragma_table_info('project_tasks') WHERE name = 'description'")
+            queryLong("SELECT \"notnull\" FROM pragma_table_info('project_tasks') WHERE name = 'description'"),
         )
     }
 
@@ -281,7 +299,7 @@ class Migration15To16Test {
         assertEquals(1, countRows("SELECT count(*) FROM sub_task_intervals"))
         assertEquals(
             1L,
-            queryLong("SELECT startedParentTimer FROM sub_task_intervals WHERE subTaskIntervalId = 'si1'")
+            queryLong("SELECT startedParentTimer FROM sub_task_intervals WHERE subTaskIntervalId = 'si1'"),
         )
     }
 
@@ -294,17 +312,17 @@ class Migration15To16Test {
         assertTrue(
             queryStrings("SELECT \"table\" FROM pragma_foreign_key_list('task_intervals')")
                 .contains("project_tasks"),
-            "task_intervals should cascade from project_tasks"
+            "task_intervals should cascade from project_tasks",
         )
         assertTrue(
             queryStrings("SELECT \"table\" FROM pragma_foreign_key_list('project_sub_tasks')")
                 .contains("project_tasks"),
-            "project_sub_tasks should cascade from project_tasks"
+            "project_sub_tasks should cascade from project_tasks",
         )
         assertTrue(
             queryStrings("SELECT \"table\" FROM pragma_foreign_key_list('task_intervals')")
                 .none { it == "project_records" },
-            "no foreign key should still name project_records"
+            "no foreign key should still name project_records",
         )
     }
 
@@ -349,7 +367,7 @@ class Migration15To16Test {
         assertTrue(indices.contains("index_project_sub_tasks_parentProjectId"), "got: $indices")
         assertTrue(
             indices.none { it.contains("project_records") },
-            "the old index name should not survive the rename: $indices"
+            "the old index name should not survive the rename: $indices",
         )
     }
 }

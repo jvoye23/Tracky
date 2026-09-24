@@ -16,39 +16,39 @@ class ActiveTimerMapperTest {
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    private fun change(body: String) =
-        json.decodeFromString<ActiveTimerChangeDto>(body).toActiveTimerChange()
+    private fun change(body: String) = json.decodeFromString<ActiveTimerChangeDto>(body).toActiveTimerChange()
 
     @Test
     fun touchedRowsAreSplitByTheKindDiscriminator() {
         // One shape on the wire, two tables locally. Getting this wrong writes a subtask interval
         // into task_intervals, where its parent ids do not resolve.
-        val applied = change(
-            """
-            {
-              "touched": [
+        val applied =
+            change(
+                """
                 {
-                  "kind": "task",
-                  "id": "c6df0a86-0000-4000-8000-000000000004",
-                  "parentProjectId": "fcd1b6fd-0000-4000-8000-000000000002",
-                  "parentTaskId": "7947002a-0000-4000-8000-000000000003",
-                  "startDateTimeUtc": "2026-09-21T15:56:14.425Z",
-                  "endDateTimeUtc": "2026-09-21T15:56:16.284Z",
-                  "durationMillis": 1859,
-                  "startedByDeviceId": "25247336-0000-4000-8000-00000000000a"
-                },
-                {
-                  "kind": "sub_task",
-                  "id": "11111111-0000-4000-8000-000000000005",
-                  "parentProjectId": "fcd1b6fd-0000-4000-8000-000000000002",
-                  "parentSubTaskId": "22222222-0000-4000-8000-000000000006",
-                  "parentTaskIntervalId": "c6df0a86-0000-4000-8000-000000000004",
-                  "startDateTimeUtc": "2026-09-21T15:56:14.425Z"
+                  "touched": [
+                    {
+                      "kind": "task",
+                      "id": "c6df0a86-0000-4000-8000-000000000004",
+                      "parentProjectId": "fcd1b6fd-0000-4000-8000-000000000002",
+                      "parentTaskId": "7947002a-0000-4000-8000-000000000003",
+                      "startDateTimeUtc": "2026-09-21T15:56:14.425Z",
+                      "endDateTimeUtc": "2026-09-21T15:56:16.284Z",
+                      "durationMillis": 1859,
+                      "startedByDeviceId": "25247336-0000-4000-8000-00000000000a"
+                    },
+                    {
+                      "kind": "sub_task",
+                      "id": "11111111-0000-4000-8000-000000000005",
+                      "parentProjectId": "fcd1b6fd-0000-4000-8000-000000000002",
+                      "parentSubTaskId": "22222222-0000-4000-8000-000000000006",
+                      "parentTaskIntervalId": "c6df0a86-0000-4000-8000-000000000004",
+                      "startDateTimeUtc": "2026-09-21T15:56:14.425Z"
+                    }
+                  ]
                 }
-              ]
-            }
-            """.trimIndent()
-        )
+                """.trimIndent(),
+            )
 
         val closed = applied.touchedTaskIntervals.single()
         assertEquals("c6df0a86-0000-4000-8000-000000000004", closed.intervalId)
@@ -71,27 +71,28 @@ class ActiveTimerMapperTest {
         // Both parent ids back NOT NULL columns and cascading foreign keys, so such a row cannot
         // be written at all. Dropping it costs one row; throwing would cost the whole response,
         // including the rows that were fine.
-        val applied = change(
-            """
-            {
-              "touched": [
+        val applied =
+            change(
+                """
                 {
-                  "kind": "task",
-                  "id": "aaaa1111-0000-4000-8000-000000000007",
-                  "parentProjectId": "fcd1b6fd-0000-4000-8000-000000000002",
-                  "startDateTimeUtc": "2026-09-21T15:56:14.425Z"
-                },
-                {
-                  "kind": "sub_task",
-                  "id": "bbbb2222-0000-4000-8000-000000000008",
-                  "parentProjectId": "fcd1b6fd-0000-4000-8000-000000000002",
-                  "parentSubTaskId": "22222222-0000-4000-8000-000000000006",
-                  "startDateTimeUtc": "2026-09-21T15:56:14.425Z"
+                  "touched": [
+                    {
+                      "kind": "task",
+                      "id": "aaaa1111-0000-4000-8000-000000000007",
+                      "parentProjectId": "fcd1b6fd-0000-4000-8000-000000000002",
+                      "startDateTimeUtc": "2026-09-21T15:56:14.425Z"
+                    },
+                    {
+                      "kind": "sub_task",
+                      "id": "bbbb2222-0000-4000-8000-000000000008",
+                      "parentProjectId": "fcd1b6fd-0000-4000-8000-000000000002",
+                      "parentSubTaskId": "22222222-0000-4000-8000-000000000006",
+                      "startDateTimeUtc": "2026-09-21T15:56:14.425Z"
+                    }
+                  ]
                 }
-              ]
-            }
-            """.trimIndent()
-        )
+                """.trimIndent(),
+            )
 
         assertTrue(applied.touchedTaskIntervals.isEmpty())
         assertTrue(applied.touchedSubTaskIntervals.isEmpty())
@@ -117,23 +118,25 @@ class ActiveTimerMapperTest {
 
     @Test
     fun aConflictCarriesTheTimerThatIsActuallyRunning() {
-        val rejected = json.decodeFromString<ActiveTimerConflictDto>(
-            """
-            {
-              "code": "TIMER_CONFLICT",
-              "active": {
-                "intervalId": "d8bc4ae2-0000-4000-8000-000000000009",
-                "kind": "sub_task",
-                "parentProjectId": "4406e80a-0000-4000-8000-00000000000b",
-                "parentTaskId": "1f4d3070-0000-4000-8000-00000000000c",
-                "parentSubTaskId": "22222222-0000-4000-8000-000000000006",
-                "parentTaskIntervalId": "c6df0a86-0000-4000-8000-000000000004",
-                "startedAtUtc": "2026-09-21T16:07:15.289Z",
-                "serverNowUtc": "2026-09-21T16:07:15.927Z"
-              }
-            }
-            """.trimIndent()
-        ).toRejected()
+        val rejected =
+            json
+                .decodeFromString<ActiveTimerConflictDto>(
+                    """
+                    {
+                      "code": "TIMER_CONFLICT",
+                      "active": {
+                        "intervalId": "d8bc4ae2-0000-4000-8000-000000000009",
+                        "kind": "sub_task",
+                        "parentProjectId": "4406e80a-0000-4000-8000-00000000000b",
+                        "parentTaskId": "1f4d3070-0000-4000-8000-00000000000c",
+                        "parentSubTaskId": "22222222-0000-4000-8000-000000000006",
+                        "parentTaskIntervalId": "c6df0a86-0000-4000-8000-000000000004",
+                        "startedAtUtc": "2026-09-21T16:07:15.289Z",
+                        "serverNowUtc": "2026-09-21T16:07:15.927Z"
+                      }
+                    }
+                    """.trimIndent(),
+                ).toRejected()
 
         // What lets the losing device converge on the truth without a second round trip.
         assertEquals("d8bc4ae2-0000-4000-8000-000000000009", rejected.active?.intervalId)
@@ -144,9 +147,11 @@ class ActiveTimerMapperTest {
 
     @Test
     fun aRefusalToRestartAClosedIntervalNamesNoTimer() {
-        val rejected = json.decodeFromString<ActiveTimerConflictDto>(
-            """{"code":"TIMER_CONFLICT","active":null}"""
-        ).toRejected()
+        val rejected =
+            json
+                .decodeFromString<ActiveTimerConflictDto>(
+                    """{"code":"TIMER_CONFLICT","active":null}""",
+                ).toRejected()
 
         assertNull(rejected.active)
         assertNull(rejected.serverNow)
@@ -154,15 +159,16 @@ class ActiveTimerMapperTest {
 
     @Test
     fun aStartRequestSpellsTheKindTheWayTheServerDoes() {
-        val request = StartActiveTimer(
-            intervalId = "11111111-0000-4000-8000-000000000005",
-            kind = ActiveTimerKind.SUB_TASK,
-            parentTaskId = "7947002a-0000-4000-8000-000000000003",
-            parentSubTaskId = "22222222-0000-4000-8000-000000000006",
-            parentTaskIntervalId = "c6df0a86-0000-4000-8000-000000000004",
-            startedAt = Instant.parse("2026-09-21T15:56:14.425Z"),
-            deviceId = "25247336-0000-4000-8000-00000000000a"
-        ).toRequest()
+        val request =
+            StartActiveTimer(
+                intervalId = "11111111-0000-4000-8000-000000000005",
+                kind = ActiveTimerKind.SUB_TASK,
+                parentTaskId = "7947002a-0000-4000-8000-000000000003",
+                parentSubTaskId = "22222222-0000-4000-8000-000000000006",
+                parentTaskIntervalId = "c6df0a86-0000-4000-8000-000000000004",
+                startedAt = Instant.parse("2026-09-21T15:56:14.425Z"),
+                deviceId = "25247336-0000-4000-8000-00000000000a",
+            ).toRequest()
 
         assertEquals("sub_task", request.kind)
         assertEquals("2026-09-21T15:56:14.425Z", request.startedAtUtc)

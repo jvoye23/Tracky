@@ -10,17 +10,15 @@ import kotlin.time.Instant
 
 class RunningTimerTest {
 
-    private fun timer(
-        startedAt: Instant = Instant.fromEpochMilliseconds(0),
-        bankedDuration: Duration = Duration.ZERO
-    ) = RunningTimer(
-        project = ProjectRef(id = "p1", title = "Tracky App Redesign", colorArgb = null),
-        useLightTextColor = false,
-        task = TaskRef(id = "t1", title = "Token refresh"),
-        subTask = null,
-        startedAt = startedAt,
-        bankedDuration = bankedDuration
-    )
+    private fun timer(startedAt: Instant = Instant.fromEpochMilliseconds(0), bankedDuration: Duration = Duration.ZERO) =
+        RunningTimer(
+            project = ProjectRef(id = "p1", title = "Tracky App Redesign", colorArgb = null),
+            useLightTextColor = false,
+            task = TaskRef(id = "t1", title = "Token refresh"),
+            subTask = null,
+            startedAt = startedAt,
+            bankedDuration = bankedDuration,
+        )
 
     @Test
     fun elapsedAddsTheOpenSpanToWhatIsAlreadyBanked() {

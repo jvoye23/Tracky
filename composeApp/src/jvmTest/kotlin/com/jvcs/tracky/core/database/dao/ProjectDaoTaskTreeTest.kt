@@ -32,10 +32,12 @@ class ProjectDaoTaskTreeTest {
 
     @BeforeTest
     fun setUp() {
-        db = Room.inMemoryDatabaseBuilder<TrackyDatabase>()
-            .setDriver(BundledSQLiteDriver())
-            .setQueryCoroutineContext(Dispatchers.IO)
-            .build()
+        db =
+            Room
+                .inMemoryDatabaseBuilder<TrackyDatabase>()
+                .setDriver(BundledSQLiteDriver())
+                .setQueryCoroutineContext(Dispatchers.IO)
+                .build()
         dao = db.projectDao
     }
 
@@ -61,7 +63,7 @@ class ProjectDaoTaskTreeTest {
                 isPinned = false,
                 updatedAtEpochMs = null,
                 sortIndex = null,
-            )
+            ),
         )
         dao.upsertProjectTask(
             ProjectTaskEntity(
@@ -75,7 +77,7 @@ class ProjectDaoTaskTreeTest {
                 isFinished = false,
                 isTimerRunning = false,
                 updatedAtEpochMs = null,
-            )
+            ),
         )
         // A second task with no subtasks: the relation must not spill s1/s2 onto it.
         dao.upsertProjectTask(
@@ -90,7 +92,7 @@ class ProjectDaoTaskTreeTest {
                 isFinished = false,
                 isTimerRunning = false,
                 updatedAtEpochMs = null,
-            )
+            ),
         )
         dao.upsertTaskInterval(
             TaskIntervalEntity(
@@ -100,7 +102,7 @@ class ProjectDaoTaskTreeTest {
                 startDateTimeEpochMs = 0,
                 endDateTimeEpochMs = 5_000,
                 durationMillis = 5_000,
-            )
+            ),
         )
         listOf("s1", "s2").forEach { subTaskId ->
             dao.upsertProjectSubTask(
@@ -116,7 +118,7 @@ class ProjectDaoTaskTreeTest {
                     endDateTimeEpochMs = null,
                     isFinished = false,
                     updatedAtEpochMs = null,
-                )
+                ),
             )
         }
         dao.upsertSubTaskInterval(
@@ -128,41 +130,44 @@ class ProjectDaoTaskTreeTest {
                 startDateTimeEpochMs = 0,
                 endDateTimeEpochMs = 3_000,
                 durationMillis = 3_000,
+            ),
+        )
+    }
+
+    @Test
+    fun `getProjectWithTaskTreeById returns tasks hydrated with their subtasks`() =
+        runBlocking {
+            seedTree()
+
+            val tree = assertNotNull(dao.getProjectWithTaskTreeById("p1"))
+
+            assertEquals("p1", tree.project.projectId)
+            assertEquals(2, tree.projectTasks.size)
+
+            val task = assertNotNull(tree.projectTasks.find { it.task.projectTaskId == "t1" })
+            assertEquals(
+                listOf("s1", "s2"),
+                task.subTasks.map { it.subTask.projectSubTaskId }.sorted(),
             )
-        )
-    }
+            assertEquals(listOf("ti1"), task.intervals.map { it.intervalId })
+
+            val subTaskWithIntervals =
+                assertNotNull(
+                    task.subTasks.find { it.subTask.projectSubTaskId == "s1" },
+                )
+            assertEquals(listOf("si1"), subTaskWithIntervals.intervals.map { it.subTaskIntervalId })
+            assertTrue(subTaskWithIntervals.intervals.single().durationMillis > 0)
+        }
 
     @Test
-    fun `getProjectWithTaskTreeById returns tasks hydrated with their subtasks`() = runBlocking {
-        seedTree()
+    fun `getProjectWithTaskTreeById leaves a task without subtasks empty`() =
+        runBlocking {
+            seedTree()
 
-        val tree = assertNotNull(dao.getProjectWithTaskTreeById("p1"))
+            val tree = assertNotNull(dao.getProjectWithTaskTreeById("p1"))
+            val task = assertNotNull(tree.projectTasks.find { it.task.projectTaskId == "t2" })
 
-        assertEquals("p1", tree.project.projectId)
-        assertEquals(2, tree.projectTasks.size)
-
-        val task = assertNotNull(tree.projectTasks.find { it.task.projectTaskId == "t1" })
-        assertEquals(
-            listOf("s1", "s2"),
-            task.subTasks.map { it.subTask.projectSubTaskId }.sorted()
-        )
-        assertEquals(listOf("ti1"), task.intervals.map { it.intervalId })
-
-        val subTaskWithIntervals = assertNotNull(
-            task.subTasks.find { it.subTask.projectSubTaskId == "s1" }
-        )
-        assertEquals(listOf("si1"), subTaskWithIntervals.intervals.map { it.subTaskIntervalId })
-        assertTrue(subTaskWithIntervals.intervals.single().durationMillis > 0)
-    }
-
-    @Test
-    fun `getProjectWithTaskTreeById leaves a task without subtasks empty`() = runBlocking {
-        seedTree()
-
-        val tree = assertNotNull(dao.getProjectWithTaskTreeById("p1"))
-        val task = assertNotNull(tree.projectTasks.find { it.task.projectTaskId == "t2" })
-
-        assertTrue(task.subTasks.isEmpty())
-        assertTrue(task.intervals.isEmpty())
-    }
+            assertTrue(task.subTasks.isEmpty())
+            assertTrue(task.intervals.isEmpty())
+        }
 }

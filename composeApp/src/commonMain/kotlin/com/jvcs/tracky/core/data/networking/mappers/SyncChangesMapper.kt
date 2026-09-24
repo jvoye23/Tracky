@@ -19,30 +19,36 @@ import kotlin.time.Instant
  * A timestamp the server sends but the client cannot parse is treated as absent for the same
  * reason. The cursor is the only field whose absence is fatal, and it is non-null on the wire.
  */
-fun SyncChangesDto.toSyncChanges(): SyncChanges = SyncChanges(
-    cursor = cursor,
-    serverNow = serverNowUtc?.let { runCatching { Instant.parse(it) }.getOrNull() },
-    fullResyncRequired = fullResyncRequired,
-    hasMore = hasMore,
-    projects = projects.map { it.toProject() },
-    tasks = tasks.mapNotNull { dto ->
-        dto.parentProjectId?.let { dto.toProjectTask(it) }
-    },
-    taskIntervals = taskIntervals.mapNotNull { dto ->
-        dto.parentProjectId?.let { dto.toTaskInterval(it, dto.startedByDeviceId) }
-    },
-    subTasks = subTasks.mapNotNull { dto ->
-        dto.parentProjectId?.let { dto.toProjectSubTask(it) }
-    },
-    subTaskIntervals = subTaskIntervals.mapNotNull { dto ->
-        dto.parentProjectId?.let {
-            dto.toSubTaskInterval(it, startedParentTimer = false, dto.startedByDeviceId)
-        }
-    },
-    tombstones = tombstones.map { it.toTombstone() }
-)
+fun SyncChangesDto.toSyncChanges(): SyncChanges =
+    SyncChanges(
+        cursor = cursor,
+        serverNow = serverNowUtc?.let { runCatching { Instant.parse(it) }.getOrNull() },
+        fullResyncRequired = fullResyncRequired,
+        hasMore = hasMore,
+        projects = projects.map { it.toProject() },
+        tasks =
+            tasks.mapNotNull { dto ->
+                dto.parentProjectId?.let { dto.toProjectTask(it) }
+            },
+        taskIntervals =
+            taskIntervals.mapNotNull { dto ->
+                dto.parentProjectId?.let { dto.toTaskInterval(it, dto.startedByDeviceId) }
+            },
+        subTasks =
+            subTasks.mapNotNull { dto ->
+                dto.parentProjectId?.let { dto.toProjectSubTask(it) }
+            },
+        subTaskIntervals =
+            subTaskIntervals.mapNotNull { dto ->
+                dto.parentProjectId?.let {
+                    dto.toSubTaskInterval(it, startedParentTimer = false, dto.startedByDeviceId)
+                }
+            },
+        tombstones = tombstones.map { it.toTombstone() },
+    )
 
-fun TombstoneDto.toTombstone(): Tombstone = Tombstone(
-    entityType = entityType,
-    entityId = entityId
-)
+fun TombstoneDto.toTombstone(): Tombstone =
+    Tombstone(
+        entityType = entityType,
+        entityId = entityId,
+    )

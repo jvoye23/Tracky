@@ -14,13 +14,12 @@ import kotlin.time.Duration.Companion.seconds
  * tracked. Whole seconds rather than centiseconds because the notification cannot redraw a hundred
  * times a second, and the two clocks must show the same characters.
  */
-fun formatDuration(duration: Duration): String {
-    return duration.toComponents { hours, minutes, seconds, _ ->
+fun formatDuration(duration: Duration): String =
+    duration.toComponents { hours, minutes, seconds, _ ->
         "${hours.toString().padStart(2, '0')}:" +
-                "${minutes.toString().padStart(2, '0')}:" +
-                seconds.toString().padStart(2, '0')
+            "${minutes.toString().padStart(2, '0')}:" +
+            seconds.toString().padStart(2, '0')
     }
-}
 
 /**
  * The inverse of [formatDuration]. Accepts the four-segment "HH:mm:ss:cc" form too, so strings
@@ -36,9 +35,12 @@ fun parseDuration(timeString: String): Duration {
     val hours = parts[0].toLongOrNull() ?: return Duration.ZERO
     val minutes = parts[1].toLongOrNull() ?: return Duration.ZERO
     val seconds = parts[2].toLongOrNull() ?: return Duration.ZERO
-    val centiseconds = if (parts.size == 4) {
-        parts[3].toLongOrNull() ?: return Duration.ZERO
-    } else 0L
+    val centiseconds =
+        if (parts.size == 4) {
+            parts[3].toLongOrNull() ?: return Duration.ZERO
+        } else {
+            0L
+        }
 
     return hours.hours + minutes.minutes + seconds.seconds + (centiseconds * 10).milliseconds
 }
@@ -47,18 +49,16 @@ fun parseDuration(timeString: String): Duration {
  * "HH:mm", e.g. `01:00` — a coarse read of a duration. Seconds are truncated, not rounded:
  * rounding 00:59:30 up to 01:00 would claim a full hour that was never tracked.
  */
-fun formatDurationHoursMinutes(duration: Duration): String {
-    return duration.toComponents { hours, minutes, _, _ ->
+fun formatDurationHoursMinutes(duration: Duration): String =
+    duration.toComponents { hours, minutes, _, _ ->
         "${hours.toString().padStart(2, '0')}:" +
-                minutes.toString().padStart(2, '0')
+            minutes.toString().padStart(2, '0')
     }
-}
 
 /** "HH:mm:ss", e.g. `00:04:02` — [formatDuration] without the centiseconds. */
-fun formatDurationHoursMinutesSeconds(duration: Duration): String {
-    return duration.toComponents { hours, minutes, seconds, _ ->
+fun formatDurationHoursMinutesSeconds(duration: Duration): String =
+    duration.toComponents { hours, minutes, seconds, _ ->
         "${hours.toString().padStart(2, '0')}:" +
-                "${minutes.toString().padStart(2, '0')}:" +
-                seconds.toString().padStart(2, '0')
+            "${minutes.toString().padStart(2, '0')}:" +
+            seconds.toString().padStart(2, '0')
     }
-}

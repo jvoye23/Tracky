@@ -15,6 +15,8 @@ interface LocalSubTaskIntervalDataSource {
      * state when it finally drains — and a missing row is how the drain knows to drop the op.
      */
     suspend fun getSubTaskIntervalById(intervalId: String): Result<SubTaskInterval?, DataError.Local>
+
     suspend fun getOpenIntervalBySubTaskId(subTaskId: String): Result<SubTaskInterval?, DataError.Local>
+
     suspend fun deleteSubTaskInterval(intervalId: String): EmptyResult<DataError.Local>
 }

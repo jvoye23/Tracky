@@ -3,8 +3,10 @@ package com.jvcs.tracky.features.project.presentation.edit_text
 import com.jvcs.tracky.design_system.util.UiText
 
 sealed interface EditTextEvent {
-    data object OnSavedSuccess: EditTextEvent
+    data object OnSavedSuccess : EditTextEvent
+
     /** A new subtask was created; there is nothing left to edit here. */
-    data object NavigateBack: EditTextEvent
-    data class Error(val error: UiText): EditTextEvent
+    data object NavigateBack : EditTextEvent
+
+    data class Error(val error: UiText) : EditTextEvent
 }

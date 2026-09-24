@@ -16,9 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.yield
 
 /** A change feed that always answers with an empty page, and counts how often it was asked. */
-internal class CountingRemoteSyncDataSource(
-    private var failures: Int = 0
-) : RemoteSyncDataSource {
+internal class CountingRemoteSyncDataSource(private var failures: Int = 0) : RemoteSyncDataSource {
 
     var calls = 0
         private set
@@ -51,8 +49,8 @@ internal class CountingRemoteSyncDataSource(
                 taskIntervals = emptyList(),
                 subTasks = emptyList(),
                 subTaskIntervals = emptyList(),
-                tombstones = emptyList()
-            )
+                tombstones = emptyList(),
+            ),
         )
     }
 }
@@ -63,20 +61,21 @@ internal fun testDeltaSyncApplier(
     timeProvider: TimeProvider = FakeTimeProvider(),
     syncRecency: SyncRecency = SyncRecency(),
     cursorStore: SyncCursorStore = FakeSyncCursorStore(),
-    local: FakeLocalProjectDataSource = FakeLocalProjectDataSource()
+    local: FakeLocalProjectDataSource = FakeLocalProjectDataSource(),
 ) = DeltaSyncApplier(
     remoteSyncDataSource = remote,
     localProjectDataSource = local,
-    projectRepository = OfflineFirstProjectRepository(
-        localProjectDataSource = local,
-        remoteProjectDataSource = FakeRemoteProjectDataSource(),
-        pendingSyncDataSource = FakePendingSyncDataSource(),
-        syncScheduler = FakeSyncScheduler(),
-        applicationScope = CoroutineScope(Dispatchers.Unconfined),
-        timeProvider = timeProvider
-    ),
+    projectRepository =
+        OfflineFirstProjectRepository(
+            localProjectDataSource = local,
+            remoteProjectDataSource = FakeRemoteProjectDataSource(),
+            pendingSyncDataSource = FakePendingSyncDataSource(),
+            syncScheduler = FakeSyncScheduler(),
+            applicationScope = CoroutineScope(Dispatchers.Unconfined),
+            timeProvider = timeProvider,
+        ),
     syncCursorStore = cursorStore,
     serverClock = ServerClock(timeProvider, FakeServerClockOffsetStore()),
     timeProvider = timeProvider,
-    syncRecency = syncRecency
+    syncRecency = syncRecency,
 )

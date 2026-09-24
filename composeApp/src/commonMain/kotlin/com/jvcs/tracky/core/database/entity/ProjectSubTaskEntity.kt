@@ -12,7 +12,7 @@ import androidx.room.PrimaryKey
             entity = ProjectTaskEntity::class,
             parentColumns = ["projectTaskId"],
             childColumns = ["parentProjectTaskId"],
-            onDelete = ForeignKey.CASCADE // Deleting a task will delete the subtasks under it
+            onDelete = ForeignKey.CASCADE, // Deleting a task will delete the subtasks under it
         ),
         // parentProjectId is denormalised rather than derived through the task, for the same reason
         // task_intervals carries it: it makes the project a direct parent of its subtasks, so a
@@ -21,11 +21,11 @@ import androidx.room.PrimaryKey
             entity = ProjectEntity::class,
             parentColumns = ["projectId"],
             childColumns = ["parentProjectId"],
-            onDelete = ForeignKey.CASCADE // Deleting a project will delete all associated subtasks
-        )
+            onDelete = ForeignKey.CASCADE, // Deleting a project will delete all associated subtasks
+        ),
     ],
     // Indexing the foreign keys is a best practice for performance
-    indices = [Index(value = ["parentProjectTaskId"]), Index(value = ["parentProjectId"])]
+    indices = [Index(value = ["parentProjectTaskId"]), Index(value = ["parentProjectId"])],
 )
 data class ProjectSubTaskEntity(
     @PrimaryKey(autoGenerate = false)

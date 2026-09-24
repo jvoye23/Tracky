@@ -19,35 +19,42 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class ForgotPasswordViewModel(
-    private val authService: AuthService
-) : ViewModel() {
+class ForgotPasswordViewModel(private val authService: AuthService) : ViewModel() {
 
     private var hasLoadedInitialData = false
 
     private val _state = MutableStateFlow(ForgotPasswordState())
-    val state = _state
-        .onStart {
-            if (!hasLoadedInitialData) {
-                observeTextStates()
-                hasLoadedInitialData = true
-            }
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), ForgotPasswordState())
+    val state =
+        _state
+            .onStart {
+                if (!hasLoadedInitialData) {
+                    observeTextStates()
+                    hasLoadedInitialData = true
+                }
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), ForgotPasswordState())
 
-    private val isEmailValidFlow = snapshotFlow { _state.value.emailTextFieldState.text.toString() }
-        .map { EmailValidator.validate(it) }
-        .distinctUntilChanged()
+    private val isEmailValidFlow =
+        snapshotFlow {
+            _state.value.emailTextFieldState.text
+                .toString()
+        }.map { EmailValidator.validate(it) }
+            .distinctUntilChanged()
 
     private val isLoadingFlow = _state.map { it.isLoading }.distinctUntilChanged()
 
     fun onAction(action: ForgotPasswordAction) {
         when (action) {
-            ForgotPasswordAction.OnSubmitClick -> submit()
+            ForgotPasswordAction.OnSubmitClick -> {
+                submit()
+            }
+
             ForgotPasswordAction.OnResendClick -> {
                 _state.update { it.copy(isEmailSentSuccessfully = false) }
             }
-            else -> Unit
+
+            else -> {
+                Unit
+            }
         }
     }
 
@@ -61,13 +68,16 @@ class ForgotPasswordViewModel(
         if (!state.value.canSubmit) return
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, errorText = null) }
-            authService.forgotPassword(
-                email = state.value.emailTextFieldState.text.toString()
-            ).onSuccess {
-                _state.update { it.copy(isLoading = false, isEmailSentSuccessfully = true) }
-            }.onFailure { error ->
-                _state.update { it.copy(errorText = error.toUiText(), isLoading = false) }
-            }
+            authService
+                .forgotPassword(
+                    email =
+                        state.value.emailTextFieldState.text
+                            .toString(),
+                ).onSuccess {
+                    _state.update { it.copy(isLoading = false, isEmailSentSuccessfully = true) }
+                }.onFailure { error ->
+                    _state.update { it.copy(errorText = error.toUiText(), isLoading = false) }
+                }
         }
     }
 }

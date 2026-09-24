@@ -16,9 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
  * need to be Parcelable, and the service would have to survive being handed a stale one. Here the
  * service reads the current value and re-reads it on every change.
  */
-class AndroidTimerNotificationController(
-    private val context: Context
-) : TimerNotificationController {
+class AndroidTimerNotificationController(private val context: Context) : TimerNotificationController {
 
     private val _session = MutableStateFlow<TimerNotificationSession?>(null)
     val session: StateFlow<TimerNotificationSession?> = _session.asStateFlow()
@@ -31,7 +29,7 @@ class AndroidTimerNotificationController(
         if (!alreadyShowing) {
             ContextCompat.startForegroundService(
                 context,
-                Intent(context, TimerNotificationService::class.java)
+                Intent(context, TimerNotificationService::class.java),
             )
         }
     }
@@ -48,7 +46,7 @@ class AndroidTimerNotificationController(
         if (_session.value == null) return
         ContextCompat.startForegroundService(
             context,
-            Intent(context, TimerNotificationService::class.java)
+            Intent(context, TimerNotificationService::class.java),
         )
     }
 

@@ -32,7 +32,7 @@ import dev.icerock.moko.permissions.notifications.REMOTE_NOTIFICATION
  */
 class AndroidTimerNotificationPermissionRequester(
     private val applicationContext: Context,
-    private val notificationController: AndroidTimerNotificationController
+    private val notificationController: AndroidTimerNotificationController,
 ) : TimerNotificationPermissionRequester {
 
     private val controller = PermissionsController(applicationContext)
@@ -52,9 +52,11 @@ class AndroidTimerNotificationPermissionRequester(
      */
     fun bind(activity: ComponentActivity) {
         controller.bind(activity)
-        activity.lifecycle.addObserver(object : DefaultLifecycleObserver {
-            override fun onResume(owner: LifecycleOwner) = onReturnToApp()
-        })
+        activity.lifecycle.addObserver(
+            object : DefaultLifecycleObserver {
+                override fun onResume(owner: LifecycleOwner) = onReturnToApp()
+            },
+        )
     }
 
     /**
@@ -70,10 +72,11 @@ class AndroidTimerNotificationPermissionRequester(
         notificationController.repost()
     }
 
-    private fun isGranted(): Boolean = ContextCompat.checkSelfPermission(
-        applicationContext,
-        Manifest.permission.POST_NOTIFICATIONS
-    ) == PackageManager.PERMISSION_GRANTED
+    private fun isGranted(): Boolean =
+        ContextCompat.checkSelfPermission(
+            applicationContext,
+            Manifest.permission.POST_NOTIFICATIONS,
+        ) == PackageManager.PERMISSION_GRANTED
 
     override suspend fun request(): TimerNotificationPermission {
         // Checked first so an already-granted permission never round-trips through the launcher -

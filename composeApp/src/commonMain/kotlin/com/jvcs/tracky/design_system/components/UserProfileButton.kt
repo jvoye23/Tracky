@@ -39,9 +39,11 @@ fun getInitials(username: String): String {
     }
 
     // Try splitting by camelCase boundary
-    val camelParts = username.replace(Regex("([a-z])([A-Z])"), "$1 $2")
-        .split(" ")
-        .filter { it.isNotEmpty() }
+    val camelParts =
+        username
+            .replace(Regex("([a-z])([A-Z])"), "$1 $2")
+            .split(" ")
+            .filter { it.isNotEmpty() }
     if (camelParts.size >= 2) {
         return "${camelParts[0].first()}${camelParts[1].first()}".uppercase()
     }
@@ -55,42 +57,43 @@ fun UserProfileButton(
     username: String,
     email: String,
     onLogoutClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
     val initials = remember(username) { getInitials(username) }
 
     Box(modifier = modifier) {
         Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primary)
-                .clickable { expanded = true },
-            contentAlignment = Alignment.Center
+            modifier =
+                Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary)
+                    .clickable { expanded = true },
+            contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = initials,
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onPrimary,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
             )
         }
 
         DropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false }
+            onDismissRequest = { expanded = false },
         ) {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Text(
                     text = username,
                     style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
                 Text(
                     text = email,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             HorizontalDivider()
@@ -103,9 +106,9 @@ fun UserProfileButton(
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Logout,
-                        contentDescription = null
+                        contentDescription = null,
                     )
-                }
+                },
             )
         }
     }

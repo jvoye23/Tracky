@@ -22,28 +22,30 @@ fun TrackyCheckbox(
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val borderColor = if (checked) {
-        MaterialTheme.colorScheme.primary
-    } else {
-        MaterialTheme.colorScheme.outline
-    }
-    val backgroundColor = if (checked) {
-        MaterialTheme.colorScheme.primary
-    } else {
-        Color.Transparent
-    }
+    val borderColor =
+        if (checked) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.outline
+        }
+    val backgroundColor =
+        if (checked) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            Color.Transparent
+        }
 
     Box(
-        modifier = modifier
-            .size(22.dp)
-            .clip(RoundedCornerShape(6.dp))
-            .background(backgroundColor)
-            .border(
-                width = 2.dp,
-                color = borderColor,
-                shape = RoundedCornerShape(6.dp),
-            )
-            .clickable { onCheckedChange(!checked) },
+        modifier =
+            modifier
+                .size(22.dp)
+                .clip(RoundedCornerShape(6.dp))
+                .background(backgroundColor)
+                .border(
+                    width = 2.dp,
+                    color = borderColor,
+                    shape = RoundedCornerShape(6.dp),
+                ).clickable { onCheckedChange(!checked) },
         contentAlignment = Alignment.Center,
     ) {
         if (checked) {

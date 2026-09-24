@@ -16,13 +16,13 @@ data class TaskWithSubTasks(
     @Embedded val task: ProjectTaskEntity,
     @Relation(
         parentColumn = "projectTaskId",
-        entityColumn = "parentTaskId"
+        entityColumn = "parentTaskId",
     )
     val intervals: List<TaskIntervalEntity>,
     @Relation(
         entity = ProjectSubTaskEntity::class,
         parentColumn = "projectTaskId",
-        entityColumn = "parentProjectTaskId"
+        entityColumn = "parentProjectTaskId",
     )
-    val subTasks: List<SubTaskWithIntervals>
+    val subTasks: List<SubTaskWithIntervals>,
 )

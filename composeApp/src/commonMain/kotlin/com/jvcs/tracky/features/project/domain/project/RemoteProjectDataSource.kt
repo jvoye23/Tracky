@@ -12,9 +12,13 @@ interface RemoteProjectDataSource {
      * is no separate remote read for them anywhere in the feature.
      */
     suspend fun getProjects(): Result<List<Project>, DataError.Remote>
+
     suspend fun postProject(project: Project): Result<Project, DataError.Remote>
+
     suspend fun updateProject(project: Project): Result<Project, DataError.Remote>
+
     suspend fun deleteProject(projectId: String): EmptyResult<DataError.Remote>
+
     /** Pushes a whole reorder as one call: only the moved projects, one shared updatedAt. */
     suspend fun reorderProjects(indices: Map<String, Long>, updatedAt: Instant): EmptyResult<DataError.Remote>
 }

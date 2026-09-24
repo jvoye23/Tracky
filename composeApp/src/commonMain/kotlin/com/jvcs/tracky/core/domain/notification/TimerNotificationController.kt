@@ -19,5 +19,6 @@ interface TimerNotificationController {
 /** For JVM, and for platforms before their surface is wired up. */
 class NoOpTimerNotificationController : TimerNotificationController {
     override suspend fun show(session: TimerNotificationSession) = Unit
+
     override suspend fun dismiss() = Unit
 }

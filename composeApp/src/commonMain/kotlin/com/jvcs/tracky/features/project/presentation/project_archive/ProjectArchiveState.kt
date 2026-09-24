@@ -8,12 +8,15 @@ data class ProjectArchiveState(
     val searchQuery: String = "",
     val isEditModeActive: Boolean = false,
     val selectedProjectIds: Set<String> = emptySet(),
-    val isDeleteConfirmationDialogVisible: Boolean = false
+    val isDeleteConfirmationDialogVisible: Boolean = false,
 ) {
     val filteredProjects: List<ProjectUi>?
-        get() = projects?.let { list ->
-            if (searchQuery.isBlank()) list
-            else list.filter { it.title.contains(searchQuery, ignoreCase = true) }
-        }
-
+        get() =
+            projects?.let { list ->
+                if (searchQuery.isBlank()) {
+                    list
+                } else {
+                    list.filter { it.title.contains(searchQuery, ignoreCase = true) }
+                }
+            }
 }

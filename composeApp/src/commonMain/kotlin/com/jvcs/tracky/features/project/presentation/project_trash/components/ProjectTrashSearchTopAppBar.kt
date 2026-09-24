@@ -46,7 +46,7 @@ fun ProjectTrashSearchTopAppBar(
                 Icon(
                     imageVector = Icons.Default.Menu,
                     contentDescription = stringResource(Res.string.navigation_menu),
-                    tint = MaterialTheme.colorScheme.onSurface
+                    tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
         },
@@ -56,13 +56,13 @@ fun ProjectTrashSearchTopAppBar(
                 Icon(
                     imageVector = if (state.isSearchActive) Icons.Default.Close else Icons.Default.Search,
                     contentDescription = stringResource(Res.string.search_in_trash),
-                    tint = MaterialTheme.colorScheme.onSurface
+                    tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
         },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        modifier = modifier
+        colors =
+            TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        modifier = modifier,
     )
 }
 
@@ -87,9 +87,10 @@ private fun SearchActivePreview() {
         ProjectTrashSearchTopAppBar(
             title = stringResource(Res.string.trash_title),
             onAction = {},
-            state = ProjectTrashState(
-                isSearchActive = true
-            ),
+            state =
+                ProjectTrashState(
+                    isSearchActive = true,
+                ),
             onMenuClick = {},
             scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(),
         )

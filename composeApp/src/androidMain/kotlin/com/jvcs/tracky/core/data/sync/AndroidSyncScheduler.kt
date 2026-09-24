@@ -12,37 +12,39 @@ import androidx.work.WorkManager
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
 import java.util.concurrent.TimeUnit
 
-class AndroidSyncScheduler(
-    private val context: Context
-) : SyncScheduler {
+class AndroidSyncScheduler(private val context: Context) : SyncScheduler {
 
     private val workManager get() = WorkManager.getInstance(context)
 
     override suspend fun schedulePeriodicSync() {
-        val request = PeriodicWorkRequestBuilder<SyncWorker>(6, TimeUnit.HOURS)
-            .setConstraints(
-                Constraints.Builder()
-                    .setRequiredNetworkType(NetworkType.CONNECTED)
-                    .build()
-            )
-            .build()
+        val request =
+            PeriodicWorkRequestBuilder<SyncWorker>(6, TimeUnit.HOURS)
+                .setConstraints(
+                    Constraints
+                        .Builder()
+                        .setRequiredNetworkType(NetworkType.CONNECTED)
+                        .build(),
+                ).build()
 
         // KEEP so rapid successive writes coalesce into a single queued sync.
         workManager.enqueueUniquePeriodicWork(SyncWorker.WORK_NAME, ExistingPeriodicWorkPolicy.KEEP, request)
     }
 
     override suspend fun schedulePeriodicSyncOnStart() {
-        val request = PeriodicWorkRequestBuilder<SyncWorker>(15, TimeUnit.MINUTES)
-            .setConstraints(
-                Constraints.Builder()
-                    .setRequiredNetworkType(NetworkType.CONNECTED)
-                    .build()
-            )
-            .build()
+        val request =
+            PeriodicWorkRequestBuilder<SyncWorker>(15, TimeUnit.MINUTES)
+                .setConstraints(
+                    Constraints
+                        .Builder()
+                        .setRequiredNetworkType(NetworkType.CONNECTED)
+                        .build(),
+                ).build()
 
         // KEEP so re-enqueuing on every app start is idempotent and preserves the running period.
         workManager.enqueueUniquePeriodicWork(
-            SyncWorker.PERIODIC_WORK_NAME, ExistingPeriodicWorkPolicy.KEEP, request
+            SyncWorker.PERIODIC_WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            request,
         )
     }
 

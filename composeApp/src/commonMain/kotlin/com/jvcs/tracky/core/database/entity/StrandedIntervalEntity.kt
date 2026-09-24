@@ -29,5 +29,5 @@ data class StrandedIntervalEntity(
      * When the app noticed. Also the proposed end: freezing it here is what stops the duration the
      * dialog offers from growing while the dialog sits unanswered.
      */
-    val detectedAtEpochMs: Long
+    val detectedAtEpochMs: Long,
 )

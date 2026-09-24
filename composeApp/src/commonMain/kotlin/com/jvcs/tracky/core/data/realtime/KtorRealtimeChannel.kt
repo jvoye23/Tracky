@@ -15,8 +15,8 @@ import io.ktor.websocket.WebSocketSession
 import io.ktor.websocket.close
 import io.ktor.websocket.readText
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.map
 
@@ -32,7 +32,7 @@ import kotlinx.coroutines.flow.map
 class KtorRealtimeChannel(
     private val httpClient: HttpClient,
     /** Null when no base URL was configured; the connection then never tries. */
-    private val url: String?
+    private val url: String?,
 ) : RealtimeChannel {
 
     override suspend fun open(): Result<RealtimeSession, DataError.Remote> {
@@ -53,12 +53,11 @@ class KtorRealtimeChannel(
     }
 }
 
-private class KtorRealtimeSession(
-    private val session: WebSocketSession
-) : RealtimeSession {
+private class KtorRealtimeSession(private val session: WebSocketSession) : RealtimeSession {
 
     override val incoming: Flow<String> =
-        session.incoming.consumeAsFlow()
+        session.incoming
+            .consumeAsFlow()
             // Ping, pong and close are the engine's business; only text carries envelopes.
             .filterIsInstance<Frame.Text>()
             .map { it.readText() }

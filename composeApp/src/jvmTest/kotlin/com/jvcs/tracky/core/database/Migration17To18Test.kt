@@ -47,7 +47,7 @@ class Migration17To18Test {
                 "`startDateTimeEpochMs` INTEGER NOT NULL, `isFinished` INTEGER NOT NULL, " +
                 "`useLightTextColor` INTEGER NOT NULL, `endDateTimeEpochMs` INTEGER, " +
                 "`isArchived` INTEGER NOT NULL, `trashedAtEpochMs` INTEGER, `isPinned` INTEGER NOT NULL, " +
-                "`updatedAtEpochMs` INTEGER, `sortIndex` INTEGER, PRIMARY KEY(`projectId`))"
+                "`updatedAtEpochMs` INTEGER, `sortIndex` INTEGER, PRIMARY KEY(`projectId`))",
         )
         connection.execSQL(
             "CREATE TABLE IF NOT EXISTS `project_tasks` (`projectTaskId` TEXT NOT NULL, " +
@@ -57,7 +57,7 @@ class Migration17To18Test {
                 "`isTimerRunning` INTEGER NOT NULL, `updatedAtEpochMs` INTEGER, " +
                 "PRIMARY KEY(`projectTaskId`), " +
                 "FOREIGN KEY(`parentProjectId`) REFERENCES `projects`(`projectId`) " +
-                "ON UPDATE NO ACTION ON DELETE CASCADE )"
+                "ON UPDATE NO ACTION ON DELETE CASCADE )",
         )
         connection.execSQL(
             "CREATE TABLE IF NOT EXISTS `project_sub_tasks` (`projectSubTaskId` TEXT NOT NULL, " +
@@ -69,7 +69,7 @@ class Migration17To18Test {
                 "FOREIGN KEY(`parentProjectTaskId`) REFERENCES `project_tasks`(`projectTaskId`) " +
                 "ON UPDATE NO ACTION ON DELETE CASCADE , " +
                 "FOREIGN KEY(`parentProjectId`) REFERENCES `projects`(`projectId`) " +
-                "ON UPDATE NO ACTION ON DELETE CASCADE )"
+                "ON UPDATE NO ACTION ON DELETE CASCADE )",
         )
     }
 
@@ -78,18 +78,18 @@ class Migration17To18Test {
     private fun seedV17() {
         connection.execSQL(
             "INSERT INTO projects (projectId, title, startDateTimeEpochMs, isFinished, " +
-                "useLightTextColor, isArchived, isPinned) VALUES ('p1', 'project', 0, 0, 0, 0, 0)"
+                "useLightTextColor, isArchived, isPinned) VALUES ('p1', 'project', 0, 0, 0, 0, 0)",
         )
         connection.execSQL(
             "INSERT INTO project_tasks (projectTaskId, parentProjectId, title, description, " +
                 "durationMillis, startDateTimeEpochMs, endDateTimeEpochMs, isFinished, " +
                 "isTimerRunning, updatedAtEpochMs) " +
-                "VALUES ('t1', 'p1', 'Write the report', 'note', 90000, 1000, 91000, 0, 1, 4242)"
+                "VALUES ('t1', 'p1', 'Write the report', 'note', 90000, 1000, 91000, 0, 1, 4242)",
         )
         connection.execSQL(
             "INSERT INTO project_sub_tasks (projectSubTaskId, parentProjectTaskId, parentProjectId, " +
                 "title, description, durationMillis, isTimerRunning, startDateTimeEpochMs, isFinished) " +
-                "VALUES ('s1', 't1', 'p1', 'Draft it', 'sub note', 5000, 0, 2000, 0)"
+                "VALUES ('s1', 't1', 'p1', 'Draft it', 'sub note', 5000, 0, 2000, 0)",
         )
     }
 
@@ -138,11 +138,11 @@ class Migration17To18Test {
         // sort rule falls back to creation order for those rows.
         assertEquals(
             0L,
-            queryLong("SELECT \"notnull\" FROM pragma_table_info('project_tasks') WHERE name = 'sortIndex'")
+            queryLong("SELECT \"notnull\" FROM pragma_table_info('project_tasks') WHERE name = 'sortIndex'"),
         )
         assertEquals(
             0L,
-            queryLong("SELECT \"notnull\" FROM pragma_table_info('project_sub_tasks') WHERE name = 'sortIndex'")
+            queryLong("SELECT \"notnull\" FROM pragma_table_info('project_sub_tasks') WHERE name = 'sortIndex'"),
         )
         assertNull(queryLong("SELECT sortIndex FROM project_tasks WHERE projectTaskId = 't1'"))
         assertNull(queryLong("SELECT sortIndex FROM project_sub_tasks WHERE projectSubTaskId = 's1'"))

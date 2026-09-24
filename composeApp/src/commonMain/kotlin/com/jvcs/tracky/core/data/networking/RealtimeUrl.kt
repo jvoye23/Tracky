@@ -19,15 +19,19 @@ internal const val REALTIME_PATH = "/api/realtime"
 internal fun realtimeUrl(baseUrl: String, path: String = REALTIME_PATH): String? {
     if (baseUrl.isBlank()) return null
     return try {
-        URLBuilder(baseUrl).apply {
-            protocol = when (protocol) {
-                URLProtocol.HTTPS -> URLProtocol.WSS
-                URLProtocol.HTTP -> URLProtocol.WS
-                // Anything else is a misconfiguration, not something to guess at.
-                else -> return null
-            }
-            path(path)
-        }.buildString()
+        URLBuilder(baseUrl)
+            .apply {
+                protocol =
+                    when (protocol) {
+                        URLProtocol.HTTPS -> URLProtocol.WSS
+
+                        URLProtocol.HTTP -> URLProtocol.WS
+
+                        // Anything else is a misconfiguration, not something to guess at.
+                        else -> return null
+                    }
+                path(path)
+            }.buildString()
     } catch (e: IllegalArgumentException) {
         null
     }

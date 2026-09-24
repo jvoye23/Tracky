@@ -20,20 +20,21 @@ import okio.Path.Companion.toPath
 import org.koin.dsl.bind
 import org.koin.dsl.module
 
-actual val platformCoreDataModule = module {
-    single { DatabaseFactory() }
-    single { ConnectivityObserver() }
-    single { AppLifecycleObserver() }
-    single { JvmSyncScheduler() } bind SyncScheduler::class
-    single { JvmTrashCleanupScheduler() } bind TrashCleanupScheduler::class
-    single { NoOpTimerNotificationController() } bind TimerNotificationController::class
-    single { NoOpTimerNotificationPermissionRequester() } bind TimerNotificationPermissionRequester::class
-    single<HttpClientEngine> { OkHttp.create() }
-    single<DataStore<Preferences>> {
-        PreferenceDataStoreFactory.createWithPath(
-            produceFile = {
-                "tracky_prefs.preferences_pb".toPath()
-            }
-        )
+actual val platformCoreDataModule =
+    module {
+        single { DatabaseFactory() }
+        single { ConnectivityObserver() }
+        single { AppLifecycleObserver() }
+        single { JvmSyncScheduler() } bind SyncScheduler::class
+        single { JvmTrashCleanupScheduler() } bind TrashCleanupScheduler::class
+        single { NoOpTimerNotificationController() } bind TimerNotificationController::class
+        single { NoOpTimerNotificationPermissionRequester() } bind TimerNotificationPermissionRequester::class
+        single<HttpClientEngine> { OkHttp.create() }
+        single<DataStore<Preferences>> {
+            PreferenceDataStoreFactory.createWithPath(
+                produceFile = {
+                    "tracky_prefs.preferences_pb".toPath()
+                },
+            )
+        }
     }
-}

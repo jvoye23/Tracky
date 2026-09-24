@@ -1,7 +1,6 @@
 package com.jvcs.tracky.core.domain.sync
 
 import com.jvcs.tracky.core.domain.util.DataError
-import kotlin.time.Instant
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.ServerClock
@@ -9,6 +8,7 @@ import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.core.domain.util.isTransient
 import com.jvcs.tracky.features.project.domain.project.LocalProjectDataSource
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
+import kotlin.time.Instant
 
 /**
  * Pulls the server's change feed and applies it, falling back to the full-tree pull when the feed
@@ -32,7 +32,7 @@ class DeltaSyncApplier(
     private val syncCursorStore: SyncCursorStore,
     private val serverClock: ServerClock,
     private val timeProvider: TimeProvider,
-    private val syncRecency: SyncRecency
+    private val syncRecency: SyncRecency,
 ) {
 
     /**
@@ -61,16 +61,20 @@ class DeltaSyncApplier(
             val since = syncCursorStore.cursor()
 
             val sentAt = timeProvider.nowInstant
-            val changes = when (val result = remoteSyncDataSource.getChanges(since)) {
-                is Result.Success -> result.data
-                is Result.Error -> return when {
-                    // The endpoint is not deployed yet. The full pull is still correct, just
-                    // more expensive, so this degrades rather than fails.
-                    result.error == DataError.Remote.NOT_FOUND -> fullPull()
-                    result.error.isTransient() -> Result.Error(result.error)
-                    else -> Result.Error(result.error)
+            val changes =
+                when (val result = remoteSyncDataSource.getChanges(since)) {
+                    is Result.Success -> result.data
+
+                    is Result.Error -> return when {
+                        // The endpoint is not deployed yet. The full pull is still correct, just
+                        // more expensive, so this degrades rather than fails.
+                        result.error == DataError.Remote.NOT_FOUND -> fullPull()
+
+                        result.error.isTransient() -> Result.Error(result.error)
+
+                        else -> Result.Error(result.error)
+                    }
                 }
-            }
 
             // Every response is a clock sample, including one that asks for a full resync — the
             // timer wants the offset whatever else happened.
@@ -109,9 +113,9 @@ class DeltaSyncApplier(
      * what we could not trust. The next delta starts from scratch, which is correct if wasteful;
      * keeping a cursor the server has disowned is neither.
      */
+
     /** The instant halfway between a request leaving and its answer arriving. */
-    private fun midpoint(sentAt: Instant, receivedAt: Instant): Instant =
-        sentAt + (receivedAt - sentAt) / 2
+    private fun midpoint(sentAt: Instant, receivedAt: Instant): Instant = sentAt + (receivedAt - sentAt) / 2
 
     private suspend fun fullPull(): EmptyResult<DataError> {
         syncCursorStore.clear()

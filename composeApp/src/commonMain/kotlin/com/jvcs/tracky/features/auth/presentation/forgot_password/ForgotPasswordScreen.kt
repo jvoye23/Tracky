@@ -18,6 +18,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -56,14 +57,10 @@ import tracky.composeapp.generated.resources.forgot_password_title
 import tracky.composeapp.generated.resources.resend_email
 import tracky.composeapp.generated.resources.reset_password
 import tracky.composeapp.generated.resources.send_reset_link
-import androidx.compose.material3.TextButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ForgotPasswordScreenRoot(
-    viewModel: ForgotPasswordViewModel = koinViewModel(),
-    onBackClick: () -> Unit
-) {
+fun ForgotPasswordScreenRoot(viewModel: ForgotPasswordViewModel = koinViewModel(), onBackClick: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     ForgotPasswordScreen(
@@ -71,20 +68,19 @@ fun ForgotPasswordScreenRoot(
         onAction = { action ->
             when (action) {
                 ForgotPasswordAction.OnBackClick,
-                ForgotPasswordAction.OnBackToLoginClick -> onBackClick()
+                ForgotPasswordAction.OnBackToLoginClick,
+                -> onBackClick()
+
                 else -> Unit
             }
             viewModel.onAction(action)
-        }
+        },
     )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ForgotPasswordScreen(
-    state: ForgotPasswordState,
-    onAction: (ForgotPasswordAction) -> Unit,
-) {
+fun ForgotPasswordScreen(state: ForgotPasswordState, onAction: (ForgotPasswordAction) -> Unit) {
     Scaffold(
         contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
@@ -98,17 +94,18 @@ fun ForgotPasswordScreen(
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
-                }
+                },
             )
-        }
+        },
     ) { paddingValues ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .imePadding()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 28.dp, vertical = 24.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .imePadding()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 28.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             if (state.isEmailSentSuccessfully) {
@@ -135,19 +132,20 @@ fun ForgotPasswordScreen(
                 val email = state.emailTextFieldState.text.toString()
                 val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
                 val primary = MaterialTheme.colorScheme.primary
-                val annotated = buildAnnotatedString {
-                    val placeholder = "%1\$s"
-                    val parts = descTemplate.split(placeholder, limit = 2)
-                    withStyle(SpanStyle(color = onSurfaceVariant)) {
-                        append(parts.getOrElse(0) { "" })
+                val annotated =
+                    buildAnnotatedString {
+                        val placeholder = "%1\$s"
+                        val parts = descTemplate.split(placeholder, limit = 2)
+                        withStyle(SpanStyle(color = onSurfaceVariant)) {
+                            append(parts.getOrElse(0) { "" })
+                        }
+                        withStyle(SpanStyle(color = primary, fontWeight = FontWeight.Medium)) {
+                            append(email)
+                        }
+                        if (parts.size > 1) {
+                            withStyle(SpanStyle(color = onSurfaceVariant)) { append(parts[1]) }
+                        }
                     }
-                    withStyle(SpanStyle(color = primary, fontWeight = FontWeight.Medium)) {
-                        append(email)
-                    }
-                    if (parts.size > 1) {
-                        withStyle(SpanStyle(color = onSurfaceVariant)) { append(parts[1]) }
-                    }
-                }
 
                 Text(
                     text = annotated,
@@ -208,9 +206,10 @@ fun ForgotPasswordScreen(
                     onImeAction = {
                         if (state.canSubmit) onAction(ForgotPasswordAction.OnSubmitClick)
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("forgot_password_email"),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .testTag("forgot_password_email"),
                     labelStyle = MaterialTheme.typography.authLabelStyle,
                     elevatedLabelStyle = MaterialTheme.typography.authElevatedLabelStyle,
                     textStyle = MaterialTheme.typography.authTextStyle,
@@ -234,9 +233,10 @@ fun ForgotPasswordScreen(
                     onClick = { onAction(ForgotPasswordAction.OnSubmitClick) },
                     enabled = state.canSubmit,
                     isLoading = state.isLoading,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("forgot_password_submit"),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .testTag("forgot_password_submit"),
                 )
 
                 Spacer(Modifier.height(16.dp))

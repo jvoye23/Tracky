@@ -19,7 +19,8 @@ class SyncChangesDtoTest {
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    private val documentedResponse = """
+    private val documentedResponse =
+        """
         {
           "cursor": 84213,
           "serverNowUtc": "2026-09-20T09:14:02.118Z",
@@ -48,7 +49,7 @@ class SyncChangesDtoTest {
             }
           ]
         }
-    """.trimIndent()
+        """.trimIndent()
 
     @Test
     fun theDocumentedResponseDecodes() {
@@ -80,44 +81,46 @@ class SyncChangesDtoTest {
         // The whole point of the column: a device that did not open this interval has to be able
         // to tell. Discarding the field here makes a foreign timer read as one this device
         // started, which is what StrandedTimerReconciler would then offer to reclaim.
-        val changes = json.decodeFromString<SyncChangesDto>(
-            """
-            {
-              "cursor": 84214,
-              "projects": [],
-              "tasks": [],
-              "taskIntervals": [
-                {
-                  "id": "6f2a91b4-0c3d-4e58-a77f-1b9e2c4d8a03",
-                  "parentTaskId": "06357c1e-0000-4000-8000-000000000001",
-                  "parentProjectId": "a3a2aef0-0000-4000-8000-000000000002",
-                  "startDateTimeUtc": "2026-09-20T08:41:07Z",
-                  "startedByDeviceId": "d41c7f90-0000-4000-8000-00000000000a"
-                }
-              ],
-              "subTasks": [],
-              "subTaskIntervals": [
-                {
-                  "id": "11111111-0000-4000-8000-000000000004",
-                  "parentSubTaskId": "22222222-0000-4000-8000-000000000005",
-                  "parentTaskIntervalId": "6f2a91b4-0c3d-4e58-a77f-1b9e2c4d8a03",
-                  "parentProjectId": "a3a2aef0-0000-4000-8000-000000000002",
-                  "startDateTimeUtc": "2026-09-20T08:41:07Z",
-                  "startedByDeviceId": "d41c7f90-0000-4000-8000-00000000000a"
-                }
-              ],
-              "tombstones": []
-            }
-            """.trimIndent()
-        ).toSyncChanges()
+        val changes =
+            json
+                .decodeFromString<SyncChangesDto>(
+                    """
+                    {
+                      "cursor": 84214,
+                      "projects": [],
+                      "tasks": [],
+                      "taskIntervals": [
+                        {
+                          "id": "6f2a91b4-0c3d-4e58-a77f-1b9e2c4d8a03",
+                          "parentTaskId": "06357c1e-0000-4000-8000-000000000001",
+                          "parentProjectId": "a3a2aef0-0000-4000-8000-000000000002",
+                          "startDateTimeUtc": "2026-09-20T08:41:07Z",
+                          "startedByDeviceId": "d41c7f90-0000-4000-8000-00000000000a"
+                        }
+                      ],
+                      "subTasks": [],
+                      "subTaskIntervals": [
+                        {
+                          "id": "11111111-0000-4000-8000-000000000004",
+                          "parentSubTaskId": "22222222-0000-4000-8000-000000000005",
+                          "parentTaskIntervalId": "6f2a91b4-0c3d-4e58-a77f-1b9e2c4d8a03",
+                          "parentProjectId": "a3a2aef0-0000-4000-8000-000000000002",
+                          "startDateTimeUtc": "2026-09-20T08:41:07Z",
+                          "startedByDeviceId": "d41c7f90-0000-4000-8000-00000000000a"
+                        }
+                      ],
+                      "tombstones": []
+                    }
+                    """.trimIndent(),
+                ).toSyncChanges()
 
         assertEquals(
             "d41c7f90-0000-4000-8000-00000000000a",
-            changes.taskIntervals.single().startedByDeviceId
+            changes.taskIntervals.single().startedByDeviceId,
         )
         assertEquals(
             "d41c7f90-0000-4000-8000-00000000000a",
-            changes.subTaskIntervals.single().startedByDeviceId
+            changes.subTaskIntervals.single().startedByDeviceId,
         )
     }
 
@@ -132,7 +135,8 @@ class SyncChangesDtoTest {
 
     @Test
     fun aRowWithNoParentProjectIdIsDroppedRatherThanFailingThePull() {
-        val payload = """
+        val payload =
+            """
             {
               "cursor": 5,
               "taskIntervals": [
@@ -144,7 +148,7 @@ class SyncChangesDtoTest {
                 }
               ]
             }
-        """.trimIndent()
+            """.trimIndent()
 
         val changes = json.decodeFromString<SyncChangesDto>(payload).toSyncChanges()
 

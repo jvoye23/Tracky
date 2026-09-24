@@ -25,9 +25,10 @@ class IosTrashCleanupScheduler : TrashCleanupScheduler {
         if (!BackgroundTaskRegistry.isRegistered(TASK_IDENTIFIER)) return
 
         BGTaskScheduler.sharedScheduler.getPendingTaskRequestsWithCompletionHandler { pending ->
-            val alreadyScheduled = pending.orEmpty().any {
-                (it as? BGTaskRequest)?.identifier == TASK_IDENTIFIER
-            }
+            val alreadyScheduled =
+                pending.orEmpty().any {
+                    (it as? BGTaskRequest)?.identifier == TASK_IDENTIFIER
+                }
             if (alreadyScheduled) return@getPendingTaskRequestsWithCompletionHandler
 
             val request = BGProcessingTaskRequest(identifier = TASK_IDENTIFIER)

@@ -1,6 +1,5 @@
 package com.jvcs.tracky.di
 
-
 import com.jvcs.tracky.MainViewModel
 import com.jvcs.tracky.core.domain.util.TimeManager
 import com.jvcs.tracky.navigation.DeepLinkRouter
@@ -11,29 +10,29 @@ import org.koin.core.module.dsl.viewModel
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
-val appModule = module {
+val appModule =
+    module {
 
-    single { DeepLinkRouter() }
+        single { DeepLinkRouter() }
 
-    single(named("AppScope")) {
-        CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        single(named("AppScope")) {
+            CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        }
+
+        single {
+            TimeManager(
+                runningTimerRepository = get(),
+                serverClock = get(),
+                syncRecency = get(),
+                scope = get(named("AppScope")),
+            )
+        }
+
+        viewModel {
+            MainViewModel(
+                sessionStorage = get(),
+                authService = get(),
+                applicationScope = get(qualifier = named("AppScope")),
+            )
+        }
     }
-
-    single {
-        TimeManager(
-            runningTimerRepository = get(),
-            serverClock = get(),
-            syncRecency = get(),
-            scope = get(named("AppScope"))
-        )
-    }
-
-    viewModel {
-        MainViewModel(
-            sessionStorage = get(),
-            authService = get(),
-            applicationScope = get(qualifier = named("AppScope"))
-        )
-    }
-
-}

@@ -21,9 +21,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.plugins.auth.authProviders
 import io.ktor.client.plugins.auth.providers.BearerAuthProvider
 
-class KtorAuthService(
-    private val httpClient: HttpClient
-) : AuthService {
+class KtorAuthService(private val httpClient: HttpClient) : AuthService {
 
     override fun clearTokenCache() {
         httpClient.authProviders
@@ -32,80 +30,69 @@ class KtorAuthService(
             ?.clearToken()
     }
 
-    override suspend fun login(
-        email: String,
-        password: String
-    ): Result<AuthInfo, DataError.Remote> {
-        return httpClient.post<LoginRequest, AuthInfoSerializable>(
-            route = "/api/auth/login",
-            body = LoginRequest(email = email, password = password)
-        ).map { it.toDomain() }
+    override suspend fun login(email: String, password: String): Result<AuthInfo, DataError.Remote> =
+        httpClient
+            .post<LoginRequest, AuthInfoSerializable>(
+                route = "/api/auth/login",
+                body = LoginRequest(email = email, password = password),
+            ).map { it.toDomain() }
             .onSuccess { clearTokenCache() }
-    }
 
     override suspend fun register(
         email: String,
         name: String,
-        password: String
-    ): Result<AuthInfo, DataError.Remote> {
-        return httpClient.post<RegisterRequest, AuthInfoSerializable>(
-            route = "/api/auth/register",
-            body = RegisterRequest(email = email, name = name, password = password)
-        ).map { it.toDomain() }
+        password: String,
+    ): Result<AuthInfo, DataError.Remote> =
+        httpClient
+            .post<RegisterRequest, AuthInfoSerializable>(
+                route = "/api/auth/register",
+                body = RegisterRequest(email = email, name = name, password = password),
+            ).map { it.toDomain() }
             .onSuccess { clearTokenCache() }
-    }
 
-    override suspend fun loginWithGoogle(idToken: String): Result<AuthInfo, DataError.Remote> {
-        return httpClient.post<SocialLoginRequest, AuthInfoSerializable>(
-            route = "/api/auth/google",
-            body = SocialLoginRequest(idToken = idToken)
-        ).map { it.toDomain() }
+    override suspend fun loginWithGoogle(idToken: String): Result<AuthInfo, DataError.Remote> =
+        httpClient
+            .post<SocialLoginRequest, AuthInfoSerializable>(
+                route = "/api/auth/google",
+                body = SocialLoginRequest(idToken = idToken),
+            ).map { it.toDomain() }
             .onSuccess { clearTokenCache() }
-    }
 
-    override suspend fun loginWithApple(idToken: String): Result<AuthInfo, DataError.Remote> {
-        return httpClient.post<SocialLoginRequest, AuthInfoSerializable>(
-            route = "/api/auth/apple",
-            body = SocialLoginRequest(idToken = idToken)
-        ).map { it.toDomain() }
+    override suspend fun loginWithApple(idToken: String): Result<AuthInfo, DataError.Remote> =
+        httpClient
+            .post<SocialLoginRequest, AuthInfoSerializable>(
+                route = "/api/auth/apple",
+                body = SocialLoginRequest(idToken = idToken),
+            ).map { it.toDomain() }
             .onSuccess { clearTokenCache() }
-    }
 
-    override suspend fun resendVerificationEmail(email: String): EmptyResult<DataError.Remote> {
-        return httpClient.post<EmailRequest, Unit>(
+    override suspend fun resendVerificationEmail(email: String): EmptyResult<DataError.Remote> =
+        httpClient.post<EmailRequest, Unit>(
             route = "/api/auth/resend-verification",
-            body = EmailRequest(email)
+            body = EmailRequest(email),
         )
-    }
 
-    override suspend fun verifyEmail(token: String): EmptyResult<DataError.Remote> {
-        return httpClient.get(
+    override suspend fun verifyEmail(token: String): EmptyResult<DataError.Remote> =
+        httpClient.get(
             route = "/api/auth/verify",
-            queryParams = mapOf("token" to token)
+            queryParams = mapOf("token" to token),
         )
-    }
 
-    override suspend fun forgotPassword(email: String): EmptyResult<DataError.Remote> {
-        return httpClient.post<EmailRequest, Unit>(
+    override suspend fun forgotPassword(email: String): EmptyResult<DataError.Remote> =
+        httpClient.post<EmailRequest, Unit>(
             route = "/api/auth/forgot-password",
-            body = EmailRequest(email)
+            body = EmailRequest(email),
         )
-    }
 
-    override suspend fun resetPassword(
-        newPassword: String,
-        token: String
-    ): EmptyResult<DataError.Remote> {
-        return httpClient.post<ResetPasswordRequest, Unit>(
+    override suspend fun resetPassword(newPassword: String, token: String): EmptyResult<DataError.Remote> =
+        httpClient.post<ResetPasswordRequest, Unit>(
             route = "/api/auth/reset-password",
-            body = ResetPasswordRequest(newPassword = newPassword, token = token)
+            body = ResetPasswordRequest(newPassword = newPassword, token = token),
         )
-    }
 
-    override suspend fun logout(refreshToken: String): EmptyResult<DataError.Remote> {
-        return httpClient.post<RefreshRequest, Unit>(
+    override suspend fun logout(refreshToken: String): EmptyResult<DataError.Remote> =
+        httpClient.post<RefreshRequest, Unit>(
             route = "/api/auth/logout",
-            body = RefreshRequest(refreshToken)
+            body = RefreshRequest(refreshToken),
         )
-    }
 }

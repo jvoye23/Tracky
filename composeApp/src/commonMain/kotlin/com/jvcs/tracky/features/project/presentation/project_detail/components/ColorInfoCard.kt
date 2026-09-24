@@ -36,20 +36,21 @@ fun ColorInfoCard(
     colorValue: Color,
     hexCode: String,
     isEditMode: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     Surface(
         modifier = modifier.clickable(enabled = isEditMode) { onClick() },
         color = if (isEditMode) MaterialTheme.colorScheme.surfaceContainerLow else Color(0xFFF0F3FA),
         shape = RoundedCornerShape(16.dp),
-        border = if (isEditMode) BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant) else null
+        border = if (isEditMode) BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant) else null,
     ) {
         Row(
-            modifier = Modifier.padding(
-                all = 16.dp
-            ),
+            modifier =
+                Modifier.padding(
+                    all = 16.dp,
+                ),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -57,13 +58,13 @@ fun ColorInfoCard(
                         Icons.Outlined.Palette,
                         null,
                         Modifier.size(14.dp),
-                        tint = MaterialTheme.colorScheme.outline
+                        tint = MaterialTheme.colorScheme.outline,
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         label.uppercase(),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline
+                        color = MaterialTheme.colorScheme.outline,
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -72,13 +73,13 @@ fun ColorInfoCard(
                         Modifier
                             .size(14.dp)
                             .clip(CircleShape)
-                            .background(colorValue)
+                            .background(colorValue),
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         hexCode,
                         style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
                     )
                 }
             }

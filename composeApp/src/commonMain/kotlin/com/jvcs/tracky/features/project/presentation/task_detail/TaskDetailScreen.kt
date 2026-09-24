@@ -73,7 +73,7 @@ fun TaskDetailScreenRoot(
     taskId: String,
     navigateBack: () -> Unit,
     onEditTextClick: (isEditMode: Boolean, projectId: String, taskId: String) -> Unit,
-    viewModel: TaskDetailViewModel = koinViewModel(parameters = { parametersOf(taskId) })
+    viewModel: TaskDetailViewModel = koinViewModel(parameters = { parametersOf(taskId) }),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
@@ -81,30 +81,37 @@ fun TaskDetailScreenRoot(
         state = state,
         onAction = { action ->
             when (action) {
-                TaskDetailAction.OnBackClick -> navigateBack()
+                TaskDetailAction.OnBackClick -> {
+                    navigateBack()
+                }
+
                 // Same contract as the project header: outside edit mode the editor opens
                 // read-only, in edit mode it opens straight into editing.
-                TaskDetailAction.OnHeaderClick -> state.projectId?.let { projectId ->
-                    onEditTextClick(state.isEditMode, projectId, taskId)
+                TaskDetailAction.OnHeaderClick -> {
+                    state.projectId?.let { projectId ->
+                        onEditTextClick(state.isEditMode, projectId, taskId)
+                    }
                 }
-                else -> Unit
+
+                else -> {
+                    Unit
+                }
             }
             viewModel.onAction(action)
-        }
+        },
     )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TaskDetailScreen(
-    state: TaskDetailState,
-    onAction: (TaskDetailAction) -> Unit
-) {
+fun TaskDetailScreen(state: TaskDetailState, onAction: (TaskDetailAction) -> Unit) {
     // Composited so it is fully opaque, matching Project Detail: the top bar and the header share
     // this colour and must read as one surface.
-    val headerColor = state.projectColor?.copy(alpha = 0.12f)
-        ?.compositeOver(MaterialTheme.colorScheme.surfaceContainerLow)
-        ?: MaterialTheme.colorScheme.surfaceContainerLow
+    val headerColor =
+        state.projectColor
+            ?.copy(alpha = 0.12f)
+            ?.compositeOver(MaterialTheme.colorScheme.surfaceContainerLow)
+            ?: MaterialTheme.colorScheme.surfaceContainerLow
 
     Scaffold(
         contentWindowInsets = WindowInsets.safeDrawing,
@@ -113,91 +120,114 @@ fun TaskDetailScreen(
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        text = if (state.isEditMode) stringResource(Res.string.edit_task_uppercase)
-                            else stringResource(Res.string.task_details),
+                        text =
+                            if (state.isEditMode) {
+                                stringResource(Res.string.edit_task_uppercase)
+                            } else {
+                                stringResource(Res.string.task_details)
+                            },
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = {
-                        if (state.isEditMode) onAction(TaskDetailAction.OnCloseEditModeClick)
-                        else onAction(TaskDetailAction.OnBackClick)
+                        if (state.isEditMode) {
+                            onAction(TaskDetailAction.OnCloseEditModeClick)
+                        } else {
+                            onAction(TaskDetailAction.OnBackClick)
+                        }
                     }) {
                         Icon(
                             if (state.isEditMode) Icons.Default.Close else Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = if (state.isEditMode) "Close" else "Back"
+                            contentDescription = if (state.isEditMode) "Close" else "Back",
                         )
                     }
                 },
                 actions = {
                     IconButton(onClick = {
-                        if (state.isEditMode) onAction(TaskDetailAction.OnCloseEditModeClick)
-                        else onAction(TaskDetailAction.OnEditModeClick)
+                        if (state.isEditMode) {
+                            onAction(TaskDetailAction.OnCloseEditModeClick)
+                        } else {
+                            onAction(TaskDetailAction.OnEditModeClick)
+                        }
                     }) {
                         Icon(
                             if (state.isEditMode) Icons.Default.Check else Icons.Default.Edit,
-                            contentDescription = if (state.isEditMode) "Done" else "Edit"
+                            contentDescription = if (state.isEditMode) "Done" else "Edit",
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = headerColor)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = headerColor),
             )
-        }
+        },
     ) { paddingValues ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             // Header
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        color = headerColor,
-                        shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
-                    ),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .background(
+                            color = headerColor,
+                            shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
+                        ),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 TaskHeader(
                     modifier = Modifier.padding(horizontal = 16.dp),
                     title = state.task?.title ?: stringResource(Res.string.title),
-                    description = state.task?.description?.takeIf { it.isNotBlank() }
-                        ?: stringResource(Res.string.description),
+                    description =
+                        state.task?.description?.takeIf { it.isNotBlank() }
+                            ?: stringResource(Res.string.description),
                     isEditMode = state.isEditMode,
-                    onClick = { onAction(TaskDetailAction.OnHeaderClick) }
+                    onClick = { onAction(TaskDetailAction.OnHeaderClick) },
                 )
                 DurationHeroCard(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 16.dp),
+                    modifier =
+                        Modifier
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 16.dp),
                     label = stringResource(Res.string.task_duration),
                     totalDuration = state.task?.displayDuration ?: "00:00:00",
                     projectColor = state.projectColor ?: MaterialTheme.colorScheme.primary,
                     useLightTextColor = state.useLightTextColor,
-                    onStartStopClick = { onAction(TaskDetailAction.OnToggleTimer) }
+                    onStartStopClick = { onAction(TaskDetailAction.OnToggleTimer) },
                 )
             }
 
             // Timer
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center
+                horizontalArrangement = Arrangement.Center,
             ) {
                 Button(
                     onClick = { onAction(TaskDetailAction.OnToggleTimer) },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (state.isTimerRunning) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-                    )
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = if (state.isTimerRunning) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                        ),
                 ) {
                     Icon(
                         if (state.isTimerRunning) Icons.Default.Stop else Icons.Default.PlayArrow,
-                        contentDescription = null
+                        contentDescription = null,
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(if (state.isTimerRunning) stringResource(Res.string.stop_timer) else stringResource(Res.string.start_timer))
+                    Text(
+                        if (state.isTimerRunning) {
+                            stringResource(
+                                Res.string.stop_timer,
+                            )
+                        } else {
+                            stringResource(Res.string.start_timer)
+                        },
+                    )
                 }
             }
 
@@ -206,7 +236,7 @@ fun TaskDetailScreen(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 text = stringResource(Res.string.daily_sessions),
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
             )
 
             Column(modifier = Modifier.weight(1f)) {
@@ -216,11 +246,11 @@ fun TaskDetailScreen(
                     startTime = stringResource(Res.string.start_time),
                     endTime = stringResource(Res.string.end_time),
                     duration = stringResource(Res.string.duration),
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
                 HorizontalDivider(
                     modifier = Modifier.padding(horizontal = 16.dp),
-                    thickness = 1.dp
+                    thickness = 1.dp,
                 )
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth(),
@@ -228,12 +258,12 @@ fun TaskDetailScreen(
                     itemsIndexed(
                         items = state.dailyStatistics,
                         // A multi-day interval's slices share an id, but never a date.
-                        key = { _, statistic -> statistic.intervalId + statistic.formattedDate }
+                        key = { _, statistic -> statistic.intervalId + statistic.formattedDate },
                     ) { index, statistic ->
                         if (index > 0) {
                             HorizontalDivider(
                                 modifier = Modifier.padding(horizontal = 16.dp),
-                                thickness = 1.dp
+                                thickness = 1.dp,
                             )
                         }
                         SessionRow(
@@ -241,7 +271,7 @@ fun TaskDetailScreen(
                             date = statistic.formattedDate,
                             startTime = statistic.formattedStartTime,
                             endTime = statistic.formattedEndTime,
-                            duration = statistic.formattedDuration
+                            duration = statistic.formattedDuration,
                         )
                     }
                 }
@@ -259,38 +289,46 @@ private fun TaskHeader(
     onClick: () -> Unit,
 ) {
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(
-                color = if (isEditMode) MaterialTheme.colorScheme.surfaceContainerLow
-                    else Color.Transparent,
-                shape = RoundedCornerShape(16.dp)
-            )
-            .border(
-                BorderStroke(
-                    width = 1.dp,
-                    color = if (isEditMode) MaterialTheme.colorScheme.outlineVariant
-                        else Color.Transparent
-                ),
-                shape = RoundedCornerShape(16.dp)
-            )
-            .clickable(onClick = onClick),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .background(
+                    color =
+                        if (isEditMode) {
+                            MaterialTheme.colorScheme.surfaceContainerLow
+                        } else {
+                            Color.Transparent
+                        },
+                    shape = RoundedCornerShape(16.dp),
+                ).border(
+                    BorderStroke(
+                        width = 1.dp,
+                        color =
+                            if (isEditMode) {
+                                MaterialTheme.colorScheme.outlineVariant
+                            } else {
+                                Color.Transparent
+                            },
+                    ),
+                    shape = RoundedCornerShape(16.dp),
+                ).clickable(onClick = onClick),
     ) {
         Text(
             modifier = Modifier.padding(16.dp),
             text = title,
             style = MaterialTheme.typography.headlineLarge,
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
-            modifier = Modifier
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 16.dp),
+            modifier =
+                Modifier
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 16.dp),
             text = description,
             maxLines = 3,
             overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -303,13 +341,14 @@ private fun SessionRow(
     startTime: String,
     endTime: String,
     duration: String,
-    fontWeight: FontWeight? = null
+    fontWeight: FontWeight? = null,
 ) {
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         TableCell(text = date, weight = 1.4f, fontWeight = fontWeight)
         TableCell(text = startTime, weight = 1f, fontWeight = fontWeight)
@@ -323,7 +362,7 @@ private fun RowScope.TableCell(
     text: String,
     weight: Float,
     fontWeight: FontWeight?,
-    textAlign: TextAlign = TextAlign.Start
+    textAlign: TextAlign = TextAlign.Start,
 ) {
     Text(
         modifier = Modifier.weight(weight),
@@ -332,31 +371,34 @@ private fun RowScope.TableCell(
         fontWeight = fontWeight,
         textAlign = textAlign,
         maxLines = 1,
-        overflow = TextOverflow.Ellipsis
+        overflow = TextOverflow.Ellipsis,
     )
 }
 
-private val previewState = TaskDetailState(
-    task = ProjectTaskUi(
-        projectTaskId = "task-1",
-        title = "Design review",
-        description = "Walk through the new task detail layout with the team.",
-        durationMillis = 5_400_000L,
-        formattedStateDateTime = "",
-        formattedEndDateTimeUtc = "",
-        isTimerRunning = false,
-        subTasks = emptyList(),
-        isFinished = false
-    ),
-    projectId = "project-1",
-    projectColor = Color(0xFF3F51B5),
-    useLightTextColor = true,
-    dailyStatistics = listOf(
-        DailyStatistic("i3", "2026-09-18", "14:00", "15:00", "01:00:00"),
-        DailyStatistic("i2", "2026-09-17", "23:40", "24:00", "00:20:00"),
-        DailyStatistic("i1", "2026-09-17", "09:30", "09:40", "00:10:00"),
+private val previewState =
+    TaskDetailState(
+        task =
+            ProjectTaskUi(
+                projectTaskId = "task-1",
+                title = "Design review",
+                description = "Walk through the new task detail layout with the team.",
+                durationMillis = 5_400_000L,
+                formattedStateDateTime = "",
+                formattedEndDateTimeUtc = "",
+                isTimerRunning = false,
+                subTasks = emptyList(),
+                isFinished = false,
+            ),
+        projectId = "project-1",
+        projectColor = Color(0xFF3F51B5),
+        useLightTextColor = true,
+        dailyStatistics =
+            listOf(
+                DailyStatistic("i3", "2026-09-18", "14:00", "15:00", "01:00:00"),
+                DailyStatistic("i2", "2026-09-17", "23:40", "24:00", "00:20:00"),
+                DailyStatistic("i1", "2026-09-17", "09:30", "09:40", "00:10:00"),
+            ),
     )
-)
 
 @Preview
 @Composable
@@ -364,7 +406,7 @@ private fun TaskDetailScreenPreview() {
     TrackyTheme {
         TaskDetailScreen(
             state = previewState,
-            onAction = {}
+            onAction = {},
         )
     }
 }
@@ -375,7 +417,7 @@ private fun TaskDetailScreenEditModePreview() {
     TrackyTheme {
         TaskDetailScreen(
             state = previewState.copy(isEditMode = true),
-            onAction = {}
+            onAction = {},
         )
     }
 }

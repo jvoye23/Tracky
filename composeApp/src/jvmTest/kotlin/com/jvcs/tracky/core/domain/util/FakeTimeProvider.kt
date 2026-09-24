@@ -16,7 +16,7 @@ import kotlin.time.Instant
  */
 internal class FakeTimeProvider(
     var now: Instant = Instant.fromEpochMilliseconds(0),
-    private val advanceOnReadMillis: Long = 0
+    private val advanceOnReadMillis: Long = 0,
 ) : TimeProvider {
     override val nowInstant: Instant
         get() = now.also { if (advanceOnReadMillis != 0L) now += advanceOnReadMillis.milliseconds }

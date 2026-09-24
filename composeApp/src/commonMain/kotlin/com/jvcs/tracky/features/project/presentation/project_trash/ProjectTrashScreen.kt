@@ -46,13 +46,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
-import com.jvcs.tracky.features.project.presentation.models.ProjectUi
 import com.jvcs.tracky.design_system.Icon_Trash
 import com.jvcs.tracky.design_system.components.MainNavDrawerItem
 import com.jvcs.tracky.design_system.components.MainNavigationDrawer
 import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.design_system.util.DevicePreviews
 import com.jvcs.tracky.design_system.util.ObserveAsEvents
+import com.jvcs.tracky.features.project.presentation.models.ProjectUi
 import com.jvcs.tracky.features.project.presentation.project_overview.components.ProjectCard
 import com.jvcs.tracky.features.project.presentation.project_trash.components.ProjectTrashSearchTopAppBar
 import com.jvcs.tracky.features.project.presentation.project_trash.components.ProjectTrashSelectionTopAppBar
@@ -76,7 +76,7 @@ import tracky.composeapp.generated.resources.trash_title
 fun ProjectTrashScreenRoot(
     onNavigateToProjects: () -> Unit,
     onNavigateToArchive: () -> Unit,
-    viewModel: ProjectTrashViewModel = koinViewModel()
+    viewModel: ProjectTrashViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
@@ -89,15 +89,16 @@ fun ProjectTrashScreenRoot(
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar(
                         message = getString(Res.string.failed_to_restore_all_selected_projects),
-                        duration = SnackbarDuration.Long
+                        duration = SnackbarDuration.Long,
                     )
                 }
             }
+
             is ProjectTrashEvent.HardDeleteError -> {
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar(
                         message = getString(Res.string.failed_to_delete_all_selected_projects),
-                        duration = SnackbarDuration.Long
+                        duration = SnackbarDuration.Long,
                     )
                 }
             }
@@ -113,7 +114,7 @@ fun ProjectTrashScreenRoot(
         onAction = viewModel::onAction,
         onNavigateToProjects = onNavigateToProjects,
         onNavigateToArchive = onNavigateToArchive,
-        snackbarHostState = snackbarHostState
+        snackbarHostState = snackbarHostState,
     )
 }
 
@@ -125,14 +126,15 @@ fun ProjectTrashScreen(
     onNavigateToProjects: () -> Unit = {},
     onNavigateToArchive: () -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
-    drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed)
+    drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed),
 ) {
     val listState = rememberLazyListState()
     // Without this the bar collapses on any drag, even when the whole list fits on screen and
     // there is nothing to scroll to.
-    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(
-        canScroll = { listState.canScrollForward || listState.canScrollBackward }
-    )
+    val scrollBehavior =
+        TopAppBarDefaults.enterAlwaysScrollBehavior(
+            canScroll = { listState.canScrollForward || listState.canScrollBackward },
+        )
 
     // If the content shrinks below one screen while the bar is collapsed, no scroll is left to
     // bring it back, so release it explicitly.
@@ -148,34 +150,35 @@ fun ProjectTrashScreen(
         isBackEnabled = drawerState.isOpen,
         onBackCompleted = {
             drawerScope.launch { drawerState.close() }
-        }
+        },
     )
 
     MainNavigationDrawer(
         drawerState = drawerState,
         selectedItem = MainNavDrawerItem.TRASH,
         onProjectsClick = onNavigateToProjects,
-        onArchiveClick = onNavigateToArchive
+        onArchiveClick = onNavigateToArchive,
     ) {
         Scaffold(
             snackbarHost = {
                 SnackbarHost(hostState = snackbarHostState)
             },
-            modifier = Modifier
-                .fillMaxSize()
-                .nestedScroll(scrollBehavior.nestedScrollConnection),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
             topBar = {
                 AnimatedContent(
                     targetState = state.isEditModeActive,
                     transitionSpec = { fadeIn() togetherWith fadeOut() },
-                    label = "topBarSwap"
+                    label = "topBarSwap",
                 ) { editMode ->
                     if (editMode) {
                         ProjectTrashSelectionTopAppBar(
                             modifier = Modifier.padding(horizontal = 10.dp),
                             state = state,
                             onAction = onAction,
-                            scrollBehavior = scrollBehavior
+                            scrollBehavior = scrollBehavior,
                         )
                     } else {
                         ProjectTrashSearchTopAppBar(
@@ -184,38 +187,44 @@ fun ProjectTrashScreen(
                             state = state,
                             onAction = onAction,
                             onMenuClick = { drawerScope.launch { drawerState.open() } },
-                            scrollBehavior = scrollBehavior
+                            scrollBehavior = scrollBehavior,
                         )
                     }
                 }
             },
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-            contentWindowInsets = WindowInsets.safeDrawing
+            contentWindowInsets = WindowInsets.safeDrawing,
         ) { innerPadding ->
             LazyColumn(
                 state = listState,
-                modifier = modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 10.dp)
-                    .testTag("project_trash"),
-                contentPadding = PaddingValues(
-                    top = innerPadding.calculateTopPadding(),
-                    bottom = innerPadding.calculateBottomPadding()
-                ),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                modifier =
+                    modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 10.dp)
+                        .testTag("project_trash"),
+                contentPadding =
+                    PaddingValues(
+                        top = innerPadding.calculateTopPadding(),
+                        bottom = innerPadding.calculateBottomPadding(),
+                    ),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(
                     items = state.filteredProjects ?: emptyList(),
-                    key = { it.projectId }
+                    key = { it.projectId },
                 ) { item ->
                     ProjectCard(
                         modifier = Modifier.animateItem(),
                         projectUi = item,
                         onClick = { onAction(ProjectTrashAction.OnProjectCardClick(item.projectId)) },
                         onLongClick = { onAction(ProjectTrashAction.OnProjectCardLongPress(item.projectId)) },
-                        onToggleSelection = { onAction(ProjectTrashAction.OnProjectCardToggleSelection(item.projectId)) },
+                        onToggleSelection = {
+                            onAction(
+                                ProjectTrashAction.OnProjectCardToggleSelection(item.projectId),
+                            )
+                        },
                         isEditModeActive = state.isEditModeActive,
-                        isSelected = item.projectId in state.selectedProjectIds
+                        isSelected = item.projectId in state.selectedProjectIds,
                     )
                 }
             }
@@ -226,23 +235,30 @@ fun ProjectTrashScreen(
                         Icon(
                             imageVector = Icon_Trash,
                             contentDescription = stringResource(Res.string.delete_permanently),
-                            tint = MaterialTheme.colorScheme.onSurface
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     },
                     title = {
                         Text(
-                            text = if (state.selectedProjectIds.size != 1)
-                                stringResource(Res.string.permanently_delete_projects_title)
-                            else stringResource(Res.string.permanently_delete_project_title)
+                            text =
+                                if (state.selectedProjectIds.size != 1) {
+                                    stringResource(Res.string.permanently_delete_projects_title)
+                                } else {
+                                    stringResource(Res.string.permanently_delete_project_title)
+                                },
                         )
                     },
                     text = {
                         Text(
-                            text = if (state.selectedProjectIds.size != 1)
-                                stringResource(
-                                    Res.string.permanently_delete_projects_confirmation,
-                                    state.selectedProjectIds.size
-                                ) else stringResource(Res.string.permanently_delete_one_project_confirmation)
+                            text =
+                                if (state.selectedProjectIds.size != 1) {
+                                    stringResource(
+                                        Res.string.permanently_delete_projects_confirmation,
+                                        state.selectedProjectIds.size,
+                                    )
+                                } else {
+                                    stringResource(Res.string.permanently_delete_one_project_confirmation)
+                                },
                         )
                     },
                     confirmButton = {
@@ -254,47 +270,49 @@ fun ProjectTrashScreen(
                         TextButton(onClick = { onAction(ProjectTrashAction.OnDismissDeleteDialog) }) {
                             Text(text = stringResource(Res.string.cancel))
                         }
-                    }
+                    },
                 )
             }
         }
     }
 }
 
-private fun previewTrashedProjects(): List<ProjectUi> = listOf(
-    ProjectUi(
-        projectId = "1",
-        title = "Old Marketing Site",
-        description = "Deleted after launch",
-        color = Color(0xFF9C27B0),
-        totalDurationMillis = 43_200_000L,
-        startDateTimeUtc = "Jan, 5, 2025",
-        isFinished = true,
-        endDateTimeUtc = "Mar, 1, 2025",
-        projectTasks = emptyList()
-    ),
-    ProjectUi(
-        projectId = "2",
-        title = "Legacy API",
-        description = "No longer maintained",
-        color = Color(0xFF607D8B),
-        totalDurationMillis = 145_800_000L,
-        startDateTimeUtc = "Feb, 2, 2024",
-        isFinished = true,
-        endDateTimeUtc = "Dec, 1, 2024",
-        projectTasks = emptyList()
+private fun previewTrashedProjects(): List<ProjectUi> =
+    listOf(
+        ProjectUi(
+            projectId = "1",
+            title = "Old Marketing Site",
+            description = "Deleted after launch",
+            color = Color(0xFF9C27B0),
+            totalDurationMillis = 43_200_000L,
+            startDateTimeUtc = "Jan, 5, 2025",
+            isFinished = true,
+            endDateTimeUtc = "Mar, 1, 2025",
+            projectTasks = emptyList(),
+        ),
+        ProjectUi(
+            projectId = "2",
+            title = "Legacy API",
+            description = "No longer maintained",
+            color = Color(0xFF607D8B),
+            totalDurationMillis = 145_800_000L,
+            startDateTimeUtc = "Feb, 2, 2024",
+            isFinished = true,
+            endDateTimeUtc = "Dec, 1, 2024",
+            projectTasks = emptyList(),
+        ),
     )
-)
 
 @DevicePreviews
 @Composable
 private fun ProjectTrashDefaultPreview() {
     TrackyTheme {
         ProjectTrashScreen(
-            state = ProjectTrashState(
-                projects = previewTrashedProjects(),
-            ),
-            onAction = {}
+            state =
+                ProjectTrashState(
+                    projects = previewTrashedProjects(),
+                ),
+            onAction = {},
         )
     }
 }
@@ -304,10 +322,11 @@ private fun ProjectTrashDefaultPreview() {
 private fun ProjectTrashEmptyPreview() {
     TrackyTheme {
         ProjectTrashScreen(
-            state = ProjectTrashState(
-                projects = emptyList(),
-            ),
-            onAction = {}
+            state =
+                ProjectTrashState(
+                    projects = emptyList(),
+                ),
+            onAction = {},
         )
     }
 }

@@ -56,7 +56,7 @@ fun SortBottomSheet(
         modifier = modifier.fillMaxWidth(),
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface,
-        dragHandle = {}
+        dragHandle = {},
     ) {
         SortSheetContent(
             selectedOption = sortOption,
@@ -66,7 +66,7 @@ fun SortBottomSheet(
                         onAction(ProjectOverviewAction.OnSortOptionSelected(option))
                     }
                 }
-            }
+            },
         )
     }
 }
@@ -78,38 +78,41 @@ internal fun SortSheetContent(
     onOptionSelected: (SortOption) -> Unit,
 ) {
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(top = 20.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(top = 20.dp),
     ) {
         Column(
-            modifier = Modifier
-                .padding(bottom = 8.dp)
+            modifier =
+                Modifier
+                    .padding(bottom = 8.dp),
         ) {
             Text(
                 modifier = Modifier.padding(start = 20.dp, bottom = 20.dp),
                 text = stringResource(Res.string.sort_by),
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
             )
             HorizontalDivider(
                 modifier = Modifier.fillMaxWidth(),
                 thickness = 1.dp,
-                color = MaterialTheme.colorScheme.surfaceVariant
+                color = MaterialTheme.colorScheme.surfaceVariant,
             )
         }
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp)
-                .padding(horizontal = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+                    .padding(horizontal = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             SortOption.entries.forEach { option ->
                 SortOptionRow(
                     selected = option == selectedOption,
                     label = stringResource(option.labelRes),
-                    onClick = { onOptionSelected(option) }
+                    onClick = { onOptionSelected(option) },
                 )
             }
         }
@@ -124,22 +127,22 @@ private fun SortOptionRow(
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(28.dp))
-            .background(
-                if (selected) MaterialTheme.colorScheme.surfaceContainerHigh else Color.Transparent
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(28.dp))
+                .background(
+                    if (selected) MaterialTheme.colorScheme.surfaceContainerHigh else Color.Transparent,
+                ).clickable(onClick = onClick)
+                .padding(horizontal = 20.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         if (selected) {
             Icon(
                 imageVector = Icon_Check,
                 contentDescription = stringResource(Res.string.check_icon),
                 tint = MaterialTheme.colorScheme.outline,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(20.dp),
             )
         } else {
             Spacer(modifier = Modifier.size(20.dp))
@@ -148,17 +151,18 @@ private fun SortOptionRow(
         Text(
             text = label,
             style = MaterialTheme.typography.bodyLarge,
-            color = if (selected) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface
+            color = if (selected) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface,
         )
     }
 }
 
 private val SortOption.labelRes: StringResource
-    get() = when (this) {
-        SortOption.CUSTOM -> Res.string.sort_custom
-        SortOption.CREATION_DATE -> Res.string.sort_creation_date
-        SortOption.MODIFICATION_DATE -> Res.string.sort_modification_date
-    }
+    get() =
+        when (this) {
+            SortOption.CUSTOM -> Res.string.sort_custom
+            SortOption.CREATION_DATE -> Res.string.sort_creation_date
+            SortOption.MODIFICATION_DATE -> Res.string.sort_modification_date
+        }
 
 @Preview(showSystemUi = true)
 @Composable
@@ -166,11 +170,11 @@ private fun SortBottomSheetPreview() {
     TrackyTheme {
         Column(
             modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Bottom
+            verticalArrangement = Arrangement.Bottom,
         ) {
             SortSheetContent(
                 selectedOption = SortOption.CUSTOM,
-                onOptionSelected = {}
+                onOptionSelected = {},
             )
         }
     }

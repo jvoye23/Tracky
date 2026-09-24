@@ -249,4 +249,3 @@ val customColor1ContainerDarkHighContrast = Color(0xFF96C7F6)
 val onCustomColor1ContainerDarkHighContrast = Color(0xFF000C19)
 
 val defaultProjectColor = Color(0xFF7DA0B7)
-

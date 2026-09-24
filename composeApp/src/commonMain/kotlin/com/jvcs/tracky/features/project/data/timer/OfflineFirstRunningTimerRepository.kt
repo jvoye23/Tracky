@@ -1,10 +1,10 @@
 package com.jvcs.tracky.features.project.data.timer
 
 import com.jvcs.tracky.core.database.dao.ProjectDao
-import com.jvcs.tracky.core.domain.device.DeviceIdProvider
-import com.jvcs.tracky.core.domain.timer.isForeignTimer
 import com.jvcs.tracky.core.database.entity.SubTaskIntervalEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
+import com.jvcs.tracky.core.domain.device.DeviceIdProvider
+import com.jvcs.tracky.core.domain.timer.isForeignTimer
 import com.jvcs.tracky.features.project.domain.timer.ProjectRef
 import com.jvcs.tracky.features.project.domain.timer.RunningTimer
 import com.jvcs.tracky.features.project.domain.timer.RunningTimerRepository
@@ -31,14 +31,14 @@ import kotlin.time.Instant
  */
 class OfflineFirstRunningTimerRepository(
     private val projectDao: ProjectDao,
-    private val deviceIdProvider: DeviceIdProvider
+    private val deviceIdProvider: DeviceIdProvider,
 ) : RunningTimerRepository {
 
     override fun observeRunningTimer(): Flow<RunningTimer?> =
         combine(
             projectDao.observeOpenSubTaskInterval(),
             projectDao.observeOpenTaskInterval(),
-            ::Pair
+            ::Pair,
         )
             // Both queries re-run on any write to their tables, so most emissions repeat the row
             // that was already there. Cut them before the joins below, not after.
@@ -48,8 +48,7 @@ class OfflineFirstRunningTimerRepository(
                 // rows are open at once and only the inner one is the timer the user started.
                 openSubTaskInterval?.let { toRunningTimer(it) }
                     ?: openTaskInterval?.let { toRunningTimer(it) }
-            }
-            .distinctUntilChanged()
+            }.distinctUntilChanged()
 
     private suspend fun toRunningTimer(interval: SubTaskIntervalEntity): RunningTimer? {
         val subTask = projectDao.getSubTaskById(interval.parentSubTaskId) ?: return null
@@ -63,7 +62,7 @@ class OfflineFirstRunningTimerRepository(
             subTask = TaskRef(id = subTask.projectSubTaskId, title = subTask.title),
             startedAt = Instant.fromEpochMilliseconds(interval.startDateTimeEpochMs),
             bankedDuration = projectDao.getBankedSubTaskDuration(subTask.projectSubTaskId).milliseconds,
-            isForeign = isForeignTimer(interval.startedByDeviceId, deviceIdProvider.deviceId())
+            isForeign = isForeignTimer(interval.startedByDeviceId, deviceIdProvider.deviceId()),
         )
     }
 
@@ -78,7 +77,7 @@ class OfflineFirstRunningTimerRepository(
             subTask = null,
             startedAt = Instant.fromEpochMilliseconds(interval.startDateTimeEpochMs),
             bankedDuration = projectDao.getBankedTaskDuration(task.projectTaskId).milliseconds,
-            isForeign = isForeignTimer(interval.startedByDeviceId, deviceIdProvider.deviceId())
+            isForeign = isForeignTimer(interval.startedByDeviceId, deviceIdProvider.deviceId()),
         )
     }
 }

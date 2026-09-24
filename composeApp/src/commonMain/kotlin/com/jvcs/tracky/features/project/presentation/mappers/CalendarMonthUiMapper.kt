@@ -19,20 +19,22 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.ExperimentalTime
 
 /** "September 2026" — the pager's page title. */
-private val monthLabelFormat = LocalDate.Format {
-    monthName(MonthNames.ENGLISH_FULL)
-    chars(" ")
-    year()
-}
+private val monthLabelFormat =
+    LocalDate.Format {
+        monthName(MonthNames.ENGLISH_FULL)
+        chars(" ")
+        year()
+    }
 
 /** "Sep, 08, 2026" — the footer's busiest-day name. */
-private val busiestDayFormat = LocalDate.Format {
-    monthName(MonthNames.ENGLISH_ABBREVIATED)
-    chars(", ")
-    day()
-    chars(", ")
-    year()
-}
+private val busiestDayFormat =
+    LocalDate.Format {
+        monthName(MonthNames.ENGLISH_ABBREVIATED)
+        chars(", ")
+        day()
+        chars(", ")
+        year()
+    }
 
 /** "01" — zero-padded, so the grid's columns line up. */
 private val dayLabelFormat = LocalDate.Format { day() }
@@ -73,12 +75,13 @@ private const val CELLS_PER_PAGE = WEEKS_PER_PAGE * DAYS_PER_WEEK
  */
 @OptIn(ExperimentalTime::class)
 fun Project.toCalendarMonthsUi(today: LocalDate, timeZone: TimeZone): List<CalendarMonthUi> {
-    val dayTotals: Map<LocalDate, Long> = countedDayIntervals(timeZone)
-        .groupingBy { it.date }
-        .fold(0L) { total, interval -> total + interval.durationMillis }
-        // A day whose intervals all came out zero-length banked nothing, so it gets no tint and
-        // no dot. Its intervals still appear in the day list - that is the list's own decision.
-        .filterValues { it > 0L }
+    val dayTotals: Map<LocalDate, Long> =
+        countedDayIntervals(timeZone)
+            .groupingBy { it.date }
+            .fold(0L) { total, interval -> total + interval.durationMillis }
+            // A day whose intervals all came out zero-length banked nothing, so it gets no tint and
+            // no dot. Its intervals still appear in the day list - that is the list's own decision.
+            .filterValues { it > 0L }
 
     val maxTracked = dayTotals.values.maxOrNull() ?: 0L
     val startMonth = startDateTimeUtc.toLocalDateTime(timeZone).date.yearMonth
@@ -93,24 +96,25 @@ fun Project.toCalendarMonthsUi(today: LocalDate, timeZone: TimeZone): List<Calen
 private fun YearMonth.toCalendarMonthUi(
     dayTotals: Map<LocalDate, Long>,
     maxTracked: Long,
-    today: LocalDate
+    today: LocalDate,
 ): CalendarMonthUi {
     // Monday is 1, so a month opening on a Monday needs no padding at all.
     val leading = firstDay.dayOfWeek.isoDayNumber - 1
     val gridStart = firstDay.plus(-leading, DateTimeUnit.DAY)
 
-    val days = (0 until CELLS_PER_PAGE).map { offset ->
-        val date = gridStart.plus(offset, DateTimeUnit.DAY)
-        CalendarDayUi(
-            date = date,
-            dayLabel = date.format(dayLabelFormat),
-            // A padding cell shows no activity even when the neighbouring month tracked some:
-            // its time belongs to that month's own page.
-            trackedMillis = if (date.yearMonth == this) dayTotals[date] ?: 0L else 0L,
-            isToday = date == today,
-            isInMonth = date.yearMonth == this
-        )
-    }
+    val days =
+        (0 until CELLS_PER_PAGE).map { offset ->
+            val date = gridStart.plus(offset, DateTimeUnit.DAY)
+            CalendarDayUi(
+                date = date,
+                dayLabel = date.format(dayLabelFormat),
+                // A padding cell shows no activity even when the neighbouring month tracked some:
+                // its time belongs to that month's own page.
+                trackedMillis = if (date.yearMonth == this) dayTotals[date] ?: 0L else 0L,
+                isToday = date == today,
+                isInMonth = date.yearMonth == this,
+            )
+        }
 
     val monthTotal = days.sumOf { it.trackedMillis }
     // Ties go to the earlier day, which the eye reaches first - the same rule the strip applies.
@@ -122,6 +126,6 @@ private fun YearMonth.toCalendarMonthUi(
         monthTotalLabel = monthTotal.takeIf { it > 0L }?.let { formatDurationHoursMinutes(it.milliseconds) },
         days = days,
         busiestDayLabel = busiest?.date?.format(busiestDayFormat),
-        maxTrackedMillis = maxTracked
+        maxTrackedMillis = maxTracked,
     )
 }

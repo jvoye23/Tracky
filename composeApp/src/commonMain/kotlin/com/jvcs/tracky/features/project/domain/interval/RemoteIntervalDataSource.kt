@@ -14,12 +14,13 @@ interface RemoteIntervalDataSource {
     // A TaskInterval carries both its parentProjectId and parentTaskId, so the route can be built
     // from the interval alone.
     suspend fun postInterval(interval: TaskInterval): Result<TaskInterval, DataError.Remote>
+
     suspend fun updateInterval(interval: TaskInterval): Result<TaskInterval, DataError.Remote>
 
     /** Takes the ids explicitly: by the time a queued delete drains, the local row is already gone. */
     suspend fun deleteInterval(
         projectId: String,
         taskId: String,
-        intervalId: String
+        intervalId: String,
     ): EmptyResult<DataError.Remote>
 }

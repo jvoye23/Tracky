@@ -5,7 +5,6 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
-
 @Entity(
     tableName = "project_tasks",
     foreignKeys = [
@@ -13,11 +12,11 @@ import androidx.room.PrimaryKey
             entity = ProjectEntity::class,
             parentColumns = ["projectId"],
             childColumns = ["parentProjectId"],
-            onDelete = ForeignKey.CASCADE // Deleting a parent project will delete all associated tasks
-        )
+            onDelete = ForeignKey.CASCADE, // Deleting a parent project will delete all associated tasks
+        ),
     ],
     // Indexing the foreign key is a best practice for performance
-    indices = [Index(value = ["parentProjectId"])]
+    indices = [Index(value = ["parentProjectId"])],
 )
 data class ProjectTaskEntity(
     @PrimaryKey(autoGenerate = false)

@@ -10,13 +10,7 @@ import kotlinx.serialization.Serializable
  * moved — anything left out keeps the sortIndex the server already has.
  */
 @Serializable
-data class ReorderTasksRequest(
-    val updatedAtUtc: String,
-    val items: List<TaskSortOrderDto>,
-)
+data class ReorderTasksRequest(val updatedAtUtc: String, val items: List<TaskSortOrderDto>)
 
 @Serializable
-data class TaskSortOrderDto(
-    val id: String,
-    val sortIndex: Long,
-)
+data class TaskSortOrderDto(val id: String, val sortIndex: Long)

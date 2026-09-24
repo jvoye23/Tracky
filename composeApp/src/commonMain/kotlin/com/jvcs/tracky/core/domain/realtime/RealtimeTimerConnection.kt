@@ -61,7 +61,7 @@ class RealtimeTimerConnection(
     private val isInForeground: Flow<Boolean>,
     private val isAuthenticated: Flow<Boolean>,
     private val applicationScope: CoroutineScope,
-    private val random: Random = Random.Default
+    private val random: Random = Random.Default,
 ) {
     private var started = false
     private var job: Job? = null
@@ -69,21 +69,23 @@ class RealtimeTimerConnection(
     fun start() {
         if (started) return
         started = true
-        job = combine(
-            isOnline.debounce(CONNECTIVITY_DEBOUNCE),
-            isInForeground,
-            isAuthenticated
-        ) { online, foreground, authed -> online && foreground && authed }
-            .distinctUntilChanged()
-            .flatMapLatest { active ->
-                if (active) connectionLoop() else {
-                    // The gate owns Idle. The loop never reports its own teardown, because a
-                    // cancelled coroutine's finally would race this and win.
-                    connectivity.set(RealtimeConnectionState.Idle)
-                    emptyFlow()
-                }
-            }
-            .launchIn(applicationScope)
+        job =
+            combine(
+                isOnline.debounce(CONNECTIVITY_DEBOUNCE),
+                isInForeground,
+                isAuthenticated,
+            ) { online, foreground, authed -> online && foreground && authed }
+                .distinctUntilChanged()
+                .flatMapLatest { active ->
+                    if (active) {
+                        connectionLoop()
+                    } else {
+                        // The gate owns Idle. The loop never reports its own teardown, because a
+                        // cancelled coroutine's finally would race this and win.
+                        connectivity.set(RealtimeConnectionState.Idle)
+                        emptyFlow()
+                    }
+                }.launchIn(applicationScope)
     }
 
     /** For teardown. The [isAuthenticated] gate already covers an ordinary logout. */
@@ -94,77 +96,84 @@ class RealtimeTimerConnection(
         connectivity.set(RealtimeConnectionState.Idle)
     }
 
-    private fun connectionLoop(): Flow<Nothing> = flow {
-        var attempt = 0
-        var authRetries = 0
+    private fun connectionLoop(): Flow<Nothing> =
+        flow {
+            var attempt = 0
+            var authRetries = 0
 
-        while (true) {
-            connectivity.set(RealtimeConnectionState.Connecting)
+            while (true) {
+                connectivity.set(RealtimeConnectionState.Connecting)
 
-            when (val opened = channel.open()) {
-                is Result.Error -> {
-                    connectivity.set(RealtimeConnectionState.Disconnected)
-                    // Ktor's Auth plugin refreshes on a 401 *response*; an upgrade refused before
-                    // one never reaches it. Rather than run a second refresh here — two of them
-                    // racing over a rotating refresh token is a way to log the user out — drive
-                    // the plugin's own by making the pull we owe the socket anyway. If that
-                    // refresh fails the session is cleared, isAuthenticated goes false, and the
-                    // gate cancels this loop: no hammering, and no special case for it.
-                    val isAuthFailure = opened.error == DataError.Remote.UNAUTHORIZED ||
-                        opened.error == DataError.Remote.FORBIDDEN
-                    if (isAuthFailure && authRetries < MAX_AUTH_RETRIES) {
-                        authRetries++
-                        pullCoordinator.pullNow()
-                        delay(AUTH_RETRY_DELAY)
-                    } else {
+                when (val opened = channel.open()) {
+                    is Result.Error -> {
+                        connectivity.set(RealtimeConnectionState.Disconnected)
+                        // Ktor's Auth plugin refreshes on a 401 *response*; an upgrade refused before
+                        // one never reaches it. Rather than run a second refresh here — two of them
+                        // racing over a rotating refresh token is a way to log the user out — drive
+                        // the plugin's own by making the pull we owe the socket anyway. If that
+                        // refresh fails the session is cleared, isAuthenticated goes false, and the
+                        // gate cancels this loop: no hammering, and no special case for it.
+                        val isAuthFailure =
+                            opened.error == DataError.Remote.UNAUTHORIZED ||
+                                opened.error == DataError.Remote.FORBIDDEN
+                        if (isAuthFailure && authRetries < MAX_AUTH_RETRIES) {
+                            authRetries++
+                            pullCoordinator.pullNow()
+                            delay(AUTH_RETRY_DELAY)
+                        } else {
+                            delay(backoff(++attempt))
+                        }
+                    }
+
+                    is Result.Success -> {
+                        val session = opened.data
+                        try {
+                            connectivity.set(RealtimeConnectionState.Connected)
+                            session.send(
+                                json.encodeToString(
+                                    HelloEnvelopeDto(
+                                        deviceId = deviceIdProvider.deviceId(),
+                                        // Zero, not absent: it makes the server's "is this client
+                                        // behind" comparison true, so a device that has never pulled
+                                        // gets its catch-up nudge straight away.
+                                        cursor = syncCursorStore.cursor() ?: 0L,
+                                    ),
+                                ),
+                            )
+                            session.incoming.collect { frame ->
+                                onEvent(frame) {
+                                    attempt = 0
+                                    authRetries = 0
+                                }
+                            }
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            // A socket that died under us is the ordinary case, not an error worth
+                            // surfacing. Reconnect.
+                            e.printStackTrace()
+                        } finally {
+                            // The scope may already be cancelled — the gate closing is exactly that —
+                            // and the close frame is still worth sending.
+                            withContext(NonCancellable) { session.close() }
+                        }
+                        // Only past the finally, so this never runs on a cancelled teardown: the state
+                        // there is Idle, set by whoever closed the gate, and a Disconnected written
+                        // afterwards would be a lie that outlives the connection.
+                        connectivity.set(RealtimeConnectionState.Disconnected)
                         delay(backoff(++attempt))
                     }
                 }
-
-                is Result.Success -> {
-                    val session = opened.data
-                    try {
-                        connectivity.set(RealtimeConnectionState.Connected)
-                        session.send(
-                            json.encodeToString(
-                                HelloEnvelopeDto(
-                                    deviceId = deviceIdProvider.deviceId(),
-                                    // Zero, not absent: it makes the server's "is this client
-                                    // behind" comparison true, so a device that has never pulled
-                                    // gets its catch-up nudge straight away.
-                                    cursor = syncCursorStore.cursor() ?: 0L
-                                )
-                            )
-                        )
-                        session.incoming.collect { frame ->
-                            onEvent(frame) { attempt = 0; authRetries = 0 }
-                        }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        // A socket that died under us is the ordinary case, not an error worth
-                        // surfacing. Reconnect.
-                        e.printStackTrace()
-                    } finally {
-                        // The scope may already be cancelled — the gate closing is exactly that —
-                        // and the close frame is still worth sending.
-                        withContext(NonCancellable) { session.close() }
-                    }
-                    // Only past the finally, so this never runs on a cancelled teardown: the state
-                    // there is Idle, set by whoever closed the gate, and a Disconnected written
-                    // afterwards would be a lie that outlives the connection.
-                    connectivity.set(RealtimeConnectionState.Disconnected)
-                    delay(backoff(++attempt))
-                }
             }
         }
-    }
 
     private suspend fun onEvent(frame: String, onHandshake: () -> Unit) {
         when (parser.parse(frame)) {
             // Unreadable. Logged by the parser; dropping a healthy connection over one bad frame
             // would be a far worse answer than ignoring it.
-            null -> return
+            null -> {
+                return
+            }
 
             RealtimeEvent.Ready -> {
                 // Reset here rather than on connect: a socket that opens and is immediately closed
@@ -177,7 +186,9 @@ class RealtimeTimerConnection(
             }
 
             // Invalidate, Timer, and anything a later backend adds all mean the same thing.
-            else -> pullCoordinator.request()
+            else -> {
+                pullCoordinator.request()
+            }
         }
     }
 

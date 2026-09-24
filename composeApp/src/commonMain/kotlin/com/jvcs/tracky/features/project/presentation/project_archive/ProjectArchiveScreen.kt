@@ -46,7 +46,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
-import com.jvcs.tracky.features.project.presentation.models.ProjectUi
 import com.jvcs.tracky.design_system.Icon_Trash
 import com.jvcs.tracky.design_system.components.MainNavDrawerItem
 import com.jvcs.tracky.design_system.components.MainNavigationDrawer
@@ -54,6 +53,7 @@ import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.design_system.util.DevicePreviews
 import com.jvcs.tracky.design_system.util.ObserveAsEvents
 import com.jvcs.tracky.design_system.util.rememberCollapsibleScrollBehavior
+import com.jvcs.tracky.features.project.presentation.models.ProjectUi
 import com.jvcs.tracky.features.project.presentation.project_archive.components.ProjectArchiveSearchTopAppBar
 import com.jvcs.tracky.features.project.presentation.project_archive.components.ProjectArchiveSelectionTopAppBar
 import com.jvcs.tracky.features.project.presentation.project_overview.components.ProjectCard
@@ -75,7 +75,7 @@ fun ProjectArchiveScreenRoot(
     onNavigateToDetail: (String) -> Unit,
     onNavigateToProjects: () -> Unit,
     onNavigateToTrash: () -> Unit,
-    viewModel: ProjectArchiveViewModel = koinViewModel()
+    viewModel: ProjectArchiveViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
@@ -88,7 +88,7 @@ fun ProjectArchiveScreenRoot(
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar(
                         message = "Failed to reactivate all selected projects",
-                        duration = SnackbarDuration.Long
+                        duration = SnackbarDuration.Long,
                     )
                 }
             }
@@ -106,13 +106,16 @@ fun ProjectArchiveScreenRoot(
                 is ProjectArchiveAction.OnProjectCardClick -> {
                     if (!state.isEditModeActive) onNavigateToDetail(action.projectId)
                 }
-                else -> Unit
+
+                else -> {
+                    Unit
+                }
             }
             viewModel.onAction(action)
         },
         onNavigateToProjects = onNavigateToProjects,
         onNavigateToTrash = onNavigateToTrash,
-        snackbarHostState = snackbarHostState
+        snackbarHostState = snackbarHostState,
     )
 }
 
@@ -124,15 +127,16 @@ fun ProjectArchiveScreen(
     onNavigateToProjects: () -> Unit = {},
     onNavigateToTrash: () -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
-    drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed)
+    drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed),
 ) {
     val listState = rememberLazyListState()
     // One instance, shared by the app bar and the nested-scroll connection below. Calling the
     // helper again at either site would orphan a behavior and freeze the list.
-    val scrollBehavior = rememberCollapsibleScrollBehavior(
-        listState = listState,
-        pinned = state.isEditModeActive
-    )
+    val scrollBehavior =
+        rememberCollapsibleScrollBehavior(
+            listState = listState,
+            pinned = state.isEditModeActive,
+        )
 
     // If the content shrinks below one screen while the bar is collapsed, no scroll is left to
     // bring it back, so release it explicitly.
@@ -148,34 +152,35 @@ fun ProjectArchiveScreen(
         isBackEnabled = drawerState.isOpen,
         onBackCompleted = {
             drawerScope.launch { drawerState.close() }
-        }
+        },
     )
 
     MainNavigationDrawer(
         drawerState = drawerState,
         selectedItem = MainNavDrawerItem.ARCHIVE,
         onProjectsClick = onNavigateToProjects,
-        onTrashClick = onNavigateToTrash
+        onTrashClick = onNavigateToTrash,
     ) {
         Scaffold(
             snackbarHost = {
                 SnackbarHost(hostState = snackbarHostState)
             },
-            modifier = Modifier
-                .fillMaxSize()
-                .nestedScroll(scrollBehavior.nestedScrollConnection),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
             topBar = {
                 AnimatedContent(
                     targetState = state.isEditModeActive,
                     transitionSpec = { fadeIn() togetherWith fadeOut() },
-                    label = "topBarSwap"
+                    label = "topBarSwap",
                 ) { editMode ->
                     if (editMode) {
                         ProjectArchiveSelectionTopAppBar(
                             modifier = Modifier.padding(horizontal = 10.dp),
                             state = state,
                             onAction = onAction,
-                            scrollBehavior = scrollBehavior
+                            scrollBehavior = scrollBehavior,
                         )
                     } else {
                         ProjectArchiveSearchTopAppBar(
@@ -190,32 +195,38 @@ fun ProjectArchiveScreen(
                 }
             },
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-            contentWindowInsets = WindowInsets.safeDrawing
+            contentWindowInsets = WindowInsets.safeDrawing,
         ) { innerPadding ->
             LazyColumn(
                 state = listState,
-                modifier = modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 10.dp)
-                    .testTag("project_archive"),
-                contentPadding = PaddingValues(
-                    top = innerPadding.calculateTopPadding(),
-                    bottom = innerPadding.calculateBottomPadding()
-                ),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                modifier =
+                    modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 10.dp)
+                        .testTag("project_archive"),
+                contentPadding =
+                    PaddingValues(
+                        top = innerPadding.calculateTopPadding(),
+                        bottom = innerPadding.calculateBottomPadding(),
+                    ),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(
                     items = state.filteredProjects ?: emptyList(),
-                    key = { it.projectId }
+                    key = { it.projectId },
                 ) { item ->
                     ProjectCard(
                         modifier = Modifier.animateItem(),
                         projectUi = item,
                         onClick = { onAction(ProjectArchiveAction.OnProjectCardClick(item.projectId)) },
                         onLongClick = { onAction(ProjectArchiveAction.OnProjectCardLongPress(item.projectId)) },
-                        onToggleSelection = { onAction(ProjectArchiveAction.OnProjectCardToggleSelection(item.projectId)) },
+                        onToggleSelection = {
+                            onAction(
+                                ProjectArchiveAction.OnProjectCardToggleSelection(item.projectId),
+                            )
+                        },
                         isEditModeActive = state.isEditModeActive,
-                        isSelected = item.projectId in state.selectedProjectIds
+                        isSelected = item.projectId in state.selectedProjectIds,
                     )
                 }
             }
@@ -226,23 +237,30 @@ fun ProjectArchiveScreen(
                         Icon(
                             imageVector = Icon_Trash,
                             contentDescription = stringResource(Res.string.delete_selected),
-                            tint = MaterialTheme.colorScheme.onSurface
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     },
                     title = {
                         Text(
-                            text = if (state.selectedProjectIds.size != 1)
-                                stringResource(Res.string.delete_projects_title)
-                            else stringResource(Res.string.delete_project_title)
+                            text =
+                                if (state.selectedProjectIds.size != 1) {
+                                    stringResource(Res.string.delete_projects_title)
+                                } else {
+                                    stringResource(Res.string.delete_project_title)
+                                },
                         )
                     },
                     text = {
                         Text(
-                            text = if (state.selectedProjectIds.size != 1)
-                                stringResource(
-                                    Res.string.delete_projects_confirmation,
-                                    state.selectedProjectIds.size
-                                ) else stringResource(Res.string.delete_one_project_confirmation)
+                            text =
+                                if (state.selectedProjectIds.size != 1) {
+                                    stringResource(
+                                        Res.string.delete_projects_confirmation,
+                                        state.selectedProjectIds.size,
+                                    )
+                                } else {
+                                    stringResource(Res.string.delete_one_project_confirmation)
+                                },
                         )
                     },
                     confirmButton = {
@@ -254,47 +272,49 @@ fun ProjectArchiveScreen(
                         TextButton(onClick = { onAction(ProjectArchiveAction.OnDismissDeleteDialog) }) {
                             Text(text = stringResource(Res.string.cancel))
                         }
-                    }
+                    },
                 )
             }
         }
     }
 }
 
-private fun previewArchivedProjects(): List<ProjectUi> = listOf(
-    ProjectUi(
-        projectId = "1",
-        title = "Old Marketing Site",
-        description = "Archived after launch",
-        color = Color(0xFF9C27B0),
-        totalDurationMillis = 43_200_000L,
-        startDateTimeUtc = "Jan, 5, 2025",
-        isFinished = true,
-        endDateTimeUtc = "Mar, 1, 2025",
-        projectTasks = emptyList()
-    ),
-    ProjectUi(
-        projectId = "2",
-        title = "Legacy API",
-        description = "No longer maintained",
-        color = Color(0xFF607D8B),
-        totalDurationMillis = 145_800_000L,
-        startDateTimeUtc = "Feb, 2, 2024",
-        isFinished = true,
-        endDateTimeUtc = "Dec, 1, 2024",
-        projectTasks = emptyList()
+private fun previewArchivedProjects(): List<ProjectUi> =
+    listOf(
+        ProjectUi(
+            projectId = "1",
+            title = "Old Marketing Site",
+            description = "Archived after launch",
+            color = Color(0xFF9C27B0),
+            totalDurationMillis = 43_200_000L,
+            startDateTimeUtc = "Jan, 5, 2025",
+            isFinished = true,
+            endDateTimeUtc = "Mar, 1, 2025",
+            projectTasks = emptyList(),
+        ),
+        ProjectUi(
+            projectId = "2",
+            title = "Legacy API",
+            description = "No longer maintained",
+            color = Color(0xFF607D8B),
+            totalDurationMillis = 145_800_000L,
+            startDateTimeUtc = "Feb, 2, 2024",
+            isFinished = true,
+            endDateTimeUtc = "Dec, 1, 2024",
+            projectTasks = emptyList(),
+        ),
     )
-)
 
 @DevicePreviews
 @Composable
 private fun ProjectArchiveDefaultPreview() {
     TrackyTheme {
         ProjectArchiveScreen(
-            state = ProjectArchiveState(
-                projects = previewArchivedProjects(),
-            ),
-            onAction = {}
+            state =
+                ProjectArchiveState(
+                    projects = previewArchivedProjects(),
+                ),
+            onAction = {},
         )
     }
 }
@@ -304,10 +324,11 @@ private fun ProjectArchiveDefaultPreview() {
 private fun ProjectArchiveEmptyPreview() {
     TrackyTheme {
         ProjectArchiveScreen(
-            state = ProjectArchiveState(
-                projects = emptyList(),
-            ),
-            onAction = {}
+            state =
+                ProjectArchiveState(
+                    projects = emptyList(),
+                ),
+            onAction = {},
         )
     }
 }
@@ -317,12 +338,13 @@ private fun ProjectArchiveEmptyPreview() {
 private fun ProjectArchiveSearchPreview() {
     TrackyTheme {
         ProjectArchiveScreen(
-            state = ProjectArchiveState(
-                projects = previewArchivedProjects(),
-                isSearchActive = true,
-                searchQuery = "Legacy"
-            ),
-            onAction = {}
+            state =
+                ProjectArchiveState(
+                    projects = previewArchivedProjects(),
+                    isSearchActive = true,
+                    searchQuery = "Legacy",
+                ),
+            onAction = {},
         )
     }
 }

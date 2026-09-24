@@ -9,11 +9,12 @@ import com.jvcs.tracky.features.auth.presentation.reset_password.ResetPasswordVi
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
-val authPresentationModule = module {
-    viewModelOf(::LoginViewModel)
-    viewModelOf(::RegisterViewModel)
-    viewModelOf(::RegisterSuccessViewModel)
-    viewModelOf(::EmailVerificationViewModel)
-    viewModelOf(::ForgotPasswordViewModel)
-    viewModelOf(::ResetPasswordViewModel)
-}
+val authPresentationModule =
+    module {
+        viewModelOf(::LoginViewModel)
+        viewModelOf(::RegisterViewModel)
+        viewModelOf(::RegisterSuccessViewModel)
+        viewModelOf(::EmailVerificationViewModel)
+        viewModelOf(::ForgotPasswordViewModel)
+        viewModelOf(::ResetPasswordViewModel)
+    }

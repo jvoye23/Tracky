@@ -39,25 +39,21 @@ data class RunningTimer(
      * Null provenance reads as "this device", so every interval written before multi-device sync
      * is correctly not foreign. See [com.jvcs.tracky.core.domain.timer.isForeignTimer].
      */
-    val isForeign: Boolean = false
+    val isForeign: Boolean = false,
 ) {
     /** The subtask when one is being timed, else the task. What Pause has to stop. */
     val timedEntityId: String get() = subTask?.id ?: task.id
 
     /** Never shrinks below what is already banked: a clock that went backwards yields zero. */
-    fun elapsedAt(now: Instant): Duration =
-        bankedDuration + (now - startedAt).coerceAtLeast(Duration.ZERO)
+    fun elapsedAt(now: Instant): Duration = bankedDuration + (now - startedAt).coerceAtLeast(Duration.ZERO)
 }
 
 /** The project a [RunningTimer] belongs to, as much of it as a surface needs to label the timer. */
 data class ProjectRef(
     val id: String,
     val title: String,
-    val colorArgb: Int?
+    val colorArgb: Int?,
 )
 
 /** A task or subtask a [RunningTimer] names: the id to start and stop it by, the title to show. */
-data class TaskRef(
-    val id: String,
-    val title: String
-)
+data class TaskRef(val id: String, val title: String)

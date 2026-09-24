@@ -21,10 +21,7 @@ import kotlin.time.Instant
  * a last-write-wins comparison between two devices is decided by minutes and hours, not seconds.
  * Everything else keeps using [TimeProvider] directly.
  */
-class ServerClock(
-    private val timeProvider: TimeProvider,
-    private val offsetStore: ServerClockOffsetStore
-) {
+class ServerClock(private val timeProvider: TimeProvider, private val offsetStore: ServerClockOffsetStore) {
     // Read once into memory: the tick reads this every second, and a DataStore round trip per
     // tick would be absurd. Seeded lazily on first read so a cold start with no network is still
     // corrected by whatever the last session measured.
@@ -59,5 +56,6 @@ class ServerClock(
 /** Where the measured offset survives a process restart. */
 interface ServerClockOffsetStore {
     suspend fun offsetMillis(): Long?
+
     suspend fun setOffsetMillis(millis: Long)
 }

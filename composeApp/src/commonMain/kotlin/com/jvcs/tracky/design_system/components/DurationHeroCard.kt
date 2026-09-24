@@ -21,9 +21,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -38,23 +38,23 @@ fun DurationHeroCard(
      * Shown under the figure when it is not this device's to explain. Null draws nothing, so the
      * card keeps its height for the ordinary case.
      */
-    caption: String? = null
+    caption: String? = null,
 ) {
     val contentColor = if (useLightTextColor) Color.White else Color.Black
 
     Surface(
         modifier = modifier.fillMaxWidth().clickable { onStartStopClick() },
         color = projectColor,
-        shape = RoundedCornerShape(40.dp)
+        shape = RoundedCornerShape(40.dp),
     ) {
         Column(
             modifier = Modifier.padding(vertical = 32.dp, horizontal = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
                 text = label,
                 style = MaterialTheme.typography.headlineMedium,
-                color = contentColor.copy(alpha = 0.7f)
+                color = contentColor.copy(alpha = 0.7f),
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
@@ -62,7 +62,7 @@ fun DurationHeroCard(
                 style = MaterialTheme.typography.displayMedium,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold,
-                color = contentColor
+                color = contentColor,
             )
             if (caption != null) {
                 Spacer(modifier = Modifier.height(8.dp))
@@ -70,7 +70,7 @@ fun DurationHeroCard(
                     text = caption,
                     style = MaterialTheme.typography.labelLarge,
                     color = contentColor.copy(alpha = 0.7f),
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
                 )
             }
         }

@@ -50,156 +50,194 @@ class DailyOverviewViewModelTest {
     private val today get() = now.toLocalDateTime(zone).date
 
     @BeforeTest fun setUp() = Dispatchers.setMain(dispatcher)
+
     @AfterTest fun tearDown() = Dispatchers.resetMain()
 
     // --- loading ------------------------------------------------------------------------------
 
     @Test
-    fun `the screen opens on today, with today's month showing`() = runTest {
-        val state = viewModel().state.value
+    fun `the screen opens on today, with today's month showing`() =
+        runTest {
+            val state = viewModel().state.value
 
-        assertEquals(today, state.selectedDate)
-        assertEquals(YearMonth(today.year, today.month), state.months[state.visibleMonthIndex].yearMonth)
-        assertFalse(state.isLoading)
-    }
-
-    @Test
-    fun `the project's title and colour reach the state`() = runTest {
-        val vm = viewModel(project = project().copy(title = "Tracky", colorArgb = 0xFFF39B19.toInt()))
-
-        assertEquals("Tracky", vm.state.value.projectTitle)
-        assertEquals(Color(0xFFF39B19.toInt()), vm.state.value.projectColor)
-    }
+            assertEquals(today, state.selectedDate)
+            assertEquals(YearMonth(today.year, today.month), state.months[state.visibleMonthIndex].yearMonth)
+            assertFalse(state.isLoading)
+        }
 
     @Test
-    fun `a preselected date outranks today`() = runTest {
-        val target = LocalDate(2026, 9, 4)
-        val vm = viewModel(preselected = target.toEpochDays())
+    fun `the project's title and colour reach the state`() =
+        runTest {
+            val vm = viewModel(project = project().copy(title = "Tracky", colorArgb = 0xFFF39B19.toInt()))
 
-        assertEquals(target, vm.state.value.selectedDate)
-    }
-
-    @Test
-    fun `a restored date outranks the one navigation supplied`() = runTest {
-        val restored = LocalDate(2026, 8, 20)
-        val handle = SavedStateHandle(
-            mapOf(DailyOverviewViewModel.KEY_SELECTED_DATE to restored.toEpochDays())
-        )
-        val vm = viewModel(preselected = LocalDate(2026, 9, 4).toEpochDays(), savedStateHandle = handle)
-
-        assertEquals(restored, vm.state.value.selectedDate)
-    }
+            assertEquals("Tracky", vm.state.value.projectTitle)
+            assertEquals(Color(0xFFF39B19.toInt()), vm.state.value.projectColor)
+        }
 
     @Test
-    fun `a project that cannot be read reports an error rather than hanging on the spinner`() = runTest {
-        val repository = FakeProjectRepository(null)
-        val vm = viewModel(repository = repository)
+    fun `a preselected date outranks today`() =
+        runTest {
+            val target = LocalDate(2026, 9, 4)
+            val vm = viewModel(preselected = target.toEpochDays())
 
-        assertFalse(vm.state.value.isLoading)
-        assertTrue(vm.state.value.months.isEmpty())
-    }
+            assertEquals(target, vm.state.value.selectedDate)
+        }
 
     @Test
-    fun `a project with no intervals still opens on today`() = runTest {
-        val vm = viewModel(project = project())
+    fun `a restored date outranks the one navigation supplied`() =
+        runTest {
+            val restored = LocalDate(2026, 8, 20)
+            val handle =
+                SavedStateHandle(
+                    mapOf(DailyOverviewViewModel.KEY_SELECTED_DATE to restored.toEpochDays()),
+                )
+            val vm = viewModel(preselected = LocalDate(2026, 9, 4).toEpochDays(), savedStateHandle = handle)
 
-        assertEquals(today, vm.state.value.selectedDate)
-        assertTrue(vm.state.value.dayDetail?.isEmpty == true)
-        assertTrue(vm.state.value.months.isNotEmpty())
-    }
+            assertEquals(restored, vm.state.value.selectedDate)
+        }
+
+    @Test
+    fun `a project that cannot be read reports an error rather than hanging on the spinner`() =
+        runTest {
+            val repository = FakeProjectRepository(null)
+            val vm = viewModel(repository = repository)
+
+            assertFalse(vm.state.value.isLoading)
+            assertTrue(
+                vm.state.value.months
+                    .isEmpty(),
+            )
+        }
+
+    @Test
+    fun `a project with no intervals still opens on today`() =
+        runTest {
+            val vm = viewModel(project = project())
+
+            assertEquals(today, vm.state.value.selectedDate)
+            assertTrue(
+                vm.state.value.dayDetail
+                    ?.isEmpty == true,
+            )
+            assertTrue(
+                vm.state.value.months
+                    .isNotEmpty(),
+            )
+        }
 
     // --- deriving in memory --------------------------------------------------------------------
 
     @Test
-    fun `selecting a date rebuilds the day without going back to the repository`() = runTest {
-        val repository = FakeProjectRepository(trackedProject())
-        val vm = viewModel(repository = repository)
-        assertEquals(1, repository.treeReads)
+    fun `selecting a date rebuilds the day without going back to the repository`() =
+        runTest {
+            val repository = FakeProjectRepository(trackedProject())
+            val vm = viewModel(repository = repository)
+            assertEquals(1, repository.treeReads)
 
-        vm.onAction(DailyOverviewAction.OnDateSelected(LocalDate(2026, 9, 8)))
-        advanceUntilIdle()
+            vm.onAction(DailyOverviewAction.OnDateSelected(LocalDate(2026, 9, 8)))
+            advanceUntilIdle()
 
-        assertEquals("Tue, Sep 08", vm.state.value.dayDetail?.dateLabel)
-        assertEquals(1, vm.state.value.dayDetail?.intervalCount)
-        // The whole point of holding the tree: no second read.
-        assertEquals(1, repository.treeReads)
-    }
-
-    @Test
-    fun `paging the calendar leaves the selected day alone`() = runTest {
-        val repository = FakeProjectRepository(trackedProject())
-        val vm = viewModel(repository = repository)
-        val selectedBefore = vm.state.value.selectedDate
-
-        vm.onAction(DailyOverviewAction.OnMonthChanged(0))
-        advanceUntilIdle()
-
-        assertEquals(0, vm.state.value.visibleMonthIndex)
-        assertEquals(selectedBefore, vm.state.value.selectedDate)
-        assertEquals(1, repository.treeReads)
-    }
+            assertEquals(
+                "Tue, Sep 08",
+                vm.state.value.dayDetail
+                    ?.dateLabel,
+            )
+            assertEquals(
+                1,
+                vm.state.value.dayDetail
+                    ?.intervalCount,
+            )
+            // The whole point of holding the tree: no second read.
+            assertEquals(1, repository.treeReads)
+        }
 
     @Test
-    fun `a month index outside the range is clamped rather than crashing`() = runTest {
-        val vm = viewModel(project = trackedProject())
+    fun `paging the calendar leaves the selected day alone`() =
+        runTest {
+            val repository = FakeProjectRepository(trackedProject())
+            val vm = viewModel(repository = repository)
+            val selectedBefore = vm.state.value.selectedDate
 
-        vm.onAction(DailyOverviewAction.OnMonthChanged(99))
-        advanceUntilIdle()
+            vm.onAction(DailyOverviewAction.OnMonthChanged(0))
+            advanceUntilIdle()
 
-        assertEquals(vm.state.value.months.lastIndex, vm.state.value.visibleMonthIndex)
-    }
-
-    @Test
-    fun `selecting a date in another month pages the calendar to it`() = runTest {
-        val vm = viewModel(project = trackedProject())
-        val august = LocalDate(2026, 8, 4)
-
-        vm.onAction(DailyOverviewAction.OnDateSelected(august))
-        advanceUntilIdle()
-
-        assertEquals(YearMonth(2026, 8), vm.state.value.months[vm.state.value.visibleMonthIndex].yearMonth)
-    }
+            assertEquals(0, vm.state.value.visibleMonthIndex)
+            assertEquals(selectedBefore, vm.state.value.selectedDate)
+            assertEquals(1, repository.treeReads)
+        }
 
     @Test
-    fun `the selected date is remembered for process death`() = runTest {
-        val handle = SavedStateHandle()
-        val vm = viewModel(project = trackedProject(), savedStateHandle = handle)
-        val target = LocalDate(2026, 9, 8)
+    fun `a month index outside the range is clamped rather than crashing`() =
+        runTest {
+            val vm = viewModel(project = trackedProject())
 
-        vm.onAction(DailyOverviewAction.OnDateSelected(target))
-        advanceUntilIdle()
+            vm.onAction(DailyOverviewAction.OnMonthChanged(99))
+            advanceUntilIdle()
 
-        assertEquals(target.toEpochDays(), handle.get<Long>(DailyOverviewViewModel.KEY_SELECTED_DATE))
-    }
+            assertEquals(vm.state.value.months.lastIndex, vm.state.value.visibleMonthIndex)
+        }
+
+    @Test
+    fun `selecting a date in another month pages the calendar to it`() =
+        runTest {
+            val vm = viewModel(project = trackedProject())
+            val august = LocalDate(2026, 8, 4)
+
+            vm.onAction(DailyOverviewAction.OnDateSelected(august))
+            advanceUntilIdle()
+
+            assertEquals(
+                YearMonth(2026, 8),
+                vm.state.value.months[vm.state.value.visibleMonthIndex]
+                    .yearMonth,
+            )
+        }
+
+    @Test
+    fun `the selected date is remembered for process death`() =
+        runTest {
+            val handle = SavedStateHandle()
+            val vm = viewModel(project = trackedProject(), savedStateHandle = handle)
+            val target = LocalDate(2026, 9, 8)
+
+            vm.onAction(DailyOverviewAction.OnDateSelected(target))
+            advanceUntilIdle()
+
+            assertEquals(target.toEpochDays(), handle.get<Long>(DailyOverviewViewModel.KEY_SELECTED_DATE))
+        }
 
     // --- helpers -------------------------------------------------------------------------------
 
-    private fun trackedProject(): Project = project(
-        tasks = listOf(
-            task(
-                title = "Design review",
-                intervals = listOf(
-                    interval("2026-08-04T09:00:00Z", minutes = 240, id = "aug"),
-                    interval("2026-09-08T09:30:00Z", minutes = 42, id = "sep")
-                )
-            )
+    private fun trackedProject(): Project =
+        project(
+            tasks =
+                listOf(
+                    task(
+                        title = "Design review",
+                        intervals =
+                            listOf(
+                                interval("2026-08-04T09:00:00Z", minutes = 240, id = "aug"),
+                                interval("2026-09-08T09:30:00Z", minutes = 42, id = "sep"),
+                            ),
+                    ),
+                ),
         )
-    )
 
     private fun TestScope.viewModel(
         project: Project? = trackedProject(),
         repository: FakeProjectRepository = FakeProjectRepository(project),
         preselected: Long = DailyOverviewViewModel.NO_PRESELECTED_DATE,
-        savedStateHandle: SavedStateHandle = SavedStateHandle()
+        savedStateHandle: SavedStateHandle = SavedStateHandle(),
     ): DailyOverviewViewModel {
-        val vm = DailyOverviewViewModel(
-            projectId = "project",
-            preselectedDateEpochDay = preselected,
-            projectRepository = repository,
-            timeProvider = FixedTimeProvider(now),
-            savedStateHandle = savedStateHandle,
-            ioDispatcher = dispatcher
-        )
+        val vm =
+            DailyOverviewViewModel(
+                projectId = "project",
+                preselectedDateEpochDay = preselected,
+                projectRepository = repository,
+                timeProvider = FixedTimeProvider(now),
+                savedStateHandle = savedStateHandle,
+                ioDispatcher = dispatcher,
+            )
         // Nothing loads until something subscribes: the read runs from `onStart`.
         backgroundScope.launch { vm.state.collect { } }
         advanceUntilIdle()

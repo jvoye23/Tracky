@@ -27,7 +27,7 @@ import kotlinx.coroutines.flow.update
 class TimerNotificationPermissionViewModel(
     private val permissionRequester: TimerNotificationPermissionRequester,
     private val runningTimerRepository: RunningTimerRepository,
-    private val savedStateHandle: SavedStateHandle
+    private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
     private var hasLoadedInitialData = false
@@ -44,21 +44,22 @@ class TimerNotificationPermissionViewModel(
         }
 
     private val _state = MutableStateFlow(TimerNotificationPermissionState())
-    val state = _state
-        .onStart {
-            if (!hasLoadedInitialData) {
-                observeRunningTimer()
-                hasLoadedInitialData = true
-            }
-        }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000L),
-            initialValue = TimerNotificationPermissionState()
-        )
+    val state =
+        _state
+            .onStart {
+                if (!hasLoadedInitialData) {
+                    observeRunningTimer()
+                    hasLoadedInitialData = true
+                }
+            }.stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000L),
+                initialValue = TimerNotificationPermissionState(),
+            )
 
     private fun observeRunningTimer() {
-        runningTimerRepository.observeRunningTimer()
+        runningTimerRepository
+            .observeRunningTimer()
             .map { it != null }
             .distinctUntilChanged()
             .onEach { isRunning -> if (isRunning) askOnce() }
@@ -73,19 +74,27 @@ class TimerNotificationPermissionViewModel(
 
         when (permissionRequester.request()) {
             TimerNotificationPermission.Granted,
-            TimerNotificationPermission.NotRequired -> Unit
+            TimerNotificationPermission.NotRequired,
+            -> {
+                Unit
+            }
 
             // Both refusals get the same explanation: the timer runs either way, and app settings is
             // a valid route out of either one.
             TimerNotificationPermission.Denied,
-            TimerNotificationPermission.DeniedAlways ->
+            TimerNotificationPermission.DeniedAlways,
+            -> {
                 _state.update { it.copy(showDeniedDialog = true) }
+            }
         }
     }
 
     fun onAction(action: TimerNotificationPermissionAction) {
         when (action) {
-            TimerNotificationPermissionAction.OnConfirm -> dismiss()
+            TimerNotificationPermissionAction.OnConfirm -> {
+                dismiss()
+            }
+
             TimerNotificationPermissionAction.OnOpenAppSettings -> {
                 permissionRequester.openAppSettings()
                 dismiss()
