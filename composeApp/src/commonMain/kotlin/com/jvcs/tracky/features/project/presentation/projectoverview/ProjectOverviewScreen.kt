@@ -42,6 +42,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
@@ -59,6 +60,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -301,29 +303,17 @@ fun ProjectOverviewScreen(
                     .fillMaxSize()
                     .nestedScroll(scrollBehavior.nestedScrollConnection),
             topBar = {
-                AnimatedContent(
-                    targetState = state.isEditModeActive,
-                    transitionSpec = { fadeIn() togetherWith fadeOut() },
-                    label = "topBarSwap",
-                ) { editMode ->
-                    if (editMode) {
-                        ProjectOverviewSelectionTopAppBar(
-                            selectedCount = state.selectedProjectIds.size,
-                            onAction = onAction,
-                            scrollBehavior = scrollBehavior,
-                        )
-                    } else {
-                        ProjectOverviewSearchTopAppBar(
-                            onAction = onAction,
-                            searchQuery = state.searchQuery,
-                            sortOption = state.sortOption,
-                            onMenuClick = { drawerScope.launch { drawerState.open() } },
-                            username = state.localUser?.username,
-                            email = state.localUser?.email,
-                            scrollBehavior = scrollBehavior,
-                        )
-                    }
-                }
+                ProjectOverviewTopBar(
+                    isEditModeActive = state.isEditModeActive,
+                    selectedCount = state.selectedProjectIds.size,
+                    searchQuery = state.searchQuery,
+                    sortOption = state.sortOption,
+                    username = state.localUser?.username,
+                    email = state.localUser?.email,
+                    scrollBehavior = scrollBehavior,
+                    onMenuClick = { drawerScope.launch { drawerState.open() } },
+                    onAction = onAction,
+                )
             },
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
             contentWindowInsets = WindowInsets.safeDrawing,
@@ -363,22 +353,7 @@ fun ProjectOverviewScreen(
             ) {
                 // Internet status
                 if (!state.isOnline) {
-                    Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .background(MaterialTheme.colorScheme.secondary)
-                                .padding(top = topInset)
-                                .padding(vertical = 4.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = stringResource(Res.string.no_internet_connection),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSecondary,
-                        )
-                    }
+                    OfflineBanner(topInset = topInset)
                 }
                 if (!state.isLoading && state.pinnedProjects.isEmpty() && state.otherProjects.isEmpty()) {
                     EmptySection(
@@ -399,70 +374,18 @@ fun ProjectOverviewScreen(
                         },
                         modifier = Modifier.fillMaxSize(),
                     ) {
-                        LazyColumn(
-                            state = listState,
-                            modifier =
-                                Modifier
-                                    .fillMaxSize()
-                                    .padding(horizontal = 10.dp)
-                                    .testTag("project_overview"),
-                            contentPadding =
-                                PaddingValues(
-                                    top = contentTopInset,
-                                    bottom = bottomInset,
-                                ),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            if (pinnedItems.isNotEmpty()) {
-                                item {
-                                    ProjectSectionHeader(text = stringResource(Res.string.pinned))
-                                }
-                                items(
-                                    items = pinnedItems,
-                                    key = { it.projectId },
-                                ) { item ->
-                                    ProjectListCard(
-                                        item = item,
-                                        isEditModeActive = state.isEditModeActive,
-                                        isSelected =
-                                            item.projectId in state.selectedProjectIds,
-                                        onAction = onAction,
-                                        reorderEnabled = reorderEnabled,
-                                        dragDropState = dragDropState,
-                                    )
-                                }
-                            }
-
-                            if (otherItems.isNotEmpty()) {
-                                item {
-                                    ProjectSectionHeader(
-                                        text =
-                                            if (state.searchQuery.isEmpty()) {
-                                                stringResource(
-                                                    Res.string.other,
-                                                )
-                                            } else {
-                                                stringResource(Res.string.search_results)
-                                            },
-                                    )
-                                }
-                            }
-
-                            items(
-                                items = otherItems,
-                                key = { it.projectId },
-                            ) { item ->
-                                ProjectListCard(
-                                    item = item,
-                                    isEditModeActive = state.isEditModeActive,
-                                    isSelected =
-                                        item.projectId in state.selectedProjectIds,
-                                    onAction = onAction,
-                                    reorderEnabled = reorderEnabled,
-                                    dragDropState = dragDropState,
-                                )
-                            }
-                        }
+                        ProjectList(
+                            pinnedItems = pinnedItems,
+                            otherItems = otherItems,
+                            isSearching = state.searchQuery.isNotEmpty(),
+                            isEditModeActive = state.isEditModeActive,
+                            selectedProjectIds = state.selectedProjectIds,
+                            reorderEnabled = reorderEnabled,
+                            listState = listState,
+                            dragDropState = dragDropState,
+                            contentPadding = PaddingValues(top = contentTopInset, bottom = bottomInset),
+                            onAction = onAction,
+                        )
                     }
                 }
             }
@@ -480,103 +403,249 @@ fun ProjectOverviewScreen(
                 )
             }
             if (state.isDeleteConfirmationDialogVisible) {
-                AlertDialog(
-                    onDismissRequest = { onAction(ProjectOverviewAction.OnDismissDeleteDialog) },
-                    icon = {
-                        Icon(
-                            imageVector = Icon_Delete,
-                            contentDescription = stringResource(Res.string.delete_selected),
-                            tint = MaterialTheme.colorScheme.onSurface,
-                        )
-                    },
-                    title = {
-                        Text(
-                            text =
-                                if (state.selectedProjectIds.size != 1) {
-                                    stringResource(Res.string.delete_projects_title)
-                                } else {
-                                    stringResource(Res.string.delete_project_title)
-                                },
-                        )
-                    },
-                    text = {
-                        Text(
-                            text =
-                                if (state.selectedProjectIds.size != 1) {
-                                    stringResource(
-                                        Res.string.delete_projects_confirmation,
-                                        state.selectedProjectIds.size,
-                                    )
-                                } else {
-                                    stringResource(Res.string.delete_one_project_confirmation)
-                                },
-                        )
-                    },
-                    confirmButton = {
-                        TextButton(onClick = { onAction(ProjectOverviewAction.OnConfirmDelete) }) {
-                            Text(text = stringResource(Res.string.confirm))
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { onAction(ProjectOverviewAction.OnDismissDeleteDialog) }) {
-                            Text(text = stringResource(Res.string.cancel))
-                        }
-                    },
-                )
+                DeleteProjectsDialog(selectedCount = state.selectedProjectIds.size, onAction = onAction)
             }
             if (state.showLogoutConfirmation) {
-                AlertDialog(
-                    onDismissRequest = { onAction(ProjectOverviewAction.OnDismissLogoutConfirmation) },
-                    icon = {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Logout,
-                            contentDescription = stringResource(Res.string.log_out),
-                            tint = MaterialTheme.colorScheme.onSurface,
-                        )
-                    },
-                    title = {
-                        Text(
-                            text =
-                                if (state.isOnline) {
-                                    stringResource(Res.string.do_you_want_to_logout)
-                                } else {
-                                    stringResource(Res.string.logout_not_possible)
-                                },
-                        )
-                    },
-                    text = {
-                        Text(
-                            text =
-                                if (state.isOnline) {
-                                    stringResource(Res.string.do_you_want_to_logout_desc)
-                                } else {
-                                    stringResource(Res.string.logout_not_possible_desc)
-                                },
-                        )
-                    },
-                    confirmButton = {
-                        if (state.isOnline) {
-                            TextButton(onClick = { onAction(ProjectOverviewAction.OnConfirmLogout) }) {
-                                Text(text = stringResource(Res.string.confirm))
-                            }
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { onAction(ProjectOverviewAction.OnDismissLogoutConfirmation) }) {
-                            Text(
-                                text =
-                                    if (state.isOnline) {
-                                        stringResource(Res.string.cancel)
-                                    } else {
-                                        stringResource(Res.string.close)
-                                    },
-                            )
-                        }
-                    },
-                )
+                LogoutConfirmationDialog(isOnline = state.isOnline, onAction = onAction)
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ProjectOverviewTopBar(
+    isEditModeActive: Boolean,
+    selectedCount: Int,
+    searchQuery: String,
+    sortOption: SortOption,
+    username: String?,
+    email: String?,
+    scrollBehavior: TopAppBarScrollBehavior,
+    onMenuClick: () -> Unit,
+    onAction: (ProjectOverviewAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    AnimatedContent(
+        targetState = isEditModeActive,
+        modifier = modifier,
+        transitionSpec = { fadeIn() togetherWith fadeOut() },
+        label = "topBarSwap",
+    ) { editMode ->
+        if (editMode) {
+            ProjectOverviewSelectionTopAppBar(
+                selectedCount = selectedCount,
+                onAction = onAction,
+                scrollBehavior = scrollBehavior,
+            )
+        } else {
+            ProjectOverviewSearchTopAppBar(
+                onAction = onAction,
+                searchQuery = searchQuery,
+                sortOption = sortOption,
+                onMenuClick = onMenuClick,
+                username = username,
+                email = email,
+                scrollBehavior = scrollBehavior,
+            )
+        }
+    }
+}
+
+/** Sits under the top bar, so it reserves the [topInset] the list would otherwise have taken. */
+@Composable
+private fun OfflineBanner(topInset: Dp, modifier: Modifier = Modifier) {
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.secondary)
+                .padding(top = topInset)
+                .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(Res.string.no_internet_connection),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSecondary,
+        )
+    }
+}
+
+@Composable
+private fun ProjectList(
+    pinnedItems: List<ProjectUi>,
+    otherItems: List<ProjectUi>,
+    isSearching: Boolean,
+    isEditModeActive: Boolean,
+    selectedProjectIds: Set<String>,
+    reorderEnabled: Boolean,
+    listState: LazyListState,
+    dragDropState: ReorderableListState,
+    contentPadding: PaddingValues,
+    onAction: (ProjectOverviewAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    LazyColumn(
+        state = listState,
+        modifier =
+            modifier
+                .fillMaxSize()
+                .padding(horizontal = 10.dp)
+                .testTag("project_overview"),
+        contentPadding = contentPadding,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (pinnedItems.isNotEmpty()) {
+            item {
+                ProjectSectionHeader(text = stringResource(Res.string.pinned))
+            }
+            items(
+                items = pinnedItems,
+                key = { it.projectId },
+            ) { item ->
+                ProjectListCard(
+                    item = item,
+                    isEditModeActive = isEditModeActive,
+                    isSelected =
+                        item.projectId in selectedProjectIds,
+                    onAction = onAction,
+                    reorderEnabled = reorderEnabled,
+                    dragDropState = dragDropState,
+                )
+            }
+        }
+
+        if (otherItems.isNotEmpty()) {
+            item {
+                ProjectSectionHeader(
+                    text =
+                        if (isSearching) {
+                            stringResource(Res.string.search_results)
+                        } else {
+                            stringResource(Res.string.other)
+                        },
+                )
+            }
+        }
+
+        items(
+            items = otherItems,
+            key = { it.projectId },
+        ) { item ->
+            ProjectListCard(
+                item = item,
+                isEditModeActive = isEditModeActive,
+                isSelected =
+                    item.projectId in selectedProjectIds,
+                onAction = onAction,
+                reorderEnabled = reorderEnabled,
+                dragDropState = dragDropState,
+            )
+        }
+    }
+}
+
+@Composable
+private fun DeleteProjectsDialog(selectedCount: Int, onAction: (ProjectOverviewAction) -> Unit) {
+    AlertDialog(
+        onDismissRequest = { onAction(ProjectOverviewAction.OnDismissDeleteDialog) },
+        icon = {
+            Icon(
+                imageVector = Icon_Delete,
+                contentDescription = stringResource(Res.string.delete_selected),
+                tint = MaterialTheme.colorScheme.onSurface,
+            )
+        },
+        title = {
+            Text(
+                text =
+                    if (selectedCount != 1) {
+                        stringResource(Res.string.delete_projects_title)
+                    } else {
+                        stringResource(Res.string.delete_project_title)
+                    },
+            )
+        },
+        text = {
+            Text(
+                text =
+                    if (selectedCount != 1) {
+                        stringResource(
+                            Res.string.delete_projects_confirmation,
+                            selectedCount,
+                        )
+                    } else {
+                        stringResource(Res.string.delete_one_project_confirmation)
+                    },
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onAction(ProjectOverviewAction.OnConfirmDelete) }) {
+                Text(text = stringResource(Res.string.confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = { onAction(ProjectOverviewAction.OnDismissDeleteDialog) }) {
+                Text(text = stringResource(Res.string.cancel))
+            }
+        },
+    )
+}
+
+/** Logging out needs the server, so offline the dialog explains why it can't and offers only a close. */
+@Composable
+private fun LogoutConfirmationDialog(isOnline: Boolean, onAction: (ProjectOverviewAction) -> Unit) {
+    AlertDialog(
+        onDismissRequest = { onAction(ProjectOverviewAction.OnDismissLogoutConfirmation) },
+        icon = {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.Logout,
+                contentDescription = stringResource(Res.string.log_out),
+                tint = MaterialTheme.colorScheme.onSurface,
+            )
+        },
+        title = {
+            Text(
+                text =
+                    if (isOnline) {
+                        stringResource(Res.string.do_you_want_to_logout)
+                    } else {
+                        stringResource(Res.string.logout_not_possible)
+                    },
+            )
+        },
+        text = {
+            Text(
+                text =
+                    if (isOnline) {
+                        stringResource(Res.string.do_you_want_to_logout_desc)
+                    } else {
+                        stringResource(Res.string.logout_not_possible_desc)
+                    },
+            )
+        },
+        confirmButton = {
+            if (isOnline) {
+                TextButton(onClick = { onAction(ProjectOverviewAction.OnConfirmLogout) }) {
+                    Text(text = stringResource(Res.string.confirm))
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = { onAction(ProjectOverviewAction.OnDismissLogoutConfirmation) }) {
+                Text(
+                    text =
+                        if (isOnline) {
+                            stringResource(Res.string.cancel)
+                        } else {
+                            stringResource(Res.string.close)
+                        },
+                )
+            }
+        },
+    )
 }
 
 /**

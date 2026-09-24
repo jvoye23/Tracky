@@ -2,6 +2,7 @@ package com.jvcs.tracky.features.project.presentation.util
 
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.designsystem.util.UiText
+import org.jetbrains.compose.resources.StringResource
 import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.error_bad_request
 import tracky.composeapp.generated.resources.error_conflict
@@ -18,25 +19,24 @@ import tracky.composeapp.generated.resources.error_too_many_requests
 import tracky.composeapp.generated.resources.error_unauthorized
 import tracky.composeapp.generated.resources.error_unknown
 
-fun DataError.toUiText(): UiText {
-    val resource =
-        when (this) {
-            DataError.Local.DISK_FULL -> Res.string.error_disk_full
-            DataError.Local.NOT_FOUND -> Res.string.error_not_found
-            DataError.Local.UNKNOWN -> Res.string.error_unknown
-            DataError.Remote.BAD_REQUEST -> Res.string.error_bad_request
-            DataError.Remote.REQUEST_TIMEOUT -> Res.string.error_request_timeout
-            DataError.Remote.UNAUTHORIZED -> Res.string.error_unauthorized
-            DataError.Remote.FORBIDDEN -> Res.string.error_forbidden
-            DataError.Remote.NOT_FOUND -> Res.string.error_not_found
-            DataError.Remote.CONFLICT -> Res.string.error_conflict
-            DataError.Remote.TOO_MANY_REQUESTS -> Res.string.error_too_many_requests
-            DataError.Remote.NO_INTERNET -> Res.string.error_no_internet
-            DataError.Remote.PAYLOAD_TOO_LARGE -> Res.string.error_payload_too_large
-            DataError.Remote.SERVER_ERROR -> Res.string.error_server
-            DataError.Remote.SERVICE_UNAVAILABLE -> Res.string.error_service_unavailable
-            DataError.Remote.SERIALIZATION -> Res.string.error_serialization
-            DataError.Remote.UNKNOWN -> Res.string.error_unknown
-        }
-    return UiText.Resource(resource)
-}
+fun DataError.toUiText(): UiText = UiText.Resource(toStringResource())
+
+private fun DataError.toStringResource(): StringResource =
+    when (this) {
+        DataError.Local.DISK_FULL -> Res.string.error_disk_full
+        DataError.Local.NOT_FOUND -> Res.string.error_not_found
+        DataError.Local.UNKNOWN -> Res.string.error_unknown
+        DataError.Remote.BAD_REQUEST -> Res.string.error_bad_request
+        DataError.Remote.REQUEST_TIMEOUT -> Res.string.error_request_timeout
+        DataError.Remote.UNAUTHORIZED -> Res.string.error_unauthorized
+        DataError.Remote.FORBIDDEN -> Res.string.error_forbidden
+        DataError.Remote.NOT_FOUND -> Res.string.error_not_found
+        DataError.Remote.CONFLICT -> Res.string.error_conflict
+        DataError.Remote.TOO_MANY_REQUESTS -> Res.string.error_too_many_requests
+        DataError.Remote.NO_INTERNET -> Res.string.error_no_internet
+        DataError.Remote.PAYLOAD_TOO_LARGE -> Res.string.error_payload_too_large
+        DataError.Remote.SERVER_ERROR -> Res.string.error_server
+        DataError.Remote.SERVICE_UNAVAILABLE -> Res.string.error_service_unavailable
+        DataError.Remote.SERIALIZATION -> Res.string.error_serialization
+        DataError.Remote.UNKNOWN -> Res.string.error_unknown
+    }

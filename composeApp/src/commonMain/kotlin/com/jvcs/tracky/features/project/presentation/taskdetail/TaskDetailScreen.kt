@@ -123,48 +123,10 @@ fun TaskDetailScreen(
         contentWindowInsets = WindowInsets.safeDrawing,
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        text =
-                            if (state.isEditMode) {
-                                stringResource(Res.string.edit_task_uppercase)
-                            } else {
-                                stringResource(Res.string.task_details)
-                            },
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = {
-                        if (state.isEditMode) {
-                            onAction(TaskDetailAction.OnCloseEditModeClick)
-                        } else {
-                            onAction(TaskDetailAction.OnBackClick)
-                        }
-                    }) {
-                        Icon(
-                            if (state.isEditMode) Icons.Default.Close else Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = if (state.isEditMode) "Close" else "Back",
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = {
-                        if (state.isEditMode) {
-                            onAction(TaskDetailAction.OnCloseEditModeClick)
-                        } else {
-                            onAction(TaskDetailAction.OnEditModeClick)
-                        }
-                    }) {
-                        Icon(
-                            if (state.isEditMode) Icons.Default.Check else Icons.Default.Edit,
-                            contentDescription = if (state.isEditMode) "Done" else "Edit",
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = headerColor),
+            TaskDetailTopBar(
+                isEditMode = state.isEditMode,
+                headerColor = headerColor,
+                onAction = onAction,
             )
         },
     ) { paddingValues ->
@@ -209,33 +171,10 @@ fun TaskDetailScreen(
             }
 
             // Timer
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-            ) {
-                Button(
-                    onClick = { onAction(TaskDetailAction.OnToggleTimer) },
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor = if (state.isTimerRunning) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                        ),
-                ) {
-                    Icon(
-                        if (state.isTimerRunning) Icons.Default.Stop else Icons.Default.PlayArrow,
-                        contentDescription = null,
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        if (state.isTimerRunning) {
-                            stringResource(
-                                Res.string.stop_timer,
-                            )
-                        } else {
-                            stringResource(Res.string.start_timer)
-                        },
-                    )
-                }
-            }
+            TimerToggleRow(
+                isTimerRunning = state.isTimerRunning,
+                onToggleTimer = { onAction(TaskDetailAction.OnToggleTimer) },
+            )
 
             // Daily sessions
             Text(
@@ -282,6 +221,100 @@ fun TaskDetailScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TaskDetailTopBar(
+    isEditMode: Boolean,
+    headerColor: Color,
+    onAction: (TaskDetailAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    CenterAlignedTopAppBar(
+        modifier = modifier,
+        title = {
+            Text(
+                text =
+                    if (isEditMode) {
+                        stringResource(Res.string.edit_task_uppercase)
+                    } else {
+                        stringResource(Res.string.task_details)
+                    },
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        },
+        navigationIcon = {
+            IconButton(onClick = {
+                if (isEditMode) {
+                    onAction(TaskDetailAction.OnCloseEditModeClick)
+                } else {
+                    onAction(TaskDetailAction.OnBackClick)
+                }
+            }) {
+                Icon(
+                    if (isEditMode) Icons.Default.Close else Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = if (isEditMode) "Close" else "Back",
+                )
+            }
+        },
+        actions = {
+            IconButton(onClick = {
+                if (isEditMode) {
+                    onAction(TaskDetailAction.OnCloseEditModeClick)
+                } else {
+                    onAction(TaskDetailAction.OnEditModeClick)
+                }
+            }) {
+                Icon(
+                    if (isEditMode) Icons.Default.Check else Icons.Default.Edit,
+                    contentDescription = if (isEditMode) "Done" else "Edit",
+                )
+            }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = headerColor),
+    )
+}
+
+@Composable
+private fun TimerToggleRow(
+    isTimerRunning: Boolean,
+    onToggleTimer: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        Button(
+            onClick = onToggleTimer,
+            colors =
+                ButtonDefaults.buttonColors(
+                    containerColor =
+                        if (isTimerRunning) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        },
+                ),
+        ) {
+            Icon(
+                if (isTimerRunning) Icons.Default.Stop else Icons.Default.PlayArrow,
+                contentDescription = null,
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                if (isTimerRunning) {
+                    stringResource(
+                        Res.string.stop_timer,
+                    )
+                } else {
+                    stringResource(Res.string.start_timer)
+                },
+            )
         }
     }
 }
