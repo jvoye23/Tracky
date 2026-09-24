@@ -1,6 +1,6 @@
 package com.jvcs.tracky.core.domain.sync
 
-/**
+/*
  * Decides, row by row, whether a pull from the server may overwrite what is already in Room.
  *
  * `GET /api/projects` returns the whole tree, so a plain server-wins upsert would quietly destroy

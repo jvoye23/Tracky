@@ -194,9 +194,9 @@ private val PreviewAlternateProjectColor = SampleProjectColors.Teal
 /**
  * September 2026, drawn from the design reference: opens on a Tuesday, so one leading padding
  * cell, and the busiest day is Tue 08 at full tint.
+ *
+ * Shared with [CalendarMonthCard]'s previews, so the fixture is written once.
  */
-
-/** Shared with [CalendarMonthCard]'s previews, so the fixture is written once. */
 @Suppress("MagicNumber") // preview fixture: sample data is meant to be literal
 internal fun previewCalendarMonth(
     tracked: Map<Int, Long> =

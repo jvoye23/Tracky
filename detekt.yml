@@ -620,10 +620,10 @@ prism:
     active: true
     excludes: ['**/test/**', '**/*Test/**', '**/androidTest/**', '**/app/src/**']
   # The Application class is the one sanctioned startKoin site, wherever it lives.
-  # initKoin.kt is the KMP-shared start, called from the Android Application and from iOS.
+  # InitKoin.kt is the KMP-shared start, called from the Android Application and from iOS.
   StartKoinOnlyInAppModule:
     active: true
-    excludes: ['**/test/**', '**/*Test/**', '**/androidTest/**', '**/*Application.kt', '**/*App.kt', '**/di/initKoin.kt']
+    excludes: ['**/test/**', '**/*Test/**', '**/androidTest/**', '**/*Application.kt', '**/*App.kt', '**/di/InitKoin.kt']
   # HttpClientFactory is where the shared client is built; enumerated per file,
   # never a directory glob, so a second construction site still fails.
   HttpClientConstructionOutsideFactory:
