@@ -1,6 +1,7 @@
 package com.jvcs.tracky
 
 interface Platform {
+
     val name: String
 }
 

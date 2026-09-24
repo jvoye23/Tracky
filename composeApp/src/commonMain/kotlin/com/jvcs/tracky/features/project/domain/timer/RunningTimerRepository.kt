@@ -9,5 +9,6 @@ import kotlinx.coroutines.flow.Flow
  * rows that nothing is timing, and [StrandedTimerRepository] owns them instead.
  */
 interface RunningTimerRepository {
+
     fun observeRunningTimer(): Flow<RunningTimer?>
 }

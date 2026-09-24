@@ -21,6 +21,7 @@ typealias ProjectId = String
  * not one-shot calls.
  */
 interface LocalProjectDataSource {
+
     fun getProjects(): Flow<List<Project>>
 
     fun getActiveProjects(): Flow<List<Project>>

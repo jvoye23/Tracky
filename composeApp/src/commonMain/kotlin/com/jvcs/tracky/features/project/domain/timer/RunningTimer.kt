@@ -41,6 +41,7 @@ data class RunningTimer(
      */
     val isForeign: Boolean = false,
 ) {
+
     /** The subtask when one is being timed, else the task. What Pause has to stop. */
     val timedEntityId: String get() = subTask?.id ?: task.id
 

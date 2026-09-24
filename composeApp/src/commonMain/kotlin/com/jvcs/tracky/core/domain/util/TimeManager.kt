@@ -45,6 +45,7 @@ data class RunningTimerTick(
      */
     val isStale: Boolean = false,
 ) {
+
     val formatted: String get() = formatDuration(elapsed)
 }
 
@@ -70,6 +71,7 @@ class TimeManager(
     private val syncRecency: SyncRecency,
     scope: CoroutineScope,
 ) {
+
     val tick: StateFlow<RunningTimerTick?> =
         runningTimerRepository
             .observeRunningTimer()

@@ -29,6 +29,7 @@ data class PendingSyncOperation(
      */
     val parentEntityId: String? = null,
 ) {
+
     companion object {
         const val ENTITY_PROJECT = "project"
         const val ENTITY_TASK = "project_task"

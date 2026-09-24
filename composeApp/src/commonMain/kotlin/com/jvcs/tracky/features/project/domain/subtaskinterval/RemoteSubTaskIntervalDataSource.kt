@@ -16,6 +16,7 @@ import com.jvcs.tracky.features.project.domain.models.SubTaskInterval
  * interval alone. The repository resolves the task id from the parent subtask row and passes it in.
  */
 interface RemoteSubTaskIntervalDataSource {
+
     suspend fun postInterval(
         projectId: String,
         taskId: String,

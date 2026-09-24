@@ -32,6 +32,7 @@ class SyncPullCoordinator(
     applicationScope: CoroutineScope,
     private val coalesceWindow: Duration = COALESCE_WINDOW,
 ) {
+
     /**
      * Conflated: while a pull is in flight, any number of further requests collapse into exactly
      * one more. Dropping the extras is the point — they all mean the same thing, "there is

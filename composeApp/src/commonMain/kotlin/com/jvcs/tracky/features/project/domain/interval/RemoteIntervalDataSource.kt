@@ -11,6 +11,7 @@ import com.jvcs.tracky.features.project.domain.models.TaskInterval
  * GET /api/projects, so there is deliberately no interval read method here.
  */
 interface RemoteIntervalDataSource {
+
     // A TaskInterval carries both its parentProjectId and parentTaskId, so the route can be built
     // from the interval alone.
     suspend fun postInterval(interval: TaskInterval): Result<TaskInterval, DataError.Remote>

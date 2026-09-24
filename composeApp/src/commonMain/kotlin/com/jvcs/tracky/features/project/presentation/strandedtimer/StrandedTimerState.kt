@@ -17,5 +17,6 @@ data class StrandedTimerState(
     /** Set while a resolution is in flight, so a double tap cannot resolve the same item twice. */
     val isResolving: Boolean = false,
 ) {
+
     val current: StrandedTimer? get() = pending.firstOrNull()
 }

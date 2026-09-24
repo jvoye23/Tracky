@@ -11,12 +11,14 @@ import kotlin.time.Instant
  * BGProcessingTask, JVM with a no-op. Scheduling is idempotent and kicked off once on app start.
  */
 interface TrashCleanupScheduler {
+
     suspend fun scheduleCleanup()
 
     suspend fun cancelCleanup()
 }
 
 object TrashRetention {
+
     /** How long a soft-deleted project stays in the trash before it is permanently removed. */
     val RETENTION: Duration = 30.days
 

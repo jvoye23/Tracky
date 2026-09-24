@@ -1,6 +1,7 @@
 package com.jvcs.tracky.features.project.presentation.strandedtimer
 
 sealed interface StrandedTimerAction {
+
     /** Banks the whole elapsed span. */
     data object OnKeep : StrandedTimerAction
 

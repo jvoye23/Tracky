@@ -45,6 +45,7 @@ data class CalendarMonthUi(
     val busiestDayLabel: String?,
     val maxTrackedMillis: Long,
 ) {
+
     /** The cells that belong to the month itself, without the padding either side. */
     val monthDays: List<CalendarDayUi> get() = days.filter { it.isInMonth }
 }

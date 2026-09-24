@@ -30,5 +30,6 @@ data class ProjectSubTask(
     // sortedBySubTaskOrder, which sorts nulls last so a new subtask lands at the bottom.
     val sortIndex: Long? = null,
 ) : Timestamped {
+
     override val children: List<Timestamped> get() = subTaskIntervals
 }

@@ -26,6 +26,7 @@ data class ProjectUi(
     val projectTasks: List<ProjectTaskUi>? = null,
     val isPinned: Boolean = false,
 ) {
+
     val totalDuration: String
         get() = formatDuration(totalDurationMillis.milliseconds)
 
@@ -73,6 +74,7 @@ data class ProjectTaskUi(
      */
     val isForeign: Boolean = false,
 ) {
+
     val formattedDuration: String
         get() = formatDuration(durationMillis.milliseconds)
 
@@ -122,6 +124,7 @@ data class ProjectSubTaskUi(
     /** See [ProjectTaskUi.isForeign]. */
     val isForeign: Boolean = false,
 ) {
+
     val formattedDuration: String
         get() = formatDuration(durationMillis.milliseconds)
 }

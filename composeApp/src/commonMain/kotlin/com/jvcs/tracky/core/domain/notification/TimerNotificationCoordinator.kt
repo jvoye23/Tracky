@@ -29,6 +29,7 @@ class TimerNotificationCoordinator(
     private val serverClock: ServerClock,
     private val applicationScope: CoroutineScope,
 ) {
+
     private data class PausedTimer(
         val timer: RunningTimer,
         val elapsed: Duration,

@@ -19,6 +19,7 @@ data class Project(
     override val ownUpdatedAt: Instant? = null,
     val sortIndex: Long? = null,
 ) : Timestamped {
+
     // null projectTasks means "not loaded" (see ProjectEntity.toProject), not "no tasks".
     override val children: List<Timestamped> get() = projectTasks.orEmpty()
 }

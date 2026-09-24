@@ -7,6 +7,7 @@ import com.jvcs.tracky.features.project.domain.models.Project
 import kotlin.time.Instant
 
 interface RemoteProjectDataSource {
+
     /**
      * The full pull. Tasks and intervals come back nested inside each project, which is why there
      * is no separate remote read for them anywhere in the feature.

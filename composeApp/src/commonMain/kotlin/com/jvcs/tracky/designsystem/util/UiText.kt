@@ -6,9 +6,11 @@ import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
 
 sealed interface UiText {
+
     data class DynamicString(val value: String) : UiText
 
     class Resource(val id: StringResource, val args: Array<Any> = arrayOf()) : UiText {
+
         // Hand-written because an Array field makes a data class fall back to identity equality,
         // which would make two UiTexts for the same string resource compare unequal.
         override fun equals(other: Any?): Boolean =

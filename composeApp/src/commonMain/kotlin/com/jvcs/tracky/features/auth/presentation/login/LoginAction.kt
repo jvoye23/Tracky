@@ -1,6 +1,7 @@
 package com.jvcs.tracky.features.auth.presentation.login
 
 sealed interface LoginAction {
+
     data object OnTogglePasswordVisibility : LoginAction
 
     data object OnForgotPasswordClick : LoginAction

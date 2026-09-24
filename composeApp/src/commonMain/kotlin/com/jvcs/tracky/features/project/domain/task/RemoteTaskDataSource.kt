@@ -7,6 +7,7 @@ import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import kotlin.time.Instant
 
 interface RemoteTaskDataSource {
+
     suspend fun getTasksByProjectId(projectId: String): Result<List<ProjectTask>, DataError.Remote>
 
     suspend fun postTaskByProjectId(projectId: String, task: ProjectTask): Result<ProjectTask, DataError.Remote>

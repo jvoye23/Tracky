@@ -10,6 +10,7 @@ data class ProjectArchiveState(
     val selectedProjectIds: Set<String> = emptySet(),
     val isDeleteConfirmationDialogVisible: Boolean = false,
 ) {
+
     val filteredProjects: List<ProjectUi>?
         get() =
             projects?.let { list ->

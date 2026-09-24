@@ -39,6 +39,7 @@ class ProjectSyncManager(
     private val pullCoordinator: SyncPullCoordinator,
     private val applicationScope: CoroutineScope,
 ) {
+
     private var started = false
 
     @OptIn(ExperimentalCoroutinesApi::class)

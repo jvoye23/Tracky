@@ -8,6 +8,7 @@ import platform.Foundation.NSFileManager
 import platform.Foundation.NSUserDomainMask
 
 actual class DatabaseFactory {
+
     actual fun create(): RoomDatabase.Builder<TrackyDatabase> {
         val dbFile = documentDirectory() + "/${TrackyDatabase.DB_NAME}"
 

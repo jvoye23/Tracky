@@ -22,6 +22,7 @@ import io.ktor.client.HttpClient
 import kotlin.time.Instant
 
 class KtorRemoteProjectDataSource(private val httpClient: HttpClient) : RemoteProjectDataSource {
+
     override suspend fun getProjects(): Result<List<Project>, DataError.Remote> =
         httpClient
             .get<List<ProjectDto>>(

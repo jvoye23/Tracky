@@ -7,5 +7,6 @@ import kotlinx.coroutines.flow.Flow
  * iOS NWPathMonitor, JVM always-connected stub).
  */
 expect class ConnectivityObserver {
+
     val isConnected: Flow<Boolean>
 }

@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.serialization.json.Json
 
 class HttpClientFactory(private val sessionStorage: SessionStorage) {
+
     fun create(engine: HttpClientEngine): HttpClient {
         return HttpClient(engine) {
             install(ContentNegotiation) {

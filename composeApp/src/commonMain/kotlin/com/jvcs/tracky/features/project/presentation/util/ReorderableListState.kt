@@ -39,6 +39,7 @@ class ReorderableListState internal constructor(
     private val scope: CoroutineScope,
     private val onMove: (fromKey: String, toKey: String) -> Unit,
 ) {
+
     var draggingItemKey by mutableStateOf<String?>(null)
         private set
 

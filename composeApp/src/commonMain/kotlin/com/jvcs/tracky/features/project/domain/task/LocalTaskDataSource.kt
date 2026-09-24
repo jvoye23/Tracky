@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlin.time.Instant
 
 interface LocalTaskDataSource {
+
     /** The stream the task detail screen observes. */
     fun getTaskWithIntervalsById(taskId: String): Flow<ProjectTask?>
 

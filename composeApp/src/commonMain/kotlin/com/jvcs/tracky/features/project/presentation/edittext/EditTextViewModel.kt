@@ -61,6 +61,7 @@ class EditTextViewModel(
     private val timeProvider: TimeProvider,
     private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
+
     private val eventChannel = Channel<EditTextEvent>()
     val events = eventChannel.receiveAsFlow()
 

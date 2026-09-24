@@ -7,11 +7,13 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 
 interface TimeProvider {
+
     val nowZoneTimeInUtc: LocalDateTime
     val nowInstant: Instant
 }
 
 data object SystemTimeProvider : TimeProvider {
+
     override val nowZoneTimeInUtc: LocalDateTime
         get() {
             val currentInstant = Clock.System.now()
