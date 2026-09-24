@@ -32,11 +32,17 @@ internal class FakeAuthService : AuthService {
         return loginResult
     }
 
+    var registerResult: Result<AuthInfo, DataError.Remote> = Result.Success(authInfo())
+    val registerCalls = mutableListOf<Triple<String, String, String>>()
+
     override suspend fun register(
         email: String,
         name: String,
         password: String,
-    ): Result<AuthInfo, DataError.Remote> = Result.Success(authInfo())
+    ): Result<AuthInfo, DataError.Remote> {
+        registerCalls += Triple(email, name, password)
+        return registerResult
+    }
 
     override suspend fun loginWithGoogle(idToken: String): Result<AuthInfo, DataError.Remote> =
         Result.Success(authInfo())
