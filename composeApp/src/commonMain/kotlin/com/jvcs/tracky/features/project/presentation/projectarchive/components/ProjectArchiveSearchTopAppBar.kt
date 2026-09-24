@@ -22,10 +22,9 @@ import com.jvcs.tracky.features.project.presentation.projectarchive.ProjectArchi
 import com.jvcs.tracky.features.project.presentation.projectarchive.ProjectArchiveState
 import org.jetbrains.compose.resources.stringResource
 import tracky.composeapp.generated.resources.Res
+import tracky.composeapp.generated.resources.archive_title
 import tracky.composeapp.generated.resources.navigation_menu
 import tracky.composeapp.generated.resources.search_in_archive
-import tracky.composeapp.generated.resources.search_in_trash
-import tracky.composeapp.generated.resources.trash_title
 
 @Composable
 fun ProjectArchiveSearchTopAppBar(
@@ -57,7 +56,7 @@ fun ProjectArchiveSearchTopAppBar(
             IconButton(onClick = { onAction(ProjectArchiveAction.OnToggleSearch) }) {
                 Icon(
                     imageVector = if (isSearchActive) Icons.Default.Close else Icons.Default.Search,
-                    contentDescription = stringResource(Res.string.search_in_trash),
+                    contentDescription = stringResource(Res.string.search_in_archive),
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
@@ -75,7 +74,7 @@ fun ProjectArchiveSearchTopAppBar(
 private fun SearchTopBarPreview() {
     TrackyTheme {
         ProjectArchiveSearchTopAppBar(
-            title = stringResource(Res.string.trash_title),
+            title = stringResource(Res.string.archive_title),
             onAction = {},
             isSearchActive = false,
             searchQuery = "",
@@ -90,7 +89,7 @@ private fun SearchTopBarPreview() {
 private fun SearchActivePreview() {
     TrackyTheme {
         ProjectArchiveSearchTopAppBar(
-            title = stringResource(Res.string.trash_title),
+            title = stringResource(Res.string.archive_title),
             onAction = {},
             isSearchActive = true,
             searchQuery = "",
