@@ -2,6 +2,12 @@
 
 package com.jvcs.tracky.features.project_tracker.data
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isNotNull
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
@@ -15,11 +21,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
@@ -63,14 +64,14 @@ class OfflineFirstProjectRepositoryTest {
             val result = repo(local, remote, queue, scheduler).upsertProject(project("p1"))
 
             // User sees success because the local write succeeded.
-            assertTrue(result is Result.Success)
-            assertNotNull(local.projects["p1"])
+            assertThat(result is Result.Success).isTrue()
+            assertThat(local.projects["p1"]).isNotNull()
 
             val ops = queue.all()
-            assertEquals(1, ops.size)
-            assertEquals(PendingSyncOperation.ENTITY_PROJECT, ops[0].entityType)
-            assertEquals(PendingSyncOperation.OP_CREATE, ops[0].operationType)
-            assertTrue(scheduler.scheduleCount > 0)
+            assertThat(ops.size).isEqualTo(1)
+            assertThat(ops[0].entityType).isEqualTo(PendingSyncOperation.ENTITY_PROJECT)
+            assertThat(ops[0].operationType).isEqualTo(PendingSyncOperation.OP_CREATE)
+            assertThat(scheduler.scheduleCount > 0).isTrue()
         }
 
     @Test
@@ -87,8 +88,8 @@ class OfflineFirstProjectRepositoryTest {
 
             repository.syncPendingProjects()
 
-            assertTrue(queue.all().isEmpty())
-            assertTrue(remote.postedProjectIds.contains("p1"))
+            assertThat(queue.all().isEmpty()).isTrue()
+            assertThat(remote.postedProjectIds.contains("p1")).isTrue()
         }
 
     /** Seeds three projects already carrying a contiguous order 0,1,2. */
@@ -112,13 +113,13 @@ class OfflineFirstProjectRepositoryTest {
                 repo(local, remote, queue, scheduler)
                     .reorderProjects(listOf("p1", "p3", "p2"))
 
-            assertTrue(result is Result.Success)
-            assertEquals(0L, local.projects["p1"]!!.sortIndex)
-            assertEquals(1L, local.projects["p3"]!!.sortIndex)
-            assertEquals(2L, local.projects["p2"]!!.sortIndex)
+            assertThat(result is Result.Success).isTrue()
+            assertThat(local.projects["p1"]!!.sortIndex).isEqualTo(0L)
+            assertThat(local.projects["p3"]!!.sortIndex).isEqualTo(1L)
+            assertThat(local.projects["p2"]!!.sortIndex).isEqualTo(2L)
             // The whole gesture is one transaction, carrying only the two cards that actually moved.
-            assertEquals(1, local.sortIndexWrites.size)
-            assertEquals(mapOf("p3" to 1L, "p2" to 2L), local.sortIndexWrites.single())
+            assertThat(local.sortIndexWrites.size).isEqualTo(1)
+            assertThat(local.sortIndexWrites.single()).isEqualTo(mapOf("p3" to 1L, "p2" to 2L))
         }
 
     @Test
@@ -133,9 +134,9 @@ class OfflineFirstProjectRepositoryTest {
             repo(local, remote, queue, scheduler).reorderProjects(listOf("p1", "p3", "p2"))
 
             // One drag must not fan out into one PUT per shifted card.
-            assertEquals(1, remote.reorderCalls.size)
-            assertEquals(mapOf("p3" to 1L, "p2" to 2L), remote.reorderCalls.single())
-            assertTrue(remote.updatedProjectIds.isEmpty())
+            assertThat(remote.reorderCalls.size).isEqualTo(1)
+            assertThat(remote.reorderCalls.single()).isEqualTo(mapOf("p3" to 1L, "p2" to 2L))
+            assertThat(remote.updatedProjectIds.isEmpty()).isTrue()
         }
 
     @Test
@@ -151,9 +152,9 @@ class OfflineFirstProjectRepositoryTest {
                 repo(local, remote, queue, scheduler)
                     .reorderProjects(listOf("p1", "p2", "p3")) // already the stored order
 
-            assertTrue(result is Result.Success)
-            assertTrue(local.sortIndexWrites.isEmpty())
-            assertTrue(remote.reorderCalls.isEmpty())
+            assertThat(result is Result.Success).isTrue()
+            assertThat(local.sortIndexWrites.isEmpty()).isTrue()
+            assertThat(remote.reorderCalls.isEmpty()).isTrue()
         }
 
     @Test
@@ -169,12 +170,12 @@ class OfflineFirstProjectRepositoryTest {
                 repo(local, remote, queue, scheduler)
                     .reorderProjects(listOf("p1", "p3", "p2"))
 
-            assertTrue(result is Result.Error)
-            assertTrue(remote.reorderCalls.isEmpty())
+            assertThat(result is Result.Error).isTrue()
+            assertThat(remote.reorderCalls.isEmpty()).isTrue()
             // Nothing landed: the old order is intact rather than half-applied.
-            assertEquals(0L, local.projects["p1"]!!.sortIndex)
-            assertEquals(1L, local.projects["p2"]!!.sortIndex)
-            assertEquals(2L, local.projects["p3"]!!.sortIndex)
+            assertThat(local.projects["p1"]!!.sortIndex).isEqualTo(0L)
+            assertThat(local.projects["p2"]!!.sortIndex).isEqualTo(1L)
+            assertThat(local.projects["p3"]!!.sortIndex).isEqualTo(2L)
         }
 
     @Test
@@ -191,14 +192,14 @@ class OfflineFirstProjectRepositoryTest {
                     .reorderProjects(listOf("p1", "p3", "p2"))
 
             // User sees success because the local write succeeded.
-            assertTrue(result is Result.Success)
-            assertEquals(1L, local.projects["p3"]!!.sortIndex)
+            assertThat(result is Result.Success).isTrue()
+            assertThat(local.projects["p3"]!!.sortIndex).isEqualTo(1L)
 
             val ops = queue.all()
-            assertEquals(1, ops.size)
-            assertEquals(PendingSyncOperation.ENTITY_PROJECT_ORDER, ops[0].entityType)
-            assertEquals(PendingSyncOperation.OP_UPDATE, ops[0].operationType)
-            assertTrue(scheduler.scheduleCount > 0)
+            assertThat(ops.size).isEqualTo(1)
+            assertThat(ops[0].entityType).isEqualTo(PendingSyncOperation.ENTITY_PROJECT_ORDER)
+            assertThat(ops[0].operationType).isEqualTo(PendingSyncOperation.OP_UPDATE)
+            assertThat(scheduler.scheduleCount > 0).isTrue()
         }
 
     @Test
@@ -215,7 +216,7 @@ class OfflineFirstProjectRepositoryTest {
             repository.reorderProjects(listOf("p3", "p2", "p1"))
 
             // The order is a single piece of state — two drags collapse into one queued push.
-            assertEquals(1, queue.all().size)
+            assertThat(queue.all().size).isEqualTo(1)
         }
 
     @Test
@@ -234,10 +235,10 @@ class OfflineFirstProjectRepositoryTest {
 
             repository.syncPendingProjects()
 
-            assertTrue(queue.all().isEmpty())
+            assertThat(queue.all().isEmpty()).isTrue()
             // The queued row is rebuilt from current local state: the full order, in one call.
-            assertEquals(1, remote.reorderCalls.size)
-            assertEquals(mapOf("p1" to 0L, "p3" to 1L, "p2" to 2L), remote.reorderCalls.single())
+            assertThat(remote.reorderCalls.size).isEqualTo(1)
+            assertThat(remote.reorderCalls.single()).isEqualTo(mapOf("p1" to 0L, "p3" to 1L, "p2" to 2L))
         }
 
     @Test
@@ -254,9 +255,9 @@ class OfflineFirstProjectRepositoryTest {
                 repo(local, remote, queue, scheduler)
                     .reorderProjects(listOf("ghost", "p1", "p2", "p3"))
 
-            assertTrue(result is Result.Success)
-            assertFalse(local.sortIndexWrites.single().containsKey("ghost"))
-            assertEquals(mapOf("p1" to 1L, "p2" to 2L, "p3" to 3L), local.sortIndexWrites.single())
+            assertThat(result is Result.Success).isTrue()
+            assertThat(local.sortIndexWrites.single().containsKey("ghost")).isFalse()
+            assertThat(local.sortIndexWrites.single()).isEqualTo(mapOf("p1" to 1L, "p2" to 2L, "p3" to 3L))
         }
 
     /** Pinned section p1,p2 (0,1) and Other section p3,p4,p5 (0,1,2) — both numbered from 0. */
@@ -287,10 +288,10 @@ class OfflineFirstProjectRepositoryTest {
             // would leave them sharing an index and let the creation date decide the order.
             val result = repo(local, remote, queue, scheduler).setProjectsPinned(listOf("p4"), isPinned = true)
 
-            assertTrue(result is Result.Success)
-            assertTrue(local.projects["p4"]!!.isPinned)
-            assertEquals(listOf("p4", "p1", "p2"), local.sectionOrder(isPinned = true))
-            assertEquals(listOf(0L, 1L, 2L), listOf("p4", "p1", "p2").map { local.projects[it]!!.sortIndex })
+            assertThat(result is Result.Success).isTrue()
+            assertThat(local.projects["p4"]!!.isPinned).isTrue()
+            assertThat(local.sectionOrder(isPinned = true)).isEqualTo(listOf("p4", "p1", "p2"))
+            assertThat(listOf("p4", "p1", "p2").map { local.projects[it]!!.sortIndex }).isEqualTo(listOf(0L, 1L, 2L))
         }
 
     @Test
@@ -306,7 +307,7 @@ class OfflineFirstProjectRepositoryTest {
             // before p5 (2).
             repo(local, remote, queue, scheduler).setProjectsPinned(listOf("p5", "p3"), isPinned = true)
 
-            assertEquals(listOf("p3", "p5", "p1", "p2"), local.sectionOrder(isPinned = true))
+            assertThat(local.sectionOrder(isPinned = true)).isEqualTo(listOf("p3", "p5", "p1", "p2"))
         }
 
     @Test
@@ -320,9 +321,9 @@ class OfflineFirstProjectRepositoryTest {
 
             repo(local, remote, queue, scheduler).setProjectsPinned(listOf("p1"), isPinned = false)
 
-            assertFalse(local.projects["p1"]!!.isPinned)
-            assertEquals(listOf("p1", "p3", "p4", "p5"), local.sectionOrder(isPinned = false))
-            assertEquals(listOf("p2"), local.sectionOrder(isPinned = true))
+            assertThat(local.projects["p1"]!!.isPinned).isFalse()
+            assertThat(local.sectionOrder(isPinned = false)).isEqualTo(listOf("p1", "p3", "p4", "p5"))
+            assertThat(local.sectionOrder(isPinned = true)).isEqualTo(listOf("p2"))
         }
 
     @Test
@@ -338,9 +339,9 @@ class OfflineFirstProjectRepositoryTest {
 
             // One gesture, one /sort request — not one per shifted card. p3 already sat at 0 and stays
             // there, so it is not part of the write.
-            assertEquals(1, remote.reorderCalls.size)
-            assertEquals(mapOf("p5" to 1L, "p1" to 2L, "p2" to 3L), remote.reorderCalls.single())
-            assertEquals(1, local.sortIndexWrites.size)
+            assertThat(remote.reorderCalls.size).isEqualTo(1)
+            assertThat(remote.reorderCalls.single()).isEqualTo(mapOf("p5" to 1L, "p1" to 2L, "p2" to 3L))
+            assertThat(local.sortIndexWrites.size).isEqualTo(1)
         }
 
     @Test
@@ -356,9 +357,9 @@ class OfflineFirstProjectRepositoryTest {
                 repo(local, remote, queue, scheduler)
                     .setProjectsPinned(listOf("ghost"), isPinned = true)
 
-            assertTrue(result is Result.Success)
-            assertEquals(listOf("p1", "p2"), local.sectionOrder(isPinned = true))
-            assertTrue(remote.reorderCalls.isEmpty())
+            assertThat(result is Result.Success).isTrue()
+            assertThat(local.sectionOrder(isPinned = true)).isEqualTo(listOf("p1", "p2"))
+            assertThat(remote.reorderCalls.isEmpty()).isTrue()
         }
 
     @Test
@@ -373,9 +374,9 @@ class OfflineFirstProjectRepositoryTest {
             repository.upsertProject(project("p1")) // queued CREATE (never reached server)
             repository.deleteProject("p1")
 
-            assertNull(local.projects["p1"])
-            assertTrue(queue.all().isEmpty())
-            assertFalse(remote.deletedProjectIds.contains("p1"))
+            assertThat(local.projects["p1"]).isNull()
+            assertThat(queue.all().isEmpty()).isTrue()
+            assertThat(remote.deletedProjectIds.contains("p1")).isFalse()
         }
 
     @Test
@@ -389,7 +390,7 @@ class OfflineFirstProjectRepositoryTest {
 
             repo(local, remote, queue, scheduler, time).upsertProject(project("p1"))
 
-            assertEquals(time.now, remote.postedProjects.single().ownUpdatedAt)
+            assertThat(remote.postedProjects.single().ownUpdatedAt).isEqualTo(time.now)
         }
 
     @Test
@@ -405,8 +406,8 @@ class OfflineFirstProjectRepositoryTest {
 
             repo(local, remote, queue, scheduler, time).reorderProjects(listOf("p2", "p1"))
 
-            assertEquals(Instant.fromEpochMilliseconds(1_000), local.sortIndexWriteTimestamps.single())
-            assertEquals(Instant.fromEpochMilliseconds(1_000), remote.reorderTimestamps.single())
+            assertThat(local.sortIndexWriteTimestamps.single()).isEqualTo(Instant.fromEpochMilliseconds(1_000))
+            assertThat(remote.reorderTimestamps.single()).isEqualTo(Instant.fromEpochMilliseconds(1_000))
         }
 
     // --- Pull path --------------------------------------------------------------------------------
@@ -480,14 +481,13 @@ class OfflineFirstProjectRepositoryTest {
             f.repository().fetchProjects()
 
             // This is the fresh-install case: tracked time has to come back, not just the project row.
-            assertNotNull(f.local.projects["p1"])
-            assertNotNull(f.local.tasks["t1"])
-            assertEquals(
-                60_000L,
+            assertThat(f.local.projects["p1"]).isNotNull()
+            assertThat(f.local.tasks["t1"]).isNotNull()
+            assertThat(
                 f.local.intervals
                     .getValue("i1")
                     .durationMillis,
-            )
+            ).isEqualTo(60_000L)
         }
 
     @Test
@@ -509,12 +509,11 @@ class OfflineFirstProjectRepositoryTest {
             f.repository().fetchProjects()
 
             // Overwriting here would also feed the stale title back to the server on the next drain.
-            assertEquals(
-                "edited offline",
+            assertThat(
                 f.local.tasks
                     .getValue("t1")
                     .title,
-            )
+            ).isEqualTo("edited offline")
         }
 
     @Test
@@ -547,12 +546,11 @@ class OfflineFirstProjectRepositoryTest {
 
             // Nothing queued for this row, so this device has no unsent change to defend: the stop
             // the user made on their other device is what lands.
-            assertEquals(
-                Instant.fromEpochMilliseconds(60_000),
+            assertThat(
                 f.local.intervals
                     .getValue("i1")
                     .endDateTimeUtc,
-            )
+            ).isEqualTo(Instant.fromEpochMilliseconds(60_000))
         }
 
     @Test
@@ -584,11 +582,11 @@ class OfflineFirstProjectRepositoryTest {
 
             f.repository().fetchProjects()
 
-            assertNull(
+            assertThat(
                 f.local.intervals
                     .getValue("i1")
                     .endDateTimeUtc,
-            )
+            ).isNull()
         }
 
     @Test
@@ -608,8 +606,8 @@ class OfflineFirstProjectRepositoryTest {
             f.repository().fetchProjects()
 
             // Created offline and still queued for upload — a pull must never delete these.
-            assertTrue(f.local.tasks.containsKey("local-only"))
-            assertTrue(f.local.intervals.containsKey("i-local"))
+            assertThat(f.local.tasks.containsKey("local-only")).isTrue()
+            assertThat(f.local.intervals.containsKey("i-local")).isTrue()
         }
 
     private fun serverSubTask(
@@ -653,13 +651,12 @@ class OfflineFirstProjectRepositoryTest {
             f.repository().fetchProjects()
 
             // The fresh-install case, one level deeper than tasks.
-            assertNotNull(f.local.subTasks["s1"])
-            assertEquals(
-                "t1",
+            assertThat(f.local.subTasks["s1"]).isNotNull()
+            assertThat(
                 f.local.subTasks
                     .getValue("s1")
                     .parentProjectTaskId,
-            )
+            ).isEqualTo("t1")
         }
 
     @Test
@@ -688,12 +685,11 @@ class OfflineFirstProjectRepositoryTest {
             f.repository().fetchProjects()
 
             // Overwriting would also feed the stale title back to the server on the next drain.
-            assertEquals(
-                "edited offline",
+            assertThat(
                 f.local.subTasks
                     .getValue("s1")
                     .title,
-            )
+            ).isEqualTo("edited offline")
         }
 
     @Test
@@ -725,12 +721,11 @@ class OfflineFirstProjectRepositoryTest {
 
             f.repository().fetchProjects()
 
-            assertEquals(
-                "renamed elsewhere",
+            assertThat(
                 f.local.subTasks
                     .getValue("s1")
                     .title,
-            )
+            ).isEqualTo("renamed elsewhere")
         }
 
     @Test
@@ -759,9 +754,9 @@ class OfflineFirstProjectRepositoryTest {
 
             f.repository().fetchProjects()
 
-            assertNull(f.local.subTasks["orphan"])
-            assertNotNull(f.local.projects["p1"])
-            assertNotNull(f.local.tasks["t1"])
+            assertThat(f.local.subTasks["orphan"]).isNull()
+            assertThat(f.local.projects["p1"]).isNotNull()
+            assertThat(f.local.tasks["t1"]).isNotNull()
         }
 
     @Test
@@ -784,6 +779,6 @@ class OfflineFirstProjectRepositoryTest {
             f.repository().fetchProjects()
 
             // Created offline and still queued for upload — a pull must never delete these.
-            assertTrue(f.local.subTasks.containsKey("local-only"))
+            assertThat(f.local.subTasks.containsKey("local-only")).isTrue()
         }
 }

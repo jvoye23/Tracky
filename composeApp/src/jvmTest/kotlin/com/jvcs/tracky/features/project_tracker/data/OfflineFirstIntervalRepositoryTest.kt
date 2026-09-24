@@ -2,14 +2,15 @@
 
 package com.jvcs.tracky.features.project_tracker.data
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNotNull
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
 import com.jvcs.tracky.core.domain.util.DataError
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
@@ -30,10 +31,10 @@ internal class OfflineFirstIntervalRepositoryTest {
 
             f.createIntervalForTask()
 
-            assertEquals(listOf("i1"), f.remoteInterval.postedIntervalIds)
+            assertThat(f.remoteInterval.postedIntervalIds).isEqualTo(listOf("i1"))
             // The route is built from the interval's own parentProjectId — no task lookup involved.
-            assertEquals(listOf("p1/t1"), f.remoteInterval.intervalRoutes)
-            assertTrue(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_INTERVAL })
+            assertThat(f.remoteInterval.intervalRoutes).isEqualTo(listOf("p1/t1"))
+            assertThat(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_INTERVAL }).isTrue()
         }
 
     @Test
@@ -45,13 +46,12 @@ internal class OfflineFirstIntervalRepositoryTest {
             f.localTask.clock = Instant.fromEpochMilliseconds(70_000) // 60s after the default start
             f.closeIntervalForTask()
 
-            assertEquals(listOf("i1"), f.remoteInterval.updatedIntervalIds)
-            assertEquals(
-                60_000L,
+            assertThat(f.remoteInterval.updatedIntervalIds).isEqualTo(listOf("i1"))
+            assertThat(
                 f.db.intervals
                     .getValue("i1")
                     .durationMillis,
-            )
+            ).isEqualTo(60_000L)
         }
 
     @Test
@@ -63,16 +63,16 @@ internal class OfflineFirstIntervalRepositoryTest {
             f.createIntervalForTask()
 
             // Local write stands regardless — the user keeps tracking time.
-            assertNotNull(f.db.intervals["i1"])
+            assertThat(f.db.intervals["i1"]).isNotNull()
 
             val ops = f.queue.all().filter { it.entityType == PendingSyncOperation.ENTITY_INTERVAL }
-            assertEquals(1, ops.size)
-            assertEquals(PendingSyncOperation.OP_CREATE, ops[0].operationType)
-            assertEquals("i1", ops[0].entityId)
+            assertThat(ops.size).isEqualTo(1)
+            assertThat(ops[0].operationType).isEqualTo(PendingSyncOperation.OP_CREATE)
+            assertThat(ops[0].entityId).isEqualTo("i1")
             // parentEntityId carries the TASK id for intervals; a queued DELETE has no local row left
             // to read parentProjectId from, so it resolves the project through the task at drain time.
-            assertEquals("t1", ops[0].parentEntityId)
-            assertTrue(f.scheduler.scheduleCount > 0)
+            assertThat(ops[0].parentEntityId).isEqualTo("t1")
+            assertThat(f.scheduler.scheduleCount > 0).isTrue()
         }
 
     /**
@@ -92,10 +92,10 @@ internal class OfflineFirstIntervalRepositoryTest {
             f.createIntervalForTask()
 
             // No request went out at all — the parent-pending check short-circuits before the network.
-            assertTrue(f.remoteInterval.intervalRoutes.isEmpty())
+            assertThat(f.remoteInterval.intervalRoutes.isEmpty()).isTrue()
             val ops = f.queue.all().filter { it.entityType == PendingSyncOperation.ENTITY_INTERVAL }
-            assertEquals(1, ops.size)
-            assertEquals(PendingSyncOperation.OP_CREATE, ops[0].operationType)
+            assertThat(ops.size).isEqualTo(1)
+            assertThat(ops[0].operationType).isEqualTo(PendingSyncOperation.OP_CREATE)
         }
 
     /**
@@ -112,8 +112,8 @@ internal class OfflineFirstIntervalRepositoryTest {
             f.createIntervalForTask()
 
             val ops = f.queue.all().filter { it.entityType == PendingSyncOperation.ENTITY_INTERVAL }
-            assertEquals(1, ops.size)
-            assertEquals(PendingSyncOperation.OP_CREATE, ops[0].operationType)
+            assertThat(ops.size).isEqualTo(1)
+            assertThat(ops[0].operationType).isEqualTo(PendingSyncOperation.OP_CREATE)
         }
 
     /** A 409 means the POST already landed and only its response was lost. */
@@ -125,9 +125,9 @@ internal class OfflineFirstIntervalRepositoryTest {
 
             f.createIntervalForTask()
 
-            assertEquals(listOf("i1"), f.remoteInterval.updatedIntervalIds)
-            assertTrue(f.remoteInterval.postedIntervalIds.isEmpty())
-            assertTrue(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_INTERVAL })
+            assertThat(f.remoteInterval.updatedIntervalIds).isEqualTo(listOf("i1"))
+            assertThat(f.remoteInterval.postedIntervalIds.isEmpty()).isTrue()
+            assertThat(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_INTERVAL }).isTrue()
         }
 
     @Test
@@ -141,8 +141,8 @@ internal class OfflineFirstIntervalRepositoryTest {
 
             f.intervalRepository.syncPendingIntervals()
 
-            assertEquals(listOf("i1"), f.remoteInterval.postedIntervalIds)
-            assertTrue(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_INTERVAL })
+            assertThat(f.remoteInterval.postedIntervalIds).isEqualTo(listOf("i1"))
+            assertThat(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_INTERVAL }).isTrue()
         }
 
     @Test
@@ -157,9 +157,9 @@ internal class OfflineFirstIntervalRepositoryTest {
 
             f.intervalRepository.syncPendingIntervals()
 
-            assertTrue(f.remoteInterval.postedIntervalIds.isEmpty())
+            assertThat(f.remoteInterval.postedIntervalIds.isEmpty()).isTrue()
             // Dropped, not retried forever.
-            assertTrue(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_INTERVAL })
+            assertThat(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_INTERVAL }).isTrue()
         }
 
     @Test
@@ -175,8 +175,8 @@ internal class OfflineFirstIntervalRepositoryTest {
 
             f.intervalRepository.syncPendingIntervals()
 
-            assertTrue(f.remoteInterval.postedIntervalIds.isEmpty())
-            assertTrue(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_INTERVAL })
+            assertThat(f.remoteInterval.postedIntervalIds.isEmpty()).isTrue()
+            assertThat(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_INTERVAL }).isTrue()
         }
 
     @Test
@@ -189,7 +189,7 @@ internal class OfflineFirstIntervalRepositoryTest {
             f.intervalRepository.syncPendingIntervals() // still offline
 
             // Left queued for the next attempt.
-            assertEquals(1, f.queue.all().count { it.entityType == PendingSyncOperation.ENTITY_INTERVAL })
+            assertThat(f.queue.all().count { it.entityType == PendingSyncOperation.ENTITY_INTERVAL }).isEqualTo(1)
         }
 
     @Test
@@ -200,8 +200,8 @@ internal class OfflineFirstIntervalRepositoryTest {
 
             f.intervalRepository.deleteTaskInterval("i1")
 
-            assertNull(f.db.intervals["i1"])
-            assertEquals(listOf("i1"), f.remoteInterval.deletedIntervalIds)
+            assertThat(f.db.intervals["i1"]).isNull()
+            assertThat(f.remoteInterval.deletedIntervalIds).isEqualTo(listOf("i1"))
         }
 
     @Test
@@ -214,8 +214,8 @@ internal class OfflineFirstIntervalRepositoryTest {
             f.intervalRepository.deleteTaskInterval("i1")
 
             // Nothing to delete server-side — the interval never got there.
-            assertTrue(f.remoteInterval.deletedIntervalIds.isEmpty())
-            assertTrue(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_INTERVAL })
+            assertThat(f.remoteInterval.deletedIntervalIds.isEmpty()).isTrue()
+            assertThat(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_INTERVAL }).isTrue()
         }
 
     @Test
@@ -228,9 +228,9 @@ internal class OfflineFirstIntervalRepositoryTest {
             f.intervalRepository.deleteTaskInterval("i1")
 
             val ops = f.queue.all().filter { it.entityType == PendingSyncOperation.ENTITY_INTERVAL }
-            assertEquals(1, ops.size)
-            assertEquals(PendingSyncOperation.OP_DELETE, ops[0].operationType)
-            assertEquals("t1", ops[0].parentEntityId)
+            assertThat(ops.size).isEqualTo(1)
+            assertThat(ops[0].operationType).isEqualTo(PendingSyncOperation.OP_DELETE)
+            assertThat(ops[0].parentEntityId).isEqualTo("t1")
         }
 
     @Test
@@ -245,8 +245,8 @@ internal class OfflineFirstIntervalRepositoryTest {
             f.intervalRepository.syncPendingIntervals()
 
             // The interval row is gone locally, so the delete has to survive on the queued task id alone.
-            assertEquals(listOf("i1"), f.remoteInterval.deletedIntervalIds)
-            assertTrue(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_INTERVAL })
+            assertThat(f.remoteInterval.deletedIntervalIds).isEqualTo(listOf("i1"))
+            assertThat(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_INTERVAL }).isTrue()
         }
 
     @Test
@@ -261,8 +261,8 @@ internal class OfflineFirstIntervalRepositoryTest {
                     .copy(durationMillis = 5_000),
             )
 
-            assertEquals(listOf("i1"), f.remoteInterval.updatedIntervalIds)
+            assertThat(f.remoteInterval.updatedIntervalIds).isEqualTo(listOf("i1"))
             // Only the original startProjectTask create.
-            assertEquals(listOf("i1"), f.remoteInterval.postedIntervalIds)
+            assertThat(f.remoteInterval.postedIntervalIds).isEqualTo(listOf("i1"))
         }
 }

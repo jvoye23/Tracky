@@ -2,13 +2,14 @@
 
 package com.jvcs.tracky.features.project_tracker.data
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.Result
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import kotlin.time.ExperimentalTime
 
 /**
@@ -32,7 +33,7 @@ internal class ReorderSubTasksTest {
 
             f.subTaskRepository.reorderSubTasks("t1", listOf("a", "c", "b"))
 
-            assertEquals(mapOf("c" to 1L, "b" to 2L), f.localSubTask.sortIndexWrites.single())
+            assertThat(f.localSubTask.sortIndexWrites.single()).isEqualTo(mapOf("c" to 1L, "b" to 2L))
         }
 
     @Test
@@ -42,8 +43,8 @@ internal class ReorderSubTasksTest {
 
             f.subTaskRepository.reorderSubTasks("t1", listOf("b", "a"))
 
-            assertEquals(mapOf("b" to 0L, "a" to 1L), f.remoteSubTask.reorderCalls.single())
-            assertTrue(f.remoteSubTask.subTaskRoutes.contains("p1/t1/sort"))
+            assertThat(f.remoteSubTask.reorderCalls.single()).isEqualTo(mapOf("b" to 0L, "a" to 1L))
+            assertThat(f.remoteSubTask.subTaskRoutes.contains("p1/t1/sort")).isTrue()
         }
 
     @Test
@@ -56,12 +57,11 @@ internal class ReorderSubTasksTest {
 
             f.subTaskRepository.reorderSubTasks("t1", listOf("b", "a"))
 
-            assertEquals(
-                setOf("b", "a"),
+            assertThat(
                 f.localSubTask.sortIndexWrites
                     .single()
                     .keys,
-            )
+            ).isEqualTo(setOf("b", "a"))
         }
 
     @Test
@@ -72,10 +72,10 @@ internal class ReorderSubTasksTest {
 
             val result = f.subTaskRepository.reorderSubTasks("t1", listOf("b", "a"))
 
-            assertTrue(result is Result.Success)
+            assertThat(result is Result.Success).isTrue()
             val ops = f.queue.all().filter { it.entityType == PendingSyncOperation.ENTITY_SUBTASK_ORDER }
-            assertEquals(1, ops.size)
-            assertEquals("t1", ops.single().parentEntityId)
+            assertThat(ops.size).isEqualTo(1)
+            assertThat(ops.single().parentEntityId).isEqualTo("t1")
         }
 
     @Test
@@ -89,6 +89,6 @@ internal class ReorderSubTasksTest {
 
             f.subTaskRepository.syncPendingSubTasks()
 
-            assertEquals(mapOf("c" to 0L, "a" to 1L, "b" to 2L), f.remoteSubTask.reorderCalls.single())
+            assertThat(f.remoteSubTask.reorderCalls.single()).isEqualTo(mapOf("c" to 0L, "a" to 1L, "b" to 2L))
         }
 }

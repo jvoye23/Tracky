@@ -2,6 +2,12 @@
 
 package com.jvcs.tracky.features.project_tracker.data
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isNotNull
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.jvcs.tracky.core.domain.device.FakeDeviceIdProvider
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
 import com.jvcs.tracky.core.domain.timer.ActiveTimerKind
@@ -11,11 +17,6 @@ import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
@@ -42,10 +43,10 @@ internal class OfflineFirstTaskRepositoryTest {
 
             val result = f.taskRepository.upsertProjectTask(task("t1"))
 
-            assertTrue(result is Result.Success)
-            assertEquals(listOf("t1"), f.remoteTask.postedTaskIds)
-            assertEquals(listOf("p1/t1"), f.remoteTask.taskRoutes)
-            assertNotNull(f.db.tasks["t1"])
+            assertThat(result is Result.Success).isTrue()
+            assertThat(f.remoteTask.postedTaskIds).isEqualTo(listOf("t1"))
+            assertThat(f.remoteTask.taskRoutes).isEqualTo(listOf("p1/t1"))
+            assertThat(f.db.tasks["t1"]).isNotNull()
         }
 
     @Test
@@ -60,8 +61,8 @@ internal class OfflineFirstTaskRepositoryTest {
                     .copy(title = "renamed"),
             )
 
-            assertEquals(listOf("t1"), f.remoteTask.updatedTaskIds)
-            assertEquals(listOf("t1"), f.remoteTask.postedTaskIds) // only the first call created
+            assertThat(f.remoteTask.updatedTaskIds).isEqualTo(listOf("t1"))
+            assertThat(f.remoteTask.postedTaskIds).isEqualTo(listOf("t1")) // only the first call created
         }
 
     @Test
@@ -73,14 +74,14 @@ internal class OfflineFirstTaskRepositoryTest {
             val result = f.taskRepository.upsertProjectTask(task("t1"))
 
             // User sees success because the local write succeeded.
-            assertTrue(result is Result.Success)
-            assertNotNull(f.db.tasks["t1"])
+            assertThat(result is Result.Success).isTrue()
+            assertThat(f.db.tasks["t1"]).isNotNull()
 
             val ops = f.queue.all().filter { it.entityType == PendingSyncOperation.ENTITY_TASK }
-            assertEquals(1, ops.size)
-            assertEquals(PendingSyncOperation.OP_CREATE, ops[0].operationType)
-            assertEquals("t1", ops[0].entityId)
-            assertTrue(f.scheduler.scheduleCount > 0)
+            assertThat(ops.size).isEqualTo(1)
+            assertThat(ops[0].operationType).isEqualTo(PendingSyncOperation.OP_CREATE)
+            assertThat(ops[0].entityId).isEqualTo("t1")
+            assertThat(f.scheduler.scheduleCount > 0).isTrue()
         }
 
     @Test
@@ -91,12 +92,11 @@ internal class OfflineFirstTaskRepositoryTest {
 
             f.taskRepository.upsertProjectTask(task("t1"))
 
-            assertEquals(
-                time.now,
+            assertThat(
                 f.db.tasks
                     .getValue("t1")
                     .ownUpdatedAt,
-            )
+            ).isEqualTo(time.now)
         }
 
     /**
@@ -113,10 +113,10 @@ internal class OfflineFirstTaskRepositoryTest {
 
             f.taskRepository.upsertProjectTask(task("t1"))
 
-            assertTrue(f.remoteTask.taskRoutes.isEmpty())
+            assertThat(f.remoteTask.taskRoutes.isEmpty()).isTrue()
             val ops = f.queue.all().filter { it.entityType == PendingSyncOperation.ENTITY_TASK }
-            assertEquals(1, ops.size)
-            assertEquals(PendingSyncOperation.OP_CREATE, ops[0].operationType)
+            assertThat(ops.size).isEqualTo(1)
+            assertThat(ops[0].operationType).isEqualTo(PendingSyncOperation.OP_CREATE)
         }
 
     @Test
@@ -129,8 +129,8 @@ internal class OfflineFirstTaskRepositoryTest {
 
             f.taskRepository.syncPendingTasks()
 
-            assertEquals(listOf("t1"), f.remoteTask.postedTaskIds)
-            assertTrue(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_TASK })
+            assertThat(f.remoteTask.postedTaskIds).isEqualTo(listOf("t1"))
+            assertThat(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_TASK }).isTrue()
         }
 
     /** The drain-side half of the gate: a doomed task push is postponed, not attempted and dropped. */
@@ -146,8 +146,8 @@ internal class OfflineFirstTaskRepositoryTest {
 
             f.taskRepository.syncPendingTasks()
 
-            assertTrue(f.remoteTask.postedTaskIds.isEmpty())
-            assertEquals(1, f.queue.all().count { it.entityType == PendingSyncOperation.ENTITY_TASK })
+            assertThat(f.remoteTask.postedTaskIds.isEmpty()).isTrue()
+            assertThat(f.queue.all().count { it.entityType == PendingSyncOperation.ENTITY_TASK }).isEqualTo(1)
         }
 
     @Test
@@ -161,8 +161,8 @@ internal class OfflineFirstTaskRepositoryTest {
 
             f.taskRepository.syncPendingTasks()
 
-            assertTrue(f.remoteTask.postedTaskIds.isEmpty())
-            assertTrue(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_TASK })
+            assertThat(f.remoteTask.postedTaskIds.isEmpty()).isTrue()
+            assertThat(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_TASK }).isTrue()
         }
 
     @Test
@@ -174,7 +174,7 @@ internal class OfflineFirstTaskRepositoryTest {
 
             f.taskRepository.syncPendingTasks() // still offline
 
-            assertEquals(1, f.queue.all().count { it.entityType == PendingSyncOperation.ENTITY_TASK })
+            assertThat(f.queue.all().count { it.entityType == PendingSyncOperation.ENTITY_TASK }).isEqualTo(1)
         }
 
     @Test
@@ -185,9 +185,9 @@ internal class OfflineFirstTaskRepositoryTest {
 
             val result = f.taskRepository.deleteProjectTask("p1", "t1")
 
-            assertTrue(result is Result.Success)
-            assertNull(f.db.tasks["t1"])
-            assertEquals(listOf("t1"), f.remoteTask.deletedTaskIds)
+            assertThat(result is Result.Success).isTrue()
+            assertThat(f.db.tasks["t1"]).isNull()
+            assertThat(f.remoteTask.deletedTaskIds).isEqualTo(listOf("t1"))
         }
 
     @Test
@@ -200,9 +200,9 @@ internal class OfflineFirstTaskRepositoryTest {
 
             f.taskRepository.deleteProjectTask("p1", "t1")
 
-            assertNull(f.db.tasks["t1"])
-            assertFalse(f.remoteTask.deletedTaskIds.contains("t1"))
-            assertTrue(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_TASK })
+            assertThat(f.db.tasks["t1"]).isNull()
+            assertThat(f.remoteTask.deletedTaskIds.contains("t1")).isFalse()
+            assertThat(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_TASK }).isTrue()
         }
 
     /** The project never reached the server either, so its cascade will take the task with it. */
@@ -216,8 +216,8 @@ internal class OfflineFirstTaskRepositoryTest {
 
             f.taskRepository.deleteProjectTask("p1", "t1")
 
-            assertNull(f.db.tasks["t1"])
-            assertTrue(f.remoteTask.deletedTaskIds.isEmpty())
+            assertThat(f.db.tasks["t1"]).isNull()
+            assertThat(f.remoteTask.deletedTaskIds.isEmpty()).isTrue()
         }
 
     @Test
@@ -230,10 +230,10 @@ internal class OfflineFirstTaskRepositoryTest {
             f.taskRepository.deleteProjectTask("p1", "t1")
 
             val ops = f.queue.all().filter { it.entityType == PendingSyncOperation.ENTITY_TASK }
-            assertEquals(1, ops.size)
-            assertEquals(PendingSyncOperation.OP_DELETE, ops[0].operationType)
+            assertThat(ops.size).isEqualTo(1)
+            assertThat(ops[0].operationType).isEqualTo(PendingSyncOperation.OP_DELETE)
             // The task row is gone by drain time, so the route has to survive on the queued project id.
-            assertEquals("p1", ops[0].parentEntityId)
+            assertThat(ops[0].parentEntityId).isEqualTo("p1")
         }
 
     @Test
@@ -247,8 +247,8 @@ internal class OfflineFirstTaskRepositoryTest {
             f.remoteTask.failWith = null
             f.taskRepository.syncPendingTasks()
 
-            assertEquals(listOf("t1"), f.remoteTask.deletedTaskIds)
-            assertTrue(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_TASK })
+            assertThat(f.remoteTask.deletedTaskIds).isEqualTo(listOf("t1"))
+            assertThat(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_TASK }).isTrue()
         }
 
     /** A 409 means the POST already landed; last-write-wins then decides on `ownUpdatedAt`. */
@@ -266,8 +266,8 @@ internal class OfflineFirstTaskRepositoryTest {
 
             // Local stamp (500) beats the server's (100), so the local row is pushed as an update
             // rather than being overwritten by the older server copy.
-            assertEquals(listOf("t1"), f.remoteTask.updatedTaskIds)
-            assertTrue(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_TASK })
+            assertThat(f.remoteTask.updatedTaskIds).isEqualTo(listOf("t1"))
+            assertThat(f.queue.all().none { it.entityType == PendingSyncOperation.ENTITY_TASK }).isTrue()
         }
 
     @Test
@@ -282,13 +282,12 @@ internal class OfflineFirstTaskRepositoryTest {
 
             f.taskRepository.upsertProjectTask(task("t1"))
 
-            assertEquals(
-                "renamed elsewhere",
+            assertThat(
                 f.db.tasks
                     .getValue("t1")
                     .title,
-            )
-            assertTrue(f.remoteTask.updatedTaskIds.isEmpty())
+            ).isEqualTo("renamed elsewhere")
+            assertThat(f.remoteTask.updatedTaskIds.isEmpty()).isTrue()
         }
 
     @Test
@@ -300,14 +299,13 @@ internal class OfflineFirstTaskRepositoryTest {
 
             f.taskRepository.updateProjectTaskTitle("t1", "renamed")
 
-            assertEquals(
-                "renamed",
+            assertThat(
                 f.db.tasks
                     .getValue("t1")
                     .title,
-            )
+            ).isEqualTo("renamed")
             // A title edit is not local-only: it has to reach the server like any other write.
-            assertEquals(listOf("t1"), f.remoteTask.updatedTaskIds)
+            assertThat(f.remoteTask.updatedTaskIds).isEqualTo(listOf("t1"))
         }
 
     @Test
@@ -320,11 +318,11 @@ internal class OfflineFirstTaskRepositoryTest {
             f.taskRepository.updateProjectTaskText("t1", "renamed", "described")
 
             val stored = f.db.tasks.getValue("t1")
-            assertEquals("renamed", stored.title)
-            assertEquals("described", stored.description)
+            assertThat(stored.title).isEqualTo("renamed")
+            assertThat(stored.description).isEqualTo("described")
             // Started from the stored row, so the task keeps its place in the manual order.
-            assertEquals(4L, stored.sortIndex)
-            assertEquals(listOf("t1"), f.remoteTask.updatedTaskIds)
+            assertThat(stored.sortIndex).isEqualTo(4L)
+            assertThat(f.remoteTask.updatedTaskIds).isEqualTo(listOf("t1"))
         }
 
     @Test
@@ -342,16 +340,16 @@ internal class OfflineFirstTaskRepositoryTest {
             // interval — rather than a blind PUT to the interval route. The task still carries the
             // accumulated total and the cleared flag, and still goes the ordinary way.
             val (intervalId, kind, endedAt) = f.activeTimer.stops.single()
-            assertEquals("i1", intervalId)
-            assertEquals(ActiveTimerKind.TASK, kind)
+            assertThat(intervalId).isEqualTo("i1")
+            assertThat(kind).isEqualTo(ActiveTimerKind.TASK)
             // The instant the interval was actually closed at, not "now" read a second time.
-            assertEquals(Instant.fromEpochMilliseconds(70_000), endedAt)
-            assertEquals(listOf("t1"), f.remoteTask.updatedTaskIds)
-            assertFalse(
+            assertThat(endedAt).isEqualTo(Instant.fromEpochMilliseconds(70_000))
+            assertThat(f.remoteTask.updatedTaskIds).isEqualTo(listOf("t1"))
+            assertThat(
                 f.db.tasks
                     .getValue("t1")
                     .isTimerRunning,
-            )
+            ).isFalse()
         }
 
     @Test
@@ -364,8 +362,8 @@ internal class OfflineFirstTaskRepositoryTest {
 
             // The server closes whatever was running on the user's other devices at this start.
             val (taskInterval, subTaskInterval) = f.activeTimer.starts.single()
-            assertEquals("i1", taskInterval.intervalId)
-            assertNull(subTaskInterval)
+            assertThat(taskInterval.intervalId).isEqualTo("i1")
+            assertThat(subTaskInterval).isNull()
         }
 
     @Test
@@ -379,8 +377,8 @@ internal class OfflineFirstTaskRepositoryTest {
 
             f.taskRepository.startProjectTask("t1")
 
-            assertTrue(f.activeTimer.starts.isEmpty())
-            assertTrue(f.queue.all().any { it.entityType == PendingSyncOperation.ENTITY_INTERVAL })
+            assertThat(f.activeTimer.starts.isEmpty()).isTrue()
+            assertThat(f.queue.all().any { it.entityType == PendingSyncOperation.ENTITY_INTERVAL }).isTrue()
         }
 
     @Test
@@ -404,25 +402,23 @@ internal class OfflineFirstTaskRepositoryTest {
 
             f.taskRepository.stopProjectTask("t1")
 
-            assertEquals(
-                bankedBefore,
+            assertThat(
                 f.db.tasks
                     .getValue("t1")
                     .durationMillis,
-            )
+            ).isEqualTo(bankedBefore)
             // The local row is left open: the echo closes it, at the instant the server recorded.
-            assertNull(
+            assertThat(
                 f.db.intervals
                     .getValue("i1")
                     .endDateTimeUtc,
-            )
+            ).isNull()
             // And the stop still reached the server, which is the whole point of the feature.
-            assertEquals(
-                "i1",
+            assertThat(
                 f.activeTimer.stops
                     .single()
                     .first,
-            )
+            ).isEqualTo("i1")
         }
 
     @Test
@@ -441,16 +437,15 @@ internal class OfflineFirstTaskRepositoryTest {
 
             f.taskRepository.stopProjectTask("t1")
 
-            assertEquals(
-                60_000,
+            assertThat(
                 f.db.tasks
                     .getValue("t1")
                     .durationMillis,
-            )
-            assertNotNull(
+            ).isEqualTo(60_000)
+            assertThat(
                 f.db.intervals
                     .getValue("i1")
                     .endDateTimeUtc,
-            )
+            ).isNotNull()
         }
 }
