@@ -5,8 +5,8 @@ import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
 
 /**
- * Records the auth calls a screen makes. Only logout is exercised today, so the credential
- * endpoints just succeed; give them recorders when a test needs them.
+ * Records the auth calls a screen makes. The credential endpoints succeed unless a test sets
+ * their result.
  */
 internal class FakeAuthService : AuthService {
 
@@ -24,8 +24,13 @@ internal class FakeAuthService : AuthService {
         clearTokenCacheCount++
     }
 
-    override suspend fun login(email: String, password: String): Result<AuthInfo, DataError.Remote> =
-        Result.Success(authInfo())
+    var loginResult: Result<AuthInfo, DataError.Remote> = Result.Success(authInfo())
+    val loginCalls = mutableListOf<Pair<String, String>>()
+
+    override suspend fun login(email: String, password: String): Result<AuthInfo, DataError.Remote> {
+        loginCalls += email to password
+        return loginResult
+    }
 
     override suspend fun register(
         email: String,

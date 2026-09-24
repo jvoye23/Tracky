@@ -144,6 +144,9 @@ kotlin {
             implementation(libs.kotlin.test.junit5)
             implementation(project.dependencies.platform(libs.junit.bom))
             runtimeOnly(libs.junit.platform.launcher)
+            // Renders composables headlessly on the JVM (runComposeUiTest), so screens are tested
+            // off-device alongside their view models.
+            implementation(libs.compose.ui.test)
         }
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
