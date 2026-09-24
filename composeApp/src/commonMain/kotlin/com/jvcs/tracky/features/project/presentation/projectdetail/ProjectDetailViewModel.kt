@@ -942,9 +942,11 @@ private fun ProjectDetailState.mapTask(
 private fun ProjectDetailState.withTaskMoved(fromTaskId: String, toTaskId: String): ProjectDetailState {
     val project = this.project ?: return this
     val tasks = project.projectTasks ?: return this
+
     val from = tasks.indexOfFirst { it.projectTaskId == fromTaskId }
     val to = tasks.indexOfFirst { it.projectTaskId == toTaskId }
     if (from == -1 || to == -1 || from == to) return this
+
     val moved = tasks.toMutableList().apply { add(to, removeAt(from)) }
     return copy(project = project.copy(projectTasks = moved))
 }

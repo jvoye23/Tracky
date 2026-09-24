@@ -167,6 +167,7 @@ interface ProjectDao {
         upsertServerTree(projects, tasks, intervals, subTasks, subTaskIntervals)
 
         val pending = getAllPendingEntityIds().toSet()
+
         deletedProjectIds.forEach { if (it !in pending) deleteProject(it) }
         deletedTaskIds.forEach { if (it !in pending) deleteProjectTask(it) }
         deletedIntervalIds.forEach { if (it !in pending) deleteTaskInterval(it) }

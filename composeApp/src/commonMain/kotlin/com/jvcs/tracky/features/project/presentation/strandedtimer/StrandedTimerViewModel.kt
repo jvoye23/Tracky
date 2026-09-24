@@ -133,8 +133,10 @@ class StrandedTimerViewModel(private val strandedTimerRepository: StrandedTimerR
         internal fun parseHoursMinutes(text: String): Duration? {
             val trimmed = text.trim()
             if (trimmed.isEmpty()) return null
+
             val parts = trimmed.split(":")
             if (parts.size > 2) return null
+
             val hours = parts[0].toLongOrNull() ?: return null
             val minutes = if (parts.size == 2) parts[1].toLongOrNull() ?: return null else 0L
             if (hours < 0 || minutes < 0 || minutes > MAX_MINUTES) return null

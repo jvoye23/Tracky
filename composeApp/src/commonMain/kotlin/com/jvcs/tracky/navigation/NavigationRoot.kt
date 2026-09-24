@@ -60,6 +60,7 @@ fun NavigationRoot(backStack: NavBackStack<NavKey>) {
                         },
                     )
                 }
+
                 entry<Route.AuthRoute.Register> {
                     RegisterScreenRoot(
                         onRegisterSuccess = { email ->
@@ -70,6 +71,7 @@ fun NavigationRoot(backStack: NavBackStack<NavKey>) {
                         },
                     )
                 }
+
                 entry<Route.AuthRoute.RegisterSuccess> { key ->
                     val vm: RegisterSuccessViewModel =
                         koinViewModel {
@@ -83,6 +85,7 @@ fun NavigationRoot(backStack: NavBackStack<NavKey>) {
                         },
                     )
                 }
+
                 entry<Route.AuthRoute.EmailVerification> { key ->
                     val vm: EmailVerificationViewModel =
                         koinViewModel {
@@ -100,6 +103,7 @@ fun NavigationRoot(backStack: NavBackStack<NavKey>) {
                         },
                     )
                 }
+
                 entry<Route.AuthRoute.ForgotPassword> {
                     ForgotPasswordScreenRoot(
                         onBackClick = {
@@ -107,6 +111,7 @@ fun NavigationRoot(backStack: NavBackStack<NavKey>) {
                         },
                     )
                 }
+
                 entry<Route.AuthRoute.ResetPassword> { key ->
                     val vm: ResetPasswordViewModel =
                         koinViewModel {
@@ -144,6 +149,7 @@ fun NavigationRoot(backStack: NavBackStack<NavKey>) {
                         },
                     )
                 }
+
                 entry<Route.ProjectRoute.ProjectArchive> {
                     ProjectArchiveScreenRoot(
                         onNavigateToDetail = { projectId ->
@@ -158,6 +164,7 @@ fun NavigationRoot(backStack: NavBackStack<NavKey>) {
                         },
                     )
                 }
+
                 entry<Route.ProjectRoute.ProjectTrash> {
                     ProjectTrashScreenRoot(
                         onNavigateToProjects = {
@@ -169,6 +176,7 @@ fun NavigationRoot(backStack: NavBackStack<NavKey>) {
                         },
                     )
                 }
+
                 entry<Route.ProjectRoute.ProjectArchiveDetail> { key ->
                     ProjectArchiveDetailScreen(
                         projectId = key.projectId,
@@ -177,6 +185,7 @@ fun NavigationRoot(backStack: NavBackStack<NavKey>) {
                         },
                     )
                 }
+
                 entry<Route.ProjectRoute.ProjectDetail> { key ->
                     val detailVm: ProjectDetailViewModel =
                         koinViewModel {
@@ -213,6 +222,7 @@ fun NavigationRoot(backStack: NavBackStack<NavKey>) {
                         },
                     )
                 }
+
                 entry<Route.ProjectRoute.DailyOverview> { key ->
                     val dailyOverviewVm: DailyOverviewViewModel =
                         koinViewModel {
@@ -225,6 +235,7 @@ fun NavigationRoot(backStack: NavBackStack<NavKey>) {
                         viewModel = dailyOverviewVm,
                     )
                 }
+
                 entry<Route.ProjectRoute.TaskDetail> { key ->
                     TaskDetailScreenRoot(
                         taskId = key.taskId,
@@ -244,6 +255,7 @@ fun NavigationRoot(backStack: NavBackStack<NavKey>) {
                         },
                     )
                 }
+
                 entry<Route.ProjectRoute.EditTextNavKey> { key ->
                     val editTextVm: EditTextViewModel =
                         koinViewModel {

@@ -456,6 +456,7 @@ fun ProjectOverviewScreen(
                     }
                 }
             }
+
             if (state.isAddNewProjectBottomSheetVisible) {
                 AddNewProjectBottomSheet(
                     state = state,

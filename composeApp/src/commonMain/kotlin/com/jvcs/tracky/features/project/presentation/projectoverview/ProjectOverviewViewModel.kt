@@ -337,6 +337,7 @@ class ProjectOverviewViewModel(
         val knownIds = mapTo(HashSet()) { it.projectId }
         val common = ArrayDeque(mapNotNull { latestById[it.projectId] })
         val result = ArrayList<ProjectUi>(latest.size)
+
         for (item in latest) {
             if (item.projectId in knownIds) {
                 if (common.isNotEmpty()) result.add(common.removeFirst())

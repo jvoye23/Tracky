@@ -25,10 +25,13 @@ actual val platformCoreDataModule =
         single { DatabaseFactory() }
         single { ConnectivityObserver() }
         single { AppLifecycleObserver() }
+
         single { JvmSyncScheduler() } bind SyncScheduler::class
         single { JvmTrashCleanupScheduler() } bind TrashCleanupScheduler::class
+
         single { NoOpTimerNotificationController() } bind TimerNotificationController::class
         single { NoOpTimerNotificationPermissionRequester() } bind TimerNotificationPermissionRequester::class
+
         single<HttpClientEngine> { OkHttp.create() }
         single<DataStore<Preferences>> {
             PreferenceDataStoreFactory.createWithPath(

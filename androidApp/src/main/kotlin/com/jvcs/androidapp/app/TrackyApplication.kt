@@ -23,6 +23,7 @@ class TrackyApplication : Application() {
             androidContext(this@TrackyApplication)
             androidLogger()
         }
+
         // Before the sync manager: a pull must not land on intervals the pass has not parked yet.
         get<StrandedTimerReconciler>().start()
         get<ProjectSyncManager>().start()

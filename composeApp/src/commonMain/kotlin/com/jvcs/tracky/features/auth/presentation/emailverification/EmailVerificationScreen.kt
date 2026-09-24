@@ -100,6 +100,7 @@ fun EmailVerificationScreen(state: EmailVerificationState, onAction: (EmailVerif
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                     )
+
                     Spacer(Modifier.height(28.dp))
                     TrackyPrimaryButton(
                         text = stringResource(Res.string.login),
@@ -131,6 +132,7 @@ fun EmailVerificationScreen(state: EmailVerificationState, onAction: (EmailVerif
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                     )
+
                     Spacer(Modifier.height(28.dp))
                     TrackyPrimaryButton(
                         text = stringResource(Res.string.close),

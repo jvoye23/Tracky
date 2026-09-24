@@ -202,12 +202,15 @@ fun RegisterScreen(state: RegisterState, onAction: (RegisterAction) -> Unit) {
                     onCheckedChange = { onAction(RegisterAction.OnTermsToggle(it)) },
                     modifier = Modifier.padding(top = 1.dp),
                 )
+
                 val onSurfaceVariantColor = MaterialTheme.colorScheme.onSurfaceVariant
                 val primaryColor = MaterialTheme.colorScheme.primary
+
                 val prefix = stringResource(Res.string.i_agree_to_terms_prefix)
                 val tos = stringResource(Res.string.terms_of_service)
                 val andWord = stringResource(Res.string.and_word)
                 val privacy = stringResource(Res.string.privacy_policy)
+
                 val termsAnnotated =
                     buildAnnotatedString {
                         withStyle(SpanStyle(color = onSurfaceVariantColor)) { append(prefix) }

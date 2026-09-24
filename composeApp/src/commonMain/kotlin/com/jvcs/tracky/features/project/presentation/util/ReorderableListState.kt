@@ -130,6 +130,7 @@ class ReorderableListState internal constructor(
             reset()
             return
         }
+
         val from = draggingItemOffset
         // Hand off to the settling state synchronously (before clearing the dragging key) so the list
         // never sees a frame where nothing is reordering and re-syncs the mirrors from stale source.
@@ -137,6 +138,7 @@ class ReorderableListState internal constructor(
         draggingItemKey = null
         draggingItemDraggedDelta = 0f
         hasMoved = false
+
         scope.launch {
             settleOffset.snapTo(from)
             settleOffset.animateTo(targetValue = 0f, animationSpec = tween(durationMillis = 220))

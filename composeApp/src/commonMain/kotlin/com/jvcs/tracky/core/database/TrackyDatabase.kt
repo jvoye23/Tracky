@@ -360,6 +360,7 @@ abstract class TrackyDatabase : RoomDatabase() {
                     connection.execSQL("UPDATE projects SET updatedAtEpochMs_tmp = NULLIF(updatedAtEpochMs, 0)")
                     connection.execSQL("ALTER TABLE projects DROP COLUMN updatedAtEpochMs")
                     connection.execSQL("ALTER TABLE projects RENAME COLUMN updatedAtEpochMs_tmp TO updatedAtEpochMs")
+
                     // project_records
                     connection.execSQL("ALTER TABLE project_records ADD COLUMN updatedAtEpochMs_tmp INTEGER")
                     connection.execSQL("UPDATE project_records SET updatedAtEpochMs_tmp = NULLIF(updatedAtEpochMs, 0)")
@@ -417,8 +418,10 @@ abstract class TrackyDatabase : RoomDatabase() {
                         JOIN projects AS p ON p.projectId = pr.parentProjectId
                         """.trimIndent(),
                     )
+
                     connection.execSQL("DROP TABLE task_intervals")
                     connection.execSQL("ALTER TABLE task_intervals_new RENAME TO task_intervals")
+
                     connection.execSQL(
                         "CREATE INDEX IF NOT EXISTS index_task_intervals_parentTaskId ON task_intervals(parentTaskId)",
                     )
@@ -589,8 +592,10 @@ abstract class TrackyDatabase : RoomDatabase() {
                         FROM task_intervals
                         """.trimIndent(),
                     )
+
                     connection.execSQL("DROP TABLE task_intervals")
                     connection.execSQL("ALTER TABLE task_intervals_new RENAME TO task_intervals")
+
                     connection.execSQL(
                         "CREATE INDEX IF NOT EXISTS index_task_intervals_parentTaskId ON task_intervals(parentTaskId)",
                     )
@@ -630,8 +635,10 @@ abstract class TrackyDatabase : RoomDatabase() {
                         FROM project_sub_tasks
                         """.trimIndent(),
                     )
+
                     connection.execSQL("DROP TABLE project_sub_tasks")
                     connection.execSQL("ALTER TABLE project_sub_tasks_new RENAME TO project_sub_tasks")
+
                     connection.execSQL(
                         "CREATE INDEX IF NOT EXISTS index_project_sub_tasks_parentProjectTaskId ON project_sub_tasks(parentProjectTaskId)",
                     )
