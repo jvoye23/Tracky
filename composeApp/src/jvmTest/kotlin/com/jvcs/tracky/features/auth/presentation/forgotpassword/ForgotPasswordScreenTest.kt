@@ -4,14 +4,20 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.runComposeUiTest
 import assertk.assertThat
 import assertk.assertions.containsExactly
+import assertk.assertions.isEqualTo
+import com.jvcs.tracky.core.domain.auth.FakeAuthService
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.designsystem.util.UiText
 import kotlinx.coroutines.runBlocking
@@ -77,5 +83,28 @@ internal class ForgotPasswordScreenTest {
                 ForgotPasswordAction.OnBackToLoginClick,
                 ForgotPasswordAction.OnResendClick,
             )
+        }
+
+    @Test
+    fun theRootSendsTheLinkAndGoesBack() =
+        runComposeUiTest {
+            var backClicks = 0
+            setContent {
+                TrackyTheme {
+                    ForgotPasswordScreenRoot(
+                        viewModel = ForgotPasswordViewModel(FakeAuthService()),
+                        onBackClick = { backClicks++ },
+                    )
+                }
+            }
+
+            onNode(
+                hasSetTextAction() and hasAnyAncestor(hasTestTag("forgot_password_email")),
+            ).performTextInput("ada@example.com")
+            onNodeWithTag("forgot_password_submit").performScrollTo().performClick()
+            onNodeWithTag("forgot_password_success").assertExists()
+            onNodeWithText(text(Res.string.back_to_login)).performScrollTo().performClick()
+
+            assertThat(backClicks).isEqualTo(1)
         }
 }
