@@ -6,7 +6,7 @@ import assertk.assertions.isTrue
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.Result
-import com.jvcs.tracky.features.project_tracker.data.RepoFixture
+import com.jvcs.tracky.features.projecttracker.data.RepoFixture
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.time.Duration.Companion.milliseconds

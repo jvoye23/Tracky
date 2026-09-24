@@ -1,6 +1,6 @@
 package com.jvcs.tracky.features.project.di
 
-import com.jvcs.tracky.features.project.presentation.project_trash.ProjectTrashViewModel
+import com.jvcs.tracky.features.project.presentation.projecttrash.ProjectTrashViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 

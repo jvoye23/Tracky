@@ -7,10 +7,10 @@ import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.ServerClock
 import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.features.project.data.project.OfflineFirstProjectRepository
-import com.jvcs.tracky.features.project_tracker.data.FakeLocalProjectDataSource
-import com.jvcs.tracky.features.project_tracker.data.FakePendingSyncDataSource
-import com.jvcs.tracky.features.project_tracker.data.FakeRemoteProjectDataSource
-import com.jvcs.tracky.features.project_tracker.data.FakeSyncScheduler
+import com.jvcs.tracky.features.projecttracker.data.FakeLocalProjectDataSource
+import com.jvcs.tracky.features.projecttracker.data.FakePendingSyncDataSource
+import com.jvcs.tracky.features.projecttracker.data.FakeRemoteProjectDataSource
+import com.jvcs.tracky.features.projecttracker.data.FakeSyncScheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.yield

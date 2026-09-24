@@ -25,10 +25,10 @@ import com.jvcs.tracky.features.project.data.project.OfflineFirstProjectReposito
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.features.project.domain.models.SubTaskInterval
 import com.jvcs.tracky.features.project.domain.models.TaskInterval
-import com.jvcs.tracky.features.project_tracker.data.FakeLocalProjectDataSource
-import com.jvcs.tracky.features.project_tracker.data.FakePendingSyncDataSource
-import com.jvcs.tracky.features.project_tracker.data.FakeRemoteProjectDataSource
-import com.jvcs.tracky.features.project_tracker.data.FakeSyncScheduler
+import com.jvcs.tracky.features.projecttracker.data.FakeLocalProjectDataSource
+import com.jvcs.tracky.features.projecttracker.data.FakePendingSyncDataSource
+import com.jvcs.tracky.features.projecttracker.data.FakeRemoteProjectDataSource
+import com.jvcs.tracky.features.projecttracker.data.FakeSyncScheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
