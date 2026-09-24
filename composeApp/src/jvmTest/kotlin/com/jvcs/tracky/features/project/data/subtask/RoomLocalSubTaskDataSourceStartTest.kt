@@ -49,6 +49,7 @@ internal class RoomLocalSubTaskDataSourceStartTest {
         dataSource =
             RoomLocalSubTaskDataSource(
                 db.projectDao,
+                db.taskDao,
                 db.subTaskIntervalDao,
                 db.taskIntervalDao,
                 db.strandedIntervalDao,
@@ -80,7 +81,7 @@ internal class RoomLocalSubTaskDataSourceStartTest {
                 updatedAtEpochMs = null,
             ),
         )
-        db.projectDao.upsertProjectTask(
+        db.taskDao.upsertProjectTask(
             ProjectTaskEntity(
                 projectTaskId = "t1",
                 parentProjectId = "p1",
@@ -113,7 +114,7 @@ internal class RoomLocalSubTaskDataSourceStartTest {
         }
     }
 
-    private suspend fun taskIsRunning(): Boolean = db.projectDao.getTaskById("t1")!!.isTimerRunning
+    private suspend fun taskIsRunning(): Boolean = db.taskDao.getTaskById("t1")!!.isTimerRunning
 
     private suspend fun subTaskIsRunning(id: String): Boolean = db.projectDao.getSubTaskById(id)!!.isTimerRunning
 
@@ -150,7 +151,7 @@ internal class RoomLocalSubTaskDataSourceStartTest {
                     durationMillis = 0,
                 ),
             )
-            db.projectDao.updateSessionTimerStatus("t1", true)
+            db.taskDao.updateSessionTimerStatus("t1", true)
             timeProvider.now = Instant.fromEpochMilliseconds(5_000)
 
             val result = dataSource.startSubTask("s1")
@@ -162,7 +163,7 @@ internal class RoomLocalSubTaskDataSourceStartTest {
             // The task timer was the user's doing, so this subtask must not claim it.
             assertThat(result.data.subTaskInterval.startedParentTimer).isFalse()
             assertThat(
-                db.projectDao
+                db.taskDao
                     .getTaskWithSubTasksById("t1")
                     .first()!!
                     .intervals.size,

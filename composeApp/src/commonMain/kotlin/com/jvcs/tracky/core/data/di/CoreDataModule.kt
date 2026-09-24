@@ -103,6 +103,7 @@ val coreDataModule =
 
         // One DAO per table of the project tree; ServerTreeWriter is what holds a pull across them.
         single { get<TrackyDatabase>().projectDao }
+        single { get<TrackyDatabase>().taskDao }
 
         single { get<TrackyDatabase>().taskIntervalDao }
         single { get<TrackyDatabase>().subTaskIntervalDao }
@@ -206,6 +207,7 @@ val coreDataModule =
         single {
             OfflineFirstStrandedTimerRepository(
                 projectDao = get(),
+                taskDao = get(),
                 subTaskIntervalDao = get(),
                 taskIntervalDao = get(),
                 strandedIntervalDao = get(),
@@ -220,6 +222,7 @@ val coreDataModule =
         single {
             OfflineFirstRunningTimerRepository(
                 projectDao = get(),
+                taskDao = get(),
                 subTaskIntervalDao = get(),
                 taskIntervalDao = get(),
                 deviceIdProvider = get(),
@@ -244,6 +247,7 @@ val coreDataModule =
         single(createdAtStart = true) {
             StrandedTimerReconciler(
                 projectDao = get(),
+                taskDao = get(),
                 subTaskIntervalDao = get(),
                 taskIntervalDao = get(),
                 strandedIntervalDao = get(),

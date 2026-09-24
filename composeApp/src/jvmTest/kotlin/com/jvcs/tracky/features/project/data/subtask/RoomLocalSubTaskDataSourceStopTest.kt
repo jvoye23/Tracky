@@ -51,6 +51,7 @@ internal class RoomLocalSubTaskDataSourceStopTest {
         subTasks =
             RoomLocalSubTaskDataSource(
                 db.projectDao,
+                db.taskDao,
                 db.subTaskIntervalDao,
                 db.taskIntervalDao,
                 db.strandedIntervalDao,
@@ -60,6 +61,7 @@ internal class RoomLocalSubTaskDataSourceStopTest {
         tasks =
             RoomLocalTaskDataSource(
                 db.projectDao,
+                db.taskDao,
                 db.subTaskIntervalDao,
                 db.taskIntervalDao,
                 FakeDeviceIdProvider(),
@@ -90,7 +92,7 @@ internal class RoomLocalSubTaskDataSourceStopTest {
                 updatedAtEpochMs = null,
             ),
         )
-        db.projectDao.upsertProjectTask(
+        db.taskDao.upsertProjectTask(
             ProjectTaskEntity(
                 projectTaskId = "t1",
                 parentProjectId = "p1",
@@ -123,7 +125,7 @@ internal class RoomLocalSubTaskDataSourceStopTest {
         }
     }
 
-    private suspend fun taskIsRunning() = db.projectDao.getTaskById("t1")!!.isTimerRunning
+    private suspend fun taskIsRunning() = db.taskDao.getTaskById("t1")!!.isTimerRunning
 
     private suspend fun subTaskIsRunning(id: String) = db.projectDao.getSubTaskById(id)!!.isTimerRunning
 
@@ -142,7 +144,7 @@ internal class RoomLocalSubTaskDataSourceStopTest {
             assertThat(subTaskIsRunning("s1")).isFalse()
             assertThat(taskIsRunning()).isFalse()
             assertThat(db.projectDao.getSubTaskById("s1")!!.durationMillis).isEqualTo(60_000L)
-            assertThat(db.projectDao.getTaskById("t1")!!.durationMillis).isEqualTo(60_000L)
+            assertThat(db.taskDao.getTaskById("t1")!!.durationMillis).isEqualTo(60_000L)
         }
 
     @Test
@@ -152,7 +154,7 @@ internal class RoomLocalSubTaskDataSourceStopTest {
             db.taskIntervalDao.upsertTaskInterval(
                 TaskIntervalEntity("i-manual", "t1", "p1", 0, null, 0),
             )
-            db.projectDao.updateSessionTimerStatus("t1", true)
+            db.taskDao.updateSessionTimerStatus("t1", true)
             subTasks.startSubTask("s1")
             timeProvider.now = Instant.fromEpochMilliseconds(60_000)
 
@@ -206,7 +208,7 @@ internal class RoomLocalSubTaskDataSourceStopTest {
             assertThat(subTaskIsRunning("s1")).isFalse()
             assertThat(taskIsRunning()).isFalse()
             assertThat(db.projectDao.getSubTaskById("s1")!!.durationMillis).isEqualTo(60_000L)
-            assertThat(db.projectDao.getTaskById("t1")!!.durationMillis).isEqualTo(60_000L)
+            assertThat(db.taskDao.getTaskById("t1")!!.durationMillis).isEqualTo(60_000L)
         }
 
     @Test
@@ -214,7 +216,7 @@ internal class RoomLocalSubTaskDataSourceStopTest {
         runBlocking {
             seed("s1")
             db.taskIntervalDao.upsertTaskInterval(TaskIntervalEntity("i1", "t1", "p1", 0, null, 0))
-            db.projectDao.updateSessionTimerStatus("t1", true)
+            db.taskDao.updateSessionTimerStatus("t1", true)
             timeProvider.now = Instant.fromEpochMilliseconds(60_000)
 
             val result = tasks.stopTask("t1")

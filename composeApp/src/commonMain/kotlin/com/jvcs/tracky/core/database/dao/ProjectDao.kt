@@ -6,15 +6,12 @@ import androidx.room.Transaction
 import androidx.room.Upsert
 import com.jvcs.tracky.core.database.entity.ProjectEntity
 import com.jvcs.tracky.core.database.entity.ProjectSubTaskEntity
-import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
 import com.jvcs.tracky.core.database.relation.ProjectSortIndexEntity
 import com.jvcs.tracky.core.database.relation.ProjectWithTaskTreeEntity
 import com.jvcs.tracky.core.database.relation.ProjectWithTasksEntity
 import com.jvcs.tracky.core.database.relation.SubTaskSortIndexEntity
 import com.jvcs.tracky.core.database.relation.SubTaskWithIntervals
 import com.jvcs.tracky.core.database.relation.TaskSortIndexEntity
-import com.jvcs.tracky.core.database.relation.TaskWithIntervals
-import com.jvcs.tracky.core.database.relation.TaskWithSubTasks
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -102,57 +99,12 @@ interface ProjectDao {
     @Query("SELECT * FROM projects WHERE projectId = :projectId")
     fun observeProjectWithTaskTreeById(projectId: String): Flow<ProjectWithTaskTreeEntity?>
 
-    @Upsert
-    suspend fun upsertProjectTask(task: ProjectTaskEntity)
-
-    @Query("SELECT * FROM project_tasks WHERE projectTaskId = :projectTaskId")
-    suspend fun getTaskById(projectTaskId: String): ProjectTaskEntity?
-
-    @Query("DELETE FROM project_tasks WHERE projectTaskId = :projectTaskId")
-    suspend fun deleteProjectTask(projectTaskId: String)
-
-    @Query("UPDATE project_tasks SET durationMillis = :newDurationMillis WHERE projectTaskId = :taskId")
-    suspend fun updateTaskDuration(taskId: String, newDurationMillis: Long)
-
-    @Transaction
-    @Query("SELECT * FROM project_tasks WHERE projectTaskId = :taskId")
-    fun getTaskWithIntervalsById(taskId: String): Flow<TaskWithIntervals?>
-
-    @Query("UPDATE project_tasks SET isTimerRunning = :isRunning WHERE projectTaskId = :sessionId")
-    suspend fun updateSessionTimerStatus(sessionId: String, isRunning: Boolean)
-
-    @Query(
-        "UPDATE project_tasks SET durationMillis = durationMillis + :additionalDuration WHERE projectTaskId = :taskId",
-    )
-    suspend fun addTaskDuration(taskId: String, additionalDuration: Long)
-
-    /**
-     * What a task has already banked, summed from its own closed intervals.
-     *
-     * Not `project_tasks.durationMillis`, which is a running total maintained by whichever device
-     * did the stopping. A device that has just adopted a timer another device started may not have
-     * pulled that total yet, so reading it would show the wrong number until it does — and would
-     * keep showing it if the task row's last-write-wins ever went the other way.
-     *
-     * The sum cannot disagree with the interval table, and it converges the instant the closing
-     * interval arrives. `parentTaskId` is indexed, so the cost is one indexed aggregate per
-     * emission of the running timer.
-     */
-    @Query(
-        "SELECT COALESCE(SUM(durationMillis), 0) FROM task_intervals " +
-            "WHERE parentTaskId = :taskId AND endDateTimeEpochMs IS NOT NULL",
-    )
-    suspend fun getBankedTaskDuration(taskId: String): Long
-
     /** The subtask twin of [getBankedTaskDuration]; `parentSubTaskId` is indexed too. */
     @Query(
         "SELECT COALESCE(SUM(durationMillis), 0) FROM sub_task_intervals " +
             "WHERE parentSubTaskId = :subTaskId AND endDateTimeEpochMs IS NOT NULL",
     )
     suspend fun getBankedSubTaskDuration(subTaskId: String): Long
-
-    @Query("UPDATE project_tasks SET title = :title WHERE projectTaskId = :taskId")
-    suspend fun updateTaskTitle(taskId: String, title: String)
 
     // Task order is per project, so unlike the project queries these are scoped to one parent.
     @Query("SELECT projectTaskId, sortIndex FROM project_tasks WHERE parentProjectId = :projectId")
@@ -177,10 +129,6 @@ interface ProjectDao {
 
     @Upsert
     suspend fun upsertProjectSubTask(subTask: ProjectSubTaskEntity)
-
-    @Transaction
-    @Query("SELECT * FROM project_tasks WHERE projectTaskId = :taskId")
-    fun getTaskWithSubTasksById(taskId: String): Flow<TaskWithSubTasks?>
 
     @Transaction
     @Query("SELECT * FROM project_sub_tasks WHERE parentProjectTaskId = :taskId")

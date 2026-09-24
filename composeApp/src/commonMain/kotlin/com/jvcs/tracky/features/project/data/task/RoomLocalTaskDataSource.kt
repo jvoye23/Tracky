@@ -4,6 +4,7 @@ import androidx.sqlite.SQLiteException
 import co.touchlab.kermit.Logger
 import com.jvcs.tracky.core.database.dao.ProjectDao
 import com.jvcs.tracky.core.database.dao.SubTaskIntervalDao
+import com.jvcs.tracky.core.database.dao.TaskDao
 import com.jvcs.tracky.core.database.dao.TaskIntervalDao
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 import com.jvcs.tracky.core.domain.device.DeviceIdProvider
@@ -31,6 +32,7 @@ import kotlin.uuid.Uuid
 
 class RoomLocalTaskDataSource(
     private val projectDao: ProjectDao,
+    private val taskDao: TaskDao,
     private val subTaskIntervalDao: SubTaskIntervalDao,
     private val taskIntervalDao: TaskIntervalDao,
     private val deviceIdProvider: DeviceIdProvider,
@@ -47,28 +49,28 @@ class RoomLocalTaskDataSource(
     private val dbWriteDispatcher = platformIoDispatcher.limitedParallelism(1)
 
     override fun getTaskWithIntervalsById(taskId: String): Flow<ProjectTask?> =
-        projectDao
+        taskDao
             .getTaskWithIntervalsById(taskId)
             .map { it?.toProjectTask() }
 
     override suspend fun getTaskById(taskId: String): Result<ProjectTask?, DataError.Local> =
         read {
-            projectDao.getTaskWithIntervalsById(taskId).first()?.toProjectTask()
+            taskDao.getTaskWithIntervalsById(taskId).first()?.toProjectTask()
         }
 
     override suspend fun upsertProjectTask(projectTask: ProjectTask): EmptyResult<DataError.Local> =
         write {
-            projectDao.upsertProjectTask(projectTask.toProjectTaskEntity())
+            taskDao.upsertProjectTask(projectTask.toProjectTaskEntity())
         }
 
     override suspend fun deleteProjectTask(taskId: String): EmptyResult<DataError.Local> =
         write {
-            projectDao.deleteProjectTask(taskId)
+            taskDao.deleteProjectTask(taskId)
         }
 
     override suspend fun updateTaskDuration(taskId: String, newDurationMillis: Long): EmptyResult<DataError.Local> =
         write {
-            projectDao.updateTaskDuration(taskId, newDurationMillis)
+            taskDao.updateTaskDuration(taskId, newDurationMillis)
         }
 
     override suspend fun getTaskSortIndices(projectId: String): Result<Map<String, Long?>, DataError.Local> =
@@ -86,7 +88,7 @@ class RoomLocalTaskDataSource(
 
     override suspend fun updateTaskTitle(taskId: String, title: String): EmptyResult<DataError.Local> =
         write {
-            projectDao.updateTaskTitle(taskId, title)
+            taskDao.updateTaskTitle(taskId, title)
         }
 
     override suspend fun startTask(taskId: String): Result<TaskTimerStart, DataError.Local> {
@@ -102,14 +104,14 @@ class RoomLocalTaskDataSource(
                     // The owning project has to be read before the interval can be written: it is part
                     // of the row now, and the cascading foreign key would reject an interval whose task
                     // no longer exists anyway.
-                    val task = projectDao.getTaskById(taskId) ?: return@withContext null
+                    val task = taskDao.getTaskById(taskId) ?: return@withContext null
 
                     // Reuse whatever is already open rather than stacking a second row on top, the way
                     // startSubTask does. The timer lives only in memory, so a process death leaves the
                     // open interval behind with nothing tracking it; starting again would strand that
                     // row, and the next stop would close it with the whole wall-clock gap since.
                     taskIntervalDao.getOpenIntervalBySessionId(taskId)?.let { open ->
-                        projectDao.updateSessionTimerStatus(taskId, true)
+                        taskDao.updateSessionTimerStatus(taskId, true)
                         // openedInterval stays null: that row is already on the server, or queued for
                         // it, and pushing a CREATE for it a second time would be a duplicate.
                         return@withContext TaskTimerStart(open.toTaskInterval(), openedInterval = null)
@@ -128,7 +130,7 @@ class RoomLocalTaskDataSource(
                         )
 
                     taskIntervalDao.upsertTaskInterval(interval)
-                    projectDao.updateSessionTimerStatus(taskId, true)
+                    taskDao.updateSessionTimerStatus(taskId, true)
 
                     val domain = interval.toTaskInterval()
                     TaskTimerStart(domain, openedInterval = domain)
@@ -156,11 +158,11 @@ class RoomLocalTaskDataSource(
                                 .getOpenSubTaskIntervalForTask(taskId)
                                 ?.let { subTaskIntervalDao.closeSubTaskInterval(it, now, projectDao) }
 
-                            taskIntervalDao.closeTaskInterval(openInterval, now, projectDao)
+                            taskIntervalDao.closeTaskInterval(openInterval, now, taskDao)
                         } else {
                             null
                         }
-                    projectDao.updateSessionTimerStatus(taskId, false)
+                    taskDao.updateSessionTimerStatus(taskId, false)
                     updatedInterval
                 }
             Result.Success(closedInterval?.toTaskInterval())

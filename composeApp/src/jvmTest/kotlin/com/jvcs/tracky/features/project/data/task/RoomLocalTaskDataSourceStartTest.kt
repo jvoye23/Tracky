@@ -52,6 +52,7 @@ internal class RoomLocalTaskDataSourceStartTest {
         dataSource =
             RoomLocalTaskDataSource(
                 db.projectDao,
+                db.taskDao,
                 db.subTaskIntervalDao,
                 db.taskIntervalDao,
                 FakeDeviceIdProvider(),
@@ -82,7 +83,7 @@ internal class RoomLocalTaskDataSourceStartTest {
                 updatedAtEpochMs = null,
             ),
         )
-        db.projectDao.upsertProjectTask(
+        db.taskDao.upsertProjectTask(
             ProjectTaskEntity(
                 projectTaskId = "t1",
                 parentProjectId = "p1",
@@ -99,7 +100,7 @@ internal class RoomLocalTaskDataSourceStartTest {
     }
 
     private suspend fun intervalCount(): Int =
-        db.projectDao
+        db.taskDao
             .getTaskWithIntervalsById("t1")
             .first()!!
             .intervals.size
@@ -120,7 +121,7 @@ internal class RoomLocalTaskDataSourceStartTest {
             ).isEqualTo(1_000L)
             // A brand-new row, so it is the caller's job to push it.
             assertThat(result.data.openedInterval).isNotNull()
-            assertThat(db.projectDao.getTaskById("t1")!!.isTimerRunning).isTrue()
+            assertThat(db.taskDao.getTaskById("t1")!!.isTimerRunning).isTrue()
         }
 
     @Test
@@ -146,7 +147,7 @@ internal class RoomLocalTaskDataSourceStartTest {
             // Nothing new to push: that row is already on the server, or queued for it. Pushing a
             // CREATE again would duplicate it.
             assertThat(second.data.openedInterval).isNull()
-            assertThat(db.projectDao.getTaskById("t1")!!.isTimerRunning).isTrue()
+            assertThat(db.taskDao.getTaskById("t1")!!.isTimerRunning).isTrue()
         }
 
     @Test
@@ -256,7 +257,7 @@ internal class RoomLocalTaskDataSourceStartTest {
             check(closed is Result.Success)
             checkNotNull(closed.data)
             assertThat(closed.data.durationMillis).isEqualTo(0L)
-            assertThat(db.projectDao.getTaskById("t1")!!.durationMillis).isEqualTo(0L)
+            assertThat(db.taskDao.getTaskById("t1")!!.durationMillis).isEqualTo(0L)
         }
 
     /**

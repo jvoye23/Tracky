@@ -75,7 +75,7 @@ internal class RoomLocalProjectDataSourceTombstoneTest {
                 sortIndex = null,
             ),
         )
-        db.projectDao.upsertProjectTask(
+        db.taskDao.upsertProjectTask(
             ProjectTaskEntity(
                 projectTaskId = "t1",
                 parentProjectId = "p1",
@@ -153,7 +153,7 @@ internal class RoomLocalProjectDataSourceTombstoneTest {
 
             applyTombstones(Tombstone("task", "t1"))
 
-            assertThat(db.projectDao.getTaskById("t1"), name = "the task row survived its tombstone").isNull()
+            assertThat(db.taskDao.getTaskById("t1"), name = "the task row survived its tombstone").isNull()
             // Room cascades, so the task's own interval goes with it whether or not the server
             // bothered to name it.
             assertThat(
@@ -196,7 +196,7 @@ internal class RoomLocalProjectDataSourceTombstoneTest {
 
             assertThat(db.taskIntervalDao.getIntervalById("i1")).isNull()
             assertThat(
-                db.projectDao.getTaskById("t1"),
+                db.taskDao.getTaskById("t1"),
                 name = "deleting an interval must not take its task",
             ).isNotNull()
         }
@@ -227,7 +227,7 @@ internal class RoomLocalProjectDataSourceTombstoneTest {
             )
 
             assertThat(db.projectDao.getProjectById("p1")).isNull()
-            assertThat(db.projectDao.getTaskById("t1")).isNull()
+            assertThat(db.taskDao.getTaskById("t1")).isNull()
             assertThat(db.taskIntervalDao.getIntervalById("i1")).isNull()
             assertThat(db.projectDao.getSubTaskById("s1")).isNull()
             assertThat(db.subTaskIntervalDao.getSubTaskIntervalById("si1")).isNull()
@@ -257,7 +257,7 @@ internal class RoomLocalProjectDataSourceTombstoneTest {
             applyTombstones(Tombstone("task", "t1"))
 
             assertThat(
-                db.projectDao.getTaskById("t1"),
+                db.taskDao.getTaskById("t1"),
                 name = "a tombstone destroyed an edit the outbox had not pushed yet",
             ).isNotNull()
         }
@@ -270,7 +270,7 @@ internal class RoomLocalProjectDataSourceTombstoneTest {
 
             applyTombstones(Tombstone("something_new_in_v2", "x1"), Tombstone("task", "t1"))
 
-            assertThat(db.projectDao.getTaskById("t1"), name = "one unknown type stopped the rest of the page").isNull()
+            assertThat(db.taskDao.getTaskById("t1"), name = "one unknown type stopped the rest of the page").isNull()
             assertThat(db.projectDao.getProjectById("p1")).isNotNull()
         }
 }

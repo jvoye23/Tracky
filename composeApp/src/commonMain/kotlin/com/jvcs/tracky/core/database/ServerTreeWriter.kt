@@ -118,9 +118,9 @@ class ServerTreeWriter(private val database: TrackyDatabase) {
 
     private suspend fun mergeTasks(tasks: List<ProjectTaskEntity>) {
         tasks.forEach { incoming ->
-            val local = database.projectDao.getTaskById(incoming.projectTaskId)
+            val local = database.taskDao.getTaskById(incoming.projectTaskId)
             if (serverWinsOnPull(local?.updatedAtEpochMs, incoming.updatedAtEpochMs)) {
-                database.projectDao.upsertProjectTask(incoming)
+                database.taskDao.upsertProjectTask(incoming)
             }
         }
     }
@@ -153,7 +153,7 @@ class ServerTreeWriter(private val database: TrackyDatabase) {
 
     private suspend fun mergeSubTasks(subTasks: List<ProjectSubTaskEntity>) {
         subTasks.forEach { incoming ->
-            if (database.projectDao.getTaskById(incoming.parentProjectTaskId) == null) return@forEach
+            if (database.taskDao.getTaskById(incoming.parentProjectTaskId) == null) return@forEach
             val local = database.projectDao.getSubTaskById(incoming.projectSubTaskId)
             // A real stamp, exactly like a task's: subtasks are edited by hand.
             if (serverWinsOnPull(local?.updatedAtEpochMs, incoming.updatedAtEpochMs)) {
@@ -198,7 +198,7 @@ class ServerTreeWriter(private val database: TrackyDatabase) {
         val pending = database.pendingSyncDao.getAllPendingEntityIds().toSet()
 
         deletions.projectIds.forEach { if (it !in pending) database.projectDao.deleteProject(it) }
-        deletions.taskIds.forEach { if (it !in pending) database.projectDao.deleteProjectTask(it) }
+        deletions.taskIds.forEach { if (it !in pending) database.taskDao.deleteProjectTask(it) }
         deletions.intervalIds.forEach { if (it !in pending) database.taskIntervalDao.deleteTaskInterval(it) }
         deletions.subTaskIds.forEach { if (it !in pending) database.projectDao.deleteProjectSubTask(it) }
         deletions.subTaskIntervalIds.forEach {

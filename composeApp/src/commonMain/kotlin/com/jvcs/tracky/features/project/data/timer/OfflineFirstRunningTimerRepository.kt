@@ -2,6 +2,7 @@ package com.jvcs.tracky.features.project.data.timer
 
 import com.jvcs.tracky.core.database.dao.ProjectDao
 import com.jvcs.tracky.core.database.dao.SubTaskIntervalDao
+import com.jvcs.tracky.core.database.dao.TaskDao
 import com.jvcs.tracky.core.database.dao.TaskIntervalDao
 import com.jvcs.tracky.core.database.entity.SubTaskIntervalEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
@@ -33,6 +34,7 @@ import kotlin.time.Instant
  */
 class OfflineFirstRunningTimerRepository(
     private val projectDao: ProjectDao,
+    private val taskDao: TaskDao,
     private val subTaskIntervalDao: SubTaskIntervalDao,
     private val taskIntervalDao: TaskIntervalDao,
     private val deviceIdProvider: DeviceIdProvider,
@@ -56,7 +58,7 @@ class OfflineFirstRunningTimerRepository(
 
     private suspend fun toRunningTimer(interval: SubTaskIntervalEntity): RunningTimer? {
         val subTask = projectDao.getSubTaskById(interval.parentSubTaskId) ?: return null
-        val task = projectDao.getTaskById(subTask.parentProjectTaskId) ?: return null
+        val task = taskDao.getTaskById(subTask.parentProjectTaskId) ?: return null
         val project = projectDao.getProjectById(task.parentProjectId) ?: return null
 
         return RunningTimer(
@@ -71,7 +73,7 @@ class OfflineFirstRunningTimerRepository(
     }
 
     private suspend fun toRunningTimer(interval: TaskIntervalEntity): RunningTimer? {
-        val task = projectDao.getTaskById(interval.parentTaskId) ?: return null
+        val task = taskDao.getTaskById(interval.parentTaskId) ?: return null
         val project = projectDao.getProjectById(task.parentProjectId) ?: return null
 
         return RunningTimer(
@@ -80,7 +82,7 @@ class OfflineFirstRunningTimerRepository(
             task = TaskRef(id = task.projectTaskId, title = task.title),
             subTask = null,
             startedAt = Instant.fromEpochMilliseconds(interval.startDateTimeEpochMs),
-            bankedDuration = projectDao.getBankedTaskDuration(task.projectTaskId).milliseconds,
+            bankedDuration = taskDao.getBankedTaskDuration(task.projectTaskId).milliseconds,
             isForeign = isForeignTimer(interval.startedByDeviceId, deviceIdProvider.deviceId()),
         )
     }
