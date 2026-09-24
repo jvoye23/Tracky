@@ -177,7 +177,7 @@ fun ProjectTrashScreen(
                     if (editMode) {
                         ProjectTrashSelectionTopAppBar(
                             modifier = Modifier.padding(horizontal = 10.dp),
-                            state = state,
+                            selectedCount = state.selectedProjectIds.size,
                             onAction = onAction,
                             scrollBehavior = scrollBehavior,
                         )
@@ -185,7 +185,8 @@ fun ProjectTrashScreen(
                         ProjectTrashSearchTopAppBar(
                             title = stringResource(Res.string.trash_title),
                             modifier = Modifier.padding(horizontal = 10.dp),
-                            state = state,
+                            isSearchActive = state.isSearchActive,
+                            searchQuery = state.searchQuery,
                             onAction = onAction,
                             onMenuClick = { drawerScope.launch { drawerState.open() } },
                             scrollBehavior = scrollBehavior,

@@ -213,6 +213,7 @@ private fun previewDay() =
         taskCount = 4,
     )
 
+@Suppress("ScreenStateOnlyInScreenComposable") // preview wrapper: hands the whole state to the Screen
 @Composable
 private fun ScreenPreview(state: DailyOverviewState) {
     TrackyTheme {

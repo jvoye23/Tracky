@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -356,7 +357,8 @@ fun ProjectDetailScreen(
                             title = state.titleText ?: stringResource(Res.string.title),
                             description = state.descriptionText ?: stringResource(Res.string.description),
                             onAction = onAction,
-                            state = state,
+                            isEditMode = state.isEditMode,
+                            projectId = state.project?.projectId,
                         )
                         if (state.isEditMode) {
                             ColorInfoCard(
@@ -422,7 +424,10 @@ fun ProjectDetailScreen(
                         lastActive = state.project.startDateTimeUtc,
                         perDayStrip = state.perDayStrip,
                         projectColor = state.projectColor ?: MaterialTheme.colorScheme.primary,
-                        state = state,
+                        doneTaskCount = state.project?.doneTaskCount ?: 0,
+                        taskCount =
+                            state.project?.projectTasks?.size ?: 0,
+                        taskProgress = { state.project?.taskProgress ?: 0f },
                         onAction = onAction,
                     )
                 }
@@ -546,7 +551,7 @@ fun ProjectDetailScreen(
     }
     if (state.isAddNewProjectTaskBottomSheetVisible) {
         AddNewProjectTaskBottomSheet(
-            state = state,
+            textFieldState = state.addProjectTaskTextFieldState,
             onAction = onAction,
         )
     }
@@ -578,7 +583,8 @@ private fun ProjectHeader(
     title: String,
     description: String,
     onAction: (ProjectDetailAction) -> Unit,
-    state: ProjectDetailState,
+    isEditMode: Boolean,
+    projectId: String?,
 ) {
     Column(
         modifier =
@@ -586,7 +592,7 @@ private fun ProjectHeader(
                 .fillMaxWidth()
                 .background(
                     color =
-                        if (state.isEditMode) {
+                        if (isEditMode) {
                             MaterialTheme.colorScheme.surfaceContainerLow
                         } else {
                             Color.Transparent
@@ -596,7 +602,7 @@ private fun ProjectHeader(
                     BorderStroke(
                         width = 1.dp,
                         color =
-                            if (state.isEditMode) {
+                            if (isEditMode) {
                                 MaterialTheme.colorScheme.outlineVariant
                             } else {
                                 Color.Transparent
@@ -604,11 +610,11 @@ private fun ProjectHeader(
                     ),
                     shape = RoundedCornerShape(16.dp),
                 ).clickable {
-                    state.project?.let {
+                    projectId?.let {
                         onAction(
                             ProjectDetailAction.OnProjectEditTextClick(
-                                isEditMode = state.isEditMode,
-                                projectId = it.projectId,
+                                isEditMode = isEditMode,
+                                projectId = it,
                             ),
                         )
                     }
@@ -644,7 +650,9 @@ private fun InfoGrid(
     lastActive: String,
     perDayStrip: PerDayStripUi?,
     projectColor: Color,
-    state: ProjectDetailState,
+    doneTaskCount: Int,
+    taskCount: Int,
+    taskProgress: () -> Float,
     onAction: (ProjectDetailAction) -> Unit,
 ) {
     Column(
@@ -684,15 +692,15 @@ private fun InfoGrid(
             value =
                 stringResource(
                     Res.string.task_completed_count,
-                    state.project?.doneTaskCount ?: 0,
-                    state.project?.projectTasks?.size ?: 0,
+                    doneTaskCount,
+                    taskCount,
                 ),
         ) {
             Spacer(modifier = Modifier.height(8.dp))
             LinearProgressIndicator(
                 // Lambda overload: the progress is read in the draw phase, so animating it
                 // later will not recompose the card.
-                progress = { state.project?.taskProgress ?: 0f },
+                progress = taskProgress,
                 modifier =
                     Modifier
                         .fillMaxWidth()

@@ -31,7 +31,7 @@ fun ProjectSessionCard(
     modifier: Modifier = Modifier,
     projectTaskUi: ProjectTaskUi,
     onAction: (ProjectDetailAction) -> Unit,
-    state: ProjectDetailState,
+    isEditMode: Boolean,
 ) {
     ListItem(
         modifier =
@@ -48,7 +48,7 @@ fun ProjectSessionCard(
             )
         },
         trailingContent = {
-            if (state.isEditMode) {
+            if (isEditMode) {
                 IconButton(
                     onClick = {
                         onAction(ProjectDetailAction.OnDeleteSessionClick(projectTaskUi.projectTaskId!!))
@@ -125,7 +125,7 @@ fun ProjectSessionCardPreview() {
                     isFinished = false,
                 ),
             onAction = {},
-            state = ProjectDetailState(),
+            isEditMode = false,
         )
     }
 }

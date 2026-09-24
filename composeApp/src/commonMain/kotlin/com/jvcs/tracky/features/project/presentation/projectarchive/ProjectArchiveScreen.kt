@@ -179,7 +179,7 @@ fun ProjectArchiveScreen(
                     if (editMode) {
                         ProjectArchiveSelectionTopAppBar(
                             modifier = Modifier.padding(horizontal = 10.dp),
-                            state = state,
+                            selectedCount = state.selectedProjectIds.size,
                             onAction = onAction,
                             scrollBehavior = scrollBehavior,
                         )
@@ -187,7 +187,8 @@ fun ProjectArchiveScreen(
                         ProjectArchiveSearchTopAppBar(
                             title = stringResource(Res.string.archive_title),
                             modifier = Modifier.padding(horizontal = 10.dp),
-                            state = state,
+                            isSearchActive = state.isSearchActive,
+                            searchQuery = state.searchQuery,
                             onAction = onAction,
                             onMenuClick = { drawerScope.launch { drawerState.open() } },
                             scrollBehavior = scrollBehavior,

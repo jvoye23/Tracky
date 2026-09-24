@@ -30,12 +30,12 @@ import tracky.composeapp.generated.resources.pin_selected
 @Composable
 fun ProjectOverviewSelectionTopAppBar(
     modifier: Modifier = Modifier,
-    state: ProjectOverviewState,
+    selectedCount: Int,
     onAction: (ProjectOverviewAction) -> Unit,
     scrollBehavior: TopAppBarScrollBehavior,
 ) {
     SelectionTopAppBar(
-        selectedCount = state.selectedProjectIds.size,
+        selectedCount = selectedCount,
         onExit = { onAction(ProjectOverviewAction.OnExitEditMode) },
         scrollBehavior = scrollBehavior,
         modifier = modifier,
@@ -79,7 +79,7 @@ private fun ProjectOverviewSelectionTopAppBarPreview() {
     TrackyTheme {
         ProjectOverviewSelectionTopAppBar(
             onAction = {},
-            state = ProjectOverviewState(),
+            selectedCount = 0,
             scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(),
         )
     }
