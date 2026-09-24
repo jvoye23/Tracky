@@ -7,9 +7,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
  * A session tests control. Defaults to a logged-in user, because screens that combine their state
  * with [observeAuthInfo] render nothing at all while the session is null.
  */
-internal class FakeSessionStorage(
-    initial: AuthInfo? = authInfo()
-) : SessionStorage {
+internal class FakeSessionStorage(initial: AuthInfo? = authInfo()) : SessionStorage {
 
     private val authInfoFlow = MutableStateFlow(initial)
 
@@ -25,21 +23,21 @@ internal class FakeSessionStorage(
 internal fun authInfo(
     accessToken: String = "access-token",
     refreshToken: String = "refresh-token",
-    user: User = user()
+    user: User = user(),
 ) = AuthInfo(
     accessToken = accessToken,
     refreshToken = refreshToken,
-    user = user
+    user = user,
 )
 
 internal fun user(
     id: String = "user-1",
     email: String = "user@example.com",
     username: String = "user",
-    hasVerifiedEmail: Boolean = true
+    hasVerifiedEmail: Boolean = true,
 ) = User(
     id = id,
     email = email,
     username = username,
-    hasVerifiedEmail = hasVerifiedEmail
+    hasVerifiedEmail = hasVerifiedEmail,
 )

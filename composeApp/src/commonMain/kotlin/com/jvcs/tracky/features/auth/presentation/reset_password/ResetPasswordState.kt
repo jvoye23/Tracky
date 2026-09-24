@@ -9,5 +9,5 @@ data class ResetPasswordState(
     val errorText: UiText? = null,
     val isPasswordVisible: Boolean = false,
     val canSubmit: Boolean = false,
-    val isResetSuccessful: Boolean = false
+    val isResetSuccessful: Boolean = false,
 )

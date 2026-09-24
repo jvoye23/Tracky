@@ -17,33 +17,32 @@ import com.jvcs.tracky.features.project.domain.interval.RemoteIntervalDataSource
 import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import io.ktor.client.HttpClient
 
-class KtorRemoteIntervalDataSource(
-    private val httpClient: HttpClient
-) : RemoteIntervalDataSource {
+class KtorRemoteIntervalDataSource(private val httpClient: HttpClient) : RemoteIntervalDataSource {
 
     override suspend fun postInterval(interval: TaskInterval): Result<TaskInterval, DataError.Remote> {
         val projectId = interval.parentProjectId
-        return httpClient.post<CreateTaskIntervalRequest, TaskIntervalDto>(
-            route = "/api/projects/$projectId/tasks/${interval.parentTaskId}/intervals",
-            body = interval.toCreateTaskIntervalRequest()
-        ).map { it.toTaskInterval(projectId, startedByDeviceId = interval.startedByDeviceId) }
+        return httpClient
+            .post<CreateTaskIntervalRequest, TaskIntervalDto>(
+                route = "/api/projects/$projectId/tasks/${interval.parentTaskId}/intervals",
+                body = interval.toCreateTaskIntervalRequest(),
+            ).map { it.toTaskInterval(projectId, startedByDeviceId = interval.startedByDeviceId) }
     }
 
     override suspend fun updateInterval(interval: TaskInterval): Result<TaskInterval, DataError.Remote> {
         val projectId = interval.parentProjectId
-        return httpClient.put<UpdateTaskIntervalRequest, TaskIntervalDto>(
-            route = "/api/projects/$projectId/tasks/${interval.parentTaskId}/intervals/${interval.intervalId}",
-            body = interval.toUpdateTaskIntervalRequest()
-        ).map { it.toTaskInterval(projectId, startedByDeviceId = interval.startedByDeviceId) }
+        return httpClient
+            .put<UpdateTaskIntervalRequest, TaskIntervalDto>(
+                route = "/api/projects/$projectId/tasks/${interval.parentTaskId}/intervals/${interval.intervalId}",
+                body = interval.toUpdateTaskIntervalRequest(),
+            ).map { it.toTaskInterval(projectId, startedByDeviceId = interval.startedByDeviceId) }
     }
 
     override suspend fun deleteInterval(
         projectId: String,
         taskId: String,
-        intervalId: String
-    ): EmptyResult<DataError.Remote> {
-        return httpClient.delete(
-            route = "/api/projects/$projectId/tasks/$taskId/intervals/$intervalId"
+        intervalId: String,
+    ): EmptyResult<DataError.Remote> =
+        httpClient.delete(
+            route = "/api/projects/$projectId/tasks/$taskId/intervals/$intervalId",
         )
-    }
 }

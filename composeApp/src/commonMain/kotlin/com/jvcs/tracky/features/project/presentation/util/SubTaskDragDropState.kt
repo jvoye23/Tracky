@@ -32,7 +32,7 @@ import kotlinx.coroutines.launch
  */
 class SubTaskDragDropState internal constructor(
     private val scope: CoroutineScope,
-    private val onMove: (fromKey: String, toKey: String) -> Unit
+    private val onMove: (fromKey: String, toKey: String) -> Unit,
 ) {
     var draggingItemKey by mutableStateOf<String?>(null)
         private set
@@ -62,7 +62,11 @@ class SubTaskDragDropState internal constructor(
         get() = settleOffset.value
 
     /** Reported by each row as it is measured, and again whenever a reorder moves it. */
-    fun onRowPlaced(key: String, top: Float, height: Float) {
+    fun onRowPlaced(
+        key: String,
+        top: Float,
+        height: Float,
+    ) {
         rowTops[key] = top
         rowHeights[key] = height
     }
@@ -89,12 +93,13 @@ class SubTaskDragDropState internal constructor(
         val height = rowHeights[draggingKey] ?: return
         val middle = top + draggingItemOffset + height / 2f
 
-        val target = rowTops.keys.firstOrNull { key ->
-            if (key == draggingKey) return@firstOrNull false
-            val otherTop = rowTops[key] ?: return@firstOrNull false
-            val otherHeight = rowHeights[key] ?: return@firstOrNull false
-            middle >= otherTop && middle <= otherTop + otherHeight
-        }
+        val target =
+            rowTops.keys.firstOrNull { key ->
+                if (key == draggingKey) return@firstOrNull false
+                val otherTop = rowTops[key] ?: return@firstOrNull false
+                val otherHeight = rowHeights[key] ?: return@firstOrNull false
+                middle >= otherTop && middle <= otherTop + otherHeight
+            }
         if (target != null) onMove(draggingKey, target)
     }
 
@@ -134,7 +139,7 @@ class SubTaskDragDropState internal constructor(
 @Composable
 fun rememberSubTaskDragDropState(
     taskId: String,
-    onMove: (fromKey: String, toKey: String) -> Unit
+    onMove: (fromKey: String, toKey: String) -> Unit,
 ): SubTaskDragDropState {
     val scope = rememberCoroutineScope()
     // The state outlives the lambda: onMove closes over the screen's onAction and is recreated on

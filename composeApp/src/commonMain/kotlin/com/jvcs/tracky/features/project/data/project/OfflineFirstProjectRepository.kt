@@ -32,62 +32,54 @@ class OfflineFirstProjectRepository(
     private val pendingSyncDataSource: PendingSyncDataSource,
     private val syncScheduler: SyncScheduler,
     private val applicationScope: CoroutineScope,
-    private val timeProvider: TimeProvider
-): ProjectRepository {
+    private val timeProvider: TimeProvider,
+) : ProjectRepository {
 
-    override suspend fun fetchProjects(): EmptyResult<DataError> {
-        return when (val remoteResult = remoteProjectDataSource.getProjects()) {
-            is Result.Error -> remoteResult.asEmptyDataResult()
+    override suspend fun fetchProjects(): EmptyResult<DataError> =
+        when (val remoteResult = remoteProjectDataSource.getProjects()) {
+            is Result.Error -> {
+                remoteResult.asEmptyDataResult()
+            }
+
             is Result.Success -> {
-                applicationScope.async {
-                    localProjectDataSource.upsertProjects(remoteResult.data).asEmptyDataResult()
-                }.await()
+                applicationScope
+                    .async {
+                        localProjectDataSource.upsertProjects(remoteResult.data).asEmptyDataResult()
+                    }.await()
             }
         }
-    }
 
-    override fun getProjects(): Flow<List<Project>> {
-        return localProjectDataSource.getProjects()
-    }
+    override fun getProjects(): Flow<List<Project>> = localProjectDataSource.getProjects()
 
-    override fun getActiveProjects(): Flow<List<Project>> {
-        return localProjectDataSource.getActiveProjects()
-    }
+    override fun getActiveProjects(): Flow<List<Project>> = localProjectDataSource.getActiveProjects()
 
-    override fun getArchivedProjects(): Flow<List<Project>> {
-        return localProjectDataSource.getArchivedProjects()
-    }
+    override fun getArchivedProjects(): Flow<List<Project>> = localProjectDataSource.getArchivedProjects()
 
-    override fun getTrashedProjects(): Flow<List<Project>> {
-        return localProjectDataSource.getTrashedProjects()
-    }
+    override fun getTrashedProjects(): Flow<List<Project>> = localProjectDataSource.getTrashedProjects()
 
-    override suspend fun getProjectById(projectId: String): Project? {
-        return localProjectDataSource.getProjectById(projectId).getOrDefault(null)
-    }
+    override suspend fun getProjectById(projectId: String): Project? =
+        localProjectDataSource.getProjectById(projectId).getOrDefault(null)
 
     // Local only: Room is the source of truth, and every remote change reaches it through a sync
     // pull, so the stream picks those up without a call of its own.
-    override fun observeProjectById(projectId: String): Flow<Project?> {
-        return localProjectDataSource.observeProjectById(projectId)
-    }
+    override fun observeProjectById(projectId: String): Flow<Project?> =
+        localProjectDataSource.observeProjectById(projectId)
 
-    override suspend fun getProjectWithTasksByProjectId(projectId: String): Project? {
-        return localProjectDataSource.getProjectWithTasksByProjectId(projectId).getOrDefault(null)
-    }
+    override suspend fun getProjectWithTasksByProjectId(projectId: String): Project? =
+        localProjectDataSource.getProjectWithTasksByProjectId(projectId).getOrDefault(null)
 
     // Local only, for the same reason as observeProjectById: Room is the source of truth and a
     // sync pull is what puts another device's rows into it.
-    override fun observeProjectWithTaskTreeById(projectId: String): Flow<Project?> {
-        return localProjectDataSource.observeProjectWithTaskTreeById(projectId)
-    }
+    override fun observeProjectWithTaskTreeById(projectId: String): Flow<Project?> =
+        localProjectDataSource.observeProjectWithTaskTreeById(projectId)
 
     // CREATE/UPDATE project: local first (optimistic), then remote; on transient failure → queue.
     override suspend fun upsertProject(project: Project): EmptyResult<DataError> {
-        val isCreate = when (val existing = localProjectDataSource.getProjectById(project.projectId)) {
-            is Result.Success -> existing.data == null
-            is Result.Error -> return existing.asEmptyDataResult()
-        }
+        val isCreate =
+            when (val existing = localProjectDataSource.getProjectById(project.projectId)) {
+                is Result.Success -> existing.data == null
+                is Result.Error -> return existing.asEmptyDataResult()
+            }
         val stamped = project.copy(ownUpdatedAt = timeProvider.nowInstant)
 
         val localResult = localProjectDataSource.upsertProject(stamped)
@@ -95,11 +87,12 @@ class OfflineFirstProjectRepository(
             return localResult.asEmptyDataResult()
         }
 
-        val remoteResult = if (isCreate) {
-            remoteProjectDataSource.postProject(stamped)
-        } else {
-            remoteProjectDataSource.updateProject(stamped)
-        }
+        val remoteResult =
+            if (isCreate) {
+                remoteProjectDataSource.postProject(stamped)
+            } else {
+                remoteProjectDataSource.updateProject(stamped)
+            }
         return when (remoteResult) {
             is Result.Success -> {
                 // Server is canonical (server-wins on the happy path), except that an echo without a
@@ -107,18 +100,28 @@ class OfflineFirstProjectRepository(
                 localProjectDataSource.upsertProject(remoteResult.data.withLocalSortIndexFallback(stamped))
                 Result.Success(Unit)
             }
-            is Result.Error -> when {
-                remoteResult.error == DataError.Remote.CONFLICT -> resolveProjectConflict(stamped)
-                remoteResult.error.isTransient() -> {
-                    // Local write already succeeded; only surface an error if queuing the sync fails.
-                    val queued = enqueueProjectOperation(
-                        project.projectId,
-                        if (isCreate) PendingSyncOperation.OP_CREATE else PendingSyncOperation.OP_UPDATE
-                    )
-                    if (queued is Result.Success) scheduleSync()
-                    queued
+
+            is Result.Error -> {
+                when {
+                    remoteResult.error == DataError.Remote.CONFLICT -> {
+                        resolveProjectConflict(stamped)
+                    }
+
+                    remoteResult.error.isTransient() -> {
+                        // Local write already succeeded; only surface an error if queuing the sync fails.
+                        val queued =
+                            enqueueProjectOperation(
+                                project.projectId,
+                                if (isCreate) PendingSyncOperation.OP_CREATE else PendingSyncOperation.OP_UPDATE,
+                            )
+                        if (queued is Result.Success) scheduleSync()
+                        queued
+                    }
+
+                    else -> {
+                        remoteResult.asEmptyDataResult()
+                    }
                 }
-                else -> remoteResult.asEmptyDataResult()
             }
         }
     }
@@ -127,10 +130,13 @@ class OfflineFirstProjectRepository(
     // pushed to the server immediately when online (and only queued for sync when offline), exactly
     // like every other write.
     override suspend fun setProjectArchived(projectId: String, isArchived: Boolean): EmptyResult<DataError> {
-        val project = when (val existing = localProjectDataSource.getProjectById(projectId)) {
-            is Result.Success -> existing.data ?: return Result.Success(Unit) // nothing to archive
-            is Result.Error -> return existing.asEmptyDataResult()
-        }
+        val project =
+            when (val existing = localProjectDataSource.getProjectById(projectId)) {
+                is Result.Success -> existing.data ?: return Result.Success(Unit)
+
+                // nothing to archive
+                is Result.Error -> return existing.asEmptyDataResult()
+            }
         return upsertProject(project.copy(isArchived = isArchived))
     }
 
@@ -138,10 +144,13 @@ class OfflineFirstProjectRepository(
     // the change is pushed to the server immediately when online (and queued when offline), exactly
     // like archive. A non-null trashedAt trashes the project; null restores it.
     override suspend fun setProjectTrashed(projectId: String, trashedAt: Instant?): EmptyResult<DataError> {
-        val project = when (val existing = localProjectDataSource.getProjectById(projectId)) {
-            is Result.Success -> existing.data ?: return Result.Success(Unit) // nothing to trash
-            is Result.Error -> return existing.asEmptyDataResult()
-        }
+        val project =
+            when (val existing = localProjectDataSource.getProjectById(projectId)) {
+                is Result.Success -> existing.data ?: return Result.Success(Unit)
+
+                // nothing to trash
+                is Result.Error -> return existing.asEmptyDataResult()
+            }
         return upsertProject(project.copy(trashedAt = trashedAt))
     }
 
@@ -149,10 +158,11 @@ class OfflineFirstProjectRepository(
     // on the server. Reuses deleteProject so each removal gets the server DELETE + offline fallback.
     override suspend fun purgeExpiredTrashedProjects(cutoff: Instant): EmptyResult<DataError> =
         coroutineScope {
-            val expiredIds = when (val result = localProjectDataSource.getExpiredTrashedProjectIds(cutoff)) {
-                is Result.Success -> result.data
-                is Result.Error -> return@coroutineScope result.asEmptyDataResult()
-            }
+            val expiredIds =
+                when (val result = localProjectDataSource.getExpiredTrashedProjectIds(cutoff)) {
+                    is Result.Success -> result.data
+                    is Result.Error -> return@coroutineScope result.asEmptyDataResult()
+                }
             expiredIds.map { async { deleteProject(it) } }.awaitAll()
             Result.Success(Unit)
         }
@@ -167,13 +177,18 @@ class OfflineFirstProjectRepository(
         val moved = mutableListOf<String>()
         var firstError: EmptyResult<DataError>? = null
         for (projectId in projectIds) {
-            val project = when (val existing = localProjectDataSource.getProjectById(projectId)) {
-                is Result.Success -> existing.data ?: continue // nothing to pin
-                is Result.Error -> {
-                    firstError = firstError ?: existing.asEmptyDataResult()
-                    continue
+            val project =
+                when (val existing = localProjectDataSource.getProjectById(projectId)) {
+                    is Result.Success -> {
+                        existing.data ?: continue
+                    }
+
+                    // nothing to pin
+                    is Result.Error -> {
+                        firstError = firstError ?: existing.asEmptyDataResult()
+                        continue
+                    }
                 }
-            }
             when (val flipped = upsertProject(project.copy(isPinned = isPinned))) {
                 is Result.Success -> moved += projectId
                 is Result.Error -> firstError = firstError ?: flipped
@@ -184,14 +199,17 @@ class OfflineFirstProjectRepository(
         // The moved projects go first, keeping the relative order they already had; everyone else in
         // the target section keeps its order behind them. reorderProjects then numbers the whole
         // section from 0 in one transaction and one request.
-        val section = when (val allPinnedProjects = localProjectDataSource.getPinnedProjects()) {
-            is Result.Success -> allPinnedProjects.data
-            is Result.Error -> return firstError ?: allPinnedProjects.asEmptyDataResult()
-        }
+        val section =
+            when (val allPinnedProjects = localProjectDataSource.getPinnedProjects()) {
+                is Result.Success -> allPinnedProjects.data
+                is Result.Error -> return firstError ?: allPinnedProjects.asEmptyDataResult()
+            }
         val movedIds = moved.toSet()
-        val (front, rest) = section.sortedByCustomOrder()
-            .map { it.projectId }
-            .partition { it in movedIds }
+        val (front, rest) =
+            section
+                .sortedByCustomOrder()
+                .map { it.projectId }
+                .partition { it in movedIds }
 
         val reordered = reorderProjects(front + rest)
         return firstError ?: reordered
@@ -203,19 +221,21 @@ class OfflineFirstProjectRepository(
     // current indices, one transactional local write, one network call. Writing card by card would
     // let a failure halfway through leave two projects sharing an index, which no retry can repair.
     override suspend fun reorderProjects(orderedProjectIds: List<String>): EmptyResult<DataError> {
-        val current = when (val existing = localProjectDataSource.getSortIndices()) {
-            is Result.Success -> existing.data
-            is Result.Error -> return existing.asEmptyDataResult()
-        }
+        val current =
+            when (val existing = localProjectDataSource.getSortIndices()) {
+                is Result.Success -> existing.data
+                is Result.Error -> return existing.asEmptyDataResult()
+            }
         // Only ids that still exist locally and whose index actually moves.
-        val changed = buildMap {
-            orderedProjectIds.forEachIndexed { index, projectId ->
-                val newIndex = index.toLong()
-                if (current.containsKey(projectId) && current[projectId] != newIndex) {
-                    put(projectId, newIndex)
+        val changed =
+            buildMap {
+                orderedProjectIds.forEachIndexed { index, projectId ->
+                    val newIndex = index.toLong()
+                    if (current.containsKey(projectId) && current[projectId] != newIndex) {
+                        put(projectId, newIndex)
+                    }
                 }
             }
-        }
         if (changed.isEmpty()) return Result.Success(Unit)
 
         // One timestamp for both writes — reading the clock twice would stamp the local row and the
@@ -227,15 +247,23 @@ class OfflineFirstProjectRepository(
         }
 
         return when (val remoteResult = remoteProjectDataSource.reorderProjects(changed, updatedAt)) {
-            is Result.Success -> Result.Success(Unit)
-            is Result.Error -> when {
-                remoteResult.error.isTransient() -> {
-                    // Local write already succeeded; only surface an error if queuing the sync fails.
-                    val queued = enqueueReorderOperation()
-                    if (queued is Result.Success) scheduleSync()
-                    queued
+            is Result.Success -> {
+                Result.Success(Unit)
+            }
+
+            is Result.Error -> {
+                when {
+                    remoteResult.error.isTransient() -> {
+                        // Local write already succeeded; only surface an error if queuing the sync fails.
+                        val queued = enqueueReorderOperation()
+                        if (queued is Result.Success) scheduleSync()
+                        queued
+                    }
+
+                    else -> {
+                        remoteResult.asEmptyDataResult()
+                    }
                 }
-                else -> remoteResult.asEmptyDataResult()
             }
         }
     }
@@ -255,21 +283,34 @@ class OfflineFirstProjectRepository(
             return Result.Success(Unit)
         }
 
-        val remoteResult = applicationScope.async {
-            remoteProjectDataSource.deleteProject(projectId)
-        }.await()
+        val remoteResult =
+            applicationScope
+                .async {
+                    remoteProjectDataSource.deleteProject(projectId)
+                }.await()
         return when (remoteResult) {
-            is Result.Success -> Result.Success(Unit)
-            is Result.Error -> when {
-                remoteResult.error.isTransient() -> {
-                    // Local delete already succeeded; only surface an error if queuing the sync fails.
-                    val queued = enqueueProjectOperation(projectId, PendingSyncOperation.OP_DELETE)
-                    if (queued is Result.Success) scheduleSync()
-                    queued
+            is Result.Success -> {
+                Result.Success(Unit)
+            }
+
+            is Result.Error -> {
+                when {
+                    remoteResult.error.isTransient() -> {
+                        // Local delete already succeeded; only surface an error if queuing the sync fails.
+                        val queued = enqueueProjectOperation(projectId, PendingSyncOperation.OP_DELETE)
+                        if (queued is Result.Success) scheduleSync()
+                        queued
+                    }
+
+                    // Server already has no such project → the delete is effectively done.
+                    remoteResult.error.isMissingOrForbidden() -> {
+                        Result.Success(Unit)
+                    }
+
+                    else -> {
+                        remoteResult.asEmptyDataResult()
+                    }
                 }
-                // Server already has no such project → the delete is effectively done.
-                remoteResult.error.isMissingOrForbidden() -> Result.Success(Unit)
-                else -> remoteResult.asEmptyDataResult()
             }
         }
     }
@@ -289,8 +330,7 @@ class OfflineFirstProjectRepository(
             .filter {
                 it.entityType == PendingSyncOperation.ENTITY_PROJECT ||
                     it.entityType == PendingSyncOperation.ENTITY_PROJECT_ORDER
-            }
-            .forEach { op ->
+            }.forEach { op ->
                 when (runProjectOperation(op)) {
                     SyncOutcome.SUCCESS, SyncOutcome.DROP -> pendingSyncDataSource.deleteOperation(op.operationId)
                     SyncOutcome.RETRY -> Unit // leave queued for the next attempt
@@ -300,37 +340,55 @@ class OfflineFirstProjectRepository(
 
     private suspend fun runProjectOperation(op: PendingSyncOperation): SyncOutcome {
         return when (op.entityType) {
-            PendingSyncOperation.ENTITY_PROJECT -> when (op.operationType) {
-                PendingSyncOperation.OP_CREATE, PendingSyncOperation.OP_UPDATE -> {
-                    val project = when (val r = localProjectDataSource.getProjectById(op.entityId)) {
-                        is Result.Success -> r.data ?: return SyncOutcome.DROP
-                        is Result.Error -> return SyncOutcome.RETRY
+            PendingSyncOperation.ENTITY_PROJECT -> {
+                when (op.operationType) {
+                    PendingSyncOperation.OP_CREATE, PendingSyncOperation.OP_UPDATE -> {
+                        val project =
+                            when (val r = localProjectDataSource.getProjectById(op.entityId)) {
+                                is Result.Success -> r.data ?: return SyncOutcome.DROP
+                                is Result.Error -> return SyncOutcome.RETRY
+                            }
+                        val result =
+                            if (op.operationType == PendingSyncOperation.OP_CREATE) {
+                                remoteProjectDataSource.postProject(project)
+                            } else {
+                                remoteProjectDataSource.updateProject(project)
+                            }
+                        result.toSyncOutcome(
+                            onSuccess = {
+                                localProjectDataSource.upsertProject(
+                                    it.withLocalSortIndexFallback(project),
+                                )
+                            },
+                            onConflict = { resolveProjectConflict(project) },
+                        )
                     }
-                    val result = if (op.operationType == PendingSyncOperation.OP_CREATE) {
-                        remoteProjectDataSource.postProject(project)
-                    } else {
-                        remoteProjectDataSource.updateProject(project)
+
+                    PendingSyncOperation.OP_DELETE -> {
+                        remoteProjectDataSource.deleteProject(op.entityId).toSyncOutcome()
                     }
-                    result.toSyncOutcome(
-                        onSuccess = { localProjectDataSource.upsertProject(it.withLocalSortIndexFallback(project)) },
-                        onConflict = { resolveProjectConflict(project) }
-                    )
+
+                    else -> {
+                        SyncOutcome.DROP
+                    }
                 }
-                PendingSyncOperation.OP_DELETE ->
-                    remoteProjectDataSource.deleteProject(op.entityId).toSyncOutcome()
-                else -> SyncOutcome.DROP
             }
+
             // The queued row is just a marker: the order itself is rebuilt from current local state,
             // so projects deleted meanwhile drop out and repeated offline reorders collapse into one push.
             PendingSyncOperation.ENTITY_PROJECT_ORDER -> {
-                val indices = when (val r = localProjectDataSource.getSortIndices()) {
-                    is Result.Success -> r.data.mapNotNull { (id, index) -> index?.let { id to it } }.toMap()
-                    is Result.Error -> return SyncOutcome.RETRY
-                }
+                val indices =
+                    when (val r = localProjectDataSource.getSortIndices()) {
+                        is Result.Success -> r.data.mapNotNull { (id, index) -> index?.let { id to it } }.toMap()
+                        is Result.Error -> return SyncOutcome.RETRY
+                    }
                 if (indices.isEmpty()) return SyncOutcome.DROP
                 remoteProjectDataSource.reorderProjects(indices, timeProvider.nowInstant).toSyncOutcome()
             }
-            else -> SyncOutcome.DROP
+
+            else -> {
+                SyncOutcome.DROP
+            }
         }
     }
 
@@ -339,21 +397,27 @@ class OfflineFirstProjectRepository(
     // ---------------------------------------------------------------------------------------------
 
     private suspend fun resolveProjectConflict(local: Project): EmptyResult<DataError> {
-        val server = when (val r = remoteProjectDataSource.getProjects()) {
-            is Result.Success -> r.data.find { it.projectId == local.projectId }
-            is Result.Error -> return r.asEmptyDataResult()
-        } ?: return remoteProjectDataSource.postProject(local).asEmptyDataResult() // server has none → push local
+        val server =
+            when (val r = remoteProjectDataSource.getProjects()) {
+                is Result.Success -> r.data.find { it.projectId == local.projectId }
+                is Result.Error -> return r.asEmptyDataResult()
+            } ?: return remoteProjectDataSource.postProject(local).asEmptyDataResult() // server has none → push local
 
         // Last-write-wins compares this project row against the same row on the server, so it must
         // read the row's own stamp — never the lastUpdatedAt roll-up over its tasks.
-        return if (local.ownUpdatedAt != null && (server.ownUpdatedAt == null || local.ownUpdatedAt > server.ownUpdatedAt)) {
+        return if (local.ownUpdatedAt != null &&
+            (server.ownUpdatedAt == null || local.ownUpdatedAt > server.ownUpdatedAt)
+        ) {
             when (val pushed = remoteProjectDataSource.updateProject(local)) {
                 is Result.Success -> {
                     val merged = pushed.data.withLocalSortIndexFallback(local)
                     applicationScope.async { localProjectDataSource.upsertProject(merged) }.await()
                     Result.Success(Unit)
                 }
-                is Result.Error -> pushed.asEmptyDataResult()
+
+                is Result.Error -> {
+                    pushed.asEmptyDataResult()
+                }
             }
         } else {
             // Server wins on freshness, but keep the local sortIndex when the server has none.
@@ -374,27 +438,25 @@ class OfflineFirstProjectRepository(
     // Queue helpers
     // ---------------------------------------------------------------------------------------------
 
-    private suspend fun enqueueProjectOperation(projectId: String, operationType: String): EmptyResult<DataError> {
-        return pendingSyncDataSource.enqueue(
+    private suspend fun enqueueProjectOperation(projectId: String, operationType: String): EmptyResult<DataError> =
+        pendingSyncDataSource.enqueue(
             entityId = projectId,
             entityType = PendingSyncOperation.ENTITY_PROJECT,
             operationType = operationType,
             parentEntityId = null,
-            createdAt = timeProvider.nowInstant
+            createdAt = timeProvider.nowInstant,
         )
-    }
 
     // One row for the whole order, not one per moved project. The queue's OP_UPDATE dedup rule then
     // collapses further offline reorders into this same row.
-    private suspend fun enqueueReorderOperation(): EmptyResult<DataError> {
-        return pendingSyncDataSource.enqueue(
+    private suspend fun enqueueReorderOperation(): EmptyResult<DataError> =
+        pendingSyncDataSource.enqueue(
             entityId = PendingSyncOperation.PROJECT_ORDER_ENTITY_ID,
             entityType = PendingSyncOperation.ENTITY_PROJECT_ORDER,
             operationType = PendingSyncOperation.OP_UPDATE,
             parentEntityId = null,
-            createdAt = timeProvider.nowInstant
+            createdAt = timeProvider.nowInstant,
         )
-    }
 
     private suspend fun scheduleSync() {
         applicationScope.launch { syncScheduler.schedulePeriodicSync() }.join()

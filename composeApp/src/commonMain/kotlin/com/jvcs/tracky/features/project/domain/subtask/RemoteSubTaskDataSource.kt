@@ -15,28 +15,25 @@ import kotlin.time.Instant
  * the server's copy to compare against. Same reason RemoteTaskDataSource keeps its list method.
  */
 interface RemoteSubTaskDataSource {
-    suspend fun getSubTasksByTaskId(
-        projectId: String,
-        taskId: String
-    ): Result<List<ProjectSubTask>, DataError.Remote>
+    suspend fun getSubTasksByTaskId(projectId: String, taskId: String): Result<List<ProjectSubTask>, DataError.Remote>
 
     suspend fun postSubTask(
         projectId: String,
         taskId: String,
-        subTask: ProjectSubTask
+        subTask: ProjectSubTask,
     ): Result<ProjectSubTask, DataError.Remote>
 
     suspend fun updateSubTask(
         projectId: String,
         taskId: String,
-        subTask: ProjectSubTask
+        subTask: ProjectSubTask,
     ): Result<ProjectSubTask, DataError.Remote>
 
     /** Takes the ids explicitly: by the time a queued delete drains, the local row is already gone. */
     suspend fun deleteSubTask(
         projectId: String,
         taskId: String,
-        subTaskId: String
+        subTaskId: String,
     ): EmptyResult<DataError.Remote>
 
     /** One request for a whole reorder gesture — see RemoteTaskDataSource.reorderTasks. */
@@ -44,6 +41,6 @@ interface RemoteSubTaskDataSource {
         projectId: String,
         taskId: String,
         indices: Map<String, Long>,
-        updatedAt: Instant
+        updatedAt: Instant,
     ): EmptyResult<DataError.Remote>
 }

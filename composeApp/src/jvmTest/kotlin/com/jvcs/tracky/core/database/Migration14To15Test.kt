@@ -39,14 +39,14 @@ class Migration14To15Test {
                 "`title` TEXT NOT NULL, `description` TEXT, `durationMillis` INTEGER, " +
                 "`isTimerRunning` INTEGER NOT NULL, `startDateTimeEpochMs` INTEGER NOT NULL, " +
                 "`endDateTimeEpochMs` INTEGER, `isFinished` INTEGER NOT NULL, " +
-                "`updatedAtEpochMs` INTEGER, PRIMARY KEY(`projectSubTaskId`))"
+                "`updatedAtEpochMs` INTEGER, PRIMARY KEY(`projectSubTaskId`))",
         )
         connection.execSQL(
             "CREATE TABLE IF NOT EXISTS `sub_task_intervals` (`subTaskIntervalId` TEXT NOT NULL, " +
                 "`parentSubTaskId` TEXT NOT NULL, `parentTaskIntervalId` TEXT NOT NULL, " +
                 "`parentProjectId` TEXT NOT NULL, `startDateTimeEpochMs` INTEGER NOT NULL, " +
                 "`endDateTimeEpochMs` INTEGER, `durationMillis` INTEGER NOT NULL, " +
-                "PRIMARY KEY(`subTaskIntervalId`))"
+                "PRIMARY KEY(`subTaskIntervalId`))",
         )
     }
 
@@ -64,19 +64,19 @@ class Migration14To15Test {
         connection.execSQL(
             "INSERT INTO sub_task_intervals (subTaskIntervalId, parentSubTaskId, " +
                 "parentTaskIntervalId, parentProjectId, startDateTimeEpochMs, endDateTimeEpochMs, " +
-                "durationMillis) VALUES ('si1', 's1', 'i1', 'p1', 0, 60000, 60000)"
+                "durationMillis) VALUES ('si1', 's1', 'i1', 'p1', 0, 60000, 60000)",
         )
 
         TrackyDatabase.MIGRATION_14_15.migrate(connection)
 
         assertEquals(
             0L,
-            queryLong("SELECT startedParentTimer FROM sub_task_intervals WHERE subTaskIntervalId = 'si1'")
+            queryLong("SELECT startedParentTimer FROM sub_task_intervals WHERE subTaskIntervalId = 'si1'"),
         )
         // The tracked time itself must survive untouched.
         assertEquals(
             60_000L,
-            queryLong("SELECT durationMillis FROM sub_task_intervals WHERE subTaskIntervalId = 'si1'")
+            queryLong("SELECT durationMillis FROM sub_task_intervals WHERE subTaskIntervalId = 'si1'"),
         )
     }
 
@@ -84,10 +84,11 @@ class Migration14To15Test {
     fun theColumnIsNotNullSoEveryRowHasAnAnswer() {
         TrackyDatabase.MIGRATION_14_15.migrate(connection)
 
-        val notNull = queryLong(
-            "SELECT \"notnull\" FROM pragma_table_info('sub_task_intervals') " +
-                "WHERE name = 'startedParentTimer'"
-        )
+        val notNull =
+            queryLong(
+                "SELECT \"notnull\" FROM pragma_table_info('sub_task_intervals') " +
+                    "WHERE name = 'startedParentTimer'",
+            )
         assertEquals(1L, notNull)
     }
 }

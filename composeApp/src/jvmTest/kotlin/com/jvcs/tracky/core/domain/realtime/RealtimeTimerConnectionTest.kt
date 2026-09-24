@@ -41,18 +41,19 @@ internal class RealtimeTimerConnectionTest {
             parser = RealtimeEnvelopeParser(Json { ignoreUnknownKeys = true }),
             deviceIdProvider = FakeDeviceIdProvider(),
             syncCursorStore = cursorStore,
-            pullCoordinator = SyncPullCoordinator(
-                deltaSyncApplier = testDeltaSyncApplier(remote = remote, cursorStore = cursorStore),
-                applicationScope = scope,
-                coalesceWindow = 10.milliseconds
-            ),
+            pullCoordinator =
+                SyncPullCoordinator(
+                    deltaSyncApplier = testDeltaSyncApplier(remote = remote, cursorStore = cursorStore),
+                    applicationScope = scope,
+                    coalesceWindow = 10.milliseconds,
+                ),
             connectivity = connectivity,
             json = Json { ignoreUnknownKeys = true },
             isOnline = online,
             isInForeground = foreground,
             isAuthenticated = authenticated,
             applicationScope = scope,
-            random = random
+            random = random,
         )
 
     /** Past the 1s connectivity debounce, then let the handshake settle. */
@@ -64,197 +65,218 @@ internal class RealtimeTimerConnectionTest {
     // --- the gate ----------------------------------------------------------------------------
 
     @Test
-    fun connectsWhenOnlineForegroundedAndSignedIn() = runTest {
-        connection(backgroundScope).start()
-        settleConnect(this)
+    fun connectsWhenOnlineForegroundedAndSignedIn() =
+        runTest {
+            connection(backgroundScope).start()
+            settleConnect(this)
 
-        assertEquals(1, channel.opens)
-        assertEquals(RealtimeConnectionState.Connected, connectivity.state.value)
-    }
-
-    @Test
-    fun doesNotConnectWhileBackgrounded() = runTest {
-        foreground.value = false
-        connection(backgroundScope).start()
-        settleConnect(this)
-
-        assertEquals(0, channel.opens)
-    }
+            assertEquals(1, channel.opens)
+            assertEquals(RealtimeConnectionState.Connected, connectivity.state.value)
+        }
 
     @Test
-    fun doesNotConnectWhileSignedOut() = runTest {
-        authenticated.value = false
-        connection(backgroundScope).start()
-        settleConnect(this)
+    fun doesNotConnectWhileBackgrounded() =
+        runTest {
+            foreground.value = false
+            connection(backgroundScope).start()
+            settleConnect(this)
 
-        assertEquals(0, channel.opens)
-    }
+            assertEquals(0, channel.opens)
+        }
 
     @Test
-    fun closesTheSocketWhenTheGateShuts() = runTest {
-        connection(backgroundScope).start()
-        settleConnect(this)
-        val session = channel.current
+    fun doesNotConnectWhileSignedOut() =
+        runTest {
+            authenticated.value = false
+            connection(backgroundScope).start()
+            settleConnect(this)
 
-        foreground.value = false
-        // Past the connectivity debounce, which keeps the gate's combine busy for a moment.
-        advanceTimeBy(3.seconds)
-        advanceUntilIdle()
+            assertEquals(0, channel.opens)
+        }
 
-        assertTrue(session.closed, "backgrounding must tear the socket down, not leave it open")
-    }
+    @Test
+    fun closesTheSocketWhenTheGateShuts() =
+        runTest {
+            connection(backgroundScope).start()
+            settleConnect(this)
+            val session = channel.current
+
+            foreground.value = false
+            // Past the connectivity debounce, which keeps the gate's combine busy for a moment.
+            advanceTimeBy(3.seconds)
+            advanceUntilIdle()
+
+            assertTrue(session.closed, "backgrounding must tear the socket down, not leave it open")
+        }
 
     // --- the handshake -----------------------------------------------------------------------
 
     @Test
-    fun sendsExactlyOneHelloCarryingTheDeviceAndCursor() = runTest {
-        cursorStore.setCursor(84213)
-        connection(backgroundScope).start()
-        settleConnect(this)
+    fun sendsExactlyOneHelloCarryingTheDeviceAndCursor() =
+        runTest {
+            cursorStore.setCursor(84213)
+            connection(backgroundScope).start()
+            settleConnect(this)
 
-        assertEquals(1, channel.current.sent.size)
-        val hello = channel.current.sent.single()
-        assertTrue(hello.contains(""""type":"hello""""), hello)
-        assertTrue(hello.contains(""""cursor":84213"""), hello)
-    }
+            assertEquals(1, channel.current.sent.size)
+            val hello = channel.current.sent.single()
+            assertTrue(hello.contains(""""type":"hello""""), hello)
+            assertTrue(hello.contains(""""cursor":84213"""), hello)
+        }
 
     /** Zero rather than absent, so the server's "are you behind" comparison is true. */
     @Test
-    fun aDeviceThatHasNeverPulledAnnouncesCursorZero() = runTest {
-        connection(backgroundScope).start()
-        settleConnect(this)
+    fun aDeviceThatHasNeverPulledAnnouncesCursorZero() =
+        runTest {
+            connection(backgroundScope).start()
+            settleConnect(this)
 
-        assertTrue(channel.current.sent.single().contains(""""cursor":0"""))
-    }
+            assertTrue(
+                channel.current.sent
+                    .single()
+                    .contains(""""cursor":0"""),
+            )
+        }
 
     // --- envelopes become pulls --------------------------------------------------------------
 
     @Test
-    fun anInvalidateTriggersAPull() = runTest {
-        connection(backgroundScope).start()
-        settleConnect(this)
-        val before = remote.calls
+    fun anInvalidateTriggersAPull() =
+        runTest {
+            connection(backgroundScope).start()
+            settleConnect(this)
+            val before = remote.calls
 
-        channel.current.emit("""{"type":"invalidate","cursor":9}""")
-        advanceTimeBy(1.seconds)
-        advanceUntilIdle()
+            channel.current.emit("""{"type":"invalidate","cursor":9}""")
+            advanceTimeBy(1.seconds)
+            advanceUntilIdle()
 
-        assertEquals(before + 1, remote.calls)
-    }
+            assertEquals(before + 1, remote.calls)
+        }
 
     @Test
-    fun aTimerEnvelopeTriggersAPullToo() = runTest {
-        connection(backgroundScope).start()
-        settleConnect(this)
-        val before = remote.calls
+    fun aTimerEnvelopeTriggersAPullToo() =
+        runTest {
+            connection(backgroundScope).start()
+            settleConnect(this)
+            val before = remote.calls
 
-        channel.current.emit("""{"type":"timer","cursor":9,"active":null}""")
-        advanceTimeBy(1.seconds)
-        advanceUntilIdle()
+            channel.current.emit("""{"type":"timer","cursor":9,"active":null}""")
+            advanceTimeBy(1.seconds)
+            advanceUntilIdle()
 
-        assertEquals(before + 1, remote.calls)
-    }
+            assertEquals(before + 1, remote.calls)
+        }
 
     /** A future backend addition must not be able to break an old client. */
     @Test
-    fun anUnknownEnvelopeTypeStillTriggersAPullAndKeepsTheSocket() = runTest {
-        connection(backgroundScope).start()
-        settleConnect(this)
-        val before = remote.calls
+    fun anUnknownEnvelopeTypeStillTriggersAPullAndKeepsTheSocket() =
+        runTest {
+            connection(backgroundScope).start()
+            settleConnect(this)
+            val before = remote.calls
 
-        channel.current.emit("""{"type":"somethingNewInV2"}""")
-        advanceTimeBy(1.seconds)
-        advanceUntilIdle()
+            channel.current.emit("""{"type":"somethingNewInV2"}""")
+            advanceTimeBy(1.seconds)
+            advanceUntilIdle()
 
-        assertEquals(before + 1, remote.calls)
-        assertEquals(1, channel.opens, "an unknown type must not drop the connection")
-    }
+            assertEquals(before + 1, remote.calls)
+            assertEquals(1, channel.opens, "an unknown type must not drop the connection")
+        }
 
     @Test
-    fun anUnreadableFrameIsIgnoredAndTheSocketSurvives() = runTest {
-        connection(backgroundScope).start()
-        settleConnect(this)
-        val before = remote.calls
+    fun anUnreadableFrameIsIgnoredAndTheSocketSurvives() =
+        runTest {
+            connection(backgroundScope).start()
+            settleConnect(this)
+            val before = remote.calls
 
-        channel.current.emit("not json at all")
-        advanceTimeBy(1.seconds)
-        advanceUntilIdle()
+            channel.current.emit("not json at all")
+            advanceTimeBy(1.seconds)
+            advanceUntilIdle()
 
-        assertEquals(before, remote.calls, "a bad frame must not cause a pull")
-        assertEquals(1, channel.opens, "a bad frame must not drop the connection")
-        assertFalse(channel.current.closed)
-    }
+            assertEquals(before, remote.calls, "a bad frame must not cause a pull")
+            assertEquals(1, channel.opens, "a bad frame must not drop the connection")
+            assertFalse(channel.current.closed)
+        }
 
     /** A burst is one pull, because the coordinator coalesces — see SyncPullCoordinator. */
     @Test
-    fun aBurstOfInvalidatesCostsOnePull() = runTest {
-        connection(backgroundScope).start()
-        settleConnect(this)
-        val before = remote.calls
+    fun aBurstOfInvalidatesCostsOnePull() =
+        runTest {
+            connection(backgroundScope).start()
+            settleConnect(this)
+            val before = remote.calls
 
-        repeat(5) { channel.current.emit("""{"type":"invalidate","cursor":$it}""") }
-        advanceTimeBy(1.seconds)
-        advanceUntilIdle()
+            repeat(5) { channel.current.emit("""{"type":"invalidate","cursor":$it}""") }
+            advanceTimeBy(1.seconds)
+            advanceUntilIdle()
 
-        // Not necessarily exactly one — a request landing after a pull has begun earns the next
-        // one — but nothing like five.
-        assertTrue(remote.calls - before <= 2, "burst cost ${remote.calls - before} pulls")
-    }
+            // Not necessarily exactly one — a request landing after a pull has begun earns the next
+            // one — but nothing like five.
+            assertTrue(remote.calls - before <= 2, "burst cost ${remote.calls - before} pulls")
+        }
 
     // --- reconnection ------------------------------------------------------------------------
 
     @Test
-    fun reconnectsWhenTheServerHangsUp() = runTest {
-        connection(backgroundScope).start()
-        settleConnect(this)
+    fun reconnectsWhenTheServerHangsUp() =
+        runTest {
+            connection(backgroundScope).start()
+            settleConnect(this)
 
-        channel.current.closeFromServer()
-        advanceTimeBy(5.seconds)
-        advanceUntilIdle()
+            channel.current.closeFromServer()
+            advanceTimeBy(5.seconds)
+            advanceUntilIdle()
 
-        assertTrue(channel.opens >= 2, "expected a reconnect, saw ${channel.opens} opens")
-    }
+            assertTrue(channel.opens >= 2, "expected a reconnect, saw ${channel.opens} opens")
+        }
 
     /** Backoff must grow, or a server that is down gets hammered. */
     @Test
-    fun backoffGrowsBetweenFailedAttempts() = runTest {
-        channel.failNextWith(
-            DataError.Remote.SERVER_ERROR, DataError.Remote.SERVER_ERROR,
-            DataError.Remote.SERVER_ERROR, DataError.Remote.SERVER_ERROR,
-            DataError.Remote.SERVER_ERROR, DataError.Remote.SERVER_ERROR
-        )
-        connection(backgroundScope).start()
-        advanceTimeBy(2.seconds)
-        advanceUntilIdle()
-        val earlyOpens = channel.opens
+    fun backoffGrowsBetweenFailedAttempts() =
+        runTest {
+            channel.failNextWith(
+                DataError.Remote.SERVER_ERROR,
+                DataError.Remote.SERVER_ERROR,
+                DataError.Remote.SERVER_ERROR,
+                DataError.Remote.SERVER_ERROR,
+                DataError.Remote.SERVER_ERROR,
+                DataError.Remote.SERVER_ERROR,
+            )
+            connection(backgroundScope).start()
+            advanceTimeBy(2.seconds)
+            advanceUntilIdle()
+            val earlyOpens = channel.opens
 
-        advanceTimeBy(2.seconds)
-        advanceUntilIdle()
-        val laterOpens = channel.opens - earlyOpens
+            advanceTimeBy(2.seconds)
+            advanceUntilIdle()
+            val laterOpens = channel.opens - earlyOpens
 
-        // The same two seconds buys fewer attempts later than it did at the start.
-        assertTrue(
-            laterOpens < earlyOpens,
-            "backoff did not grow: $earlyOpens attempts in the first window, $laterOpens in the second"
-        )
-    }
+            // The same two seconds buys fewer attempts later than it did at the start.
+            assertTrue(
+                laterOpens < earlyOpens,
+                "backoff did not grow: $earlyOpens attempts in the first window, $laterOpens in the second",
+            )
+        }
 
     @Test
-    fun backoffIsCappedSoADeadServerIsStillRetried() = runTest {
-        repeat(40) { channel.failNextWith(DataError.Remote.SERVER_ERROR) }
-        connection(backgroundScope).start()
-        advanceTimeBy(10.minutesAsSeconds())
-        advanceUntilIdle()
-        val opensByTenMinutes = channel.opens
+    fun backoffIsCappedSoADeadServerIsStillRetried() =
+        runTest {
+            repeat(40) { channel.failNextWith(DataError.Remote.SERVER_ERROR) }
+            connection(backgroundScope).start()
+            advanceTimeBy(10.minutesAsSeconds())
+            advanceUntilIdle()
+            val opensByTenMinutes = channel.opens
 
-        advanceTimeBy(2.minutesAsSeconds())
-        advanceUntilIdle()
+            advanceTimeBy(2.minutesAsSeconds())
+            advanceUntilIdle()
 
-        assertTrue(
-            channel.opens > opensByTenMinutes,
-            "a capped backoff must keep retrying; stalled at $opensByTenMinutes"
-        )
-    }
+            assertTrue(
+                channel.opens > opensByTenMinutes,
+                "a capped backoff must keep retrying; stalled at $opensByTenMinutes",
+            )
+        }
 
     // --- auth ---------------------------------------------------------------------------------
 
@@ -263,53 +285,57 @@ internal class RealtimeTimerConnectionTest {
      * connection drives the refresh by making the pull it owes anyway.
      */
     @Test
-    fun aRefusedUpgradeDrivesARefreshByPulling() = runTest {
-        channel.failNextWith(DataError.Remote.UNAUTHORIZED)
-        connection(backgroundScope).start()
-        advanceTimeBy(6.seconds)
-        advanceUntilIdle()
+    fun aRefusedUpgradeDrivesARefreshByPulling() =
+        runTest {
+            channel.failNextWith(DataError.Remote.UNAUTHORIZED)
+            connection(backgroundScope).start()
+            advanceTimeBy(6.seconds)
+            advanceUntilIdle()
 
-        assertTrue(remote.calls >= 1, "a 401 upgrade should have driven a REST pull to refresh")
-        assertTrue(channel.opens >= 2, "and then retried the socket")
-    }
+            assertTrue(remote.calls >= 1, "a 401 upgrade should have driven a REST pull to refresh")
+            assertTrue(channel.opens >= 2, "and then retried the socket")
+        }
 
     @Test
-    fun aPersistent401DegradesIntoOrdinaryBackoffRatherThanARefreshStorm() = runTest {
-        repeat(20) { channel.failNextWith(DataError.Remote.UNAUTHORIZED) }
-        connection(backgroundScope).start()
-        advanceTimeBy(30.seconds)
-        advanceUntilIdle()
+    fun aPersistent401DegradesIntoOrdinaryBackoffRatherThanARefreshStorm() =
+        runTest {
+            repeat(20) { channel.failNextWith(DataError.Remote.UNAUTHORIZED) }
+            connection(backgroundScope).start()
+            advanceTimeBy(30.seconds)
+            advanceUntilIdle()
 
-        // Capped at MAX_AUTH_RETRIES; everything after is plain backoff, so pulls stay bounded
-        // even though attempts continue.
-        assertTrue(remote.calls <= 3, "refresh storm: ${remote.calls} pulls")
-    }
+            // Capped at MAX_AUTH_RETRIES; everything after is plain backoff, so pulls stay bounded
+            // even though attempts continue.
+            assertTrue(remote.calls <= 3, "refresh storm: ${remote.calls} pulls")
+        }
 
     // --- lifecycle -----------------------------------------------------------------------------
 
     @Test
-    fun startIsIdempotent() = runTest {
-        val connection = connection(backgroundScope)
-        connection.start()
-        connection.start()
-        settleConnect(this)
+    fun startIsIdempotent() =
+        runTest {
+            val connection = connection(backgroundScope)
+            connection.start()
+            connection.start()
+            settleConnect(this)
 
-        assertEquals(1, channel.opens, "a second start() must not open a second socket")
-    }
+            assertEquals(1, channel.opens, "a second start() must not open a second socket")
+        }
 
     @Test
-    fun stopClosesAndStaysClosed() = runTest {
-        val connection = connection(backgroundScope)
-        connection.start()
-        settleConnect(this)
+    fun stopClosesAndStaysClosed() =
+        runTest {
+            val connection = connection(backgroundScope)
+            connection.start()
+            settleConnect(this)
 
-        connection.stop()
-        advanceTimeBy(10.seconds)
-        advanceUntilIdle()
+            connection.stop()
+            advanceTimeBy(10.seconds)
+            advanceUntilIdle()
 
-        assertEquals(1, channel.opens, "stop() must not leave the retry loop running")
-        assertEquals(RealtimeConnectionState.Idle, connectivity.state.value)
-    }
+            assertEquals(1, channel.opens, "stop() must not leave the retry loop running")
+            assertEquals(RealtimeConnectionState.Idle, connectivity.state.value)
+        }
 }
 
 private fun Int.minutesAsSeconds() = (this * 60).seconds

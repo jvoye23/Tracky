@@ -31,10 +31,7 @@ interface ActiveTimerRepository {
      *   inner row is then the timer the server arbitrates, because it is what the user started —
      *   the enclosing task interval is a consequence, not the choice.
      */
-    suspend fun start(
-        taskInterval: TaskInterval,
-        subTaskInterval: SubTaskInterval? = null
-    ): EmptyResult<DataError>
+    suspend fun start(taskInterval: TaskInterval, subTaskInterval: SubTaskInterval? = null): EmptyResult<DataError>
 
     /**
      * Closes [intervalId] at [endedAt], but only while it is still the running timer.
@@ -50,6 +47,6 @@ interface ActiveTimerRepository {
     suspend fun stop(
         intervalId: String,
         kind: ActiveTimerKind,
-        endedAt: Instant
+        endedAt: Instant,
     ): EmptyResult<DataError>
 }

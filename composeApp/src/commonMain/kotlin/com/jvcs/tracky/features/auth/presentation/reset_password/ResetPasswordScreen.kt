@@ -40,10 +40,7 @@ import tracky.composeapp.generated.resources.set_new_password
 import tracky.composeapp.generated.resources.submit
 
 @Composable
-fun ResetPasswordScreenRoot(
-    viewModel: ResetPasswordViewModel = koinViewModel(),
-    onLoginClick: () -> Unit
-) {
+fun ResetPasswordScreenRoot(viewModel: ResetPasswordViewModel = koinViewModel(), onLoginClick: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     ResetPasswordScreen(
@@ -54,23 +51,21 @@ fun ResetPasswordScreenRoot(
                 else -> Unit
             }
             viewModel.onAction(action)
-        }
+        },
     )
 }
 
 @Composable
-fun ResetPasswordScreen(
-    state: ResetPasswordState,
-    onAction: (ResetPasswordAction) -> Unit,
-) {
+fun ResetPasswordScreen(state: ResetPasswordState, onAction: (ResetPasswordAction) -> Unit) {
     Scaffold { paddingValues ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .imePadding()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 28.dp, vertical = 24.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .imePadding()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 28.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             if (state.isResetSuccessful) {

@@ -21,53 +21,57 @@ import com.jvcs.tracky.features.project.domain.task.RemoteTaskDataSource
 import io.ktor.client.HttpClient
 import kotlin.time.Instant
 
-class KtorRemoteTaskDataSource(
-    private val httpClient: HttpClient
-) : RemoteTaskDataSource {
+class KtorRemoteTaskDataSource(private val httpClient: HttpClient) : RemoteTaskDataSource {
 
-    override suspend fun getTasksByProjectId(projectId: String): Result<List<ProjectTask>, DataError.Remote> {
-        return httpClient.get<List<ProjectTaskDto>>(
-            route = "/api/projects/${projectId}/tasks"
-        ).map {
-            it.map { projectTaskDto -> projectTaskDto.toProjectTask(projectId) }
-        }
-    }
+    override suspend fun getTasksByProjectId(projectId: String): Result<List<ProjectTask>, DataError.Remote> =
+        httpClient
+            .get<List<ProjectTaskDto>>(
+                route = "/api/projects/$projectId/tasks",
+            ).map {
+                it.map { projectTaskDto -> projectTaskDto.toProjectTask(projectId) }
+            }
 
-    override suspend fun postTaskByProjectId(projectId: String, task: ProjectTask): Result<ProjectTask, DataError.Remote> {
-        return httpClient.post<CreateProjectTaskRequest, ProjectTaskDto>(
-            route = "/api/projects/${projectId}/tasks",
-            body = task.toCreateProjectTaskRequest()
-        ).map { it.toProjectTask(projectId) }
-    }
+    override suspend fun postTaskByProjectId(
+        projectId: String,
+        task: ProjectTask,
+    ): Result<ProjectTask, DataError.Remote> =
+        httpClient
+            .post<CreateProjectTaskRequest, ProjectTaskDto>(
+                route = "/api/projects/$projectId/tasks",
+                body = task.toCreateProjectTaskRequest(),
+            ).map { it.toProjectTask(projectId) }
 
-    override suspend fun updateTaskByProjectId(projectId: String, task: ProjectTask): Result<ProjectTask, DataError.Remote> {
-        return httpClient.put<UpdateProjectTaskRequest, ProjectTaskDto>(
-            route = "/api/projects/${projectId}/tasks/${task.projectTaskId}",
-            body = task.toUpdateProjectTaskRequest()
-        ).map { it.toProjectTask(projectId) }
-    }
+    override suspend fun updateTaskByProjectId(
+        projectId: String,
+        task: ProjectTask,
+    ): Result<ProjectTask, DataError.Remote> =
+        httpClient
+            .put<UpdateProjectTaskRequest, ProjectTaskDto>(
+                route = "/api/projects/$projectId/tasks/${task.projectTaskId}",
+                body = task.toUpdateProjectTaskRequest(),
+            ).map { it.toProjectTask(projectId) }
 
-    override suspend fun deleteTask(projectId: String, taskId: String): EmptyResult<DataError.Remote> {
-        return httpClient.delete(
-            route = "/api/projects/$projectId/tasks/$taskId"
+    override suspend fun deleteTask(projectId: String, taskId: String): EmptyResult<DataError.Remote> =
+        httpClient.delete(
+            route = "/api/projects/$projectId/tasks/$taskId",
         )
-    }
 
     // One request for the whole sort gesture. The endpoint answers 204, so nothing comes back that
     // could overwrite the order we just wrote locally.
     override suspend fun reorderTasks(
         projectId: String,
         indices: Map<String, Long>,
-        updatedAt: Instant
-    ): EmptyResult<DataError.Remote> {
-        return httpClient.put<ReorderTasksRequest, Unit>(
+        updatedAt: Instant,
+    ): EmptyResult<DataError.Remote> =
+        httpClient.put<ReorderTasksRequest, Unit>(
             route = "/api/projects/$projectId/tasks/sort",
-            body = ReorderTasksRequest(
-                updatedAtUtc = updatedAt.toString(),
-                items = indices.map { (taskId, sortIndex) ->
-                    TaskSortOrderDto(id = taskId, sortIndex = sortIndex)
-                }
-            )
+            body =
+                ReorderTasksRequest(
+                    updatedAtUtc = updatedAt.toString(),
+                    items =
+                        indices.map { (taskId, sortIndex) ->
+                            TaskSortOrderDto(id = taskId, sortIndex = sortIndex)
+                        },
+                ),
         )
-    }
 }

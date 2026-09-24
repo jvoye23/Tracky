@@ -40,7 +40,7 @@ fun ProjectArchiveDetailScreen(
                 title = {
                     Text(
                         text = stringResource(Res.string.archive_title),
-                        style = MaterialTheme.typography.titleLarge
+                        style = MaterialTheme.typography.titleLarge,
                     )
                 },
                 navigationIcon = {
@@ -48,27 +48,29 @@ fun ProjectArchiveDetailScreen(
                         Icon(
                             imageVector = Icon_ArrowLeft,
                             contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onSurface
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-                )
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    ),
             )
-        }
+        },
     ) { innerPadding ->
         Box(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            contentAlignment = Alignment.Center
+            modifier =
+                modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+            contentAlignment = Alignment.Center,
         ) {
             // Placeholder content — fleshed out in a later iteration.
             Text(
                 text = "Archived project\n$projectId",
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -80,7 +82,7 @@ private fun ProjectArchiveDetailScreenPreview() {
     TrackyTheme {
         ProjectArchiveDetailScreen(
             projectId = "abc-123",
-            onNavigateBack = {}
+            onNavigateBack = {},
         )
     }
 }

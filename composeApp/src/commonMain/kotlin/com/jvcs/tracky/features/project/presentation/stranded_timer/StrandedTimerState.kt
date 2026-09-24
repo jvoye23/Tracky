@@ -15,7 +15,7 @@ data class StrandedTimerState(
     /** "HH:mm", the editable form of the offered duration. */
     val editDurationState: TextFieldState = TextFieldState(),
     /** Set while a resolution is in flight, so a double tap cannot resolve the same item twice. */
-    val isResolving: Boolean = false
+    val isResolving: Boolean = false,
 ) {
     val current: StrandedTimer? get() = pending.firstOrNull()
 }

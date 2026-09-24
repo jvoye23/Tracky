@@ -10,9 +10,9 @@ import com.jvcs.tracky.features.project.presentation.util.toUiText
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -21,9 +21,7 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 
-class StrandedTimerViewModel(
-    private val strandedTimerRepository: StrandedTimerRepository
-) : ViewModel() {
+class StrandedTimerViewModel(private val strandedTimerRepository: StrandedTimerRepository) : ViewModel() {
 
     private val eventChannel = Channel<StrandedTimerEvent>()
     val events = eventChannel.receiveAsFlow()
@@ -31,21 +29,22 @@ class StrandedTimerViewModel(
     private var hasLoadedInitialData = false
 
     private val _state = MutableStateFlow(StrandedTimerState())
-    val state = _state
-        .onStart {
-            if (!hasLoadedInitialData) {
-                observeStrandedTimers()
-                hasLoadedInitialData = true
-            }
-        }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000L),
-            initialValue = StrandedTimerState()
-        )
+    val state =
+        _state
+            .onStart {
+                if (!hasLoadedInitialData) {
+                    observeStrandedTimers()
+                    hasLoadedInitialData = true
+                }
+            }.stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000L),
+                initialValue = StrandedTimerState(),
+            )
 
     private fun observeStrandedTimers() {
-        strandedTimerRepository.observeStrandedTimers()
+        strandedTimerRepository
+            .observeStrandedTimers()
             .onEach { timers ->
                 _state.update { current ->
                     // The edit field belongs to whichever item is on top; a queue that shifted
@@ -57,25 +56,40 @@ class StrandedTimerViewModel(
                         current.copy(
                             pending = timers,
                             isEditingDuration = false,
-                            editDurationState = TextFieldState()
+                            editDurationState = TextFieldState(),
                         )
                     }
                 }
-            }
-            .launchIn(viewModelScope)
+            }.launchIn(viewModelScope)
     }
 
     fun onAction(action: StrandedTimerAction) {
         when (action) {
-            StrandedTimerAction.OnKeep -> resolve { strandedTimerRepository.keep(it) }
-            StrandedTimerAction.OnDiscard -> resolve { strandedTimerRepository.discard(it) }
-            StrandedTimerAction.OnBeginEditDuration -> beginEdit()
-            StrandedTimerAction.OnCancelEditDuration -> _state.update {
-                it.copy(isEditingDuration = false)
+            StrandedTimerAction.OnKeep -> {
+                resolve { strandedTimerRepository.keep(it) }
             }
+
+            StrandedTimerAction.OnDiscard -> {
+                resolve { strandedTimerRepository.discard(it) }
+            }
+
+            StrandedTimerAction.OnBeginEditDuration -> {
+                beginEdit()
+            }
+
+            StrandedTimerAction.OnCancelEditDuration -> {
+                _state.update {
+                    it.copy(isEditingDuration = false)
+                }
+            }
+
             StrandedTimerAction.OnConfirmEditedDuration -> {
-                val typed = parseHoursMinutes(_state.value.editDurationState.text.toString())
-                    ?: return
+                val typed =
+                    parseHoursMinutes(
+                        _state.value.editDurationState.text
+                            .toString(),
+                    )
+                        ?: return
                 resolve { strandedTimerRepository.keepWithDuration(it, typed) }
             }
         }
@@ -87,7 +101,7 @@ class StrandedTimerViewModel(
         _state.update {
             it.copy(
                 isEditingDuration = true,
-                editDurationState = TextFieldState(formatHoursMinutes(offered))
+                editDurationState = TextFieldState(formatHoursMinutes(offered)),
             )
         }
     }

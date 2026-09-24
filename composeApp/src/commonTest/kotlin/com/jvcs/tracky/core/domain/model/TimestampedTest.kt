@@ -40,10 +40,11 @@ class TimestampedTest {
 
     @Test
     fun newerTaskWinsOverTheProjectsOwnStamp() {
-        val project = project(
-            ownUpdatedAt = t100,
-            projectTasks = listOf(task("t1", ownUpdatedAt = t300))
-        )
+        val project =
+            project(
+                ownUpdatedAt = t100,
+                projectTasks = listOf(task("t1", ownUpdatedAt = t300)),
+            )
 
         assertEquals(t300, project.lastUpdatedAt)
         assertEquals(t100, project.ownUpdatedAt) // own stamp is untouched by the roll-up
@@ -51,44 +52,49 @@ class TimestampedTest {
 
     @Test
     fun newerProjectWinsOverItsTasks() {
-        val project = project(
-            ownUpdatedAt = t300,
-            projectTasks = listOf(task("t1", ownUpdatedAt = t100), task("t2", ownUpdatedAt = t200))
-        )
+        val project =
+            project(
+                ownUpdatedAt = t300,
+                projectTasks = listOf(task("t1", ownUpdatedAt = t100), task("t2", ownUpdatedAt = t200)),
+            )
 
         assertEquals(t300, project.lastUpdatedAt)
     }
 
     @Test
     fun theNewestTaskWinsAmongSiblings() {
-        val project = project(
-            ownUpdatedAt = null,
-            projectTasks = listOf(
-                task("t1", ownUpdatedAt = t100),
-                task("t2", ownUpdatedAt = t300),
-                task("t3", ownUpdatedAt = t200)
+        val project =
+            project(
+                ownUpdatedAt = null,
+                projectTasks =
+                    listOf(
+                        task("t1", ownUpdatedAt = t100),
+                        task("t2", ownUpdatedAt = t300),
+                        task("t3", ownUpdatedAt = t200),
+                    ),
             )
-        )
 
         assertEquals(t300, project.lastUpdatedAt)
     }
 
     @Test
     fun aTaskWithoutAStampDoesNotHideItsSiblings() {
-        val project = project(
-            ownUpdatedAt = null,
-            projectTasks = listOf(task("t1", ownUpdatedAt = null), task("t2", ownUpdatedAt = t200))
-        )
+        val project =
+            project(
+                ownUpdatedAt = null,
+                projectTasks = listOf(task("t1", ownUpdatedAt = null), task("t2", ownUpdatedAt = t200)),
+            )
 
         assertEquals(t200, project.lastUpdatedAt)
     }
 
     @Test
     fun noStampsAnywhereRollUpToNull() {
-        val project = project(
-            ownUpdatedAt = null,
-            projectTasks = listOf(task("t1", ownUpdatedAt = null))
-        )
+        val project =
+            project(
+                ownUpdatedAt = null,
+                projectTasks = listOf(task("t1", ownUpdatedAt = null)),
+            )
 
         assertNull(project.lastUpdatedAt)
     }
@@ -107,39 +113,41 @@ class TimestampedTest {
     fun aStampedSubTaskRollsUpThroughATaskThatAlsoHasIntervals() {
         // Both branches of a task's subtree have to stay visible to the roll-up: dropping either
         // one from `children` leaves the newest stamp unreachable.
-        val task = task(
-            "t1",
-            ownUpdatedAt = t100,
-            intervals = listOf(interval("i1")),
-            subTasks = listOf(subTask("s1", ownUpdatedAt = t300))
-        )
+        val task =
+            task(
+                "t1",
+                ownUpdatedAt = t100,
+                intervals = listOf(interval("i1")),
+                subTasks = listOf(subTask("s1", ownUpdatedAt = t300)),
+            )
 
         assertEquals(t300, task.lastUpdatedAt)
         assertEquals(t100, task.ownUpdatedAt) // own stamp is untouched by the roll-up
-        assertEquals(2, task.children.size)   // the interval branch is still there
+        assertEquals(2, task.children.size) // the interval branch is still there
         assertEquals(t300, project(ownUpdatedAt = null, projectTasks = listOf(task)).lastUpdatedAt)
     }
 
     // ---------------------------------------------------------------------------------------------
 
-    private fun project(ownUpdatedAt: Instant?, projectTasks: List<ProjectTask>?) = Project(
-        projectId = "p1",
-        title = "title",
-        description = null,
-        colorArgb = null,
-        totalDurationMillis = null,
-        startDateTimeUtc = Instant.fromEpochMilliseconds(0),
-        isFinished = false,
-        endDateTimeUtc = null,
-        projectTasks = projectTasks,
-        ownUpdatedAt = ownUpdatedAt
-    )
+    private fun project(ownUpdatedAt: Instant?, projectTasks: List<ProjectTask>?) =
+        Project(
+            projectId = "p1",
+            title = "title",
+            description = null,
+            colorArgb = null,
+            totalDurationMillis = null,
+            startDateTimeUtc = Instant.fromEpochMilliseconds(0),
+            isFinished = false,
+            endDateTimeUtc = null,
+            projectTasks = projectTasks,
+            ownUpdatedAt = ownUpdatedAt,
+        )
 
     private fun task(
         id: String,
         ownUpdatedAt: Instant?,
         intervals: List<TaskInterval> = emptyList(),
-        subTasks: List<ProjectSubTask>? = null
+        subTasks: List<ProjectSubTask>? = null,
     ) = ProjectTask(
         projectTaskId = id,
         title = "title-$id",
@@ -153,23 +161,25 @@ class TimestampedTest {
         subTasks = subTasks,
     )
 
-    private fun subTask(id: String, ownUpdatedAt: Instant?) = ProjectSubTask(
-        projectSubTaskId = id,
-        parentProjectTaskId = "t1",
-        parentProjectId = "p1",
-        title = "title-$id",
-        durationMillis = null,
-        isTimerRunning = false,
-        startDateTimeUtc = Instant.fromEpochMilliseconds(0),
-        ownUpdatedAt = ownUpdatedAt,
-    )
+    private fun subTask(id: String, ownUpdatedAt: Instant?) =
+        ProjectSubTask(
+            projectSubTaskId = id,
+            parentProjectTaskId = "t1",
+            parentProjectId = "p1",
+            title = "title-$id",
+            durationMillis = null,
+            isTimerRunning = false,
+            startDateTimeUtc = Instant.fromEpochMilliseconds(0),
+            ownUpdatedAt = ownUpdatedAt,
+        )
 
-    private fun interval(id: String) = TaskInterval(
-        intervalId = id,
-        parentTaskId = "t1",
-        parentProjectId = "p1",
-        startDateTimeUtc = Instant.fromEpochMilliseconds(0),
-        endDateTimeUtc = null,
-        durationMillis = 0L
-    )
+    private fun interval(id: String) =
+        TaskInterval(
+            intervalId = id,
+            parentTaskId = "t1",
+            parentProjectId = "p1",
+            startDateTimeUtc = Instant.fromEpochMilliseconds(0),
+            endDateTimeUtc = null,
+            durationMillis = 0L,
+        )
 }

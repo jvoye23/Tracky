@@ -10,11 +10,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -65,8 +65,6 @@ import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
 import com.jvcs.tracky.core.domain.auth.User
-import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
-import com.jvcs.tracky.features.project.presentation.models.ProjectUi
 import com.jvcs.tracky.design_system.Icon_Delete
 import com.jvcs.tracky.design_system.components.FullScreenLoadingIndicator
 import com.jvcs.tracky.design_system.components.MainNavDrawerItem
@@ -75,15 +73,17 @@ import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.design_system.util.DevicePreviews
 import com.jvcs.tracky.design_system.util.ObserveAsEvents
 import com.jvcs.tracky.design_system.util.rememberCollapsibleScrollBehavior
+import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
+import com.jvcs.tracky.features.project.presentation.models.ProjectUi
 import com.jvcs.tracky.features.project.presentation.project_overview.components.AddNewProjectBottomSheet
 import com.jvcs.tracky.features.project.presentation.project_overview.components.EmptySection
 import com.jvcs.tracky.features.project.presentation.project_overview.components.ProjectCard
-import com.jvcs.tracky.features.project.presentation.util.ReorderableListState
-import com.jvcs.tracky.features.project.presentation.util.rememberReorderableListState
 import com.jvcs.tracky.features.project.presentation.project_overview.components.ProjectOverviewSearchTopAppBar
 import com.jvcs.tracky.features.project.presentation.project_overview.components.ProjectOverviewSelectionTopAppBar
 import com.jvcs.tracky.features.project.presentation.project_overview.components.SortBottomSheet
 import com.jvcs.tracky.features.project.presentation.project_overview.components.SortSheetContent
+import com.jvcs.tracky.features.project.presentation.util.ReorderableListState
+import com.jvcs.tracky.features.project.presentation.util.rememberReorderableListState
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
@@ -119,7 +119,7 @@ fun ProjectOverviewScreenRoot(
     onNavigateToDetailScreen: (String) -> Unit,
     onNavigateToArchive: () -> Unit = {},
     onNavigateToTrash: () -> Unit = {},
-    viewModel: ProjectOverviewViewModel = koinViewModel()
+    viewModel: ProjectOverviewViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val sortOption by viewModel.sortOption.collectAsStateWithLifecycle()
@@ -128,67 +128,76 @@ fun ProjectOverviewScreenRoot(
     val coroutineScope = rememberCoroutineScope()
 
     ObserveAsEvents(viewModel.events) { event ->
-        when(event) {
+        when (event) {
             is ProjectOverviewEvent.Error -> {
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar(
                         message = event.error.asStringAsync(),
-                        duration = SnackbarDuration.Long
+                        duration = SnackbarDuration.Long,
                     )
                 }
             }
+
             is ProjectOverviewEvent.ArchiveError -> {
                 coroutineScope.launch {
                     val errorMessage = getString(Res.string.error_archiving_projects)
                     snackbarHostState.showSnackbar(
                         message = errorMessage,
-                        duration = SnackbarDuration.Long
+                        duration = SnackbarDuration.Long,
                     )
                 }
             }
+
             is ProjectOverviewEvent.PinError -> {
                 coroutineScope.launch {
                     val errorMessage = getString(Res.string.error_pinning_projects)
                     snackbarHostState.showSnackbar(
                         message = errorMessage,
-                        duration = SnackbarDuration.Long
+                        duration = SnackbarDuration.Long,
                     )
                 }
             }
+
             is ProjectOverviewEvent.NewProjectSaved -> {
                 coroutineScope.launch {
                     val confirmMessage = getString(Res.string.project_saved_successfully)
                     snackbarHostState.showSnackbar(
                         message = confirmMessage,
-                        duration = SnackbarDuration.Long
+                        duration = SnackbarDuration.Long,
                     )
                 }
                 onNavigateToDetailScreen(event.projectId)
             }
+
             is ProjectOverviewEvent.AddToTrashError -> {
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar(
                         message = event.error.asStringAsync(),
-                        duration = SnackbarDuration.Long
+                        duration = SnackbarDuration.Long,
                     )
                 }
             }
+
             is ProjectOverviewEvent.ReorderError -> {
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar(
                         message = event.error.asStringAsync(),
-                        duration = SnackbarDuration.Long
+                        duration = SnackbarDuration.Long,
                     )
                 }
             }
+
             is ProjectOverviewEvent.OnLogoutError -> {
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar(
-                        message = event.error.asStringAsync()
+                        message = event.error.asStringAsync(),
                     )
                 }
             }
-            ProjectOverviewEvent.OnLogoutSuccess -> onSuccessfulLogout()
+
+            ProjectOverviewEvent.OnLogoutSuccess -> {
+                onSuccessfulLogout()
+            }
         }
     }
 
@@ -197,16 +206,20 @@ fun ProjectOverviewScreenRoot(
     }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
+        modifier =
+            Modifier
+                .fillMaxSize(),
     ) {
         ProjectOverviewScreen(
             onAction = { action ->
-                when(action) {
+                when (action) {
                     is ProjectOverviewAction.OnProjectCardClick -> {
                         if (!state.isEditModeActive) onNavigateToDetailScreen(action.projectId)
                     }
-                    else -> Unit
+
+                    else -> {
+                        Unit
+                    }
                 }
                 viewModel.onAction(action)
             },
@@ -214,7 +227,7 @@ fun ProjectOverviewScreenRoot(
             onNavigateToArchive = onNavigateToArchive,
             onNavigateToTrash = onNavigateToTrash,
             snackbarHostState = snackbarHostState,
-            sortOption = sortOption
+            sortOption = sortOption,
         )
 
         if (state.isLoading || state.isLoggingOut) {
@@ -232,16 +245,16 @@ fun ProjectOverviewScreen(
     onNavigateToTrash: () -> Unit = {},
     snackbarHostState: SnackbarHostState,
     sortOption: SortOption = SortOption.CUSTOM,
-    drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed)
+    drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed),
 ) {
-
     val listState = rememberLazyListState()
     // One instance, shared by both top app bars and the nested-scroll connection below. Calling
     // the helper again at either site would orphan a behavior and freeze the list.
-    val scrollBehavior = rememberCollapsibleScrollBehavior(
-        listState = listState,
-        pinned = state.isEditModeActive
-    )
+    val scrollBehavior =
+        rememberCollapsibleScrollBehavior(
+            listState = listState,
+            pinned = state.isEditModeActive,
+        )
     val fabExpanded = listState.isScrollingUp()
     val drawerScope = rememberCoroutineScope()
     val backState = rememberNavigationEventState(NavigationEventInfo.None)
@@ -252,274 +265,306 @@ fun ProjectOverviewScreen(
     // re-derives it from what was actually persisted.
     val pinnedItems = state.pinnedProjects
     val otherItems = state.otherProjects
-    val dragDropState = rememberReorderableListState(
-        lazyListState = listState,
-        onMove = { fromKey, toKey ->
-            onAction(ProjectOverviewAction.OnReorderMove(fromId = fromKey, toId = toKey))
-        }
-    )
+    val dragDropState =
+        rememberReorderableListState(
+            lazyListState = listState,
+            onMove = { fromKey, toKey ->
+                onAction(ProjectOverviewAction.OnReorderMove(fromId = fromKey, toId = toKey))
+            },
+        )
 
     NavigationBackHandler(
         state = backState,
         isBackEnabled = drawerState.isOpen,
         onBackCompleted = {
             drawerScope.launch { drawerState.close() }
-        }
+        },
     )
 
     MainNavigationDrawer(
         drawerState = drawerState,
         selectedItem = MainNavDrawerItem.PROJECTS,
         onArchiveClick = onNavigateToArchive,
-        onTrashClick = onNavigateToTrash
+        onTrashClick = onNavigateToTrash,
     ) {
-    Scaffold(
-        snackbarHost = {
-            SnackbarHost(hostState = snackbarHostState)
-        },
-        modifier = Modifier
-            .fillMaxSize()
-            .nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = {
-            AnimatedContent(
-                targetState = state.isEditModeActive,
-                transitionSpec = { fadeIn() togetherWith fadeOut() },
-                label = "topBarSwap"
-            ) { editMode ->
-                if (editMode) {
-                    ProjectOverviewSelectionTopAppBar(
-                        state = state,
-                        onAction = onAction,
-                        scrollBehavior = scrollBehavior
+        Scaffold(
+            snackbarHost = {
+                SnackbarHost(hostState = snackbarHostState)
+            },
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+            topBar = {
+                AnimatedContent(
+                    targetState = state.isEditModeActive,
+                    transitionSpec = { fadeIn() togetherWith fadeOut() },
+                    label = "topBarSwap",
+                ) { editMode ->
+                    if (editMode) {
+                        ProjectOverviewSelectionTopAppBar(
+                            state = state,
+                            onAction = onAction,
+                            scrollBehavior = scrollBehavior,
+                        )
+                    } else {
+                        ProjectOverviewSearchTopAppBar(
+                            onAction = onAction,
+                            state = state,
+                            onMenuClick = { drawerScope.launch { drawerState.open() } },
+                            username = state.localUser?.username,
+                            email = state.localUser?.email,
+                            scrollBehavior = scrollBehavior,
+                        )
+                    }
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            contentWindowInsets = WindowInsets.safeDrawing,
+            floatingActionButton = {
+                ExtendedFloatingActionButton(
+                    onClick = {
+                        onAction(ProjectOverviewAction.OnFabClick)
+                    },
+                    expanded = fabExpanded,
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = stringResource(Res.string.new_project),
+                            modifier = Modifier.size(26.dp),
+                        )
+                    },
+                    text = {
+                        Text(
+                            text = stringResource(Res.string.new_project),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    },
+                )
+            },
+
+        ) { innerPadding ->
+            // Applied per-child rather than to the Column, so the list can scroll its items
+            // through the top bar / status bar band instead of being clipped below it.
+            val topInset = innerPadding.calculateTopPadding()
+            val bottomInset = innerPadding.calculateBottomPadding()
+            // When the offline banner is shown it already sits under the bar and reserves the inset.
+            val contentTopInset = if (state.isOnline) topInset else 0.dp
+            Column(
+                modifier = modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Top,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                // Internet status
+                if (!state.isOnline) {
+                    Row(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .background(MaterialTheme.colorScheme.secondary)
+                                .padding(top = topInset)
+                                .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = stringResource(Res.string.no_internet_connection),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondary,
+                        )
+                    }
+                }
+                if (!state.isLoading && state.pinnedProjects.isEmpty() && state.otherProjects.isEmpty()) {
+                    EmptySection(
+                        title = stringResource(Res.string.no_current_projects),
+                        description = stringResource(Res.string.no_current_projects_subtitle),
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
+                                .padding(top = contentTopInset, bottom = bottomInset)
+                                .padding(horizontal = 8.dp),
                     )
                 } else {
-                    ProjectOverviewSearchTopAppBar(
-                        onAction = onAction,
-                        state = state,
-                        onMenuClick = { drawerScope.launch { drawerState.open() } },
-                        username = state.localUser?.username,
-                        email = state.localUser?.email,
-                        scrollBehavior = scrollBehavior
-                    )
-                }
-            }
-        },
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        contentWindowInsets = WindowInsets.safeDrawing,
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = {
-                    onAction(ProjectOverviewAction.OnFabClick)
-                },
-                expanded = fabExpanded,
-                icon = {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = stringResource(Res.string.new_project),
-                        modifier = Modifier.size(26.dp)
-                    )
-                },
-                text = {
-                    Text(
-                        text = stringResource(Res.string.new_project),
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                }
-            )
-        }
-
-    ) { innerPadding ->
-        // Applied per-child rather than to the Column, so the list can scroll its items
-        // through the top bar / status bar band instead of being clipped below it.
-        val topInset = innerPadding.calculateTopPadding()
-        val bottomInset = innerPadding.calculateBottomPadding()
-        // When the offline banner is shown it already sits under the bar and reserves the inset.
-        val contentTopInset = if (state.isOnline) topInset else 0.dp
-        Column(
-            modifier = modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Top,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            //Internet status
-            if (!state.isOnline){
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.secondary)
-                        .padding(top = topInset)
-                        .padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = stringResource(Res.string.no_internet_connection),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSecondary
-                    )
-                }
-            }
-            if (!state.isLoading && state.pinnedProjects.isEmpty() && state.otherProjects.isEmpty()){
-                EmptySection(
-                    title = stringResource(Res.string.no_current_projects),
-                    description = stringResource(Res.string.no_current_projects_subtitle),
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .padding(top = contentTopInset, bottom = bottomInset)
-                        .padding(horizontal = 8.dp)
-                )
-            } else {
-                PullToRefreshBox(
-                    isRefreshing = state.isRefreshing,
-                    onRefresh = {
-                        onAction(ProjectOverviewAction.OnPullToRefresh)
-                    },
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 10.dp)
-                            .testTag("project_overview"),
-                        contentPadding = PaddingValues(
-                            top = contentTopInset,
-                            bottom = bottomInset
-                        ),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    PullToRefreshBox(
+                        isRefreshing = state.isRefreshing,
+                        onRefresh = {
+                            onAction(ProjectOverviewAction.OnPullToRefresh)
+                        },
+                        modifier = Modifier.fillMaxSize(),
                     ) {
-                        if (pinnedItems.isNotEmpty()) {
-                            item {
-                                ProjectSectionHeader(text = stringResource(Res.string.pinned))
+                        LazyColumn(
+                            state = listState,
+                            modifier =
+                                Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 10.dp)
+                                    .testTag("project_overview"),
+                            contentPadding =
+                                PaddingValues(
+                                    top = contentTopInset,
+                                    bottom = bottomInset,
+                                ),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            if (pinnedItems.isNotEmpty()) {
+                                item {
+                                    ProjectSectionHeader(text = stringResource(Res.string.pinned))
+                                }
+                                items(
+                                    items = pinnedItems,
+                                    key = { it.projectId },
+                                ) { item ->
+                                    ProjectListCard(
+                                        item = item,
+                                        state = state,
+                                        onAction = onAction,
+                                        reorderEnabled = reorderEnabled,
+                                        dragDropState = dragDropState,
+                                    )
+                                }
                             }
+
+                            if (otherItems.isNotEmpty()) {
+                                item {
+                                    ProjectSectionHeader(
+                                        text =
+                                            if (state.searchQuery.isEmpty()) {
+                                                stringResource(
+                                                    Res.string.other,
+                                                )
+                                            } else {
+                                                stringResource(Res.string.search_results)
+                                            },
+                                    )
+                                }
+                            }
+
                             items(
-                                items = pinnedItems,
-                                key = { it.projectId }
+                                items = otherItems,
+                                key = { it.projectId },
                             ) { item ->
                                 ProjectListCard(
                                     item = item,
                                     state = state,
                                     onAction = onAction,
                                     reorderEnabled = reorderEnabled,
-                                    dragDropState = dragDropState
+                                    dragDropState = dragDropState,
                                 )
                             }
-                        }
-
-                        if (otherItems.isNotEmpty()) {
-                            item {
-                                ProjectSectionHeader(
-                                    text = if (state.searchQuery.isEmpty()) stringResource(Res.string.other) else stringResource(Res.string.search_results)
-                                )
-                            }
-                        }
-
-                        items(
-                            items = otherItems,
-                            key = { it.projectId }
-                        ) { item ->
-                            ProjectListCard(
-                                item = item,
-                                state = state,
-                                onAction = onAction,
-                                reorderEnabled = reorderEnabled,
-                                dragDropState = dragDropState
-                            )
                         }
                     }
-
                 }
             }
-        }
-        if (state.isAddNewProjectBottomSheetVisible) {
-            AddNewProjectBottomSheet(
-                state = state,
-                onAction = onAction
-            )
-        }
-        if (state.isSortBottomSheetVisible) {
-            SortBottomSheet(
-                sortOption = sortOption,
-                onAction = onAction
-            )
-        }
-        if (state.isDeleteConfirmationDialogVisible) {
-            AlertDialog(
-                onDismissRequest = { onAction(ProjectOverviewAction.OnDismissDeleteDialog) },
-                icon = {
-                    Icon(
-                        imageVector = Icon_Delete,
-                        contentDescription = stringResource(Res.string.delete_selected),
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-
-                },
-                title = {
-                    Text(
-                        text = if(state.selectedProjectIds.size != 1)
-                            stringResource(Res.string.delete_projects_title)
-                        else stringResource(Res.string.delete_project_title)
-                    )
-                },
-                text = {
-                    Text(
-                        text = if(state.selectedProjectIds.size != 1)
-                            stringResource(
-                            Res.string.delete_projects_confirmation,
-                            state.selectedProjectIds.size
-                        ) else stringResource(Res.string.delete_one_project_confirmation)
-                    )
-                },
-                confirmButton = {
-                    TextButton(onClick = { onAction(ProjectOverviewAction.OnConfirmDelete) }) {
-                        Text(text = stringResource(Res.string.confirm))
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { onAction(ProjectOverviewAction.OnDismissDeleteDialog) }) {
-                        Text(text = stringResource(Res.string.cancel))
-                    }
-                }
-            )
-        }
-        if (state.showLogoutConfirmation) {
-            AlertDialog(
-                onDismissRequest = { onAction(ProjectOverviewAction.OnDismissLogoutConfirmation) },
-                icon = {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Logout,
-                        contentDescription = stringResource(Res.string.log_out),
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                },
-                title = {
-                    Text(
-                        text = if (state.isOnline) stringResource(Res.string.do_you_want_to_logout)
-                            else stringResource(Res.string.logout_not_possible)
-                    )
-                },
-                text = {
-                    Text(
-                        text = if (state.isOnline) stringResource(Res.string.do_you_want_to_logout_desc)
-                            else stringResource(Res.string.logout_not_possible_desc)
-                    )
-                },
-                confirmButton = { if (state.isOnline)
-                    TextButton(onClick = { onAction(ProjectOverviewAction.OnConfirmLogout) }) {
-                        Text(text = stringResource(Res.string.confirm))
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { onAction(ProjectOverviewAction.OnDismissLogoutConfirmation) }) {
-                        Text(
-                            text = if (state.isOnline) stringResource(Res.string.cancel)
-                                else stringResource(Res.string.close)
+            if (state.isAddNewProjectBottomSheetVisible) {
+                AddNewProjectBottomSheet(
+                    state = state,
+                    onAction = onAction,
+                )
+            }
+            if (state.isSortBottomSheetVisible) {
+                SortBottomSheet(
+                    sortOption = sortOption,
+                    onAction = onAction,
+                )
+            }
+            if (state.isDeleteConfirmationDialogVisible) {
+                AlertDialog(
+                    onDismissRequest = { onAction(ProjectOverviewAction.OnDismissDeleteDialog) },
+                    icon = {
+                        Icon(
+                            imageVector = Icon_Delete,
+                            contentDescription = stringResource(Res.string.delete_selected),
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
-                    }
-                }
-            )
+                    },
+                    title = {
+                        Text(
+                            text =
+                                if (state.selectedProjectIds.size != 1) {
+                                    stringResource(Res.string.delete_projects_title)
+                                } else {
+                                    stringResource(Res.string.delete_project_title)
+                                },
+                        )
+                    },
+                    text = {
+                        Text(
+                            text =
+                                if (state.selectedProjectIds.size != 1) {
+                                    stringResource(
+                                        Res.string.delete_projects_confirmation,
+                                        state.selectedProjectIds.size,
+                                    )
+                                } else {
+                                    stringResource(Res.string.delete_one_project_confirmation)
+                                },
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { onAction(ProjectOverviewAction.OnConfirmDelete) }) {
+                            Text(text = stringResource(Res.string.confirm))
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { onAction(ProjectOverviewAction.OnDismissDeleteDialog) }) {
+                            Text(text = stringResource(Res.string.cancel))
+                        }
+                    },
+                )
+            }
+            if (state.showLogoutConfirmation) {
+                AlertDialog(
+                    onDismissRequest = { onAction(ProjectOverviewAction.OnDismissLogoutConfirmation) },
+                    icon = {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Logout,
+                            contentDescription = stringResource(Res.string.log_out),
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
+                    },
+                    title = {
+                        Text(
+                            text =
+                                if (state.isOnline) {
+                                    stringResource(Res.string.do_you_want_to_logout)
+                                } else {
+                                    stringResource(Res.string.logout_not_possible)
+                                },
+                        )
+                    },
+                    text = {
+                        Text(
+                            text =
+                                if (state.isOnline) {
+                                    stringResource(Res.string.do_you_want_to_logout_desc)
+                                } else {
+                                    stringResource(Res.string.logout_not_possible_desc)
+                                },
+                        )
+                    },
+                    confirmButton = {
+                        if (state.isOnline) {
+                            TextButton(onClick = { onAction(ProjectOverviewAction.OnConfirmLogout) }) {
+                                Text(text = stringResource(Res.string.confirm))
+                            }
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { onAction(ProjectOverviewAction.OnDismissLogoutConfirmation) }) {
+                            Text(
+                                text =
+                                    if (state.isOnline) {
+                                        stringResource(Res.string.cancel)
+                                    } else {
+                                        stringResource(Res.string.close)
+                                    },
+                            )
+                        }
+                    },
+                )
+            }
         }
-    }
     }
 }
 
@@ -549,11 +594,12 @@ private fun LazyListState.isScrollingUp(): Boolean {
 @Composable
 private fun ProjectSectionHeader(text: String) {
     Text(
-        modifier = Modifier
-            .padding(bottom = 8.dp, top = 8.dp, start = 8.dp),
+        modifier =
+            Modifier
+                .padding(bottom = 8.dp, top = 8.dp, start = 8.dp),
         text = text,
         style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
 
@@ -563,25 +609,28 @@ private fun LazyItemScope.ProjectListCard(
     state: ProjectOverviewState,
     onAction: (ProjectOverviewAction) -> Unit,
     reorderEnabled: Boolean,
-    dragDropState: ReorderableListState
+    dragDropState: ReorderableListState,
 ) {
     // The dragged card (and the one settling back after release) drives its own translation and rides
     // above the rest; every other card animates to its new slot via animateItem().
-    val isActive = item.projectId == dragDropState.draggingItemKey ||
-        item.projectId == dragDropState.settlingItemKey
-    val cardModifier = if (isActive) {
-        Modifier
-            .zIndex(1f)
-            .graphicsLayer {
-                translationY = if (item.projectId == dragDropState.draggingItemKey) {
-                    dragDropState.draggingItemOffset
-                } else {
-                    dragDropState.settlingItemOffset
+    val isActive =
+        item.projectId == dragDropState.draggingItemKey ||
+            item.projectId == dragDropState.settlingItemKey
+    val cardModifier =
+        if (isActive) {
+            Modifier
+                .zIndex(1f)
+                .graphicsLayer {
+                    translationY =
+                        if (item.projectId == dragDropState.draggingItemKey) {
+                            dragDropState.draggingItemOffset
+                        } else {
+                            dragDropState.settlingItemOffset
+                        }
                 }
-            }
-    } else {
-        Modifier.animateItem()
-    }
+        } else {
+            Modifier.animateItem()
+        }
     ProjectCard(
         modifier = cardModifier,
         projectUi = item,
@@ -613,81 +662,86 @@ private fun LazyItemScope.ProjectListCard(
             // Aborted without a drop: discard the preview order before the card settles back.
             onAction(ProjectOverviewAction.OnReorderCancel)
             dragDropState.onDragCancel()
-        }
+        },
     )
 }
 
 // The ViewModel fills the section lists in production; previews build the state by hand, so they do
 // the same split here.
 private fun ProjectOverviewState.withPreviewSections(): ProjectOverviewState {
-    val visible = projects.orEmpty()
-        .filter { searchQuery.isBlank() || it.title.contains(searchQuery, ignoreCase = true) }
+    val visible =
+        projects
+            .orEmpty()
+            .filter { searchQuery.isBlank() || it.title.contains(searchQuery, ignoreCase = true) }
     return copy(
         pinnedProjects = visible.filter { it.isPinned },
-        otherProjects = visible.filterNot { it.isPinned }
+        otherProjects = visible.filterNot { it.isPinned },
     )
 }
 
-private fun previewProjects(): List<ProjectUi> = listOf(
-    ProjectUi(
-        projectId = "1",
-        title = "Running Project",
-        description = "Currently tracking time",
-        color = Color(0xFF4CAF50),
-        totalDurationMillis = 9_000_000L,
-        startDateTimeUtc = "2025-12-01T10:00",
-        isFinished = false,
-        endDateTimeUtc = null,
-        projectTasks = listOf(
-            ProjectTaskUi(
-                projectTaskId = "t1",
-                title = "Task 1",
-                description = null,
-                durationMillis = 9_000_000L,
-                formattedStateDateTime = "10:00",
-                formattedEndDateTimeUtc = "",
-                isTimerRunning = true,
-                subTasks = emptyList(),
-                isFinished = false
-            )
-        )
-    ),
-    ProjectUi(
-        projectId = "2",
-        title = "Completed Project",
-        description = "All tasks done",
-        color = Color(0xFF2196F3),
-        totalDurationMillis = 18_900_000L,
-        startDateTimeUtc = "2025-11-20T09:00",
-        isFinished = true,
-        endDateTimeUtc = "2025-11-25T17:00",
-        isPinned = true,
-        projectTasks = listOf(
-            ProjectTaskUi(
-                projectTaskId = "t2",
-                title = "Task 2",
-                description = null,
-                durationMillis = 18_900_000L,
-                formattedStateDateTime = "09:00",
-                formattedEndDateTimeUtc = "17:00",
-                isTimerRunning = false,
-                subTasks = emptyList(),
-                isFinished = false
-            )
-        )
-    ),
-    ProjectUi(
-        projectId = "3",
-        title = "Idle Project",
-        description = "Not started yet",
-        color = Color(0xFFFFC107),
-        totalDurationMillis = 0L,
-        startDateTimeUtc = "2025-12-05T08:00",
-        isFinished = false,
-        endDateTimeUtc = null,
-        projectTasks = emptyList()
+private fun previewProjects(): List<ProjectUi> =
+    listOf(
+        ProjectUi(
+            projectId = "1",
+            title = "Running Project",
+            description = "Currently tracking time",
+            color = Color(0xFF4CAF50),
+            totalDurationMillis = 9_000_000L,
+            startDateTimeUtc = "2025-12-01T10:00",
+            isFinished = false,
+            endDateTimeUtc = null,
+            projectTasks =
+                listOf(
+                    ProjectTaskUi(
+                        projectTaskId = "t1",
+                        title = "Task 1",
+                        description = null,
+                        durationMillis = 9_000_000L,
+                        formattedStateDateTime = "10:00",
+                        formattedEndDateTimeUtc = "",
+                        isTimerRunning = true,
+                        subTasks = emptyList(),
+                        isFinished = false,
+                    ),
+                ),
+        ),
+        ProjectUi(
+            projectId = "2",
+            title = "Completed Project",
+            description = "All tasks done",
+            color = Color(0xFF2196F3),
+            totalDurationMillis = 18_900_000L,
+            startDateTimeUtc = "2025-11-20T09:00",
+            isFinished = true,
+            endDateTimeUtc = "2025-11-25T17:00",
+            isPinned = true,
+            projectTasks =
+                listOf(
+                    ProjectTaskUi(
+                        projectTaskId = "t2",
+                        title = "Task 2",
+                        description = null,
+                        durationMillis = 18_900_000L,
+                        formattedStateDateTime = "09:00",
+                        formattedEndDateTimeUtc = "17:00",
+                        isTimerRunning = false,
+                        subTasks = emptyList(),
+                        isFinished = false,
+                    ),
+                ),
+        ),
+        ProjectUi(
+            projectId = "3",
+            title = "Idle Project",
+            description = "Not started yet",
+            color = Color(0xFFFFC107),
+            totalDurationMillis = 0L,
+            startDateTimeUtc = "2025-12-05T08:00",
+            isFinished = false,
+            endDateTimeUtc = null,
+            projectTasks = emptyList(),
+        ),
     )
-)
 
 @DevicePreviews
 @Composable
@@ -695,12 +749,19 @@ private fun ProjectOverviewDefaultPreview() {
     TrackyTheme {
         ProjectOverviewScreen(
             onAction = {},
-            state = ProjectOverviewState(
-                projects = previewProjects(),
-                localUser = User(id = "123", username = "JoergVoye", email = "joerg@example.com", hasVerifiedEmail = true ),
-                isOnline = false
-            ).withPreviewSections(),
-            snackbarHostState = remember { SnackbarHostState() }
+            state =
+                ProjectOverviewState(
+                    projects = previewProjects(),
+                    localUser =
+                        User(
+                            id = "123",
+                            username = "JoergVoye",
+                            email = "joerg@example.com",
+                            hasVerifiedEmail = true,
+                        ),
+                    isOnline = false,
+                ).withPreviewSections(),
+            snackbarHostState = remember { SnackbarHostState() },
         )
     }
 }
@@ -711,12 +772,19 @@ private fun ProjectOverviewSearchPreview() {
     TrackyTheme {
         ProjectOverviewScreen(
             onAction = {},
-            state = ProjectOverviewState(
-                projects = previewProjects(),
-                searchQuery = "Run",
-                localUser = User(id = "123", username = "JoergVoye", email = "joerg@example.com", hasVerifiedEmail = true )
-            ).withPreviewSections(),
-            snackbarHostState = remember { SnackbarHostState() }
+            state =
+                ProjectOverviewState(
+                    projects = previewProjects(),
+                    searchQuery = "Run",
+                    localUser =
+                        User(
+                            id = "123",
+                            username = "JoergVoye",
+                            email = "joerg@example.com",
+                            hasVerifiedEmail = true,
+                        ),
+                ).withPreviewSections(),
+            snackbarHostState = remember { SnackbarHostState() },
         )
     }
 }
@@ -727,13 +795,20 @@ private fun ProjectOverviewEditModePreview() {
     TrackyTheme {
         ProjectOverviewScreen(
             onAction = {},
-            state = ProjectOverviewState(
-                projects = previewProjects(),
-                isEditModeActive = true,
-                selectedProjectIds = setOf("1", "3"),
-                localUser = User(id = "123", username = "JoergVoye", email = "joerg@example.com", hasVerifiedEmail = true )
-            ).withPreviewSections(),
-            snackbarHostState = remember { SnackbarHostState() }
+            state =
+                ProjectOverviewState(
+                    projects = previewProjects(),
+                    isEditModeActive = true,
+                    selectedProjectIds = setOf("1", "3"),
+                    localUser =
+                        User(
+                            id = "123",
+                            username = "JoergVoye",
+                            email = "joerg@example.com",
+                            hasVerifiedEmail = true,
+                        ),
+                ).withPreviewSections(),
+            snackbarHostState = remember { SnackbarHostState() },
         )
     }
 }
@@ -744,12 +819,19 @@ private fun ProjectOverviewDrawerOpenPreview() {
     TrackyTheme {
         ProjectOverviewScreen(
             onAction = {},
-            state = ProjectOverviewState(
-                projects = previewProjects(),
-                localUser = User(id = "123", username = "JoergVoye", email = "joerg@example.com", hasVerifiedEmail = true )
-            ).withPreviewSections(),
+            state =
+                ProjectOverviewState(
+                    projects = previewProjects(),
+                    localUser =
+                        User(
+                            id = "123",
+                            username = "JoergVoye",
+                            email = "joerg@example.com",
+                            hasVerifiedEmail = true,
+                        ),
+                ).withPreviewSections(),
             snackbarHostState = remember { SnackbarHostState() },
-            drawerState = rememberDrawerState(DrawerValue.Open)
+            drawerState = rememberDrawerState(DrawerValue.Open),
         )
     }
 }
@@ -763,23 +845,31 @@ private fun ProjectOverviewSortSheetVisiblePreview() {
         Box(modifier = Modifier.fillMaxSize()) {
             ProjectOverviewScreen(
                 onAction = {},
-                state = ProjectOverviewState(
-                    projects = previewProjects(),
-                    localUser = User(id = "123", username = "JoergVoye", email = "joerg@example.com", hasVerifiedEmail = true )
-                ).withPreviewSections(),
-                snackbarHostState = remember { SnackbarHostState() }
+                state =
+                    ProjectOverviewState(
+                        projects = previewProjects(),
+                        localUser =
+                            User(
+                                id = "123",
+                                username = "JoergVoye",
+                                email = "joerg@example.com",
+                                hasVerifiedEmail = true,
+                            ),
+                    ).withPreviewSections(),
+                snackbarHostState = remember { SnackbarHostState() },
             )
             Surface(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth(),
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth(),
                 color = MaterialTheme.colorScheme.surface,
                 shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-                shadowElevation = 8.dp
+                shadowElevation = 8.dp,
             ) {
                 SortSheetContent(
                     selectedOption = SortOption.CREATION_DATE,
-                    onOptionSelected = {}
+                    onOptionSelected = {},
                 )
             }
         }

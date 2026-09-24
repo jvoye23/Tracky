@@ -10,15 +10,16 @@ import kotlin.time.Instant
 
 class TimerNotificationSessionTest {
 
-    private fun session(isRunning: Boolean) = TimerNotificationSession(
-        project = ProjectRef(id = "p1", title = "Tracky App Redesign", colorArgb = null),
-        useLightTextColor = false,
-        task = TaskRef(id = "t1", title = "Token refresh"),
-        subTask = null,
-        elapsed = 2.minutes,
-        asOf = Instant.fromEpochMilliseconds(0),
-        isRunning = isRunning
-    )
+    private fun session(isRunning: Boolean) =
+        TimerNotificationSession(
+            project = ProjectRef(id = "p1", title = "Tracky App Redesign", colorArgb = null),
+            useLightTextColor = false,
+            task = TaskRef(id = "t1", title = "Token refresh"),
+            subTask = null,
+            elapsed = 2.minutes,
+            asOf = Instant.fromEpochMilliseconds(0),
+            isRunning = isRunning,
+        )
 
     @Test
     fun aRunningClockKeepsCountingPastTheInstantItWasBuilt() {

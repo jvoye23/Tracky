@@ -19,13 +19,13 @@ interface RemoteSubTaskIntervalDataSource {
     suspend fun postInterval(
         projectId: String,
         taskId: String,
-        interval: SubTaskInterval
+        interval: SubTaskInterval,
     ): Result<SubTaskInterval, DataError.Remote>
 
     suspend fun updateInterval(
         projectId: String,
         taskId: String,
-        interval: SubTaskInterval
+        interval: SubTaskInterval,
     ): Result<SubTaskInterval, DataError.Remote>
 
     /** Takes the ids explicitly: by the time a queued delete drains, the local row is already gone. */
@@ -33,6 +33,6 @@ interface RemoteSubTaskIntervalDataSource {
         projectId: String,
         taskId: String,
         subTaskId: String,
-        intervalId: String
+        intervalId: String,
     ): EmptyResult<DataError.Remote>
 }

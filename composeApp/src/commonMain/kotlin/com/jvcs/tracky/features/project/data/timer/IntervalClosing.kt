@@ -19,10 +19,7 @@ import kotlin.time.Instant
  *
  * Returns the closed row so callers can hand it on without recomputing the duration.
  */
-internal suspend fun ProjectDao.closeTaskInterval(
-    interval: TaskIntervalEntity,
-    now: Instant
-): TaskIntervalEntity {
+internal suspend fun ProjectDao.closeTaskInterval(interval: TaskIntervalEntity, now: Instant): TaskIntervalEntity {
     val duration = interval.elapsedAt(now)
     val closed =
         interval.copy(endDateTimeEpochMs = now.toEpochMilliseconds(), durationMillis = duration)
@@ -35,7 +32,7 @@ internal suspend fun ProjectDao.closeTaskInterval(
 /** The same for a subtask interval, likewise returning the row it closed. */
 internal suspend fun ProjectDao.closeSubTaskInterval(
     interval: SubTaskIntervalEntity,
-    now: Instant
+    now: Instant,
 ): SubTaskIntervalEntity {
     val duration = interval.elapsedAt(now)
     val closed =

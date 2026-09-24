@@ -17,16 +17,17 @@ import platform.Network.nw_path_status_satisfied
 import platform.darwin.dispatch_queue_create
 
 actual class ConnectivityObserver {
-    actual val isConnected: Flow<Boolean> = callbackFlow {
-        val monitor = nw_path_monitor_create()
-        val queue = dispatch_queue_create("com.jvcs.tracky.connectivity", null)
+    actual val isConnected: Flow<Boolean> =
+        callbackFlow {
+            val monitor = nw_path_monitor_create()
+            val queue = dispatch_queue_create("com.jvcs.tracky.connectivity", null)
 
-        nw_path_monitor_set_update_handler(monitor) { path ->
-            trySend(nw_path_get_status(path) == nw_path_status_satisfied)
-        }
-        nw_path_monitor_set_queue(monitor, queue)
-        nw_path_monitor_start(monitor)
+            nw_path_monitor_set_update_handler(monitor) { path ->
+                trySend(nw_path_get_status(path) == nw_path_status_satisfied)
+            }
+            nw_path_monitor_set_queue(monitor, queue)
+            nw_path_monitor_start(monitor)
 
-        awaitClose { nw_path_monitor_cancel(monitor) }
-    }.distinctUntilChanged()
+            awaitClose { nw_path_monitor_cancel(monitor) }
+        }.distinctUntilChanged()
 }

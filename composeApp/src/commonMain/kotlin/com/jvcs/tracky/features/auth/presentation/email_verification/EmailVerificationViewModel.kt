@@ -12,22 +12,19 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class EmailVerificationViewModel(
-    private val authService: AuthService,
-    private val token: String
-) : ViewModel() {
+class EmailVerificationViewModel(private val authService: AuthService, private val token: String) : ViewModel() {
 
     private var hasLoadedInitialData = false
 
     private val _state = MutableStateFlow(EmailVerificationState())
-    val state = _state
-        .onStart {
-            if (!hasLoadedInitialData) {
-                verifyEmail()
-                hasLoadedInitialData = true
-            }
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), EmailVerificationState())
+    val state =
+        _state
+            .onStart {
+                if (!hasLoadedInitialData) {
+                    verifyEmail()
+                    hasLoadedInitialData = true
+                }
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), EmailVerificationState())
 
     fun onAction(action: EmailVerificationAction) {
         // Navigation-only actions handled in Root composable
@@ -36,11 +33,11 @@ class EmailVerificationViewModel(
     private fun verifyEmail() {
         viewModelScope.launch {
             _state.update { it.copy(isVerifying = true) }
-            authService.verifyEmail(token)
+            authService
+                .verifyEmail(token)
                 .onSuccess {
                     _state.update { it.copy(isVerifying = false, isVerified = true) }
-                }
-                .onFailure {
+                }.onFailure {
                     _state.update { it.copy(isVerifying = false, hasFailed = true) }
                 }
         }

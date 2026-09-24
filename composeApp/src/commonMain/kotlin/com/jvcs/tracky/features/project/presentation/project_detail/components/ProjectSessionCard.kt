@@ -21,8 +21,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
 import com.jvcs.tracky.design_system.theme.TrackyTheme
+import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
 import com.jvcs.tracky.features.project.presentation.project_detail.ProjectDetailAction
 import com.jvcs.tracky.features.project.presentation.project_detail.ProjectDetailState
 
@@ -31,21 +31,20 @@ fun ProjectSessionCard(
     modifier: Modifier = Modifier,
     projectTaskUi: ProjectTaskUi,
     onAction: (ProjectDetailAction) -> Unit,
-    state: ProjectDetailState
+    state: ProjectDetailState,
 ) {
-
-
     ListItem(
-        modifier = modifier
-            .fillMaxWidth(),
+        modifier =
+            modifier
+                .fillMaxWidth(),
         headlineContent = {
             Text(
-                text = projectTaskUi.title
+                text = projectTaskUi.title,
             )
         },
         supportingContent = {
             Text(
-                text = projectTaskUi.formattedDuration
+                text = projectTaskUi.formattedDuration,
             )
         },
         trailingContent = {
@@ -53,55 +52,59 @@ fun ProjectSessionCard(
                 IconButton(
                     onClick = {
                         onAction(ProjectDetailAction.OnDeleteSessionClick(projectTaskUi.projectTaskId!!))
-                    }
+                    },
                 ) {
                     Icon(
                         imageVector = Icons.Default.Delete,
                         contentDescription = "Delete Session",
-                        tint = MaterialTheme.colorScheme.error
+                        tint = MaterialTheme.colorScheme.error,
                     )
                 }
             } else {
                 Checkbox(
                     checked = false,
                     onCheckedChange = {
-
-                    }
+                    },
                 )
             }
-
         },
         leadingContent = {
             Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clickable {
-                        onAction(ProjectDetailAction.OnToggleSessionTimer(projectTaskUi.projectTaskId!!))
-                    }
-                    .background(
-                        color = if (projectTaskUi.isTimerRunning) {
-                            MaterialTheme.colorScheme.errorContainer
-                        } else MaterialTheme.colorScheme.primaryContainer,
-                        shape = CircleShape
-                    ),
-                contentAlignment = Alignment.Center
-            ){
+                modifier =
+                    Modifier
+                        .size(40.dp)
+                        .clickable {
+                            onAction(ProjectDetailAction.OnToggleSessionTimer(projectTaskUi.projectTaskId!!))
+                        }.background(
+                            color =
+                                if (projectTaskUi.isTimerRunning) {
+                                    MaterialTheme.colorScheme.errorContainer
+                                } else {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                },
+                            shape = CircleShape,
+                        ),
+                contentAlignment = Alignment.Center,
+            ) {
                 Icon(
-                    imageVector = if (projectTaskUi.isTimerRunning) {
-                        Icons.Default.Stop
-                    } else Icons.Default.PlayArrow,
+                    imageVector =
+                        if (projectTaskUi.isTimerRunning) {
+                            Icons.Default.Stop
+                        } else {
+                            Icons.Default.PlayArrow
+                        },
                     contentDescription = null,
-                    tint = if (projectTaskUi.isTimerRunning) {
-                        MaterialTheme.colorScheme.onErrorContainer
-                    } else MaterialTheme.colorScheme.onPrimaryContainer
+                    tint =
+                        if (projectTaskUi.isTimerRunning) {
+                            MaterialTheme.colorScheme.onErrorContainer
+                        } else {
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        },
                 )
             }
         },
 
-
     )
-
-
 }
 
 @Preview
@@ -109,20 +112,20 @@ fun ProjectSessionCard(
 fun ProjectSessionCardPreview() {
     TrackyTheme {
         ProjectSessionCard(
-            projectTaskUi = ProjectTaskUi(
-                projectTaskId = "1",
-                title = "This is session One",
-                description = "Description One",
-                durationMillis = 1_859_000L,
-                formattedStateDateTime = "2023-01-01",
-                formattedEndDateTimeUtc = "2023-01-01",
-                isTimerRunning = false,
-                subTasks = emptyList(),
-                isFinished = false
-            ),
+            projectTaskUi =
+                ProjectTaskUi(
+                    projectTaskId = "1",
+                    title = "This is session One",
+                    description = "Description One",
+                    durationMillis = 1_859_000L,
+                    formattedStateDateTime = "2023-01-01",
+                    formattedEndDateTimeUtc = "2023-01-01",
+                    isTimerRunning = false,
+                    subTasks = emptyList(),
+                    isFinished = false,
+                ),
             onAction = {},
-            state = ProjectDetailState()
+            state = ProjectDetailState(),
         )
-
     }
 }

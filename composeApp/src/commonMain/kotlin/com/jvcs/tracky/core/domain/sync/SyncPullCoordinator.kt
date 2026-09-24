@@ -30,7 +30,7 @@ import kotlin.time.Duration.Companion.milliseconds
 class SyncPullCoordinator(
     private val deltaSyncApplier: DeltaSyncApplier,
     applicationScope: CoroutineScope,
-    private val coalesceWindow: Duration = COALESCE_WINDOW
+    private val coalesceWindow: Duration = COALESCE_WINDOW,
 ) {
     /**
      * Conflated: while a pull is in flight, any number of further requests collapse into exactly
@@ -60,9 +60,10 @@ class SyncPullCoordinator(
     }
 
     /** Pull and wait for the outcome, for callers that need to know — the sync loop, and auth. */
-    suspend fun pullNow(): EmptyResult<DataError> = mutex.withLock {
-        deltaSyncApplier.pullChanges()
-    }
+    suspend fun pullNow(): EmptyResult<DataError> =
+        mutex.withLock {
+            deltaSyncApplier.pullChanges()
+        }
 
     private companion object {
         val COALESCE_WINDOW = 200.milliseconds

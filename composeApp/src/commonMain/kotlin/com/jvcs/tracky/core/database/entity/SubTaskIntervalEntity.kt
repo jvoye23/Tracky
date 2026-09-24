@@ -13,7 +13,7 @@ import androidx.room.PrimaryKey
             entity = ProjectSubTaskEntity::class,
             parentColumns = ["projectSubTaskId"],
             childColumns = ["parentSubTaskId"],
-            onDelete = ForeignKey.CASCADE // Deleting a subtask will delete the time it tracked
+            onDelete = ForeignKey.CASCADE, // Deleting a subtask will delete the time it tracked
         ),
         // Every subtask interval sits inside exactly one task interval: timing a subtask also runs
         // its parent task's timer. Closing the enclosing interval therefore closes this one too, and
@@ -22,21 +22,21 @@ import androidx.room.PrimaryKey
             entity = TaskIntervalEntity::class,
             parentColumns = ["intervalId"],
             childColumns = ["parentTaskIntervalId"],
-            onDelete = ForeignKey.CASCADE
+            onDelete = ForeignKey.CASCADE,
         ),
         ForeignKey(
             entity = ProjectEntity::class,
             parentColumns = ["projectId"],
             childColumns = ["parentProjectId"],
-            onDelete = ForeignKey.CASCADE // Deleting a project will delete all associated intervals
-        )
+            onDelete = ForeignKey.CASCADE, // Deleting a project will delete all associated intervals
+        ),
     ],
     // Indexing the foreign keys is a best practice for performance
     indices = [
         Index(value = ["parentSubTaskId"]),
         Index(value = ["parentTaskIntervalId"]),
-        Index(value = ["parentProjectId"])
-    ]
+        Index(value = ["parentProjectId"]),
+    ],
 )
 data class SubTaskIntervalEntity(
     @PrimaryKey(autoGenerate = false)
@@ -58,5 +58,5 @@ data class SubTaskIntervalEntity(
     // See TaskIntervalEntity.startedByDeviceId. Carried here too rather than read through the
     // enclosing task interval: the stranded-timer pass walks subtask intervals directly, children
     // first, so a join would be four extra queries on the startup path.
-    val startedByDeviceId: String? = null
+    val startedByDeviceId: String? = null,
 )

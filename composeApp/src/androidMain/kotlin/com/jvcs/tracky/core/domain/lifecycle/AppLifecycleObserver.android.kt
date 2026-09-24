@@ -11,27 +11,29 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 actual class AppLifecycleObserver {
-    actual val isInForeground: Flow<Boolean> = callbackFlow {
-        val observer = object : DefaultLifecycleObserver {
-            override fun onStart(owner: LifecycleOwner) {
-                trySend(true)
-            }
+    actual val isInForeground: Flow<Boolean> =
+        callbackFlow {
+            val observer =
+                object : DefaultLifecycleObserver {
+                    override fun onStart(owner: LifecycleOwner) {
+                        trySend(true)
+                    }
 
-            override fun onStop(owner: LifecycleOwner) {
-                trySend(false)
-            }
-        }
+                    override fun onStop(owner: LifecycleOwner) {
+                        trySend(false)
+                    }
+                }
 
-        // ProcessLifecycleOwner must be observed on the main thread.
-        val mainHandler = Handler(Looper.getMainLooper())
-        mainHandler.post {
-            ProcessLifecycleOwner.get().lifecycle.addObserver(observer)
-        }
-
-        awaitClose {
+            // ProcessLifecycleOwner must be observed on the main thread.
+            val mainHandler = Handler(Looper.getMainLooper())
             mainHandler.post {
-                ProcessLifecycleOwner.get().lifecycle.removeObserver(observer)
+                ProcessLifecycleOwner.get().lifecycle.addObserver(observer)
             }
-        }
-    }.distinctUntilChanged()
+
+            awaitClose {
+                mainHandler.post {
+                    ProcessLifecycleOwner.get().lifecycle.removeObserver(observer)
+                }
+            }
+        }.distinctUntilChanged()
 }

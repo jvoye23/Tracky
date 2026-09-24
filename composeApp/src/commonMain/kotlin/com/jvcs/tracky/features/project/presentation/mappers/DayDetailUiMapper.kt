@@ -17,29 +17,32 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.ExperimentalTime
 
 /** "Tue, Sep 08" — the day list's heading. */
-private val dateLabelFormat = LocalDate.Format {
-    dayOfWeek(DayOfWeekNames.ENGLISH_ABBREVIATED)
-    chars(", ")
-    monthName(MonthNames.ENGLISH_ABBREVIATED)
-    chars(" ")
-    day()
-}
+private val dateLabelFormat =
+    LocalDate.Format {
+        dayOfWeek(DayOfWeekNames.ENGLISH_ABBREVIATED)
+        chars(", ")
+        monthName(MonthNames.ENGLISH_ABBREVIATED)
+        chars(" ")
+        day()
+    }
 
 /** "Sep 8, 2026" — the calendar headline, matching Material 3's date-picker header. */
-private val headlineFormat = LocalDate.Format {
-    monthName(MonthNames.ENGLISH_ABBREVIATED)
-    chars(" ")
-    day(Padding.NONE)
-    chars(", ")
-    year()
-}
+private val headlineFormat =
+    LocalDate.Format {
+        monthName(MonthNames.ENGLISH_ABBREVIATED)
+        chars(" ")
+        day(Padding.NONE)
+        chars(", ")
+        year()
+    }
 
 /** "09:30" — the ends of a time range. */
-internal val clockFormat = LocalTime.Format {
-    hour()
-    chars(":")
-    minute()
-}
+internal val clockFormat =
+    LocalTime.Format {
+        hour()
+        chars(":")
+        minute()
+    }
 
 /** En dash, per the design. Typographic, not translatable. */
 private const val RANGE_SEPARATOR = " – "
@@ -73,29 +76,33 @@ internal const val END_OF_DAY = "24:00"
  */
 @OptIn(ExperimentalTime::class)
 fun Project.toDayDetailUi(date: LocalDate, timeZone: TimeZone): DayDetailUi {
-    val intervals = countedDayIntervals(timeZone)
-        .filter { it.date == date }
-        // Sorted before the cards are numbered, so 01 is genuinely the day's first interval.
-        .sortedWith(compareBy({ it.start }, { it.intervalId }))
+    val intervals =
+        countedDayIntervals(timeZone)
+            .filter { it.date == date }
+            // Sorted before the cards are numbered, so 01 is genuinely the day's first interval.
+            .sortedWith(compareBy({ it.start }, { it.intervalId }))
 
     return DayDetailUi(
         dateLabel = date.format(dateLabelFormat),
         headlineLabel = date.format(headlineFormat),
         totalDuration = formatDurationHoursMinutesSeconds(intervals.sumOf { it.durationMillis }.milliseconds),
-        intervals = intervals.mapIndexed { index, interval ->
-            DayIntervalUi(
-                intervalId = interval.intervalId,
-                indexLabel = (index + 1).toString().padStart(2, '0'),
-                taskTitle = interval.taskTitle,
-                subTaskTitle = interval.subTaskTitle,
-                timeRangeLabel = interval.start.format(clockFormat) + RANGE_SEPARATOR +
-                        if (interval.endsAtMidnight) END_OF_DAY else interval.end.format(clockFormat),
-                formattedDuration = formatDurationHoursMinutesSeconds(interval.durationMillis.milliseconds),
-                projectColor = if (this.colorArgb != null) Color(colorArgb) else Color(0xFF475D92)
-            )
-        },
+        intervals =
+            intervals.mapIndexed { index, interval ->
+                DayIntervalUi(
+                    intervalId = interval.intervalId,
+                    indexLabel = (index + 1).toString().padStart(2, '0'),
+                    taskTitle = interval.taskTitle,
+                    subTaskTitle = interval.subTaskTitle,
+                    timeRangeLabel =
+                        interval.start.format(clockFormat) +
+                            RANGE_SEPARATOR +
+                            if (interval.endsAtMidnight) END_OF_DAY else interval.end.format(clockFormat),
+                    formattedDuration = formatDurationHoursMinutesSeconds(interval.durationMillis.milliseconds),
+                    projectColor = if (this.colorArgb != null) Color(colorArgb) else Color(0xFF475D92),
+                )
+            },
         // Distinct parent tasks: two intervals of the same task, or of two of its subtasks, are
         // one task's worth of work. "4 intervals · 4 tasks" counts different things on purpose.
-        taskCount = intervals.map { it.taskId }.distinct().size
+        taskCount = intervals.map { it.taskId }.distinct().size,
     )
 }

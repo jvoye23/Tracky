@@ -13,9 +13,8 @@ import kotlinx.coroutines.flow.consumeAsFlow
  * are pushed in with [emit] and the session ends when [closeFromServer] is called, which is what a
  * server hanging up looks like from here.
  */
-internal class FakeRealtimeChannel(
-    private val failures: MutableList<DataError.Remote> = mutableListOf()
-) : RealtimeChannel {
+internal class FakeRealtimeChannel(private val failures: MutableList<DataError.Remote> = mutableListOf()) :
+    RealtimeChannel {
 
     val sessions = mutableListOf<FakeRealtimeSession>()
     var opens = 0

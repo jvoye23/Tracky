@@ -38,7 +38,7 @@ import tracky.composeapp.generated.resources.verifying_account
 fun EmailVerificationScreenRoot(
     viewModel: EmailVerificationViewModel = koinViewModel(),
     onLoginClick: () -> Unit,
-    onCloseClick: () -> Unit
+    onCloseClick: () -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
@@ -49,21 +49,19 @@ fun EmailVerificationScreenRoot(
                 EmailVerificationAction.OnLoginClick -> onLoginClick()
                 EmailVerificationAction.OnCloseClick -> onCloseClick()
             }
-        }
+        },
     )
 }
 
 @Composable
-fun EmailVerificationScreen(
-    state: EmailVerificationState,
-    onAction: (EmailVerificationAction) -> Unit,
-) {
+fun EmailVerificationScreen(state: EmailVerificationState, onAction: (EmailVerificationAction) -> Unit) {
     Scaffold { paddingValues ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 28.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(horizontal = 28.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -80,6 +78,7 @@ fun EmailVerificationScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+
                 state.isVerified -> {
                     AuthHeaderIcon(
                         icon = Icon_CheckCircle,
@@ -108,6 +107,7 @@ fun EmailVerificationScreen(
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
+
                 state.hasFailed -> {
                     AuthHeaderIcon(
                         icon = Icon_ErrorCircle,

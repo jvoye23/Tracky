@@ -59,8 +59,8 @@ class EditTextViewModel(
     private val projectTaskRepository: ProjectTaskRepository,
     private val subTaskRepository: SubTaskRepository,
     private val timeProvider: TimeProvider,
-    private val savedStateHandle: SavedStateHandle
-): ViewModel() {
+    private val savedStateHandle: SavedStateHandle,
+) : ViewModel() {
     private val eventChannel = Channel<EditTextEvent>()
     val events = eventChannel.receiveAsFlow()
 
@@ -80,50 +80,65 @@ class EditTextViewModel(
 
     // Owned by the ViewModel and never replaced, so the text (and the focus and undo history that
     // hang off it) survives every state update.
-    private val titleState = TextFieldState(
-        initialText = restoredTitle ?: "",
-        initialSelection = TextRange(restoredTitle?.length ?: 0),
-    )
-    private val descriptionState = TextFieldState(
-        initialText = restoredDescription ?: "",
-        initialSelection = TextRange(restoredDescription?.length ?: 0),
-    )
-
-    private val editModeState  = restoredEditMode ?: isEditMode
-
-    private val _state = MutableStateFlow(
-        EditTextState(
-            target = target,
-            titleState = titleState,
-            descriptionState = descriptionState,
-            isEditMode = editModeState,
+    private val titleState =
+        TextFieldState(
+            initialText = restoredTitle ?: "",
+            initialSelection = TextRange(restoredTitle?.length ?: 0),
         )
-    )
-
-    val state = _state
-        .onStart {
-            if (!hasLoadedInitialData) {
-                loadInitialData()
-                observeTitleChanges()
-                observeDescriptionChanges()
-                observeEditModeChanges()
-                hasLoadedInitialData = true
-            }
-        }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = _state.value
+    private val descriptionState =
+        TextFieldState(
+            initialText = restoredDescription ?: "",
+            initialSelection = TextRange(restoredDescription?.length ?: 0),
         )
+
+    private val editModeState = restoredEditMode ?: isEditMode
+
+    private val _state =
+        MutableStateFlow(
+            EditTextState(
+                target = target,
+                titleState = titleState,
+                descriptionState = descriptionState,
+                isEditMode = editModeState,
+            ),
+        )
+
+    val state =
+        _state
+            .onStart {
+                if (!hasLoadedInitialData) {
+                    loadInitialData()
+                    observeTitleChanges()
+                    observeDescriptionChanges()
+                    observeEditModeChanges()
+                    hasLoadedInitialData = true
+                }
+            }.stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = _state.value,
+            )
 
     fun onAction(action: EditTextAction) {
         when (action) {
-            EditTextAction.OnEditClick -> toggleEditMode()
-            EditTextAction.OnSaveClick -> save(
-                title = _state.value.titleState.text.toString(),
-                description = _state.value.descriptionState.text.toString(),
-            )
-            else -> Unit
+            EditTextAction.OnEditClick -> {
+                toggleEditMode()
+            }
+
+            EditTextAction.OnSaveClick -> {
+                save(
+                    title =
+                        _state.value.titleState.text
+                            .toString(),
+                    description =
+                        _state.value.descriptionState.text
+                            .toString(),
+                )
+            }
+
+            else -> {
+                Unit
+            }
         }
     }
 
@@ -145,7 +160,8 @@ class EditTextViewModel(
 
     private fun observeEditModeChanges() {
         viewModelScope.launch {
-            _state.map { it.isEditMode }
+            _state
+                .map { it.isEditMode }
                 .distinctUntilChanged()
                 .collect { savedStateHandle[KEY_IS_EDIT_MODE] = it }
         }
@@ -164,26 +180,38 @@ class EditTextViewModel(
                 return@launch
             }
             val projectUi = project.toProjectUi()
-            _state.update { it.copy(
-                project = projectUi,
-                projectColor = projectUi.color,
-            ) }
-
-            val stored: StoredText = when (target) {
-                EditTextTarget.PROJECT -> StoredText(project.title, project.description)
-                EditTextTarget.TASK -> {
-                    val task = taskId?.let { projectTaskRepository.getProjectTaskWithIntervalsById(it).first() }
-                        ?: return@launch sendError(Res.string.task_cannot_be_found)
-                    StoredText(task.title, task.description)
-                }
-                EditTextTarget.SUBTASK -> {
-                    val subTask = loadStoredSubTask()
-                        ?: return@launch sendError(Res.string.subtask_cannot_be_found)
-                    StoredText(subTask.title, subTask.description)
-                }
-                // Nothing is stored yet: the fields start empty.
-                EditTextTarget.NEW_SUBTASK -> return@launch
+            _state.update {
+                it.copy(
+                    project = projectUi,
+                    projectColor = projectUi.color,
+                )
             }
+
+            val stored: StoredText =
+                when (target) {
+                    EditTextTarget.PROJECT -> {
+                        StoredText(project.title, project.description)
+                    }
+
+                    EditTextTarget.TASK -> {
+                        val task =
+                            taskId?.let { projectTaskRepository.getProjectTaskWithIntervalsById(it).first() }
+                                ?: return@launch sendError(Res.string.task_cannot_be_found)
+                        StoredText(task.title, task.description)
+                    }
+
+                    EditTextTarget.SUBTASK -> {
+                        val subTask =
+                            loadStoredSubTask()
+                                ?: return@launch sendError(Res.string.subtask_cannot_be_found)
+                        StoredText(subTask.title, subTask.description)
+                    }
+
+                    // Nothing is stored yet: the fields start empty.
+                    EditTextTarget.NEW_SUBTASK -> {
+                        return@launch
+                    }
+                }
 
             // A draft restored after process death outranks the stored text: it is the newer,
             // unsaved edit the user was still typing.
@@ -198,7 +226,9 @@ class EditTextViewModel(
 
     private suspend fun loadStoredSubTask(): ProjectSubTask? {
         val parentTaskId = taskId ?: return null
-        return subTaskRepository.getSubTasksForTask(parentTaskId).first()
+        return subTaskRepository
+            .getSubTasksForTask(parentTaskId)
+            .first()
             .find { it.projectSubTaskId == subTaskId }
     }
 
@@ -209,15 +239,19 @@ class EditTextViewModel(
                 return@launch
             }
 
-            val result = when (target) {
-                EditTextTarget.PROJECT -> saveProject(title, description)
-                EditTextTarget.TASK -> saveTask(title, description)
-                EditTextTarget.SUBTASK -> saveSubTask(title, description)
-                EditTextTarget.NEW_SUBTASK -> createSubTask(title, description)
-            } ?: return@launch
+            val result =
+                when (target) {
+                    EditTextTarget.PROJECT -> saveProject(title, description)
+                    EditTextTarget.TASK -> saveTask(title, description)
+                    EditTextTarget.SUBTASK -> saveSubTask(title, description)
+                    EditTextTarget.NEW_SUBTASK -> createSubTask(title, description)
+                } ?: return@launch
 
             when (result) {
-                is Result.Error -> eventChannel.send(EditTextEvent.Error(result.error.toUiText()))
+                is Result.Error -> {
+                    eventChannel.send(EditTextEvent.Error(result.error.toUiText()))
+                }
+
                 is Result.Success -> {
                     if (target == EditTextTarget.NEW_SUBTASK) {
                         eventChannel.send(EditTextEvent.NavigateBack)
@@ -236,10 +270,11 @@ class EditTextViewModel(
     // saving one back would move the row to the top of its manual order.
 
     private suspend fun saveProject(title: String, description: String): EmptyResult<DataError>? {
-        val editedProject = projectRepository.getProjectById(projectId)?.copy(
-            title = title,
-            description = description,
-        ) ?: return null
+        val editedProject =
+            projectRepository.getProjectById(projectId)?.copy(
+                title = title,
+                description = description,
+            ) ?: return null
         return projectRepository.upsertProject(editedProject)
     }
 
@@ -248,7 +283,7 @@ class EditTextViewModel(
         return projectTaskRepository.updateProjectTaskText(
             taskId = taskId,
             title = title,
-            description = description.ifBlank { null }
+            description = description.ifBlank { null },
         )
     }
 
@@ -258,8 +293,8 @@ class EditTextViewModel(
             subTask.copy(
                 title = title,
                 description = description.ifBlank { null },
-                ownUpdatedAt = timeProvider.nowInstant
-            )
+                ownUpdatedAt = timeProvider.nowInstant,
+            ),
         )
     }
 
@@ -275,17 +310,21 @@ class EditTextViewModel(
                 durationMillis = 0L,
                 isTimerRunning = false,
                 startDateTimeUtc = timeProvider.nowInstant,
-                ownUpdatedAt = timeProvider.nowInstant
-            )
+                ownUpdatedAt = timeProvider.nowInstant,
+            ),
         )
     }
 
-    private fun blankTitleError(): StringResource = when (target) {
-        EditTextTarget.PROJECT -> Res.string.project_title_cannot_be_blank
-        EditTextTarget.TASK -> Res.string.task_title_cannot_be_blank
-        EditTextTarget.SUBTASK,
-        EditTextTarget.NEW_SUBTASK -> Res.string.subtask_title_cannot_be_blank
-    }
+    private fun blankTitleError(): StringResource =
+        when (target) {
+            EditTextTarget.PROJECT -> Res.string.project_title_cannot_be_blank
+
+            EditTextTarget.TASK -> Res.string.task_title_cannot_be_blank
+
+            EditTextTarget.SUBTASK,
+            EditTextTarget.NEW_SUBTASK,
+            -> Res.string.subtask_title_cannot_be_blank
+        }
 
     private suspend fun sendError(resource: StringResource) {
         eventChannel.send(EditTextEvent.Error(UiText.Resource(resource)))

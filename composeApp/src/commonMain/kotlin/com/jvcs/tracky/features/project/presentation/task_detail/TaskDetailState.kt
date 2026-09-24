@@ -12,5 +12,5 @@ data class TaskDetailState(
     val projectColor: Color? = null,
     val useLightTextColor: Boolean = false,
     val dailyStatistics: List<DailyStatistic> = emptyList(),
-    val isTimerRunning: Boolean = false
+    val isTimerRunning: Boolean = false,
 )

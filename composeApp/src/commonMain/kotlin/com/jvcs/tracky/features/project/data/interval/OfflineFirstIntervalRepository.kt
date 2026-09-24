@@ -37,7 +37,7 @@ class OfflineFirstIntervalRepository(
     private val pendingSyncDataSource: PendingSyncDataSource,
     private val syncScheduler: SyncScheduler,
     private val applicationScope: CoroutineScope,
-    private val timeProvider: TimeProvider
+    private val timeProvider: TimeProvider,
 ) : IntervalRepository {
 
     // CREATE/UPDATE interval: local first (optimistic), then remote — same flow as projects/tasks.
@@ -56,15 +56,16 @@ class OfflineFirstIntervalRepository(
         return pushInterval(interval, isCreate)
     }
 
-    override suspend fun getOpenIntervalByTaskId(taskId: String): Result<TaskInterval?, DataError> {
-        return localIntervalDataSource.getOpenIntervalByTaskId(taskId)
-    }
+    override suspend fun getOpenIntervalByTaskId(taskId: String): Result<TaskInterval?, DataError> =
+        localIntervalDataSource.getOpenIntervalByTaskId(taskId)
 
     // DELETE interval: local first, then remote, with the same offline-create-then-delete (ghost)
     // handling as tasks — an interval that never reached the server just drops out of the queue.
     override suspend fun deleteTaskInterval(intervalId: String): EmptyResult<DataError> {
-        val interval = localIntervalDataSource.getIntervalById(intervalId)
-            .getOrDefault(null) ?: return Result.Success(Unit) // already gone locally
+        val interval =
+            localIntervalDataSource
+                .getIntervalById(intervalId)
+                .getOrDefault(null) ?: return Result.Success(Unit) // already gone locally
         val hadPendingCreate = pendingSyncDataSource.hasPendingCreate(intervalId).getOrDefault(false)
 
         val localResult = localIntervalDataSource.deleteTaskInterval(intervalId)
@@ -77,21 +78,34 @@ class OfflineFirstIntervalRepository(
         }
 
         val taskId = interval.parentTaskId
-        val remoteResult = applicationScope.async {
-            remoteIntervalDataSource.deleteInterval(interval.parentProjectId, taskId, intervalId)
-        }.await()
+        val remoteResult =
+            applicationScope
+                .async {
+                    remoteIntervalDataSource.deleteInterval(interval.parentProjectId, taskId, intervalId)
+                }.await()
         return when (remoteResult) {
-            is Result.Success -> Result.Success(Unit)
-            is Result.Error -> when {
-                remoteResult.error.isTransient() -> {
-                    // Local delete already succeeded; only surface an error if queuing the sync fails.
-                    val queued = enqueueIntervalOperation(intervalId, taskId, PendingSyncOperation.OP_DELETE)
-                    if (queued is Result.Success) scheduleSync()
-                    queued
+            is Result.Success -> {
+                Result.Success(Unit)
+            }
+
+            is Result.Error -> {
+                when {
+                    remoteResult.error.isTransient() -> {
+                        // Local delete already succeeded; only surface an error if queuing the sync fails.
+                        val queued = enqueueIntervalOperation(intervalId, taskId, PendingSyncOperation.OP_DELETE)
+                        if (queued is Result.Success) scheduleSync()
+                        queued
+                    }
+
+                    // Server already has no such interval — the delete is effectively done.
+                    remoteResult.error.isMissingOrForbidden() -> {
+                        Result.Success(Unit)
+                    }
+
+                    else -> {
+                        remoteResult.asEmptyDataResult()
+                    }
                 }
-                // Server already has no such interval — the delete is effectively done.
-                remoteResult.error.isMissingOrForbidden() -> Result.Success(Unit)
-                else -> remoteResult.asEmptyDataResult()
             }
         }
     }
@@ -118,37 +132,53 @@ class OfflineFirstIntervalRepository(
             return queueForLater(interval.intervalId, taskId, operation)
         }
 
-        val remoteResult = if (isCreate) {
-            remoteIntervalDataSource.postInterval(interval)
-        } else {
-            remoteIntervalDataSource.updateInterval(interval)
-        }
+        val remoteResult =
+            if (isCreate) {
+                remoteIntervalDataSource.postInterval(interval)
+            } else {
+                remoteIntervalDataSource.updateInterval(interval)
+            }
 
         return when (remoteResult) {
             // Server is canonical on the happy path, exactly like projects and tasks.
-            is Result.Success -> localIntervalDataSource.upsertTaskInterval(remoteResult.data).asEmptyDataResult()
-            is Result.Error -> when {
-                isCreate && remoteResult.error == DataError.Remote.CONFLICT ->
-                    resolveIntervalConflict(interval)
-                remoteResult.error.isMissingOrForbidden() || remoteResult.error.isTransient() ->
-                    queueForLater(interval.intervalId, taskId, operation)
-                // Permanent error — the local row stands, nothing left to try.
-                else -> remoteResult.asEmptyDataResult()
+            is Result.Success -> {
+                localIntervalDataSource.upsertTaskInterval(remoteResult.data).asEmptyDataResult()
+            }
+
+            is Result.Error -> {
+                when {
+                    isCreate && remoteResult.error == DataError.Remote.CONFLICT -> {
+                        resolveIntervalConflict(interval)
+                    }
+
+                    remoteResult.error.isMissingOrForbidden() || remoteResult.error.isTransient() -> {
+                        queueForLater(interval.intervalId, taskId, operation)
+                    }
+
+                    // Permanent error — the local row stands, nothing left to try.
+                    else -> {
+                        remoteResult.asEmptyDataResult()
+                    }
+                }
             }
         }
     }
 
     /** A duplicate create means the row is already on the server: push local state as an update. */
-    private suspend fun resolveIntervalConflict(interval: TaskInterval): EmptyResult<DataError> {
-        return when (val updated = remoteIntervalDataSource.updateInterval(interval)) {
-            is Result.Success -> localIntervalDataSource.upsertTaskInterval(updated.data).asEmptyDataResult()
-            is Result.Error -> if (updated.error.isTransient()) {
-                queueForLater(interval.intervalId, interval.parentTaskId, PendingSyncOperation.OP_UPDATE)
-            } else {
-                updated.asEmptyDataResult()
+    private suspend fun resolveIntervalConflict(interval: TaskInterval): EmptyResult<DataError> =
+        when (val updated = remoteIntervalDataSource.updateInterval(interval)) {
+            is Result.Success -> {
+                localIntervalDataSource.upsertTaskInterval(updated.data).asEmptyDataResult()
+            }
+
+            is Result.Error -> {
+                if (updated.error.isTransient()) {
+                    queueForLater(interval.intervalId, interval.parentTaskId, PendingSyncOperation.OP_UPDATE)
+                } else {
+                    updated.asEmptyDataResult()
+                }
             }
         }
-    }
 
     // ---------------------------------------------------------------------------------------------
     // Pending-sync queue draining
@@ -170,25 +200,30 @@ class OfflineFirstIntervalRepository(
     private suspend fun runIntervalOperation(op: PendingSyncOperation): SyncOutcome {
         return when (op.operationType) {
             PendingSyncOperation.OP_CREATE, PendingSyncOperation.OP_UPDATE -> {
-                val interval = when (val r = localIntervalDataSource.getIntervalById(op.entityId)) {
-                    is Result.Success -> r.data ?: return SyncOutcome.DROP // deleted meanwhile
-                    is Result.Error -> return SyncOutcome.RETRY
-                }
+                val interval =
+                    when (val r = localIntervalDataSource.getIntervalById(op.entityId)) {
+                        is Result.Success -> r.data ?: return SyncOutcome.DROP
+
+                        // deleted meanwhile
+                        is Result.Error -> return SyncOutcome.RETRY
+                    }
                 // The task drain runs before this one, so a still-pending CREATE means that push
                 // failed too. Stay queued rather than burning a request that cannot succeed.
                 if (pendingSyncDataSource.hasPendingCreate(interval.parentTaskId).getOrDefault(false)) {
                     return SyncOutcome.RETRY
                 }
-                val result = if (op.operationType == PendingSyncOperation.OP_CREATE) {
-                    remoteIntervalDataSource.postInterval(interval)
-                } else {
-                    remoteIntervalDataSource.updateInterval(interval)
-                }
+                val result =
+                    if (op.operationType == PendingSyncOperation.OP_CREATE) {
+                        remoteIntervalDataSource.postInterval(interval)
+                    } else {
+                        remoteIntervalDataSource.updateInterval(interval)
+                    }
                 result.toSyncOutcome(
                     onSuccess = { localIntervalDataSource.upsertTaskInterval(it) },
-                    onConflict = { resolveIntervalConflict(interval) }
+                    onConflict = { resolveIntervalConflict(interval) },
                 )
             }
+
             PendingSyncOperation.OP_DELETE -> {
                 val taskId = op.parentEntityId ?: return SyncOutcome.DROP
                 if (pendingSyncDataSource.hasPendingCreate(taskId).getOrDefault(false)) {
@@ -197,7 +232,10 @@ class OfflineFirstIntervalRepository(
                 val projectId = parentProjectIdOf(taskId) ?: return SyncOutcome.DROP
                 remoteIntervalDataSource.deleteInterval(projectId, taskId, op.entityId).toSyncOutcome()
             }
-            else -> SyncOutcome.DROP
+
+            else -> {
+                SyncOutcome.DROP
+            }
         }
     }
 
@@ -219,7 +257,7 @@ class OfflineFirstIntervalRepository(
     private suspend fun queueForLater(
         intervalId: String,
         taskId: String,
-        operationType: String
+        operationType: String,
     ): EmptyResult<DataError> {
         val queued = enqueueIntervalOperation(intervalId, taskId, operationType)
         if (queued is Result.Success) scheduleSync()
@@ -232,14 +270,15 @@ class OfflineFirstIntervalRepository(
     private suspend fun enqueueIntervalOperation(
         intervalId: String,
         taskId: String,
-        operationType: String
-    ): EmptyResult<DataError> = pendingSyncDataSource.enqueue(
-        entityId = intervalId,
-        entityType = PendingSyncOperation.ENTITY_INTERVAL,
-        operationType = operationType,
-        parentEntityId = taskId,
-        createdAt = timeProvider.nowInstant
-    )
+        operationType: String,
+    ): EmptyResult<DataError> =
+        pendingSyncDataSource.enqueue(
+            entityId = intervalId,
+            entityType = PendingSyncOperation.ENTITY_INTERVAL,
+            operationType = operationType,
+            parentEntityId = taskId,
+            createdAt = timeProvider.nowInstant,
+        )
 
     private suspend fun scheduleSync() {
         applicationScope.launch { syncScheduler.schedulePeriodicSync() }.join()

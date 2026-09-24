@@ -15,6 +15,8 @@ interface LocalIntervalDataSource {
      * local state when it finally drains — and a missing row is how the drain knows to drop the op.
      */
     suspend fun getIntervalById(intervalId: String): Result<TaskInterval?, DataError.Local>
+
     suspend fun getOpenIntervalByTaskId(taskId: String): Result<TaskInterval?, DataError.Local>
+
     suspend fun deleteTaskInterval(intervalId: String): EmptyResult<DataError.Local>
 }

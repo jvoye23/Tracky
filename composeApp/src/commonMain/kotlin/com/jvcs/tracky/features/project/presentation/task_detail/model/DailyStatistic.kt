@@ -9,5 +9,5 @@ data class DailyStatistic(
     val formattedDate: String,
     val formattedStartTime: String,
     val formattedEndTime: String,
-    val formattedDuration: String
+    val formattedDuration: String,
 )

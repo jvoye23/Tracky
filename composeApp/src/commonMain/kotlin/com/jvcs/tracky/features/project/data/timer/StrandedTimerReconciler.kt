@@ -40,7 +40,7 @@ class StrandedTimerReconciler(
      */
     private val serverClock: ServerClock,
     private val deviceIdProvider: DeviceIdProvider,
-    private val applicationScope: CoroutineScope
+    private val applicationScope: CoroutineScope,
 ) : StartupReconciliation {
 
     private val reconciled = CompletableDeferred<Unit>()
@@ -82,14 +82,18 @@ class StrandedTimerReconciler(
         }
     }
 
-    private suspend fun park(intervalId: String, isSubTaskInterval: Boolean, detectedAt: Long) {
+    private suspend fun park(
+        intervalId: String,
+        isSubTaskInterval: Boolean,
+        detectedAt: Long,
+    ) {
         if (projectDao.getStrandedInterval(intervalId) != null) return
         projectDao.upsertStrandedInterval(
             StrandedIntervalEntity(
                 intervalId = intervalId,
                 isSubTaskInterval = isSubTaskInterval,
-                detectedAtEpochMs = detectedAt
-            )
+                detectedAtEpochMs = detectedAt,
+            ),
         )
     }
 }

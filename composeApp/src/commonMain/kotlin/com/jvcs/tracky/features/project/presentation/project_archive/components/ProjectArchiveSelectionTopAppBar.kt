@@ -41,7 +41,7 @@ fun ProjectArchiveSelectionTopAppBar(
                 Icon(
                     imageVector = Icon_Delete,
                     contentDescription = stringResource(Res.string.delete_permanently),
-                    tint = MaterialTheme.colorScheme.onSurface
+                    tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
             IconButton(onClick = { onAction(ProjectArchiveAction.OnReactivateSelectedClick) }) {
@@ -49,10 +49,10 @@ fun ProjectArchiveSelectionTopAppBar(
                     imageVector = Icon_Archive,
                     contentDescription = stringResource(Res.string.restore_selected),
                     tint = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.rotate(180f)
+                    modifier = Modifier.rotate(180f),
                 )
             }
-        }
+        },
     )
 }
 
@@ -63,7 +63,7 @@ private fun TopAppBarPreview() {
         ProjectArchiveSelectionTopAppBar(
             state = ProjectArchiveState(),
             onAction = {},
-            scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+            scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(),
         )
     }
 }

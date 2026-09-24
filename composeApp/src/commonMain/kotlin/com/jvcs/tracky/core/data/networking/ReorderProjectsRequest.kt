@@ -7,13 +7,7 @@ import kotlinx.serialization.Serializable
  * project left out keeps the sortIndex the server already has.
  */
 @Serializable
-data class ReorderProjectsRequest(
-    val updatedAtUtc: String,
-    val items: List<ProjectSortOrderDto>,
-)
+data class ReorderProjectsRequest(val updatedAtUtc: String, val items: List<ProjectSortOrderDto>)
 
 @Serializable
-data class ProjectSortOrderDto(
-    val projectId: String,
-    val sortIndex: Long,
-)
+data class ProjectSortOrderDto(val projectId: String, val sortIndex: Long)

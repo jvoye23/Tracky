@@ -14,181 +14,201 @@ import tracky.composeapp.generated.resources.inter_regular
 import tracky.composeapp.generated.resources.inter_semibold
 import tracky.composeapp.generated.resources.roboto_mono_variable
 
-
-val RobotoMono @Composable get() = FontFamily(
-    Font(
-        Res.font.roboto_mono_variable,
-        weight = FontWeight.Normal
+val RobotoMono @Composable get() =
+    FontFamily(
+        Font(
+            Res.font.roboto_mono_variable,
+            weight = FontWeight.Normal,
+        ),
     )
-)
 
-val Inter @Composable get() = FontFamily(
-    Font(
-        Res.font.inter_regular,
-        weight = FontWeight.Normal
-    ),
-    Font(
-        Res.font.inter_semibold,
-        weight = FontWeight.SemiBold
-    ),
-    Font(
-        Res.font.inter_medium,
-        weight = FontWeight.Medium
+val Inter @Composable get() =
+    FontFamily(
+        Font(
+            Res.font.inter_regular,
+            weight = FontWeight.Normal,
+        ),
+        Font(
+            Res.font.inter_semibold,
+            weight = FontWeight.SemiBold,
+        ),
+        Font(
+            Res.font.inter_medium,
+            weight = FontWeight.Medium,
+        ),
     )
-)
 
-val Typography @Composable get() = Typography(
-    headlineLarge = TextStyle(
-        fontFamily = Inter,
-        fontWeight = FontWeight.Bold,
-        fontSize = 28.sp,
-        lineHeight = 30.sp
-    ),
-    headlineMedium = TextStyle(
-        fontFamily = Inter,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 20.sp,
-        lineHeight = 24.sp
-    ),
-    headlineSmall = TextStyle(
-        fontFamily = Inter,
-        fontWeight = FontWeight.Medium,
-        fontSize = 16.sp,
-        lineHeight = 24.sp
-    ),
-    bodyMedium = TextStyle(
-        fontFamily = Inter,
-        fontWeight = FontWeight.Normal,
-        fontSize = 16.sp,
-        lineHeight = 24.sp,
-    ),
-    bodySmall = TextStyle(
-        fontFamily = Inter,
-        fontWeight = FontWeight.Normal,
-        fontSize = 14.sp,
-        lineHeight = 20.sp
-    ),
-    labelMedium = TextStyle(
-        fontFamily = Inter,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 16.sp,
-        lineHeight = 24.sp
-    ),
-    labelSmall = TextStyle(
-        fontFamily = Inter,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 14.sp,
-        lineHeight = 20.sp
+val Typography @Composable get() =
+    Typography(
+        headlineLarge =
+            TextStyle(
+                fontFamily = Inter,
+                fontWeight = FontWeight.Bold,
+                fontSize = 28.sp,
+                lineHeight = 30.sp,
+            ),
+        headlineMedium =
+            TextStyle(
+                fontFamily = Inter,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 20.sp,
+                lineHeight = 24.sp,
+            ),
+        headlineSmall =
+            TextStyle(
+                fontFamily = Inter,
+                fontWeight = FontWeight.Medium,
+                fontSize = 16.sp,
+                lineHeight = 24.sp,
+            ),
+        bodyMedium =
+            TextStyle(
+                fontFamily = Inter,
+                fontWeight = FontWeight.Normal,
+                fontSize = 16.sp,
+                lineHeight = 24.sp,
+            ),
+        bodySmall =
+            TextStyle(
+                fontFamily = Inter,
+                fontWeight = FontWeight.Normal,
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
+            ),
+        labelMedium =
+            TextStyle(
+                fontFamily = Inter,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 16.sp,
+                lineHeight = 24.sp,
+            ),
+        labelSmall =
+            TextStyle(
+                fontFamily = Inter,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
+            ),
     )
-)
 
 val Typography.timerStyle: TextStyle
     @Composable
-    get() = TextStyle(
-        fontFamily = RobotoMono,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 20.sp,
-        lineHeight = 24.sp
-    )
+    get() =
+        TextStyle(
+            fontFamily = RobotoMono,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 20.sp,
+            lineHeight = 24.sp,
+        )
 
 val Typography.authLabelStyle: TextStyle
     @Composable
-    get() = TextStyle(
-        fontFamily = Inter,
-        fontWeight = FontWeight.Normal,
-        fontSize = 15.sp,
-        lineHeight = 20.sp,
-    )
+    get() =
+        TextStyle(
+            fontFamily = Inter,
+            fontWeight = FontWeight.Normal,
+            fontSize = 15.sp,
+            lineHeight = 20.sp,
+        )
 
 val Typography.authElevatedLabelStyle: TextStyle
     @Composable
-    get() = TextStyle(
-        fontFamily = Inter,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 11.sp,
-        lineHeight = 14.sp,
-        letterSpacing = 0.5.sp
-    )
+    get() =
+        TextStyle(
+            fontFamily = Inter,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 11.sp,
+            lineHeight = 14.sp,
+            letterSpacing = 0.5.sp,
+        )
 
 val Typography.authTextStyle: TextStyle
     @Composable
-    get() = TextStyle(
-        fontFamily = Inter,
-        fontWeight = FontWeight.Normal,
-        fontSize = 15.sp,
-        lineHeight = 20.sp,
-    )
+    get() =
+        TextStyle(
+            fontFamily = Inter,
+            fontWeight = FontWeight.Normal,
+            fontSize = 15.sp,
+            lineHeight = 20.sp,
+        )
 
 val Typography.projectLabelStyle: TextStyle
     @Composable
-    get() = TextStyle(
-        fontFamily = Inter,
-        fontWeight = FontWeight.Normal,
-        fontSize = 15.sp,
-        lineHeight = 20.sp,
-    )
+    get() =
+        TextStyle(
+            fontFamily = Inter,
+            fontWeight = FontWeight.Normal,
+            fontSize = 15.sp,
+            lineHeight = 20.sp,
+        )
 
 val Typography.projectElevatedLabelStyle: TextStyle
     @Composable
-    get() = TextStyle(
-        fontFamily = Inter,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 11.sp,
-        lineHeight = 14.sp,
-        letterSpacing = 0.5.sp
-    )
-
+    get() =
+        TextStyle(
+            fontFamily = Inter,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 11.sp,
+            lineHeight = 14.sp,
+            letterSpacing = 0.5.sp,
+        )
 
 val Typography.labelXSmall: TextStyle
     @Composable
-    get() = TextStyle(
-        fontFamily = Inter,
-        fontWeight = FontWeight.Bold,
-        fontSize = 11.sp,
-        lineHeight = 12.sp
-    )
+    get() =
+        TextStyle(
+            fontFamily = Inter,
+            fontWeight = FontWeight.Bold,
+            fontSize = 11.sp,
+            lineHeight = 12.sp,
+        )
 
 val Typography.headlineXSmall: TextStyle
     @Composable
-    get() = TextStyle(
-        fontFamily = Inter,
-        fontWeight = FontWeight.Medium,
-        fontSize = 14.sp,
-        lineHeight = 20.sp
-    )
+    get() =
+        TextStyle(
+            fontFamily = Inter,
+            fontWeight = FontWeight.Medium,
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+        )
 
 val Typography.errorLabel: TextStyle
     @Composable
-    get() = TextStyle(
-        fontFamily = Inter,
-        fontWeight = FontWeight.Normal,
-        fontSize = 11.sp,
-        lineHeight = 12.sp
-    )
+    get() =
+        TextStyle(
+            fontFamily = Inter,
+            fontWeight = FontWeight.Normal,
+            fontSize = 11.sp,
+            lineHeight = 12.sp,
+        )
 val Typography.agendaItemFinished: TextStyle
     @Composable
-    get() = TextStyle(
-        fontFamily = Inter,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 20.sp,
-        lineHeight = 24.sp,
-        textDecoration = TextDecoration.LineThrough
-    )
+    get() =
+        TextStyle(
+            fontFamily = Inter,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 20.sp,
+            lineHeight = 24.sp,
+            textDecoration = TextDecoration.LineThrough,
+        )
 
 val Typography.monoLabelSmall: TextStyle
     @Composable
-    get() = TextStyle(
-        fontFamily = RobotoMono,
-        fontWeight = FontWeight.Bold,
-        fontSize = 11.sp,
-        lineHeight = 14.sp
-    )
+    get() =
+        TextStyle(
+            fontFamily = RobotoMono,
+            fontWeight = FontWeight.Bold,
+            fontSize = 11.sp,
+            lineHeight = 14.sp,
+        )
 
 val Typography.monoLabelXSmall: TextStyle
     @Composable
-    get() = TextStyle(
-        fontFamily = RobotoMono,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 9.sp,
-        lineHeight = 12.sp
-    )
+    get() =
+        TextStyle(
+            fontFamily = RobotoMono,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 9.sp,
+            lineHeight = 12.sp,
+        )

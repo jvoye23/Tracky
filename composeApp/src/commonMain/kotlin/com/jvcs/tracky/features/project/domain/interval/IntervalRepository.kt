@@ -20,6 +20,7 @@ interface IntervalRepository {
     suspend fun updateTaskInterval(interval: TaskInterval): EmptyResult<DataError>
 
     suspend fun deleteTaskInterval(intervalId: String): EmptyResult<DataError>
+
     suspend fun getOpenIntervalByTaskId(taskId: String): Result<TaskInterval?, DataError>
 
     /**

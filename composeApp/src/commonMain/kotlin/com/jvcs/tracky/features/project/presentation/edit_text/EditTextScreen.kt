@@ -61,11 +61,7 @@ import tracky.composeapp.generated.resources.title
 import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
-fun EditTextScreenRoot(
-    onNavigateBack: () -> Unit,
-    viewModel: EditTextViewModel = koinViewModel()
-) {
-
+fun EditTextScreenRoot(onNavigateBack: () -> Unit, viewModel: EditTextViewModel = koinViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -77,19 +73,23 @@ fun EditTextScreenRoot(
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar(
                         message = event.error.asStringAsync(),
-                        duration = SnackbarDuration.Short
+                        duration = SnackbarDuration.Short,
                     )
                 }
             }
+
             is EditTextEvent.OnSavedSuccess -> {
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar(
                         message = UiText.Resource(state.target.savedMessage()).asStringAsync(),
-                        duration = SnackbarDuration.Short
+                        duration = SnackbarDuration.Short,
                     )
                 }
             }
-            is EditTextEvent.NavigateBack -> onNavigateBack()
+
+            is EditTextEvent.NavigateBack -> {
+                onNavigateBack()
+            }
         }
     }
 
@@ -103,8 +103,7 @@ fun EditTextScreenRoot(
                 else -> Unit
             }
             viewModel.onAction(action)
-
-        }
+        },
     )
 }
 
@@ -113,14 +112,14 @@ private fun EditTextScreen(
     onNavigateBack: () -> Unit,
     state: EditTextState,
     snackbarHostState: SnackbarHostState,
-    onAction: (EditTextAction) -> Unit
+    onAction: (EditTextAction) -> Unit,
 ) {
-
     val focusRequester = remember { FocusRequester() }
 
     Scaffold(
-        modifier = Modifier
-            .fillMaxSize(),
+        modifier =
+            Modifier
+                .fillMaxSize(),
         contentWindowInsets = WindowInsets.statusBars,
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
@@ -131,27 +130,29 @@ private fun EditTextScreen(
                 onSaveClick = { onAction(EditTextAction.OnSaveClick) },
                 title = stringResource(state.target.topBarTitle(state.isEditMode)),
                 // A project without a colour of its own falls back to the theme accent.
-                projectColor = state.projectColor ?: MaterialTheme.colorScheme.primary
+                projectColor = state.projectColor ?: MaterialTheme.colorScheme.primary,
             )
-        }
+        },
     ) { innerPadding ->
         Column(
-            modifier = Modifier
-                .padding(innerPadding)
-                // The Scaffold only insets the status bar. The description stretches to the bottom,
-                // so keep it clear of the navigation bar and, while typing, of the keyboard.
-                .windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars))
-                .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier =
+                Modifier
+                    .padding(innerPadding)
+                    // The Scaffold only insets the status bar. The description stretches to the bottom,
+                    // so keep it clear of the navigation bar and, while typing, of the keyboard.
+                    .windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars))
+                    .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.surface),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             TrackyTextField(
                 state = state.titleState,
                 label = stringResource(Res.string.title),
-                modifier = Modifier
-                    .fillMaxWidth()
-                .focusRequester(focusRequester),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester),
                 labelStyle = MaterialTheme.typography.projectLabelStyle,
                 elevatedLabelStyle = MaterialTheme.typography.projectElevatedLabelStyle,
                 textStyle = MaterialTheme.typography.headlineLarge,
@@ -160,16 +161,17 @@ private fun EditTextScreen(
                 showLabel = true,
                 backgroundDefaultColor = MaterialTheme.colorScheme.surface,
                 borderDefaultColor = MaterialTheme.colorScheme.surface,
-                borderIsFocusedColor = MaterialTheme.colorScheme.surface
+                borderIsFocusedColor = MaterialTheme.colorScheme.surface,
             )
             TrackyTextField(
                 state = state.descriptionState,
                 label = stringResource(Res.string.description),
                 // Fills everything below the title, even when empty, so the whole area is the
                 // writing surface.
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
                 fillHeight = true,
                 labelStyle = MaterialTheme.typography.projectLabelStyle,
                 elevatedLabelStyle = MaterialTheme.typography.projectElevatedLabelStyle,
@@ -179,7 +181,7 @@ private fun EditTextScreen(
                 showLabel = true,
                 backgroundDefaultColor = MaterialTheme.colorScheme.surface,
                 borderDefaultColor = MaterialTheme.colorScheme.surface,
-                borderIsFocusedColor = MaterialTheme.colorScheme.surface
+                borderIsFocusedColor = MaterialTheme.colorScheme.surface,
             )
         }
         LaunchedEffect(state.isEditMode) {
@@ -192,22 +194,35 @@ private fun EditTextScreen(
     }
 }
 
-private fun EditTextTarget.topBarTitle(isEditMode: Boolean): StringResource = when (this) {
-    EditTextTarget.PROJECT ->
-        if (isEditMode) Res.string.edit_project_uppercase else Res.string.project_details_uppercase
-    EditTextTarget.TASK ->
-        if (isEditMode) Res.string.edit_task_uppercase else Res.string.task_details_uppercase
-    EditTextTarget.SUBTASK ->
-        if (isEditMode) Res.string.edit_subtask_uppercase else Res.string.subtask_details_uppercase
-    EditTextTarget.NEW_SUBTASK -> Res.string.new_subtask_uppercase
-}
+private fun EditTextTarget.topBarTitle(isEditMode: Boolean): StringResource =
+    when (this) {
+        EditTextTarget.PROJECT -> {
+            if (isEditMode) Res.string.edit_project_uppercase else Res.string.project_details_uppercase
+        }
 
-private fun EditTextTarget.savedMessage(): StringResource = when (this) {
-    EditTextTarget.PROJECT -> Res.string.project_info_saved
-    EditTextTarget.TASK -> Res.string.task_info_saved
-    EditTextTarget.SUBTASK,
-    EditTextTarget.NEW_SUBTASK -> Res.string.subtask_info_saved
-}
+        EditTextTarget.TASK -> {
+            if (isEditMode) Res.string.edit_task_uppercase else Res.string.task_details_uppercase
+        }
+
+        EditTextTarget.SUBTASK -> {
+            if (isEditMode) Res.string.edit_subtask_uppercase else Res.string.subtask_details_uppercase
+        }
+
+        EditTextTarget.NEW_SUBTASK -> {
+            Res.string.new_subtask_uppercase
+        }
+    }
+
+private fun EditTextTarget.savedMessage(): StringResource =
+    when (this) {
+        EditTextTarget.PROJECT -> Res.string.project_info_saved
+
+        EditTextTarget.TASK -> Res.string.task_info_saved
+
+        EditTextTarget.SUBTASK,
+        EditTextTarget.NEW_SUBTASK,
+        -> Res.string.subtask_info_saved
+    }
 
 private const val PREVIEW_TITLE = "Tracky Redesign"
 private const val PREVIEW_DESCRIPTION =
@@ -222,26 +237,23 @@ private fun previewState(
     description: String = PREVIEW_DESCRIPTION,
     isEditMode: Boolean = false,
     projectColor: Color? = previewProjectColor,
-    target: EditTextTarget = EditTextTarget.PROJECT
+    target: EditTextTarget = EditTextTarget.PROJECT,
 ) = EditTextState(
     target = target,
     titleState = rememberTextFieldState(title),
     descriptionState = rememberTextFieldState(description),
     isEditMode = isEditMode,
-    projectColor = projectColor
+    projectColor = projectColor,
 )
 
 @Composable
-private fun EditTextScreenPreviewContainer(
-    state: EditTextState,
-    darkTheme: Boolean = false
-) {
+private fun EditTextScreenPreviewContainer(state: EditTextState, darkTheme: Boolean = false) {
     TrackyTheme(darkTheme = darkTheme) {
         EditTextScreen(
             onNavigateBack = {},
             state = state,
             snackbarHostState = remember { SnackbarHostState() },
-            onAction = {}
+            onAction = {},
         )
     }
 }
@@ -250,7 +262,7 @@ private fun EditTextScreenPreviewContainer(
 @Composable
 private fun EditTextScreenViewModeLightPreview() {
     EditTextScreenPreviewContainer(
-        state = previewState(isEditMode = false)
+        state = previewState(isEditMode = false),
     )
 }
 
@@ -259,7 +271,7 @@ private fun EditTextScreenViewModeLightPreview() {
 private fun EditTextScreenViewModeDarkPreview() {
     EditTextScreenPreviewContainer(
         state = previewState(isEditMode = false),
-        darkTheme = true
+        darkTheme = true,
     )
 }
 
@@ -267,7 +279,7 @@ private fun EditTextScreenViewModeDarkPreview() {
 @Composable
 private fun EditTextScreenEditModeLightPreview() {
     EditTextScreenPreviewContainer(
-        state = previewState(isEditMode = true)
+        state = previewState(isEditMode = true),
     )
 }
 
@@ -276,7 +288,7 @@ private fun EditTextScreenEditModeLightPreview() {
 private fun EditTextScreenEditModeDarkPreview() {
     EditTextScreenPreviewContainer(
         state = previewState(isEditMode = true),
-        darkTheme = true
+        darkTheme = true,
     )
 }
 
@@ -285,11 +297,12 @@ private fun EditTextScreenEditModeDarkPreview() {
 @Composable
 private fun EditTextScreenEmptyPreview() {
     EditTextScreenPreviewContainer(
-        state = previewState(
-            title = "",
-            description = "",
-            isEditMode = true
-        )
+        state =
+            previewState(
+                title = "",
+                description = "",
+                isEditMode = true,
+            ),
     )
 }
 
@@ -297,13 +310,15 @@ private fun EditTextScreenEmptyPreview() {
 @Composable
 private fun EditTextScreenLongContentPreview() {
     EditTextScreenPreviewContainer(
-        state = previewState(
-            title = "Rebuild the project detail and edit screens on the new design system",
-            description = "Move every field onto TrackyTextField so the label elevation, hint and " +
-                "disabled styling come from one place.\n\nThen delete the old OutlinedTextField " +
-                "variants and align the top bar tint with the project colour.",
-            isEditMode = false
-        )
+        state =
+            previewState(
+                title = "Rebuild the project detail and edit screens on the new design system",
+                description =
+                    "Move every field onto TrackyTextField so the label elevation, hint and " +
+                        "disabled styling come from one place.\n\nThen delete the old OutlinedTextField " +
+                        "variants and align the top bar tint with the project colour.",
+                isEditMode = false,
+            ),
     )
 }
 
@@ -312,7 +327,7 @@ private fun EditTextScreenLongContentPreview() {
 @Composable
 private fun EditTextScreenDefaultColorPreview() {
     EditTextScreenPreviewContainer(
-        state = previewState(projectColor = null)
+        state = previewState(projectColor = null),
     )
 }
 
@@ -320,7 +335,7 @@ private fun EditTextScreenDefaultColorPreview() {
 @Composable
 private fun EditTextScreenLargeFontPreview() {
     EditTextScreenPreviewContainer(
-        state = previewState(isEditMode = false)
+        state = previewState(isEditMode = false),
     )
 }
 
@@ -328,7 +343,7 @@ private fun EditTextScreenLargeFontPreview() {
 @Composable
 private fun EditTextScreenTaskPreview() {
     EditTextScreenPreviewContainer(
-        state = previewState(isEditMode = true, target = EditTextTarget.TASK)
+        state = previewState(isEditMode = true, target = EditTextTarget.TASK),
     )
 }
 
@@ -336,12 +351,13 @@ private fun EditTextScreenTaskPreview() {
 @Composable
 private fun EditTextScreenNewSubTaskPreview() {
     EditTextScreenPreviewContainer(
-        state = previewState(
-            title = "",
-            description = "",
-            isEditMode = true,
-            target = EditTextTarget.NEW_SUBTASK
-        )
+        state =
+            previewState(
+                title = "",
+                description = "",
+                isEditMode = true,
+                target = EditTextTarget.NEW_SUBTASK,
+            ),
     )
 }
 
@@ -349,6 +365,6 @@ private fun EditTextScreenNewSubTaskPreview() {
 @Composable
 private fun EditTextScreenDevicesPreview() {
     EditTextScreenPreviewContainer(
-        state = previewState(isEditMode = false)
+        state = previewState(isEditMode = false),
     )
 }

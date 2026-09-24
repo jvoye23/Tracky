@@ -13,15 +13,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
 
-class DataStoreSessionStorage(
-    private val dataStore: DataStore<Preferences>
-) : SessionStorage {
+class DataStoreSessionStorage(private val dataStore: DataStore<Preferences>) : SessionStorage {
 
     private val authInfoKey = stringPreferencesKey("KEY_AUTH_INFO")
     private val json = Json { ignoreUnknownKeys = true }
 
-    override fun observeAuthInfo(): Flow<AuthInfo?> {
-        return dataStore.data.map { preferences ->
+    override fun observeAuthInfo(): Flow<AuthInfo?> =
+        dataStore.data.map { preferences ->
             preferences[authInfoKey]?.let {
                 try {
                     json.decodeFromString<AuthInfoSerializable>(it).toDomain()
@@ -30,7 +28,6 @@ class DataStoreSessionStorage(
                 }
             }
         }
-    }
 
     override suspend fun set(info: AuthInfo?) {
         if (info == null) {

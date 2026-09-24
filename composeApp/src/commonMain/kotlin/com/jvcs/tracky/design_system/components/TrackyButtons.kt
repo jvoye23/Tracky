@@ -59,31 +59,33 @@ fun TrackyPrimaryButton(
 
     val isInteractive = enabled && !isLoading
 
-    val backgroundColor = when {
-        !enabled -> MaterialTheme.colorScheme.surfaceContainerHigh
-        isPressed -> MaterialTheme.colorScheme.onPrimaryContainer
-        else -> MaterialTheme.colorScheme.primary
-    }
-    val contentColor = if (enabled) {
-        MaterialTheme.colorScheme.onPrimary
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    }
+    val backgroundColor =
+        when {
+            !enabled -> MaterialTheme.colorScheme.surfaceContainerHigh
+            isPressed -> MaterialTheme.colorScheme.onPrimaryContainer
+            else -> MaterialTheme.colorScheme.primary
+        }
+    val contentColor =
+        if (enabled) {
+            MaterialTheme.colorScheme.onPrimary
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        }
 
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(52.dp)
-            .scale(scale)
-            .clip(CircleShape)
-            .background(backgroundColor)
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                enabled = isInteractive,
-                onClick = onClick,
-            )
-            .padding(horizontal = 24.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(52.dp)
+                .scale(scale)
+                .clip(CircleShape)
+                .background(backgroundColor)
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    enabled = isInteractive,
+                    onClick = onClick,
+                ).padding(horizontal = 24.dp),
         contentAlignment = Alignment.Center,
     ) {
         if (isLoading) {
@@ -127,29 +129,29 @@ fun TrackyOutlinedButton(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
-    val backgroundColor = if (isPressed) {
-        MaterialTheme.colorScheme.primary.copy(alpha = 0.06f)
-    } else {
-        Color.Transparent
-    }
+    val backgroundColor =
+        if (isPressed) {
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.06f)
+        } else {
+            Color.Transparent
+        }
 
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(50.dp)
-            .clip(CircleShape)
-            .background(backgroundColor)
-            .border(
-                BorderStroke(1.5.dp, MaterialTheme.colorScheme.outlineVariant),
-                shape = CircleShape,
-            )
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                enabled = enabled,
-                onClick = onClick,
-            )
-            .padding(horizontal = 20.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(50.dp)
+                .clip(CircleShape)
+                .background(backgroundColor)
+                .border(
+                    BorderStroke(1.5.dp, MaterialTheme.colorScheme.outlineVariant),
+                    shape = CircleShape,
+                ).clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    enabled = enabled,
+                    onClick = onClick,
+                ).padding(horizontal = 20.dp),
         contentAlignment = Alignment.Center,
     ) {
         Row(
@@ -169,21 +171,17 @@ fun TrackyOutlinedButton(
     }
 }
 
-
-
-@Preview (showSystemUi = false, device = Devices.PIXEL_9_PRO)
+@Preview(showSystemUi = false, device = Devices.PIXEL_9_PRO)
 @Composable
 private fun TrackyButtonsPreview() {
     TrackyTheme {
-
-
-
-
         Column(
-            modifier = Modifier.fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             TrackyPrimaryButton(
                 text = "Register",
@@ -191,13 +189,13 @@ private fun TrackyButtonsPreview() {
                 modifier = Modifier.fillMaxWidth(),
                 enabled = true,
                 isLoading = false,
-                leadingIcon = null
+                leadingIcon = null,
             )
 
             TrackyOutlinedButton(
                 text = "Continue with Google",
                 onClick = {},
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }

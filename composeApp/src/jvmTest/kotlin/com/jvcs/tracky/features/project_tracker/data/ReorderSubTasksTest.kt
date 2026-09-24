@@ -17,68 +17,78 @@ import kotlin.time.ExperimentalTime
  */
 internal class ReorderSubTasksTest {
 
-
-    private fun fixture(vararg subTaskIds: String) = RepoFixture().apply {
-        seedProjectWithTask()
-        subTaskIds.forEach { db.seedSubTask(it, "t1", "p1") }
-    }
-
-    @Test
-    fun reorderSubTasks_writesOnlyTheIdsWhoseIndexActuallyMoved() = runBlocking<Unit> {
-        val f = fixture("a", "b", "c")
-        f.subTaskRepository.reorderSubTasks("t1", listOf("a", "b", "c"))
-        f.localSubTask.sortIndexWrites.clear()
-
-        f.subTaskRepository.reorderSubTasks("t1", listOf("a", "c", "b"))
-
-        assertEquals(mapOf("c" to 1L, "b" to 2L), f.localSubTask.sortIndexWrites.single())
-    }
+    private fun fixture(vararg subTaskIds: String) =
+        RepoFixture().apply {
+            seedProjectWithTask()
+            subTaskIds.forEach { db.seedSubTask(it, "t1", "p1") }
+        }
 
     @Test
-    fun reorderSubTasks_pushesTheWholeGestureAsOneRequestUnderTheParentTask() = runBlocking<Unit> {
-        val f = fixture("a", "b")
+    fun reorderSubTasks_writesOnlyTheIdsWhoseIndexActuallyMoved() =
+        runBlocking<Unit> {
+            val f = fixture("a", "b", "c")
+            f.subTaskRepository.reorderSubTasks("t1", listOf("a", "b", "c"))
+            f.localSubTask.sortIndexWrites.clear()
 
-        f.subTaskRepository.reorderSubTasks("t1", listOf("b", "a"))
+            f.subTaskRepository.reorderSubTasks("t1", listOf("a", "c", "b"))
 
-        assertEquals(mapOf("b" to 0L, "a" to 1L), f.remoteSubTask.reorderCalls.single())
-        assertTrue(f.remoteSubTask.subTaskRoutes.contains("p1/t1/sort"))
-    }
-
-    @Test
-    fun reorderSubTasks_onlyTouchesTheSiblingsOfOneTask() = runBlocking<Unit> {
-        // A subtask never leaves its parent, so another task's subtasks must not be re-indexed.
-        val f = fixture("a", "b")
-        f.db.seedTask("t2", "p1")
-        f.db.seedSubTask("other", "t2", "p1")
-
-        f.subTaskRepository.reorderSubTasks("t1", listOf("b", "a"))
-
-        assertEquals(setOf("b", "a"), f.localSubTask.sortIndexWrites.single().keys)
-    }
+            assertEquals(mapOf("c" to 1L, "b" to 2L), f.localSubTask.sortIndexWrites.single())
+        }
 
     @Test
-    fun reorderSubTasks_queuesOneMarkerWhenOffline() = runBlocking<Unit> {
-        val f = fixture("a", "b")
-        f.remoteSubTask.reorderFailWith = DataError.Remote.NO_INTERNET
+    fun reorderSubTasks_pushesTheWholeGestureAsOneRequestUnderTheParentTask() =
+        runBlocking<Unit> {
+            val f = fixture("a", "b")
 
-        val result = f.subTaskRepository.reorderSubTasks("t1", listOf("b", "a"))
+            f.subTaskRepository.reorderSubTasks("t1", listOf("b", "a"))
 
-        assertTrue(result is Result.Success)
-        val ops = f.queue.all().filter { it.entityType == PendingSyncOperation.ENTITY_SUBTASK_ORDER }
-        assertEquals(1, ops.size)
-        assertEquals("t1", ops.single().parentEntityId)
-    }
+            assertEquals(mapOf("b" to 0L, "a" to 1L), f.remoteSubTask.reorderCalls.single())
+            assertTrue(f.remoteSubTask.subTaskRoutes.contains("p1/t1/sort"))
+        }
 
     @Test
-    fun syncPendingSubTasks_rebuildsTheOrderFromLocalStateWhenTheMarkerDrains() = runBlocking<Unit> {
-        val f = fixture("a", "b", "c")
-        f.remoteSubTask.reorderFailWith = DataError.Remote.NO_INTERNET
-        f.subTaskRepository.reorderSubTasks("t1", listOf("c", "a", "b"))
-        f.remoteSubTask.reorderFailWith = null
-        f.remoteSubTask.reorderCalls.clear()
+    fun reorderSubTasks_onlyTouchesTheSiblingsOfOneTask() =
+        runBlocking<Unit> {
+            // A subtask never leaves its parent, so another task's subtasks must not be re-indexed.
+            val f = fixture("a", "b")
+            f.db.seedTask("t2", "p1")
+            f.db.seedSubTask("other", "t2", "p1")
 
-        f.subTaskRepository.syncPendingSubTasks()
+            f.subTaskRepository.reorderSubTasks("t1", listOf("b", "a"))
 
-        assertEquals(mapOf("c" to 0L, "a" to 1L, "b" to 2L), f.remoteSubTask.reorderCalls.single())
-    }
+            assertEquals(
+                setOf("b", "a"),
+                f.localSubTask.sortIndexWrites
+                    .single()
+                    .keys,
+            )
+        }
+
+    @Test
+    fun reorderSubTasks_queuesOneMarkerWhenOffline() =
+        runBlocking<Unit> {
+            val f = fixture("a", "b")
+            f.remoteSubTask.reorderFailWith = DataError.Remote.NO_INTERNET
+
+            val result = f.subTaskRepository.reorderSubTasks("t1", listOf("b", "a"))
+
+            assertTrue(result is Result.Success)
+            val ops = f.queue.all().filter { it.entityType == PendingSyncOperation.ENTITY_SUBTASK_ORDER }
+            assertEquals(1, ops.size)
+            assertEquals("t1", ops.single().parentEntityId)
+        }
+
+    @Test
+    fun syncPendingSubTasks_rebuildsTheOrderFromLocalStateWhenTheMarkerDrains() =
+        runBlocking<Unit> {
+            val f = fixture("a", "b", "c")
+            f.remoteSubTask.reorderFailWith = DataError.Remote.NO_INTERNET
+            f.subTaskRepository.reorderSubTasks("t1", listOf("c", "a", "b"))
+            f.remoteSubTask.reorderFailWith = null
+            f.remoteSubTask.reorderCalls.clear()
+
+            f.subTaskRepository.syncPendingSubTasks()
+
+            assertEquals(mapOf("c" to 0L, "a" to 1L, "b" to 2L), f.remoteSubTask.reorderCalls.single())
+        }
 }

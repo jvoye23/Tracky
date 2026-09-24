@@ -24,7 +24,7 @@ data class ProjectUi(
     val useLightTextColor: Boolean = false,
     val endDateTimeUtc: String?,
     val projectTasks: List<ProjectTaskUi>? = null,
-    val isPinned: Boolean = false
+    val isPinned: Boolean = false,
 ) {
     val totalDuration: String
         get() = formatDuration(totalDurationMillis.milliseconds)
@@ -43,7 +43,8 @@ data class ProjectUi(
         get() = projectTasks?.any { it.isTimerRunning || it.isAnySubTaskRunning } ?: false
 
     val allTasksDone: Boolean
-        get() = !projectTasks.isNullOrEmpty() &&
+        get() =
+            !projectTasks.isNullOrEmpty() &&
                 doneTaskCount == projectTasks.size
 
     val doneTaskCount: Int
@@ -70,7 +71,7 @@ data class ProjectTaskUi(
      * pausing is stop-then-start, so it would stop the other device's timer globally.
      * Overlaid from TimeManager, never stored.
      */
-    val isForeign: Boolean = false
+    val isForeign: Boolean = false,
 ) {
     val formattedDuration: String
         get() = formatDuration(durationMillis.milliseconds)
@@ -119,7 +120,7 @@ data class ProjectSubTaskUi(
     val isTimerRunning: Boolean,
     val isFinished: Boolean,
     /** See [ProjectTaskUi.isForeign]. */
-    val isForeign: Boolean = false
+    val isForeign: Boolean = false,
 ) {
     val formattedDuration: String
         get() = formatDuration(durationMillis.milliseconds)

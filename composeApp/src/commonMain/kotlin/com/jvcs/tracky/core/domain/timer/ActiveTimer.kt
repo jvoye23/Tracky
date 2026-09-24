@@ -32,7 +32,7 @@ data class ActiveTimer(
      * [com.jvcs.tracky.core.domain.device.DeviceIdProvider]; it is how a timer to adopt and display
      * is told apart from a crash to recover from.
      */
-    val startedByDeviceId: String?
+    val startedByDeviceId: String?,
 )
 
 /** Which table the open interval lives in. The wire spells these `task` and `sub_task`. */
@@ -52,5 +52,5 @@ data class StartActiveTimer(
     val parentSubTaskId: String?,
     val parentTaskIntervalId: String?,
     val startedAt: Instant,
-    val deviceId: String
+    val deviceId: String,
 )

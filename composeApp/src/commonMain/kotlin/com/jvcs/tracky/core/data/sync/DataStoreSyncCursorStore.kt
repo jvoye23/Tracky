@@ -14,9 +14,7 @@ import kotlinx.coroutines.flow.first
  * `deleteAllProjects()` being wrong about it — a cursor living in a table that logout truncates
  * would be cleared by accident rather than on purpose.
  */
-class DataStoreSyncCursorStore(
-    private val dataStore: DataStore<Preferences>
-) : SyncCursorStore {
+class DataStoreSyncCursorStore(private val dataStore: DataStore<Preferences>) : SyncCursorStore {
 
     private val cursorKey = longPreferencesKey(KEY_SYNC_CURSOR)
 

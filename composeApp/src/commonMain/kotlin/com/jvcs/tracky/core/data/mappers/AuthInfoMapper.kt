@@ -5,38 +5,34 @@ import com.jvcs.tracky.core.data.dto.UserSerializable
 import com.jvcs.tracky.core.domain.auth.AuthInfo
 import com.jvcs.tracky.core.domain.auth.User
 
-fun AuthInfoSerializable.toDomain(): AuthInfo {
-    return AuthInfo(
+fun AuthInfoSerializable.toDomain(): AuthInfo =
+    AuthInfo(
         accessToken = accessToken,
         refreshToken = refreshToken,
-        user = user.toDomain()
+        user = user.toDomain(),
     )
-}
 
-fun UserSerializable.toDomain(): User {
-    return User(
+fun UserSerializable.toDomain(): User =
+    User(
         id = id,
         email = email,
         username = username,
         hasVerifiedEmail = hasVerifiedEmail,
-        profilePictureUrl = profilePictureUrl
+        profilePictureUrl = profilePictureUrl,
     )
-}
 
-fun AuthInfo.toSerializable(): AuthInfoSerializable {
-    return AuthInfoSerializable(
+fun AuthInfo.toSerializable(): AuthInfoSerializable =
+    AuthInfoSerializable(
         accessToken = accessToken,
         refreshToken = refreshToken,
-        user = user.toSerializable()
+        user = user.toSerializable(),
     )
-}
 
-fun User.toSerializable(): UserSerializable {
-    return UserSerializable(
+fun User.toSerializable(): UserSerializable =
+    UserSerializable(
         id = id,
         email = email,
         username = username,
         hasVerifiedEmail = hasVerifiedEmail,
-        profilePictureUrl = profilePictureUrl
+        profilePictureUrl = profilePictureUrl,
     )
-}

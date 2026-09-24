@@ -12,16 +12,18 @@ import kotlinx.datetime.format.Padding
 import kotlin.time.Duration.Companion.milliseconds
 
 /** "Sat" — the abbreviated weekday, used whole in both the tiles and the footer. */
-private val weekdayFormat = LocalDate.Format {
-    dayOfWeek(DayOfWeekNames.ENGLISH_ABBREVIATED)
-}
+private val weekdayFormat =
+    LocalDate.Format {
+        dayOfWeek(DayOfWeekNames.ENGLISH_ABBREVIATED)
+    }
 
 /** "25.8" — zero-padded day, unpadded month, per [PerDayUi.dateLabel]. */
-private val dateLabelFormat = LocalDate.Format {
-    day()
-    chars(".")
-    monthNumber(Padding.NONE)
-}
+private val dateLabelFormat =
+    LocalDate.Format {
+        day()
+        chars(".")
+        monthNumber(Padding.NONE)
+    }
 
 /** How many active days the strip shows. Days with no tracked time never take a tile. */
 private const val MAX_ACTIVE_DAYS = 10
@@ -41,26 +43,28 @@ private const val MAX_ACTIVE_DAYS = 10
  * to draw, and the screen simply omits the card.
  */
 fun Project.toPerDayStripUi(timeZone: TimeZone): PerDayStripUi? {
-    val activeDays = countedDayIntervals(timeZone)
-        .groupingBy { it.date }
-        .fold(0L) { total, interval -> total + interval.durationMillis }
-        // A day whose intervals all came out zero-length banked nothing, so it is not active.
-        .filterValues { it > 0L }
-        .map { (date, millis) -> DayTotal(date, millis) }
-        .sortedBy { it.date }
-        .takeLast(MAX_ACTIVE_DAYS)
+    val activeDays =
+        countedDayIntervals(timeZone)
+            .groupingBy { it.date }
+            .fold(0L) { total, interval -> total + interval.durationMillis }
+            // A day whose intervals all came out zero-length banked nothing, so it is not active.
+            .filterValues { it > 0L }
+            .map { (date, millis) -> DayTotal(date, millis) }
+            .sortedBy { it.date }
+            .takeLast(MAX_ACTIVE_DAYS)
 
     if (activeDays.isEmpty()) return null
 
-    val days = activeDays.map { (date, millis) ->
-        PerDayUi(
-            date = date,
-            weekdayLabel = date.format(weekdayFormat),
-            dateLabel = date.format(dateLabelFormat),
-            formattedDuration = formatDurationHoursMinutesSeconds(millis.milliseconds),
-            trackedMillis = millis
-        )
-    }
+    val days =
+        activeDays.map { (date, millis) ->
+            PerDayUi(
+                date = date,
+                weekdayLabel = date.format(weekdayFormat),
+                dateLabel = date.format(dateLabelFormat),
+                formattedDuration = formatDurationHoursMinutesSeconds(millis.milliseconds),
+                trackedMillis = millis,
+            )
+        }
 
     // Over the visible window only: the footer names a day the eye can find in the strip, and that
     // day is the one rendered at full tint.
@@ -68,15 +72,12 @@ fun Project.toPerDayStripUi(timeZone: TimeZone): PerDayStripUi? {
 
     return PerDayStripUi(
         days = days,
-        busiestDayLabel = "${busiestDate.format(weekdayFormat)} ${busiestDate.format(dateLabelFormat)}"
+        busiestDayLabel = "${busiestDate.format(weekdayFormat)} ${busiestDate.format(dateLabelFormat)}",
     )
 }
 
 /** How much time one day collected. */
-private data class DayTotal(
-    val date: LocalDate,
-    val millis: Long
-)
+private data class DayTotal(val date: LocalDate, val millis: Long)
 
 /** Busiest first. Equal days go to the earlier one, which the eye reaches first. */
 private val busiestFirst = compareByDescending<DayTotal> { it.millis }.thenBy { it.date }

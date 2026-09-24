@@ -43,10 +43,7 @@ import tracky.composeapp.generated.resources.verify_your_email
 import tracky.composeapp.generated.resources.verify_your_email_desc
 
 @Composable
-fun RegisterSuccessScreenRoot(
-    viewModel: RegisterSuccessViewModel = koinViewModel(),
-    onLoginClick: () -> Unit
-) {
+fun RegisterSuccessScreenRoot(viewModel: RegisterSuccessViewModel = koinViewModel(), onLoginClick: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -70,7 +67,7 @@ fun RegisterSuccessScreenRoot(
                 else -> Unit
             }
             viewModel.onAction(action)
-        }
+        },
     )
 }
 
@@ -82,13 +79,14 @@ fun RegisterSuccessScreen(
 ) {
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        contentWindowInsets = WindowInsets.safeDrawing
+        contentWindowInsets = WindowInsets.safeDrawing,
     ) { paddingValues ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 28.dp, vertical = 32.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(horizontal = 28.dp, vertical = 32.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {

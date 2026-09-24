@@ -27,22 +27,23 @@ class ProjectTaskDtoTest {
 
     @Test
     fun decodesTheDocumentedServerResponse() {
-        val dto = json.decodeFromString<ProjectTaskDto>(
-            """
-            {
-              "id": "fe316e35-bd3f-4c6f-9d7d-23d6b6e8877e",
-              "title": "Work task",
-              "description": "Quarterly report",
-              "durationMillis": 3600000,
-              "startDateTimeUtc": "2026-03-28T15:16:40Z",
-              "endDateTimeUtc": null,
-              "isFinished": false,
-              "isTimerRunning": true,
-              "updatedAtUtc": "2026-03-28T15:16:40.112000000Z",
-              "intervals": []
-            }
-            """.trimIndent()
-        )
+        val dto =
+            json.decodeFromString<ProjectTaskDto>(
+                """
+                {
+                  "id": "fe316e35-bd3f-4c6f-9d7d-23d6b6e8877e",
+                  "title": "Work task",
+                  "description": "Quarterly report",
+                  "durationMillis": 3600000,
+                  "startDateTimeUtc": "2026-03-28T15:16:40Z",
+                  "endDateTimeUtc": null,
+                  "isFinished": false,
+                  "isTimerRunning": true,
+                  "updatedAtUtc": "2026-03-28T15:16:40.112000000Z",
+                  "intervals": []
+                }
+                """.trimIndent(),
+            )
 
         assertEquals("Work task", dto.title)
         assertEquals("Quarterly report", dto.description)
@@ -54,42 +55,48 @@ class ProjectTaskDtoTest {
         // GET /api/projects carries startedByDeviceId too, not just the delta feed. Handing the
         // nested intervals a hardcoded null here would blank the provenance of every interval on
         // every full pull - including the fallback pull a full resync triggers.
-        val dto = json.decodeFromString<ProjectTaskDto>(
-            """
-            {
-              "id": "fe316e35-bd3f-4c6f-9d7d-23d6b6e8877e",
-              "title": "Work task",
-              "startDateTimeUtc": "2026-03-28T15:16:40Z",
-              "intervals": [
+        val dto =
+            json.decodeFromString<ProjectTaskDto>(
+                """
                 {
-                  "id": "9c1f0b52-6a4e-4f0d-9d16-2b5b0f8c9a31",
-                  "parentTaskId": "fe316e35-bd3f-4c6f-9d7d-23d6b6e8877e",
+                  "id": "fe316e35-bd3f-4c6f-9d7d-23d6b6e8877e",
+                  "title": "Work task",
                   "startDateTimeUtc": "2026-03-28T15:16:40Z",
-                  "startedByDeviceId": "d41c7f90-0000-4000-8000-00000000000a"
+                  "intervals": [
+                    {
+                      "id": "9c1f0b52-6a4e-4f0d-9d16-2b5b0f8c9a31",
+                      "parentTaskId": "fe316e35-bd3f-4c6f-9d7d-23d6b6e8877e",
+                      "startDateTimeUtc": "2026-03-28T15:16:40Z",
+                      "startedByDeviceId": "d41c7f90-0000-4000-8000-00000000000a"
+                    }
+                  ]
                 }
-              ]
-            }
-            """.trimIndent()
-        )
+                """.trimIndent(),
+            )
 
         assertEquals(
             "d41c7f90-0000-4000-8000-00000000000a",
-            dto.toProjectTask("p1").intervals.single().startedByDeviceId
+            dto
+                .toProjectTask("p1")
+                .intervals
+                .single()
+                .startedByDeviceId,
         )
     }
 
     @Test
     fun fallsBackToDescriptionWhenTheDeploymentPredatesTheTitleField() {
         // A pre-1.6.0 server sends no title at all, and the title lives in description.
-        val dto = json.decodeFromString<ProjectTaskDto>(
-            """
-            {
-              "id": "fe316e35-bd3f-4c6f-9d7d-23d6b6e8877e",
-              "description": "Work task",
-              "startDateTimeUtc": "2026-03-28T15:16:40Z"
-            }
-            """.trimIndent()
-        )
+        val dto =
+            json.decodeFromString<ProjectTaskDto>(
+                """
+                {
+                  "id": "fe316e35-bd3f-4c6f-9d7d-23d6b6e8877e",
+                  "description": "Work task",
+                  "startDateTimeUtc": "2026-03-28T15:16:40Z"
+                }
+                """.trimIndent(),
+            )
 
         assertEquals("", dto.title)
         assertEquals("Work task", dto.toProjectTask("p1").title)
@@ -100,9 +107,11 @@ class ProjectTaskDtoTest {
 
     @Test
     fun serialisingATaskPutsTheTitleInTheTitleField() {
-        val task = json.decodeFromString<ProjectTaskDto>(
-            """{"id":"t1","title":"Work task","startDateTimeUtc":"2026-03-28T15:16:40Z"}"""
-        ).toProjectTask("p1")
+        val task =
+            json
+                .decodeFromString<ProjectTaskDto>(
+                    """{"id":"t1","title":"Work task","startDateTimeUtc":"2026-03-28T15:16:40Z"}""",
+                ).toProjectTask("p1")
 
         val encoded = json.encodeToString(task.toProjectTaskDto())
 
@@ -115,10 +124,12 @@ class ProjectTaskDtoTest {
     fun titleAndDescriptionBothSurviveARoundTrip() {
         // Since the local table gained its own title column, description is the task's *other*
         // text rather than a second copy of the title, and both have to survive a round trip.
-        val task = json.decodeFromString<ProjectTaskDto>(
-            """{"id":"t1","title":"Work task","description":"Quarterly report",""" +
-                """"startDateTimeUtc":"2026-03-28T15:16:40Z"}"""
-        ).toProjectTask("p1")
+        val task =
+            json
+                .decodeFromString<ProjectTaskDto>(
+                    """{"id":"t1","title":"Work task","description":"Quarterly report",""" +
+                        """"startDateTimeUtc":"2026-03-28T15:16:40Z"}""",
+                ).toProjectTask("p1")
 
         assertEquals("Work task", task.title)
         assertEquals("Quarterly report", task.description)
@@ -134,9 +145,11 @@ class ProjectTaskDtoTest {
 
     @Test
     fun theCreateBodyCarriesANonBlankTitle() {
-        val task = json.decodeFromString<ProjectTaskDto>(
-            """{"id":"t1","title":"Work task","startDateTimeUtc":"2026-03-28T15:16:40Z"}"""
-        ).toProjectTask("p1")
+        val task =
+            json
+                .decodeFromString<ProjectTaskDto>(
+                    """{"id":"t1","title":"Work task","startDateTimeUtc":"2026-03-28T15:16:40Z"}""",
+                ).toProjectTask("p1")
 
         val body: CreateProjectTaskRequest = task.toCreateProjectTaskRequest()
 

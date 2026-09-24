@@ -17,8 +17,9 @@ package com.jvcs.tracky.core.domain.sync
  * to the server because it is canonical.
  */
 fun serverWinsOnPull(localUpdatedAtEpochMs: Long?, serverUpdatedAtEpochMs: Long?): Boolean {
-    val localIsStrictlyNewer = localUpdatedAtEpochMs != null &&
-        (serverUpdatedAtEpochMs == null || localUpdatedAtEpochMs > serverUpdatedAtEpochMs)
+    val localIsStrictlyNewer =
+        localUpdatedAtEpochMs != null &&
+            (serverUpdatedAtEpochMs == null || localUpdatedAtEpochMs > serverUpdatedAtEpochMs)
     return !localIsStrictlyNewer
 }
 
@@ -49,11 +50,14 @@ fun serverWinsOnPull(localUpdatedAtEpochMs: Long?, serverUpdatedAtEpochMs: Long?
 fun serverWinsOnPullForInterval(
     localEndDateTimeEpochMs: Long?,
     serverEndDateTimeEpochMs: Long?,
-    hasPendingLocalPush: Boolean
-): Boolean = when {
-    // This device owes the server a change; its own state is newer by definition.
-    hasPendingLocalPush -> false
-    // Reopening a closed interval discards its banked duration.
-    localEndDateTimeEpochMs != null && serverEndDateTimeEpochMs == null -> false
-    else -> true
-}
+    hasPendingLocalPush: Boolean,
+): Boolean =
+    when {
+        // This device owes the server a change; its own state is newer by definition.
+        hasPendingLocalPush -> false
+
+        // Reopening a closed interval discards its banked duration.
+        localEndDateTimeEpochMs != null && serverEndDateTimeEpochMs == null -> false
+
+        else -> true
+    }

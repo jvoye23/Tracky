@@ -37,7 +37,6 @@ import tracky.composeapp.generated.resources.confirm
 import tracky.composeapp.generated.resources.create_new_project
 import tracky.composeapp.generated.resources.enter_new_title
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddNewProjectBottomSheet(
@@ -64,73 +63,84 @@ fun AddNewProjectBottomSheet(
 private fun SheetContent(
     modifier: Modifier = Modifier,
     state: ProjectOverviewState,
-    onAction: (ProjectOverviewAction) -> Unit
+    onAction: (ProjectOverviewAction) -> Unit,
 ) {
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(bottom = 32.dp)
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(bottom = 32.dp)
+                .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(
             modifier = Modifier.fillMaxWidth(),
             text = stringResource(Res.string.create_new_project),
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurface,
         )
         TextField(
             state = state.addProjectTextFieldState,
-            modifier = modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.background)
-                .onFocusChanged {
-                    it.isFocused
-                },
-            textStyle = MaterialTheme.typography.titleMedium.copy(
-                color = MaterialTheme.colorScheme.secondary
-            ),
+            modifier =
+                modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.background)
+                    .onFocusChanged {
+                        it.isFocused
+                    },
+            textStyle =
+                MaterialTheme.typography.titleMedium.copy(
+                    color = MaterialTheme.colorScheme.secondary,
+                ),
             placeholder = {
                 Text(
                     text = stringResource(Res.string.enter_new_title),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                        alpha = 0.7f
-                    ),
-                    modifier = Modifier.fillMaxWidth()
+                    color =
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                            alpha = 0.7f,
+                        ),
+                    modifier = Modifier.fillMaxWidth(),
                 )
             },
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Text
-            ),
+            keyboardOptions =
+                KeyboardOptions(
+                    keyboardType = KeyboardType.Text,
+                ),
             shape = RoundedCornerShape(50.dp),
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceDim,
-                focusedTextColor = MaterialTheme.colorScheme.primary,
-                unfocusedIndicatorColor = Color.Transparent,
-                focusedIndicatorColor = Color.Transparent
-            )
+            colors =
+                TextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceDim,
+                    focusedTextColor = MaterialTheme.colorScheme.primary,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    focusedIndicatorColor = Color.Transparent,
+                ),
         )
 
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Button(
                 enabled = state.addProjectTextFieldState.text != "",
                 modifier = Modifier.fillMaxWidth(),
                 contentPadding = PaddingValues(16.dp),
                 onClick = {
-                    onAction(ProjectOverviewAction.OnAddProjectClick(projectTitle = state.addProjectTextFieldState.text as String))
+                    onAction(
+                        ProjectOverviewAction.OnAddProjectClick(
+                            projectTitle = state.addProjectTextFieldState.text as String,
+                        ),
+                    )
                 },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    disabledContentColor = MaterialTheme.colorScheme.outline
-                )
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        disabledContentColor = MaterialTheme.colorScheme.outline,
+                    ),
             ) {
                 Text(
                     text = stringResource(Res.string.confirm),
@@ -141,17 +151,17 @@ private fun SheetContent(
     }
 }
 
-@Preview(showSystemUi = true, )
+@Preview(showSystemUi = true)
 @Composable
 private fun SheetContentPreview() {
     TrackyTheme {
         Column(
             modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.Center,
         ) {
             AddNewProjectBottomSheet(
                 state = ProjectOverviewState(),
-                onAction = {}
+                onAction = {},
             )
         }
     }

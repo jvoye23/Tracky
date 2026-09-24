@@ -52,76 +52,84 @@ class OfflineFirstActiveTimerRepository(
     private val syncScheduler: SyncScheduler,
     private val serverClock: ServerClock,
     private val timeProvider: TimeProvider,
-    private val applicationScope: CoroutineScope
+    private val applicationScope: CoroutineScope,
 ) : ActiveTimerRepository {
 
-    override suspend fun start(
-        taskInterval: TaskInterval,
-        subTaskInterval: SubTaskInterval?
-    ): EmptyResult<DataError> {
+    override suspend fun start(taskInterval: TaskInterval, subTaskInterval: SubTaskInterval?): EmptyResult<DataError> {
         val deviceId = deviceIdProvider.deviceId()
         // The inner row wins when there is one. Timing a subtask opens its parent task's interval
         // as well, but naming the task interval here would let another device stop the task while
         // this one still shows the subtask running — two devices disagreeing about what is timed.
-        val request = if (subTaskInterval != null) {
-            StartActiveTimer(
-                intervalId = subTaskInterval.subTaskIntervalId,
-                kind = ActiveTimerKind.SUB_TASK,
-                parentTaskId = taskInterval.parentTaskId,
-                parentSubTaskId = subTaskInterval.parentSubTaskId,
-                parentTaskIntervalId = taskInterval.intervalId,
-                startedAt = subTaskInterval.startDateTimeUtc,
-                deviceId = deviceId
-            )
-        } else {
-            StartActiveTimer(
-                intervalId = taskInterval.intervalId,
-                kind = ActiveTimerKind.TASK,
-                parentTaskId = taskInterval.parentTaskId,
-                parentSubTaskId = null,
-                parentTaskIntervalId = null,
-                startedAt = taskInterval.startDateTimeUtc,
-                deviceId = deviceId
-            )
-        }
+        val request =
+            if (subTaskInterval != null) {
+                StartActiveTimer(
+                    intervalId = subTaskInterval.subTaskIntervalId,
+                    kind = ActiveTimerKind.SUB_TASK,
+                    parentTaskId = taskInterval.parentTaskId,
+                    parentSubTaskId = subTaskInterval.parentSubTaskId,
+                    parentTaskIntervalId = taskInterval.intervalId,
+                    startedAt = subTaskInterval.startDateTimeUtc,
+                    deviceId = deviceId,
+                )
+            } else {
+                StartActiveTimer(
+                    intervalId = taskInterval.intervalId,
+                    kind = ActiveTimerKind.TASK,
+                    parentTaskId = taskInterval.parentTaskId,
+                    parentSubTaskId = null,
+                    parentTaskIntervalId = null,
+                    startedAt = taskInterval.startDateTimeUtc,
+                    deviceId = deviceId,
+                )
+            }
 
         val sentAt = timeProvider.nowInstant
         return when (val result = remoteActiveTimerDataSource.start(request)) {
-            is Result.Success -> settle(result.data, midpoint(sentAt, timeProvider.nowInstant))
-            is Result.Error -> fallBackToTheQueue(
-                intervalId = request.intervalId,
-                kind = request.kind,
-                // A subtask interval hangs off its subtask, not the task, and the drain resolves
-                // the rest of the ancestry from local rows.
-                parentId = request.parentSubTaskId ?: request.parentTaskId,
-                operationType = PendingSyncOperation.OP_CREATE,
-                error = result.error
-            )
+            is Result.Success -> {
+                settle(result.data, midpoint(sentAt, timeProvider.nowInstant))
+            }
+
+            is Result.Error -> {
+                fallBackToTheQueue(
+                    intervalId = request.intervalId,
+                    kind = request.kind,
+                    // A subtask interval hangs off its subtask, not the task, and the drain resolves
+                    // the rest of the ancestry from local rows.
+                    parentId = request.parentSubTaskId ?: request.parentTaskId,
+                    operationType = PendingSyncOperation.OP_CREATE,
+                    error = result.error,
+                )
+            }
         }
     }
 
     override suspend fun stop(
         intervalId: String,
         kind: ActiveTimerKind,
-        endedAt: Instant
+        endedAt: Instant,
     ): EmptyResult<DataError> = stopAt(intervalId, kind, endedAt, timeProvider.nowInstant)
 
     private suspend fun stopAt(
         intervalId: String,
         kind: ActiveTimerKind,
         endedAt: Instant,
-        sentAt: Instant
+        sentAt: Instant,
     ): EmptyResult<DataError> =
         when (val result = remoteActiveTimerDataSource.stop(intervalId, endedAt)) {
-            is Result.Success -> settle(result.data, midpoint(sentAt, timeProvider.nowInstant))
-            is Result.Error -> fallBackToTheQueue(
-                intervalId = intervalId,
-                kind = kind,
-                // An UPDATE re-reads the row when it drains, so the stored parent goes unused.
-                parentId = null,
-                operationType = PendingSyncOperation.OP_UPDATE,
-                error = result.error
-            )
+            is Result.Success -> {
+                settle(result.data, midpoint(sentAt, timeProvider.nowInstant))
+            }
+
+            is Result.Error -> {
+                fallBackToTheQueue(
+                    intervalId = intervalId,
+                    kind = kind,
+                    // An UPDATE re-reads the row when it drains, so the stored parent goes unused.
+                    parentId = null,
+                    operationType = PendingSyncOperation.OP_UPDATE,
+                    error = result.error,
+                )
+            }
         }
 
     /**
@@ -135,9 +143,9 @@ class OfflineFirstActiveTimerRepository(
      * the guess `StrandedTimerReconciler` exists to refuse. A pull carries the real row, so that is
      * what is asked for.
      */
+
     /** The instant halfway between a request leaving and its answer arriving. */
-    private fun midpoint(sentAt: Instant, receivedAt: Instant): Instant =
-        sentAt + (receivedAt - sentAt) / 2
+    private fun midpoint(sentAt: Instant, receivedAt: Instant): Instant = sentAt + (receivedAt - sentAt) / 2
 
     private suspend fun settle(change: ActiveTimerChange, receivedAt: Instant): EmptyResult<DataError> {
         // receivedAt, not "now": settle() runs after the round trip, so passing the current
@@ -145,10 +153,13 @@ class OfflineFirstActiveTimerRepository(
         change.serverNow?.let { serverClock.observe(it, receivedAt) }
 
         return when (change) {
-            is ActiveTimerChange.Applied -> localProjectDataSource.applyTimerEcho(
-                taskIntervals = change.touchedTaskIntervals,
-                subTaskIntervals = change.touchedSubTaskIntervals
-            ).asEmptyDataResult()
+            is ActiveTimerChange.Applied -> {
+                localProjectDataSource
+                    .applyTimerEcho(
+                        taskIntervals = change.touchedTaskIntervals,
+                        subTaskIntervals = change.touchedSubTaskIntervals,
+                    ).asEmptyDataResult()
+            }
 
             is ActiveTimerChange.Rejected -> {
                 // Deliberately not surfaced as an error: the user's action was understood, it just
@@ -170,22 +181,24 @@ class OfflineFirstActiveTimerRepository(
         kind: ActiveTimerKind,
         parentId: String?,
         operationType: String,
-        error: DataError.Remote
+        error: DataError.Remote,
     ): EmptyResult<DataError> {
         if (!error.isTransient() && !error.isMissingOrForbidden()) {
             return Result.Error(error)
         }
-        val entityType = when (kind) {
-            ActiveTimerKind.TASK -> PendingSyncOperation.ENTITY_INTERVAL
-            ActiveTimerKind.SUB_TASK -> PendingSyncOperation.ENTITY_SUBTASK_INTERVAL
-        }
-        val queued = pendingSyncDataSource.enqueue(
-            entityId = intervalId,
-            entityType = entityType,
-            operationType = operationType,
-            parentEntityId = parentId,
-            createdAt = timeProvider.nowInstant
-        )
+        val entityType =
+            when (kind) {
+                ActiveTimerKind.TASK -> PendingSyncOperation.ENTITY_INTERVAL
+                ActiveTimerKind.SUB_TASK -> PendingSyncOperation.ENTITY_SUBTASK_INTERVAL
+            }
+        val queued =
+            pendingSyncDataSource.enqueue(
+                entityId = intervalId,
+                entityType = entityType,
+                operationType = operationType,
+                parentEntityId = parentId,
+                createdAt = timeProvider.nowInstant,
+            )
         if (queued is Result.Success) {
             applicationScope.launch { syncScheduler.schedulePeriodicSync() }.join()
         }

@@ -37,10 +37,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
-import com.jvcs.tracky.features.project.presentation.models.ProjectUi
 import com.jvcs.tracky.design_system.theme.TrackyTheme
 import com.jvcs.tracky.design_system.theme.timerStyle
+import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
+import com.jvcs.tracky.features.project.presentation.models.ProjectUi
 import kotlinx.datetime.LocalDateTime
 import org.jetbrains.compose.resources.stringResource
 import tracky.composeapp.generated.resources.Res
@@ -63,72 +63,78 @@ fun ProjectCard(
     onReorderDragStart: () -> Unit = {},
     onReorderDrag: (dragAmountY: Float) -> Unit = {},
     onReorderDragEnd: () -> Unit = {},
-    onReorderDragCancel: () -> Unit = {}
+    onReorderDragCancel: () -> Unit = {},
 ) {
     val contentColor = if (projectUi.useLightTextColor) Color.White else Color.Black
     val cardShape = CardDefaults.elevatedShape
-    val selectionBorder = if (isSelected) {
-        Modifier.border(
-            width = 2.dp,
-            color = MaterialTheme.colorScheme.primary,
-            shape = cardShape
-        )
-    } else {
-        Modifier
-    }
+    val selectionBorder =
+        if (isSelected) {
+            Modifier.border(
+                width = 2.dp,
+                color = MaterialTheme.colorScheme.primary,
+                shape = cardShape,
+            )
+        } else {
+            Modifier
+        }
 
     ElevatedCard(
-        modifier = modifier
-            .combinedClickable(
-                onLongClick = onLongClick,
-                onClick = {
-                    if (isEditModeActive) {
-                        onToggleSelection()
+        modifier =
+            modifier
+                .combinedClickable(
+                    onLongClick = onLongClick,
+                    onClick = {
+                        if (isEditModeActive) {
+                            onToggleSelection()
+                        } else {
+                            onClick()
+                        }
+                    },
+                )
+                // Long-press also arms a reorder drag (Custom sort only). onLongClick above still enters
+                // edit mode; the drag's first movement clears it (onReorderDrag). A long-press without
+                // movement leaves the card in edit mode, exactly like before.
+                .then(
+                    if (isReorderable) {
+                        Modifier.pointerInput(projectUi.projectId) {
+                            detectDragGesturesAfterLongPress(
+                                onDragStart = { onReorderDragStart() },
+                                onDrag = { change, dragAmount ->
+                                    change.consume()
+                                    onReorderDrag(dragAmount.y)
+                                },
+                                onDragEnd = { onReorderDragEnd() },
+                                onDragCancel = { onReorderDragCancel() },
+                            )
+                        }
                     } else {
-                        onClick()
-                    }
-                }
-            )
-            // Long-press also arms a reorder drag (Custom sort only). onLongClick above still enters
-            // edit mode; the drag's first movement clears it (onReorderDrag). A long-press without
-            // movement leaves the card in edit mode, exactly like before.
-            .then(
-                if (isReorderable) {
-                    Modifier.pointerInput(projectUi.projectId) {
-                        detectDragGesturesAfterLongPress(
-                            onDragStart = { onReorderDragStart() },
-                            onDrag = { change, dragAmount ->
-                                change.consume()
-                                onReorderDrag(dragAmount.y)
-                            },
-                            onDragEnd = { onReorderDragEnd() },
-                            onDragCancel = { onReorderDragCancel() }
-                        )
-                    }
-                } else Modifier
-            )
-            .then(selectionBorder),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = projectUi.color ?: MaterialTheme.colorScheme.surfaceContainerLow
-        ),
-        elevation = CardDefaults.elevatedCardElevation(
-            defaultElevation = 6.dp
-        )
+                        Modifier
+                    },
+                ).then(selectionBorder),
+        colors =
+            CardDefaults.elevatedCardColors(
+                containerColor = projectUi.color ?: MaterialTheme.colorScheme.surfaceContainerLow,
+            ),
+        elevation =
+            CardDefaults.elevatedCardElevation(
+                defaultElevation = 6.dp,
+            ),
     ) {
         Column(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth()
+            modifier =
+                Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth(),
         ) {
             // HEADER: Title & Status
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 if (isEditModeActive) {
                     Checkbox(
-                        checked = isSelected ,
+                        checked = isSelected,
                         onCheckedChange = { onToggleSelection() },
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -140,7 +146,7 @@ fun ProjectCard(
                     color = contentColor,
                     modifier = Modifier.weight(1f),
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
 
                 if (projectUi.anyTimerRunning || projectUi.allTasksDone) {
@@ -148,7 +154,7 @@ fun ProjectCard(
 
                     ProjectStatusBadge(
                         isActive = projectUi.anyTimerRunning,
-                        useLightTextColor = projectUi.useLightTextColor
+                        useLightTextColor = projectUi.useLightTextColor,
                     )
                 }
             }
@@ -161,7 +167,7 @@ fun ProjectCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = contentColor.copy(alpha = 0.7f),
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -170,19 +176,19 @@ fun ProjectCard(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(32.dp)
+                horizontalArrangement = Arrangement.spacedBy(32.dp),
             ) {
                 MetaInfoStackedItem(
                     label = stringResource(Res.string.start_date),
                     icon = Icons.Rounded.CalendarToday,
                     value = projectUi.startDateTimeUtc,
-                    contentColor = contentColor
+                    contentColor = contentColor,
                 )
                 MetaInfoStackedItem(
                     label = stringResource(Res.string.duration),
                     icon = Icons.Rounded.Timer,
                     value = projectUi.totalProjectDuration,
-                    contentColor = contentColor
+                    contentColor = contentColor,
                 )
             }
         }
@@ -191,34 +197,39 @@ fun ProjectCard(
 
 @Composable
 private fun ProjectStatusBadge(isActive: Boolean, useLightTextColor: Boolean) {
-    val containerColor = if (isActive) {
-        if (useLightTextColor) Color.White.copy(alpha = 0.2f) else MaterialTheme.colorScheme.primaryContainer
-    } else {
-        if (useLightTextColor) Color.White.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surfaceVariant
-    }
-    val contentColor = if (useLightTextColor) Color.White else {
-        if (isActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-    }
+    val containerColor =
+        if (isActive) {
+            if (useLightTextColor) Color.White.copy(alpha = 0.2f) else MaterialTheme.colorScheme.primaryContainer
+        } else {
+            if (useLightTextColor) Color.White.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surfaceVariant
+        }
+    val contentColor =
+        if (useLightTextColor) {
+            Color.White
+        } else {
+            if (isActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+        }
     val icon = if (isActive) Icons.Rounded.PlayArrow else Icons.Rounded.Check
     val label = if (isActive) stringResource(Res.string.in_progress) else stringResource(Res.string.done)
 
     Row(
-        modifier = Modifier
-            .background(color = containerColor, shape = MaterialTheme.shapes.small)
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+        modifier =
+            Modifier
+                .background(color = containerColor, shape = MaterialTheme.shapes.small)
+                .padding(horizontal = 8.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             modifier = Modifier.size(14.dp),
-            tint = contentColor
+            tint = contentColor,
         )
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
-            color = contentColor
+            color = contentColor,
         )
     }
 }
@@ -228,37 +239,39 @@ private fun MetaInfoStackedItem(
     label: String,
     icon: ImageVector,
     value: String,
-    contentColor: Color
+    contentColor: Color,
 ) {
     Column(
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         // Top Label (e.g., "START DATE")
         Text(
             text = label.uppercase(),
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.sp // Adds the tracking-wider look from the design
-            ),
-            color = contentColor.copy(alpha = 0.7f)
+            style =
+                MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp, // Adds the tracking-wider look from the design
+                ),
+            color = contentColor.copy(alpha = 0.7f),
         )
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
                 modifier = Modifier.size(16.dp),
-                tint = contentColor
+                tint = contentColor,
             )
             Text(
                 text = value,
-                style = MaterialTheme.typography.timerStyle.copy(
-                    fontSize = 15.sp
-                ),
-                color = contentColor
+                style =
+                    MaterialTheme.typography.timerStyle.copy(
+                        fontSize = 15.sp,
+                    ),
+                color = contentColor,
             )
         }
     }
@@ -267,106 +280,113 @@ private fun MetaInfoStackedItem(
 @Preview(showBackground = true)
 @Composable
 fun ProjectCardPreview() {
-    TrackyTheme  {
+    TrackyTheme {
         Surface(
             modifier = Modifier.padding(16.dp),
-            color = MaterialTheme.colorScheme.surface
+            color = MaterialTheme.colorScheme.surface,
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 // Timer running -> "In Progress" badge
                 ProjectCard(
-                    projectUi = ProjectUi(
-                        projectId = "1",
-                        title = "Running Project",
-                        description = "Description of the project",
-                        color = Color.Cyan,
-                        totalDurationMillis = 3_600_000L,
-                        startDateTimeUtc = LocalDateTime(2025, 12, 1, 10, 0,0).toString(),
-                        isFinished = false,
-                        endDateTimeUtc = null,
-                        projectTasks = listOf(
-                            ProjectTaskUi(
-                                projectTaskId = "t1",
-                                title = "Task 1",
-                                description = null,
-                                durationMillis = 3_600_000L,
-                                formattedStateDateTime = "10:00",
-                                formattedEndDateTimeUtc = "",
-                                isTimerRunning = true,
-                                subTasks = emptyList(),
-                                isFinished = false
-                            )
-                        )
-                    )
+                    projectUi =
+                        ProjectUi(
+                            projectId = "1",
+                            title = "Running Project",
+                            description = "Description of the project",
+                            color = Color.Cyan,
+                            totalDurationMillis = 3_600_000L,
+                            startDateTimeUtc = LocalDateTime(2025, 12, 1, 10, 0, 0).toString(),
+                            isFinished = false,
+                            endDateTimeUtc = null,
+                            projectTasks =
+                                listOf(
+                                    ProjectTaskUi(
+                                        projectTaskId = "t1",
+                                        title = "Task 1",
+                                        description = null,
+                                        durationMillis = 3_600_000L,
+                                        formattedStateDateTime = "10:00",
+                                        formattedEndDateTimeUtc = "",
+                                        isTimerRunning = true,
+                                        subTasks = emptyList(),
+                                        isFinished = false,
+                                    ),
+                                ),
+                        ),
                 )
                 // All tasks done -> "Done" badge
                 ProjectCard(
-                    projectUi = ProjectUi(
-                        projectId = "2",
-                        title = "Completed Project",
-                        description = "Description of the project",
-                        color = Color.Blue,
-                        totalDurationMillis = 3_600_000L,
-                        startDateTimeUtc = LocalDateTime(2025, 12, 1, 10, 0,0).toString(),
-                        isFinished = true,
-                        endDateTimeUtc = null,
-                        projectTasks = listOf(
-                            ProjectTaskUi(
-                                projectTaskId = "t1",
-                                title = "Task 1",
-                                description = null,
-                                durationMillis = 3_600_000L,
-                                formattedStateDateTime = "10:00",
-                                formattedEndDateTimeUtc = "11:00",
-                                isTimerRunning = false,
-                                subTasks = emptyList(),
-                                isFinished = false
-                            )
-                        )
-                    )
+                    projectUi =
+                        ProjectUi(
+                            projectId = "2",
+                            title = "Completed Project",
+                            description = "Description of the project",
+                            color = Color.Blue,
+                            totalDurationMillis = 3_600_000L,
+                            startDateTimeUtc = LocalDateTime(2025, 12, 1, 10, 0, 0).toString(),
+                            isFinished = true,
+                            endDateTimeUtc = null,
+                            projectTasks =
+                                listOf(
+                                    ProjectTaskUi(
+                                        projectTaskId = "t1",
+                                        title = "Task 1",
+                                        description = null,
+                                        durationMillis = 3_600_000L,
+                                        formattedStateDateTime = "10:00",
+                                        formattedEndDateTimeUtc = "11:00",
+                                        isTimerRunning = false,
+                                        subTasks = emptyList(),
+                                        isFinished = false,
+                                    ),
+                                ),
+                        ),
                 )
                 // Neither running nor all done -> no badge
                 ProjectCard(
-                    projectUi = ProjectUi(
-                        projectId = "3",
-                        title = "Idle Project",
-                        description = "Description of the project",
-                        color = Color.Yellow,
-                        totalDurationMillis = 3_600_000L,
-                        startDateTimeUtc = LocalDateTime(2025, 12, 1, 10, 0,0).toString(),
-                        isFinished = false,
-                        endDateTimeUtc = null,
-                        projectTasks = listOf(
-                            ProjectTaskUi(
-                                projectTaskId = "t1",
-                                title = "Task 1",
-                                description = null,
-                                durationMillis = 3_600_000L,
-                                formattedStateDateTime = "10:00",
-                                formattedEndDateTimeUtc = "",
-                                isTimerRunning = false,
-                                subTasks = emptyList(),
-                                isFinished = false
-                            )
+                    projectUi =
+                        ProjectUi(
+                            projectId = "3",
+                            title = "Idle Project",
+                            description = "Description of the project",
+                            color = Color.Yellow,
+                            totalDurationMillis = 3_600_000L,
+                            startDateTimeUtc = LocalDateTime(2025, 12, 1, 10, 0, 0).toString(),
+                            isFinished = false,
+                            endDateTimeUtc = null,
+                            projectTasks =
+                                listOf(
+                                    ProjectTaskUi(
+                                        projectTaskId = "t1",
+                                        title = "Task 1",
+                                        description = null,
+                                        durationMillis = 3_600_000L,
+                                        formattedStateDateTime = "10:00",
+                                        formattedEndDateTimeUtc = "",
+                                        isTimerRunning = false,
+                                        subTasks = emptyList(),
+                                        isFinished = false,
+                                    ),
+                                ),
+                            useLightTextColor = false,
                         ),
-                        useLightTextColor = false
-                    ),
                     isSelected = false,
-                    isEditModeActive = true
+                    isEditModeActive = true,
                 )
                 // No tasks -> no badge
                 ProjectCard(
-                    projectUi = ProjectUi(
-                        projectId = "4",
-                        title = "Empty Project",
-                        description = "Description of the project",
-                        color = Color.Magenta,
-                        totalDurationMillis = 3_600_000L,
-                        startDateTimeUtc = LocalDateTime(2025, 12, 1, 10, 0,0).toString(),
-                        isFinished = false,
-                        endDateTimeUtc = null,
-                        useLightTextColor = true
-                    )
+                    projectUi =
+                        ProjectUi(
+                            projectId = "4",
+                            title = "Empty Project",
+                            description = "Description of the project",
+                            color = Color.Magenta,
+                            totalDurationMillis = 3_600_000L,
+                            startDateTimeUtc = LocalDateTime(2025, 12, 1, 10, 0, 0).toString(),
+                            isFinished = false,
+                            endDateTimeUtc = null,
+                            useLightTextColor = true,
+                        ),
                 )
             }
         }

@@ -18,7 +18,7 @@ data class ProjectWithTaskTreeEntity(
     @Relation(
         entity = ProjectTaskEntity::class,
         parentColumn = "projectId",
-        entityColumn = "parentProjectId"
+        entityColumn = "parentProjectId",
     )
-    val projectTasks: List<TaskWithSubTasks>
+    val projectTasks: List<TaskWithSubTasks>,
 )

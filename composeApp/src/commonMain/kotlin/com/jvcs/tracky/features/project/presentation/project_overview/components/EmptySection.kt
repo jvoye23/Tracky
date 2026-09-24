@@ -22,35 +22,36 @@ import tracky.composeapp.generated.resources.tracky_icon
 fun EmptySection(
     title: String,
     description: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val configuration = currentDeviceConfiguration()
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Image(
             painter = painterResource(Res.drawable.tracky_icon),
             contentDescription = title,
-            modifier = Modifier.size(
-                if(configuration == DeviceConfiguration.MOBILE_LANDSCAPE) {
-                    100.dp
-                } else {
-                    200.dp
-                }
-            )
+            modifier =
+                Modifier.size(
+                    if (configuration == DeviceConfiguration.MOBILE_LANDSCAPE) {
+                        100.dp
+                    } else {
+                        200.dp
+                    },
+                ),
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = title,
             style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.primary
+            color = MaterialTheme.colorScheme.primary,
         )
         Text(
             text = description,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground
+            color = MaterialTheme.colorScheme.onBackground,
         )
     }
 }

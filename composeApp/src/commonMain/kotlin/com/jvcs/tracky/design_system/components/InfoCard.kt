@@ -1,15 +1,15 @@
 package com.jvcs.tracky.design_system.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -36,19 +36,23 @@ fun InfoCard(
     icon: ImageVector,
     label: String,
     value: String,
-    content: @Composable ColumnScope.() -> Unit = {}
+    content: @Composable ColumnScope.() -> Unit = {},
 ) {
     Surface(
         modifier = modifier,
         color = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, Color.Black.copy(alpha = 0.03f))
+        border = BorderStroke(1.dp, Color.Black.copy(alpha = 0.03f)),
     ) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(icon, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.outline)
                 Spacer(modifier = Modifier.width(6.dp))
-                Text(label.uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                Text(
+                    label.uppercase(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.outline,
+                )
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(value, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
@@ -69,7 +73,7 @@ private fun InfoCardPairPreview() {
         Surface(color = MaterialTheme.colorScheme.surfaceContainerLow) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 InfoCard(Modifier.weight(1f), Icons.Outlined.DateRange, "Busiest day", "Tue 08")
                 InfoCard(Modifier.weight(1f), Icons.Outlined.Schedule, "This month", "20:08")
@@ -86,7 +90,7 @@ private fun InfoCardFontScalePreview() {
         Surface(color = MaterialTheme.colorScheme.surfaceContainerLow) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 InfoCard(Modifier.weight(1f), Icons.Outlined.DateRange, "Busiest day", "Tue 08")
                 InfoCard(Modifier.weight(1f), Icons.Outlined.Schedule, "This month", "20:08")

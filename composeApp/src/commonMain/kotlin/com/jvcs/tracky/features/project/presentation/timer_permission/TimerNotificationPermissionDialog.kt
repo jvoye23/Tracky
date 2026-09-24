@@ -23,7 +23,7 @@ import tracky.composeapp.generated.resources.timer_notification_permission_title
 @Composable
 fun TimerNotificationPermissionDialog(
     onAction: (TimerNotificationPermissionAction) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     AlertDialog(
         modifier = modifier,
@@ -39,7 +39,7 @@ fun TimerNotificationPermissionDialog(
             TextButton(onClick = { onAction(TimerNotificationPermissionAction.OnOpenAppSettings) }) {
                 Text(text = stringResource(Res.string.timer_notification_permission_open_settings))
             }
-        }
+        },
     )
 }
 

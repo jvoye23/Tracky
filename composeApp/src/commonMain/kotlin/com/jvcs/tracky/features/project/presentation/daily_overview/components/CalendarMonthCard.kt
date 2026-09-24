@@ -52,8 +52,8 @@ import kotlinx.datetime.format.DayOfWeekNames
 import org.jetbrains.compose.resources.stringResource
 import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.calendar_intensity_less
-import tracky.composeapp.generated.resources.calendar_jump_to_today
 import tracky.composeapp.generated.resources.calendar_intensity_more
+import tracky.composeapp.generated.resources.calendar_jump_to_today
 import tracky.composeapp.generated.resources.calendar_next_month
 import tracky.composeapp.generated.resources.calendar_previous_month
 import tracky.composeapp.generated.resources.calendar_select_date_title
@@ -81,7 +81,7 @@ fun CalendarMonthCard(
     projectColor: Color,
     onDateSelected: (LocalDate) -> Unit,
     onMonthChange: (Int) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     if (months.isEmpty()) return
     val index = currentIndex.coerceIn(months.indices)
@@ -124,7 +124,7 @@ fun CalendarMonthCard(
         modifier = modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, Color.Black.copy(alpha = 0.03f))
+        border = BorderStroke(1.dp, Color.Black.copy(alpha = 0.03f)),
     ) {
         Column(modifier = Modifier.padding(vertical = 12.dp)) {
             MonthHeader(
@@ -137,7 +137,7 @@ fun CalendarMonthCard(
                 onNextMonth = { onMonthChange(displayedIndex + 1) },
                 canGoBack = displayedIndex > 0,
                 canGoForward = displayedIndex < months.lastIndex,
-                modifier = Modifier.padding(horizontal = 8.dp)
+                modifier = Modifier.padding(horizontal = 8.dp),
             )
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -150,12 +150,14 @@ fun CalendarMonthCard(
                     onYearSelected = { year ->
                         // Land on the same month of that year when it exists, so picking a year
                         // does not silently move the user to January.
-                        val target = months.indexOfFirst {
-                            it.yearMonth.year == year && it.yearMonth.month == month.yearMonth.month
-                        }.takeIf { it >= 0 } ?: months.indexOfFirst { it.yearMonth.year == year }
+                        val target =
+                            months
+                                .indexOfFirst {
+                                    it.yearMonth.year == year && it.yearMonth.month == month.yearMonth.month
+                                }.takeIf { it >= 0 } ?: months.indexOfFirst { it.yearMonth.year == year }
                         if (target >= 0) onMonthChange(target)
                         isYearPickerOpen = false
-                    }
+                    },
                 )
             } else {
                 WeekdayHeaderRow(modifier = Modifier.padding(horizontal = 12.dp))
@@ -168,7 +170,7 @@ fun CalendarMonthCard(
                         selectedDate = selectedDate,
                         projectColor = projectColor,
                         onDateSelected = onDateSelected,
-                        modifier = Modifier.padding(horizontal = 12.dp)
+                        modifier = Modifier.padding(horizontal = 12.dp),
                     )
                 }
             }
@@ -177,7 +179,7 @@ fun CalendarMonthCard(
 
             MonthFooter(
                 projectColor = projectColor,
-                modifier = Modifier.padding(horizontal = 14.dp)
+                modifier = Modifier.padding(horizontal = 14.dp),
             )
         }
     }
@@ -201,14 +203,14 @@ private fun MonthHeader(
     onNextMonth: () -> Unit,
     canGoBack: Boolean,
     canGoForward: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
             text = stringResource(Res.string.calendar_select_date_title),
             modifier = Modifier.padding(start = 8.dp),
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.outline
+            color = MaterialTheme.colorScheme.outline,
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -220,12 +222,12 @@ private fun MonthHeader(
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
             IconButton(onClick = onJumpToToday ?: {}, enabled = onJumpToToday != null) {
                 Icon(
                     imageVector = Icons.Outlined.Today,
-                    contentDescription = stringResource(Res.string.calendar_jump_to_today)
+                    contentDescription = stringResource(Res.string.calendar_jump_to_today),
                 )
             }
         }
@@ -234,21 +236,22 @@ private fun MonthHeader(
 
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable(onClick = onToggleYearPicker)
-                    .padding(start = 8.dp, top = 4.dp, bottom = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
+                modifier =
+                    Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable(onClick = onToggleYearPicker)
+                        .padding(start = 8.dp, top = 4.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = month.monthLabel,
                     style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 Icon(
                     imageVector = if (isYearPickerOpen) Icons.Filled.ArrowDropUp else Icons.Filled.ArrowDropDown,
                     contentDescription = stringResource(Res.string.calendar_select_year),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
@@ -257,13 +260,13 @@ private fun MonthHeader(
             IconButton(onClick = onPreviousMonth, enabled = canGoBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                    contentDescription = stringResource(Res.string.calendar_previous_month)
+                    contentDescription = stringResource(Res.string.calendar_previous_month),
                 )
             }
             IconButton(onClick = onNextMonth, enabled = canGoForward) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = stringResource(Res.string.calendar_next_month)
+                    contentDescription = stringResource(Res.string.calendar_next_month),
                 )
             }
         }
@@ -275,7 +278,7 @@ private fun WeekdayHeaderRow(modifier: Modifier = Modifier) {
     Row(
         // Decorative: every cell below already announces its own date and duration.
         modifier = modifier.fillMaxWidth().clearAndSetSemantics { },
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         // Monday-first, per the design's M T W T F S S header.
         DayOfWeekNames.ENGLISH_ABBREVIATED.names.forEach { name ->
@@ -284,23 +287,20 @@ private fun WeekdayHeaderRow(modifier: Modifier = Modifier) {
                 modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.outline,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
             )
         }
     }
 }
 
 @Composable
-private fun MonthFooter(
-    projectColor: Color,
-    modifier: Modifier = Modifier
-) {
+private fun MonthFooter(projectColor: Color, modifier: Modifier = Modifier) {
     // Only the key for the tints above. The month's busiest day and its total are statistics
     // rather than parts of the calendar control, so they live in their own cards on the screen.
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.End,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         IntensityLegend(projectColor = projectColor)
     }
@@ -312,12 +312,12 @@ private fun IntensityLegend(projectColor: Color, modifier: Modifier = Modifier) 
         // A visual key for the tints above; nothing for a screen reader to announce.
         modifier = modifier.clearAndSetSemantics { },
         horizontalArrangement = Arrangement.spacedBy(3.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = stringResource(Res.string.calendar_intensity_less),
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.outline
+            color = MaterialTheme.colorScheme.outline,
         )
         LegendSwatch(MaterialTheme.colorScheme.surfaceVariant)
         LegendSwatch(projectColor.copy(alpha = MIN_INTENSITY))
@@ -326,7 +326,7 @@ private fun IntensityLegend(projectColor: Color, modifier: Modifier = Modifier) 
         Text(
             text = stringResource(Res.string.calendar_intensity_more),
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.outline
+            color = MaterialTheme.colorScheme.outline,
         )
     }
 }
@@ -352,21 +352,22 @@ private fun CardPreviewContainer(content: @Composable () -> Unit) {
 }
 
 /** August and September 2026, so the pager and the year picker both have somewhere to go. */
-private fun previewMonths(): List<CalendarMonthUi> = listOf(
-    previewCalendarMonth().copy(
-        yearMonth = YearMonth(2026, 8),
-        monthLabel = "August 2026",
-        monthTotalLabel = "12:40",
-        busiestDayLabel = "Mon 24"
-    ),
-    previewCalendarMonth()
-)
+private fun previewMonths(): List<CalendarMonthUi> =
+    listOf(
+        previewCalendarMonth().copy(
+            yearMonth = YearMonth(2026, 8),
+            monthLabel = "August 2026",
+            monthTotalLabel = "12:40",
+            busiestDayLabel = "Mon 24",
+        ),
+        previewCalendarMonth(),
+    )
 
 @Composable
 private fun PreviewCard(
     months: List<CalendarMonthUi> = previewMonths(),
     currentIndex: Int = 1,
-    projectColor: Color = PreviewProjectColor
+    projectColor: Color = PreviewProjectColor,
 ) {
     CalendarMonthCard(
         months = months,
@@ -375,7 +376,7 @@ private fun PreviewCard(
         selectedDateLabel = "Sep 8, 2026",
         projectColor = projectColor,
         onDateSelected = {},
-        onMonthChange = {}
+        onMonthChange = {},
     )
 }
 
@@ -391,11 +392,12 @@ private fun CalendarMonthCardDefaultPreview() {
 private fun CalendarMonthCardEmptyPreview() {
     CardPreviewContainer {
         PreviewCard(
-            months = listOf(
-                previewCalendarMonth(tracked = emptyMap())
-                    .copy(monthTotalLabel = null, busiestDayLabel = null)
-            ),
-            currentIndex = 0
+            months =
+                listOf(
+                    previewCalendarMonth(tracked = emptyMap())
+                        .copy(monthTotalLabel = null, busiestDayLabel = null),
+                ),
+            currentIndex = 0,
         )
     }
 }

@@ -19,7 +19,8 @@ enum class DeviceConfiguration {
     MOBILE_LANDSCAPE,
     TABLET_PORTRAIT,
     TABLET_LANDSCAPE,
-    DESKTOP;
+    DESKTOP,
+    ;
 
     val isMobile: Boolean
         get() = this in listOf(MOBILE_PORTRAIT, MOBILE_LANDSCAPE)
@@ -28,20 +29,23 @@ enum class DeviceConfiguration {
         get() = this in listOf(TABLET_LANDSCAPE, DESKTOP)
 
     companion object {
-        fun fromWindowSizeClass(windowSizeClass: WindowSizeClass): DeviceConfiguration {
-            return with(windowSizeClass) {
+        fun fromWindowSizeClass(windowSizeClass: WindowSizeClass): DeviceConfiguration =
+            with(windowSizeClass) {
                 when {
                     minWidthDp < WIDTH_DP_MEDIUM_LOWER_BOUND &&
-                            minHeightDp >= HEIGHT_DP_MEDIUM_LOWER_BOUND -> MOBILE_PORTRAIT
+                        minHeightDp >= HEIGHT_DP_MEDIUM_LOWER_BOUND -> MOBILE_PORTRAIT
+
                     minWidthDp >= WIDTH_DP_EXPANDED_LOWER_BOUND &&
-                            minHeightDp < HEIGHT_DP_MEDIUM_LOWER_BOUND -> MOBILE_LANDSCAPE
+                        minHeightDp < HEIGHT_DP_MEDIUM_LOWER_BOUND -> MOBILE_LANDSCAPE
+
                     minWidthDp in WIDTH_DP_MEDIUM_LOWER_BOUND..WIDTH_DP_EXPANDED_LOWER_BOUND &&
-                            minHeightDp >= HEIGHT_DP_EXPANDED_LOWER_BOUND -> TABLET_PORTRAIT
+                        minHeightDp >= HEIGHT_DP_EXPANDED_LOWER_BOUND -> TABLET_PORTRAIT
+
                     minWidthDp >= WIDTH_DP_EXPANDED_LOWER_BOUND &&
-                            minHeightDp in HEIGHT_DP_MEDIUM_LOWER_BOUND..HEIGHT_DP_EXPANDED_LOWER_BOUND -> TABLET_LANDSCAPE
+                        minHeightDp in HEIGHT_DP_MEDIUM_LOWER_BOUND..HEIGHT_DP_EXPANDED_LOWER_BOUND -> TABLET_LANDSCAPE
+
                     else -> DESKTOP
                 }
             }
-        }
     }
 }

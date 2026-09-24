@@ -28,11 +28,15 @@ sealed interface Route : NavKey {
 
         @Serializable
         @SerialName("register_success")
-        data class RegisterSuccess(val email: String) : AuthRoute, NavKey
+        data class RegisterSuccess(val email: String) :
+            AuthRoute,
+            NavKey
 
         @Serializable
         @SerialName("email_verification")
-        data class EmailVerification(val token: String) : AuthRoute, NavKey
+        data class EmailVerification(val token: String) :
+            AuthRoute,
+            NavKey
 
         @Serializable
         @SerialName("forgot_password")
@@ -40,7 +44,9 @@ sealed interface Route : NavKey {
 
         @Serializable
         @SerialName("reset_password")
-        data class ResetPassword(val token: String) : AuthRoute, NavKey
+        data class ResetPassword(val token: String) :
+            AuthRoute,
+            NavKey
     }
 
     @Serializable
@@ -57,7 +63,9 @@ sealed interface Route : NavKey {
 
         @Serializable
         @SerialName("project_archive_detail")
-        data class ProjectArchiveDetail(val projectId: String) : Route, NavKey
+        data class ProjectArchiveDetail(val projectId: String) :
+            Route,
+            NavKey
 
         @Serializable
         @SerialName("project_trash")
@@ -65,10 +73,9 @@ sealed interface Route : NavKey {
 
         @Serializable
         @SerialName("project_detail")
-        data class ProjectDetail(
-            val isEditMode: Boolean,
-            val projectId: String? = null
-        ) : Route, NavKey
+        data class ProjectDetail(val isEditMode: Boolean, val projectId: String? = null) :
+            Route,
+            NavKey
 
         @Serializable
         @SerialName("edit_text")
@@ -81,8 +88,9 @@ sealed interface Route : NavKey {
             // The task being edited for TASK; the parent task for SUBTASK and NEW_SUBTASK.
             val taskId: String? = null,
             // Only for SUBTASK.
-            val subTaskId: String? = null
-        ) : Route, NavKey
+            val subTaskId: String? = null,
+        ) : Route,
+            NavKey
 
         @Serializable
         @SerialName("daily_overview")
@@ -90,13 +98,14 @@ sealed interface Route : NavKey {
             val projectId: String,
             // Epoch day rather than a LocalDate: the saved back stack handles primitives
             // predictably, and -1 stands for "open on today" because day 0 is a real date.
-            val preselectedDateEpochDay: Long = -1L
-        ) : Route, NavKey
+            val preselectedDateEpochDay: Long = -1L,
+        ) : Route,
+            NavKey
 
         @Serializable
         @SerialName("task_detail")
-        data class TaskDetail(
-            val taskId: String
-        ) : Route, NavKey
+        data class TaskDetail(val taskId: String) :
+            Route,
+            NavKey
     }
 }

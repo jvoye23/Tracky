@@ -29,18 +29,18 @@ fun ProjectTrashSelectionTopAppBar(
     modifier: Modifier = Modifier,
     state: ProjectTrashState,
     onAction: (ProjectTrashAction) -> Unit,
-    scrollBehavior: TopAppBarScrollBehavior
+    scrollBehavior: TopAppBarScrollBehavior,
 ) {
     SelectionTopAppBar(
         selectedCount = state.selectedProjectIds.size,
-        onExit = { onAction(ProjectTrashAction.OnExitEditMode)},
+        onExit = { onAction(ProjectTrashAction.OnExitEditMode) },
         scrollBehavior = scrollBehavior,
         actions = {
             IconButton(onClick = { onAction(ProjectTrashAction.OnDeleteSelectedClick) }) {
                 Icon(
                     imageVector = Icon_Delete,
                     contentDescription = stringResource(Res.string.delete_permanently),
-                    tint = MaterialTheme.colorScheme.onSurface
+                    tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
             IconButton(onClick = { onAction(ProjectTrashAction.OnRestoreSelectedClick) }) {
@@ -48,11 +48,11 @@ fun ProjectTrashSelectionTopAppBar(
                     imageVector = Icon_Archive,
                     contentDescription = stringResource(Res.string.restore_selected),
                     tint = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.rotate(180f)
+                    modifier = Modifier.rotate(180f),
                 )
             }
         },
-        modifier = modifier
+        modifier = modifier,
     )
 }
 
@@ -61,11 +61,12 @@ fun ProjectTrashSelectionTopAppBar(
 private fun ProjectTrashSelectionTopAppBarPreview() {
     TrackyTheme {
         ProjectTrashSelectionTopAppBar(
-            state = ProjectTrashState(
-                isEditModeActive = true
-            ),
+            state =
+                ProjectTrashState(
+                    isEditModeActive = true,
+                ),
             onAction = {},
-            scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+            scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(),
         )
     }
 }

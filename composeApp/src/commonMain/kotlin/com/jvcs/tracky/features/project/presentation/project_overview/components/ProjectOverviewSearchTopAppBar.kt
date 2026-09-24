@@ -37,7 +37,7 @@ fun ProjectOverviewSearchTopAppBar(
     email: String?,
 ) {
     SearchTopAppBar(
-        isSearchBoxExpanded = true ,
+        isSearchBoxExpanded = true,
         searchHint = stringResource(Res.string.search_in_projects),
         searchQuery = state.searchQuery,
         onQueryChange = { onAction(ProjectOverviewAction.OnSearchQueryChange(it)) },
@@ -46,7 +46,7 @@ fun ProjectOverviewSearchTopAppBar(
                 Icon(
                     imageVector = Icons.Default.Menu,
                     contentDescription = "Menu",
-                    tint = MaterialTheme.colorScheme.onSurface
+                    tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
         },
@@ -59,13 +59,13 @@ fun ProjectOverviewSearchTopAppBar(
                     username = username,
                     email = email,
                     onLogoutClick = { onAction(ProjectOverviewAction.OnLogoutClick) },
-                    modifier = Modifier.padding(start = 8.dp, end = 10.dp)
+                    modifier = Modifier.padding(start = 8.dp, end = 10.dp),
                 )
             }
         },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        modifier = modifier
+        colors =
+            TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        modifier = modifier,
     )
 }
 
@@ -79,7 +79,7 @@ private fun ProjectOverviewTopBarPreview() {
             scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(),
             onMenuClick = {},
             username = "Jörg Voyé",
-            email = "j.voye@jv-coding-solutions.com"
+            email = "j.voye@jv-coding-solutions.com",
         )
     }
 }

@@ -16,9 +16,8 @@ import kotlinx.coroutines.withContext
  * The rendering itself is Swift's - see [LiveActivityBridge]. This end owns the mapping and the
  * threading, and does nothing at all until Swift has registered a bridge.
  */
-class IosTimerNotificationController(
-    private val bridge: () -> LiveActivityBridge? = LiveActivityRegistry::current
-) : TimerNotificationController {
+class IosTimerNotificationController(private val bridge: () -> LiveActivityBridge? = LiveActivityRegistry::current) :
+    TimerNotificationController {
 
     override suspend fun show(session: TimerNotificationSession) {
         val state = session.toLiveActivityState()
@@ -53,6 +52,6 @@ internal fun TimerNotificationSession.toLiveActivityState(): LiveActivityState {
         startedAtEpochSeconds = asOf.epochSeconds.toDouble() - elapsedSeconds,
         elapsedSeconds = elapsedSeconds,
         isRunning = isRunning,
-        isForeign = isForeign
+        isForeign = isForeign,
     )
 }

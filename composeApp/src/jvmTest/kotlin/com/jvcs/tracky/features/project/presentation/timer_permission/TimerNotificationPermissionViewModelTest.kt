@@ -39,14 +39,15 @@ internal class TimerNotificationPermissionViewModelTest {
     private lateinit var savedStateHandle: SavedStateHandle
     private lateinit var viewModel: TimerNotificationPermissionViewModel
 
-    private val timer = RunningTimer(
-        project = ProjectRef(id = "p1", title = "Tracky App", colorArgb = 0xFF7DA0B7.toInt()),
-        useLightTextColor = true,
-        task = TaskRef(id = "t1", title = "Token refresh"),
-        subTask = null,
-        startedAt = Instant.fromEpochMilliseconds(0),
-        bankedDuration = 2.minutes
-    )
+    private val timer =
+        RunningTimer(
+            project = ProjectRef(id = "p1", title = "Tracky App", colorArgb = 0xFF7DA0B7.toInt()),
+            useLightTextColor = true,
+            task = TaskRef(id = "t1", title = "Token refresh"),
+            subTask = null,
+            startedAt = Instant.fromEpochMilliseconds(0),
+            bankedDuration = 2.minutes,
+        )
 
     @BeforeTest
     fun setUp() {
@@ -58,13 +59,15 @@ internal class TimerNotificationPermissionViewModelTest {
     @AfterTest
     fun tearDown() = Dispatchers.resetMain()
 
-    private fun buildViewModel() = TimerNotificationPermissionViewModel(
-        permissionRequester = requester,
-        runningTimerRepository = object : RunningTimerRepository {
-            override fun observeRunningTimer(): Flow<RunningTimer?> = runningTimer
-        },
-        savedStateHandle = savedStateHandle
-    )
+    private fun buildViewModel() =
+        TimerNotificationPermissionViewModel(
+            permissionRequester = requester,
+            runningTimerRepository =
+                object : RunningTimerRepository {
+                    override fun observeRunningTimer(): Flow<RunningTimer?> = runningTimer
+                },
+            savedStateHandle = savedStateHandle,
+        )
 
     /** state is a `WhileSubscribed` stateIn, so nothing is observed until something collects. */
     private fun TestScope.subscribeToState() {
@@ -72,114 +75,124 @@ internal class TimerNotificationPermissionViewModelTest {
     }
 
     @Test
-    fun nothingIsAskedWhileNoTimerIsRunning() = runTest(UnconfinedTestDispatcher()) {
-        subscribeToState()
+    fun nothingIsAskedWhileNoTimerIsRunning() =
+        runTest(UnconfinedTestDispatcher()) {
+            subscribeToState()
 
-        assertEquals(0, requester.requestCount)
-    }
-
-    @Test
-    fun theFirstRunningTimerTriggersTheAsk() = runTest(UnconfinedTestDispatcher()) {
-        subscribeToState()
-
-        runningTimer.value = timer
-
-        assertEquals(1, requester.requestCount)
-    }
-
-    @Test
-    fun aGrantIsNotWorthADialog() = runTest(UnconfinedTestDispatcher()) {
-        requester.answer = TimerNotificationPermission.Granted
-
-        viewModel.state.test {
-            assertFalse(awaitItem().showDeniedDialog)
-            runningTimer.value = timer
-            expectNoEvents()
+            assertEquals(0, requester.requestCount)
         }
-    }
 
     @Test
-    fun aPlatformWithNothingToAskNeverShowsTheDialog() = runTest(UnconfinedTestDispatcher()) {
-        // The contract iOS and the JVM desktop build rest on.
-        requester.answer = TimerNotificationPermission.NotRequired
+    fun theFirstRunningTimerTriggersTheAsk() =
+        runTest(UnconfinedTestDispatcher()) {
+            subscribeToState()
 
-        viewModel.state.test {
-            assertFalse(awaitItem().showDeniedDialog)
             runningTimer.value = timer
-            expectNoEvents()
+
+            assertEquals(1, requester.requestCount)
         }
-    }
 
     @Test
-    fun aRefusalExplainsWhatWasLost() = runTest(UnconfinedTestDispatcher()) {
-        requester.answer = TimerNotificationPermission.Denied
+    fun aGrantIsNotWorthADialog() =
+        runTest(UnconfinedTestDispatcher()) {
+            requester.answer = TimerNotificationPermission.Granted
 
-        viewModel.state.test {
-            assertFalse(awaitItem().showDeniedDialog)
+            viewModel.state.test {
+                assertFalse(awaitItem().showDeniedDialog)
+                runningTimer.value = timer
+                expectNoEvents()
+            }
+        }
+
+    @Test
+    fun aPlatformWithNothingToAskNeverShowsTheDialog() =
+        runTest(UnconfinedTestDispatcher()) {
+            // The contract iOS and the JVM desktop build rest on.
+            requester.answer = TimerNotificationPermission.NotRequired
+
+            viewModel.state.test {
+                assertFalse(awaitItem().showDeniedDialog)
+                runningTimer.value = timer
+                expectNoEvents()
+            }
+        }
+
+    @Test
+    fun aRefusalExplainsWhatWasLost() =
+        runTest(UnconfinedTestDispatcher()) {
+            requester.answer = TimerNotificationPermission.Denied
+
+            viewModel.state.test {
+                assertFalse(awaitItem().showDeniedDialog)
+                runningTimer.value = timer
+                assertTrue(awaitItem().showDeniedDialog)
+            }
+        }
+
+    @Test
+    fun aPermanentRefusalGetsTheSameExplanation() =
+        runTest(UnconfinedTestDispatcher()) {
+            requester.answer = TimerNotificationPermission.DeniedAlways
+
+            viewModel.state.test {
+                assertFalse(awaitItem().showDeniedDialog)
+                runningTimer.value = timer
+                assertTrue(awaitItem().showDeniedDialog)
+            }
+        }
+
+    @Test
+    fun aSecondTimerInTheSameSessionDoesNotAskAgain() =
+        runTest(UnconfinedTestDispatcher()) {
+            subscribeToState()
+
             runningTimer.value = timer
-            assertTrue(awaitItem().showDeniedDialog)
-        }
-    }
-
-    @Test
-    fun aPermanentRefusalGetsTheSameExplanation() = runTest(UnconfinedTestDispatcher()) {
-        requester.answer = TimerNotificationPermission.DeniedAlways
-
-        viewModel.state.test {
-            assertFalse(awaitItem().showDeniedDialog)
+            runningTimer.value = null
             runningTimer.value = timer
-            assertTrue(awaitItem().showDeniedDialog)
+
+            assertEquals(1, requester.requestCount)
         }
-    }
 
     @Test
-    fun aSecondTimerInTheSameSessionDoesNotAskAgain() = runTest(UnconfinedTestDispatcher()) {
-        subscribeToState()
+    fun aViewModelRebuiltAfterProcessDeathDoesNotAskAgain() =
+        runTest(UnconfinedTestDispatcher()) {
+            subscribeToState()
+            runningTimer.value = timer
+            assertEquals(1, requester.requestCount)
 
-        runningTimer.value = timer
-        runningTimer.value = null
-        runningTimer.value = timer
+            // Same SavedStateHandle, new ViewModel: what Android hands back after process death with a
+            // timer still running. A plain field would ask a second time here.
+            viewModel = buildViewModel()
+            subscribeToState()
 
-        assertEquals(1, requester.requestCount)
-    }
-
-    @Test
-    fun aViewModelRebuiltAfterProcessDeathDoesNotAskAgain() = runTest(UnconfinedTestDispatcher()) {
-        subscribeToState()
-        runningTimer.value = timer
-        assertEquals(1, requester.requestCount)
-
-        // Same SavedStateHandle, new ViewModel: what Android hands back after process death with a
-        // timer still running. A plain field would ask a second time here.
-        viewModel = buildViewModel()
-        subscribeToState()
-
-        assertEquals(1, requester.requestCount)
-    }
+            assertEquals(1, requester.requestCount)
+        }
 
     @Test
-    fun confirmingDismissesWithoutLeavingForSettings() = runTest(UnconfinedTestDispatcher()) {
-        requester.answer = TimerNotificationPermission.Denied
-        subscribeToState()
-        runningTimer.value = timer
+    fun confirmingDismissesWithoutLeavingForSettings() =
+        runTest(UnconfinedTestDispatcher()) {
+            requester.answer = TimerNotificationPermission.Denied
+            subscribeToState()
+            runningTimer.value = timer
 
-        viewModel.onAction(TimerNotificationPermissionAction.OnConfirm)
+            viewModel.onAction(TimerNotificationPermissionAction.OnConfirm)
 
-        assertFalse(viewModel.state.value.showDeniedDialog)
-        assertEquals(0, requester.openAppSettingsCount)
-    }
+            assertFalse(viewModel.state.value.showDeniedDialog)
+            assertEquals(0, requester.openAppSettingsCount)
+        }
 
     @Test
-    fun openingSettingsCallsThroughAndDismisses() = runTest(UnconfinedTestDispatcher()) {
-        requester.answer = TimerNotificationPermission.Denied
-        subscribeToState()
-        runningTimer.value = timer
+    fun openingSettingsCallsThroughAndDismisses() =
+        runTest(UnconfinedTestDispatcher()) {
+            requester.answer = TimerNotificationPermission.Denied
+            subscribeToState()
+            runningTimer.value = timer
 
-        viewModel.onAction(TimerNotificationPermissionAction.OnOpenAppSettings)
+            viewModel.onAction(TimerNotificationPermissionAction.OnOpenAppSettings)
 
-        assertEquals(1, requester.openAppSettingsCount)
-        assertFalse(viewModel.state.value.showDeniedDialog)
-    }
+            assertEquals(1, requester.openAppSettingsCount)
+            assertFalse(viewModel.state.value.showDeniedDialog)
+        }
 
     private class FakeRequester : TimerNotificationPermissionRequester {
         var answer: TimerNotificationPermission = TimerNotificationPermission.Granted

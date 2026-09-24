@@ -37,7 +37,7 @@ data class SyncChangesDto(
     val taskIntervals: List<TaskIntervalDto> = emptyList(),
     val subTasks: List<ProjectSubTaskDto> = emptyList(),
     val subTaskIntervals: List<SubTaskIntervalDto> = emptyList(),
-    val tombstones: List<TombstoneDto> = emptyList()
+    val tombstones: List<TombstoneDto> = emptyList(),
 )
 
 /**
@@ -56,5 +56,5 @@ data class SyncChangesDto(
 data class TombstoneDto(
     val entityType: String,
     val entityId: String,
-    val deletedAtUtc: String? = null
+    val deletedAtUtc: String? = null,
 )

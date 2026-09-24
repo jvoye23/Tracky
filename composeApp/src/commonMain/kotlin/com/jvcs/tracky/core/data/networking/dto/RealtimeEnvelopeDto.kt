@@ -30,7 +30,7 @@ data class HelloEnvelopeDto(
      * without it the handshake goes out with no `type` at all and the server cannot read it.
      */
     @EncodeDefault(EncodeDefault.Mode.ALWAYS)
-    val type: String = "hello"
+    val type: String = "hello",
 )
 
 /**
@@ -44,22 +44,23 @@ data class HelloEnvelopeDto(
 class RealtimeEnvelopeParser(private val json: Json) {
 
     /** Null means "could not read it" — log and carry on; never a reason to drop the socket. */
-    fun parse(frame: String): RealtimeEvent? = try {
-        val obj = json.parseToJsonElement(frame).jsonObject
-        when (val type = obj["type"]?.jsonPrimitive?.contentOrNull) {
-            "ready" -> RealtimeEvent.Ready
-            "invalidate" -> RealtimeEvent.Invalidate(obj.cursor())
-            "timer" -> RealtimeEvent.Timer(obj.cursor())
-            null -> null
-            else -> RealtimeEvent.Unknown(type)
+    fun parse(frame: String): RealtimeEvent? =
+        try {
+            val obj = json.parseToJsonElement(frame).jsonObject
+            when (val type = obj["type"]?.jsonPrimitive?.contentOrNull) {
+                "ready" -> RealtimeEvent.Ready
+                "invalidate" -> RealtimeEvent.Invalidate(obj.cursor())
+                "timer" -> RealtimeEvent.Timer(obj.cursor())
+                null -> null
+                else -> RealtimeEvent.Unknown(type)
+            }
+        } catch (e: SerializationException) {
+            null
+        } catch (e: IllegalArgumentException) {
+            // jsonObject / jsonPrimitive throw this when the frame is well-formed JSON of the wrong
+            // shape — a bare array, say. Same answer: ignore the frame, keep the connection.
+            null
         }
-    } catch (e: SerializationException) {
-        null
-    } catch (e: IllegalArgumentException) {
-        // jsonObject / jsonPrimitive throw this when the frame is well-formed JSON of the wrong
-        // shape — a bare array, say. Same answer: ignore the frame, keep the connection.
-        null
-    }
 
     private fun JsonObject.cursor(): Long = this["cursor"]?.jsonPrimitive?.longOrNull ?: 0L
 }

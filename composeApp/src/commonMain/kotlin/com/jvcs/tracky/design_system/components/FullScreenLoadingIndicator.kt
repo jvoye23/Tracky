@@ -12,22 +12,21 @@ import androidx.compose.ui.input.pointer.pointerInput
 import com.jvcs.tracky.design_system.theme.backgroundDarkMediumContrast
 
 @Composable
-fun FullScreenLoadingIndicator(
-    modifier: Modifier = Modifier
-) {
+fun FullScreenLoadingIndicator(modifier: Modifier = Modifier) {
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f))
-            .pointerInput(Unit) {
-                // Intercept all touch events to disable the underlying content
-                awaitPointerEventScope {
-                    while (true) {
-                        awaitPointerEvent()
+        modifier =
+            modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f))
+                .pointerInput(Unit) {
+                    // Intercept all touch events to disable the underlying content
+                    awaitPointerEventScope {
+                        while (true) {
+                            awaitPointerEvent()
+                        }
                     }
-                }
-            },
-        contentAlignment = Alignment.Center
+                },
+        contentAlignment = Alignment.Center,
     ) {
         CircularProgressIndicator()
     }

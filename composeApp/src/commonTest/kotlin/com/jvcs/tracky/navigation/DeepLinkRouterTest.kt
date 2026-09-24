@@ -7,6 +7,7 @@ import kotlin.test.assertNull
 class DeepLinkRouterTest {
 
     private val router = DeepLinkRouter()
+
     private fun detail(id: String) = Route.ProjectRoute.ProjectDetail(isEditMode = false, projectId = id)
 
     @Test

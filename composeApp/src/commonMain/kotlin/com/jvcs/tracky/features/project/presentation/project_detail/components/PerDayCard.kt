@@ -83,7 +83,7 @@ fun PerDayCard(
     busiestDayLabel: String?,
     projectColor: Color,
     modifier: Modifier = Modifier,
-    onDayClick: (LocalDate) -> Unit = {}
+    onDayClick: (LocalDate) -> Unit = {},
 ) {
     val maxMillis = days.maxOfOrNull { it.trackedMillis } ?: 0L
 
@@ -91,11 +91,11 @@ fun PerDayCard(
         modifier = modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, Color.Black.copy(alpha = 0.03f))
+        border = BorderStroke(1.dp, Color.Black.copy(alpha = 0.03f)),
     ) {
         Column(modifier = Modifier.padding(top = 10.dp, bottom = 11.dp)) {
             PerDayHeader(
-                modifier = Modifier.padding(horizontal = 14.dp)
+                modifier = Modifier.padding(horizontal = 14.dp),
             )
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -103,14 +103,14 @@ fun PerDayCard(
             LazyRow(
                 modifier = Modifier.fillMaxWidth(),
                 contentPadding = PaddingValues(horizontal = 14.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 items(days) { day ->
                     DayCell(
                         day = day,
                         maxMillis = maxMillis,
                         projectColor = projectColor,
-                        onClick = day.date?.let { date -> { onDayClick(date) } }
+                        onClick = day.date?.let { date -> { onDayClick(date) } },
                     )
                 }
             }
@@ -121,25 +121,23 @@ fun PerDayCard(
                 dayCount = days.size,
                 busiestDayLabel = busiestDayLabel,
                 projectColor = projectColor,
-                modifier = Modifier.padding(horizontal = 14.dp)
+                modifier = Modifier.padding(horizontal = 14.dp),
             )
         }
     }
 }
 
 @Composable
-private fun PerDayHeader(
-    modifier: Modifier = Modifier
-) {
+private fun PerDayHeader(modifier: Modifier = Modifier) {
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = stringResource(Res.string.duration_per_day).uppercase(),
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.outline
+            color = MaterialTheme.colorScheme.outline,
         )
     }
 }
@@ -151,20 +149,22 @@ private fun DayCell(
     projectColor: Color,
     modifier: Modifier = Modifier,
     // Null for a tile built without a date, which keeps the older previews inert.
-    onClick: (() -> Unit)? = null
+    onClick: (() -> Unit)? = null,
 ) {
-    val intensity: Float? = when {
-        day.trackedMillis <= 0L || maxMillis <= 0L -> null
-        day.trackedMillis >= maxMillis -> 1f
-        else -> lerp(MIN_INTENSITY, MAX_INTENSITY, day.trackedMillis.toFloat() / maxMillis)
-    }
+    val intensity: Float? =
+        when {
+            day.trackedMillis <= 0L || maxMillis <= 0L -> null
+            day.trackedMillis >= maxMillis -> 1f
+            else -> lerp(MIN_INTENSITY, MAX_INTENSITY, day.trackedMillis.toFloat() / maxMillis)
+        }
 
     val isTracked = intensity != null
-    val background = if (intensity != null) {
-        projectColor.copy(alpha = intensity)
-    } else {
-        MaterialTheme.colorScheme.surfaceVariant
-    }
+    val background =
+        if (intensity != null) {
+            projectColor.copy(alpha = intensity)
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant
+        }
     val outlineVariant = MaterialTheme.colorScheme.outlineVariant
 
     // A tinted tile is filled with the project colour, so its content colour cannot come
@@ -174,42 +174,59 @@ private fun DayCell(
     val tileColor = background.compositeOver(MaterialTheme.colorScheme.surfaceContainerLow)
     val onTile = if (tileColor.luminance() > 0.18f) Color.Black else Color.White
 
-    val description = stringResource(
-        Res.string.per_day_cell_description,
-        day.weekdayLabel,
-        day.dateLabel,
-        day.formattedDuration ?: stringResource(Res.string.per_day_cell_untracked)
-    )
+    val description =
+        stringResource(
+            Res.string.per_day_cell_description,
+            day.weekdayLabel,
+            day.dateLabel,
+            day.formattedDuration ?: stringResource(Res.string.per_day_cell_untracked),
+        )
 
     Column(
-        modifier = modifier
-            .widthIn(min = MIN_TILE_WIDTH)
-            .clip(RoundedCornerShape(16.dp))
-            .background(background)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(vertical = 16.dp)
-            .padding(10.dp)
-            .semantics(mergeDescendants = true) { contentDescription = description },
+        modifier =
+            modifier
+                .widthIn(min = MIN_TILE_WIDTH)
+                .clip(RoundedCornerShape(16.dp))
+                .background(background)
+                .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+                .padding(vertical = 16.dp)
+                .padding(10.dp)
+                .semantics(mergeDescendants = true) { contentDescription = description },
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(
             text = day.weekdayLabel,
             style = MaterialTheme.typography.labelSmall,
-            color = if (isTracked) onTile.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            color =
+                if (isTracked) {
+                    onTile.copy(
+                        alpha = 0.5f,
+                    )
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                },
         )
         Text(
             text = day.dateLabel,
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontWeight = FontWeight.Bold,
-                letterSpacing = (-0.1).sp
-            ),
-            color = if (isTracked) onTile else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            style =
+                MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = (-0.1).sp,
+                ),
+            color = if (isTracked) onTile else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
         )
         Text(
             text = day.formattedDuration ?: UNTRACKED_GLYPH,
             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-            color = if (isTracked) onTile.copy(alpha = 0.72f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            color =
+                if (isTracked) {
+                    onTile.copy(
+                        alpha = 0.72f,
+                    )
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                },
         )
     }
 }
@@ -219,36 +236,34 @@ private fun PerDayFooter(
     dayCount: Int,
     busiestDayLabel: String?,
     projectColor: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = if (busiestDayLabel != null) {
-                stringResource(Res.string.per_day_summary, busiestDayLabel)
-            } else {
-                stringResource(Res.string.per_day_no_activity, dayCount)
-            },
+            text =
+                if (busiestDayLabel != null) {
+                    stringResource(Res.string.per_day_summary, busiestDayLabel)
+                } else {
+                    stringResource(Res.string.per_day_no_activity, dayCount)
+                },
             style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurface,
         )
         IntensityLegend(projectColor = projectColor)
     }
 }
 
 @Composable
-private fun IntensityLegend(
-    projectColor: Color,
-    modifier: Modifier = Modifier
-) {
+private fun IntensityLegend(projectColor: Color, modifier: Modifier = Modifier) {
     Row(
         // Purely a visual key for the tints above; nothing for a screen reader to announce.
         modifier = modifier.clearAndSetSemantics { },
         horizontalArrangement = Arrangement.spacedBy(3.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         LegendSwatch(color = MaterialTheme.colorScheme.surfaceVariant)
         LegendSwatch(color = projectColor.copy(alpha = MIN_INTENSITY))
@@ -260,10 +275,11 @@ private fun IntensityLegend(
 @Composable
 private fun LegendSwatch(color: Color) {
     Box(
-        modifier = Modifier
-            .size(10.dp)
-            .clip(RoundedCornerShape(3.dp))
-            .background(color)
+        modifier =
+            Modifier
+                .size(10.dp)
+                .clip(RoundedCornerShape(3.dp))
+                .background(color),
     )
 }
 
@@ -282,23 +298,25 @@ private fun seconds(value: Long): Long = value * 1_000L
  * A full strip: the ten most recent active days, drawn from the design reference. The dates skip
  * 26.8, 28.8, 29.8, 31.8, 3.9 and 4.9 the way the mapper does — an untracked day takes no tile.
  */
-private fun referenceDays(): List<PerDayUi> = listOf(
-    PerDayUi("Mon", "24.8", "00:52:12", minutes(52) + seconds(12)),
-    PerDayUi("Tue", "25.8", "00:23:41", minutes(23) + seconds(41)),
-    PerDayUi("Thu", "27.8", "00:41:07", minutes(41) + seconds(7)),
-    PerDayUi("Sun", "30.8", "00:12:30", minutes(12) + seconds(30)),
-    PerDayUi("Tue", "01.9", "00:35:00", minutes(35)),
-    PerDayUi("Wed", "02.9", "00:19:55", minutes(19) + seconds(55)),
-    PerDayUi("Sat", "05.9", "01:00:02", minutes(60) + seconds(2)),
-    PerDayUi("Sun", "06.9", "00:08:44", minutes(8) + seconds(44)),
-    PerDayUi("Tue", "08.9", "00:27:03", minutes(27) + seconds(3)),
-    PerDayUi("Wed", "09.9", "00:44:20", minutes(44) + seconds(20))
-)
+private fun referenceDays(): List<PerDayUi> =
+    listOf(
+        PerDayUi("Mon", "24.8", "00:52:12", minutes(52) + seconds(12)),
+        PerDayUi("Tue", "25.8", "00:23:41", minutes(23) + seconds(41)),
+        PerDayUi("Thu", "27.8", "00:41:07", minutes(41) + seconds(7)),
+        PerDayUi("Sun", "30.8", "00:12:30", minutes(12) + seconds(30)),
+        PerDayUi("Tue", "01.9", "00:35:00", minutes(35)),
+        PerDayUi("Wed", "02.9", "00:19:55", minutes(19) + seconds(55)),
+        PerDayUi("Sat", "05.9", "01:00:02", minutes(60) + seconds(2)),
+        PerDayUi("Sun", "06.9", "00:08:44", minutes(8) + seconds(44)),
+        PerDayUi("Tue", "08.9", "00:27:03", minutes(27) + seconds(3)),
+        PerDayUi("Wed", "09.9", "00:44:20", minutes(44) + seconds(20)),
+    )
 
 /** The first day a project banks time: one tile, which is also the busiest. */
-private fun singleTrackedDay(): List<PerDayUi> = listOf(
-    PerDayUi("Wed", "09.9", "00:07:18", minutes(7) + seconds(18))
-)
+private fun singleTrackedDay(): List<PerDayUi> =
+    listOf(
+        PerDayUi("Wed", "09.9", "00:07:18", minutes(7) + seconds(18)),
+    )
 
 @Composable
 private fun PerDayCardPreviewContainer(content: @Composable () -> Unit) {
@@ -318,7 +336,7 @@ private fun PerDayCardDefaultPreview() {
         PerDayCard(
             days = referenceDays(),
             busiestDayLabel = "Sat 05.9",
-            projectColor = PreviewProjectColor
+            projectColor = PreviewProjectColor,
         )
     }
 }
@@ -330,7 +348,7 @@ private fun PerDayCardSingleTrackedDayPreview() {
         PerDayCard(
             days = singleTrackedDay(),
             busiestDayLabel = "Wed 09.9",
-            projectColor = PreviewProjectColor
+            projectColor = PreviewProjectColor,
         )
     }
 }
@@ -342,7 +360,7 @@ private fun PerDayCardAlternateColorPreview() {
         PerDayCard(
             days = referenceDays(),
             busiestDayLabel = "Sat 05.9",
-            projectColor = PreviewAlternateProjectColor
+            projectColor = PreviewAlternateProjectColor,
         )
     }
 }
@@ -354,7 +372,7 @@ private fun PerDayCardCompactPreview() {
         PerDayCard(
             days = referenceDays(),
             busiestDayLabel = "Sat 05.9",
-            projectColor = PreviewProjectColor
+            projectColor = PreviewProjectColor,
         )
     }
 }
@@ -366,7 +384,7 @@ private fun PerDayCardExpandedWidthPreview() {
         PerDayCard(
             days = referenceDays(),
             busiestDayLabel = "Sat 05.9",
-            projectColor = PreviewProjectColor
+            projectColor = PreviewProjectColor,
         )
     }
 }
@@ -378,7 +396,7 @@ private fun PerDayCardFontScalePreview() {
         PerDayCard(
             days = referenceDays(),
             busiestDayLabel = "Sat 05.9",
-            projectColor = PreviewProjectColor
+            projectColor = PreviewProjectColor,
         )
     }
 }

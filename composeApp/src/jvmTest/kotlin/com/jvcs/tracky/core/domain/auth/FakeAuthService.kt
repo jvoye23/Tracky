@@ -27,8 +27,11 @@ internal class FakeAuthService : AuthService {
     override suspend fun login(email: String, password: String): Result<AuthInfo, DataError.Remote> =
         Result.Success(authInfo())
 
-    override suspend fun register(email: String, name: String, password: String): Result<AuthInfo, DataError.Remote> =
-        Result.Success(authInfo())
+    override suspend fun register(
+        email: String,
+        name: String,
+        password: String,
+    ): Result<AuthInfo, DataError.Remote> = Result.Success(authInfo())
 
     override suspend fun loginWithGoogle(idToken: String): Result<AuthInfo, DataError.Remote> =
         Result.Success(authInfo())
@@ -37,8 +40,11 @@ internal class FakeAuthService : AuthService {
         Result.Success(authInfo())
 
     override suspend fun resendVerificationEmail(email: String): EmptyResult<DataError.Remote> = Result.Success(Unit)
+
     override suspend fun verifyEmail(token: String): EmptyResult<DataError.Remote> = Result.Success(Unit)
+
     override suspend fun forgotPassword(email: String): EmptyResult<DataError.Remote> = Result.Success(Unit)
+
     override suspend fun resetPassword(newPassword: String, token: String): EmptyResult<DataError.Remote> =
         Result.Success(Unit)
 }

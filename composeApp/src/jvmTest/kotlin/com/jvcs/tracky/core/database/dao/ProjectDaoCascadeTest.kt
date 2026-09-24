@@ -30,10 +30,12 @@ class ProjectDaoCascadeTest {
 
     @BeforeTest
     fun setUp() {
-        db = Room.inMemoryDatabaseBuilder<TrackyDatabase>()
-            .setDriver(BundledSQLiteDriver())
-            .setQueryCoroutineContext(Dispatchers.IO)
-            .build()
+        db =
+            Room
+                .inMemoryDatabaseBuilder<TrackyDatabase>()
+                .setDriver(BundledSQLiteDriver())
+                .setQueryCoroutineContext(Dispatchers.IO)
+                .build()
         dao = db.projectDao
     }
 
@@ -59,7 +61,7 @@ class ProjectDaoCascadeTest {
                 isPinned = false,
                 updatedAtEpochMs = null,
                 sortIndex = null,
-            )
+            ),
         )
         listOf("t1", "t2").forEach { taskId ->
             dao.upsertProjectTask(
@@ -74,7 +76,7 @@ class ProjectDaoCascadeTest {
                     isFinished = false,
                     isTimerRunning = false,
                     updatedAtEpochMs = null,
-                )
+                ),
             )
             dao.upsertTaskInterval(
                 TaskIntervalEntity(
@@ -84,44 +86,47 @@ class ProjectDaoCascadeTest {
                     startDateTimeEpochMs = 0,
                     endDateTimeEpochMs = 60_000,
                     durationMillis = 60_000,
-                )
+                ),
             )
         }
     }
 
     @Test
-    fun deletingAProjectAlsoDeletesItsTasksAndIntervals() = runBlocking {
-        seedTree()
+    fun deletingAProjectAlsoDeletesItsTasksAndIntervals() =
+        runBlocking {
+            seedTree()
 
-        dao.deleteProject("p1")
+            dao.deleteProject("p1")
 
-        assertNull(dao.getTaskById("t1"))
-        assertNull(dao.getTaskById("t2"))
-        assertNull(dao.getIntervalById("i-t1"))
-        assertNull(dao.getIntervalById("i-t2"))
-    }
-
-    @Test
-    fun deletingASingleTaskDeletesOnlyItsOwnIntervals() = runBlocking {
-        seedTree()
-
-        dao.deleteProjectTask("t1")
-
-        assertNull(dao.getIntervalById("i-t1"))
-        // The sibling task is untouched, so its tracked time has to survive.
-        assertNotNull(dao.getTaskById("t2"))
-        assertNotNull(dao.getIntervalById("i-t2"))
-        Unit
-    }
+            assertNull(dao.getTaskById("t1"))
+            assertNull(dao.getTaskById("t2"))
+            assertNull(dao.getIntervalById("i-t1"))
+            assertNull(dao.getIntervalById("i-t2"))
+        }
 
     @Test
-    fun deletingAllProjectsClearsTheWholeTree() = runBlocking {
-        seedTree()
+    fun deletingASingleTaskDeletesOnlyItsOwnIntervals() =
+        runBlocking {
+            seedTree()
 
-        dao.deleteAllProjects()
+            dao.deleteProjectTask("t1")
 
-        assertNull(dao.getTaskById("t1"))
-        assertNull(dao.getIntervalById("i-t1"))
-        assertNull(dao.getIntervalById("i-t2"))
-    }
+            assertNull(dao.getIntervalById("i-t1"))
+            // The sibling task is untouched, so its tracked time has to survive.
+            assertNotNull(dao.getTaskById("t2"))
+            assertNotNull(dao.getIntervalById("i-t2"))
+            Unit
+        }
+
+    @Test
+    fun deletingAllProjectsClearsTheWholeTree() =
+        runBlocking {
+            seedTree()
+
+            dao.deleteAllProjects()
+
+            assertNull(dao.getTaskById("t1"))
+            assertNull(dao.getIntervalById("i-t1"))
+            assertNull(dao.getIntervalById("i-t2"))
+        }
 }

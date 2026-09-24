@@ -20,7 +20,7 @@ data class CalendarDayUi(
      * False for the leading and trailing cells that only exist to pad the grid to whole weeks.
      * They render greyed and are not selectable.
      */
-    val isInMonth: Boolean
+    val isInMonth: Boolean,
 )
 
 /**
@@ -43,7 +43,7 @@ data class CalendarMonthUi(
     val days: List<CalendarDayUi>,
     /** "Tue 08" — the busiest day *in this month*; null when the month banked nothing. */
     val busiestDayLabel: String?,
-    val maxTrackedMillis: Long
+    val maxTrackedMillis: Long,
 ) {
     /** The cells that belong to the month itself, without the padding either side. */
     val monthDays: List<CalendarDayUi> get() = days.filter { it.isInMonth }

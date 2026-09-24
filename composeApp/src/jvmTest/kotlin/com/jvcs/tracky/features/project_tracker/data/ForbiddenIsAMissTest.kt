@@ -37,64 +37,87 @@ internal class ForbiddenIsAMissTest {
     }
 
     @Test
-    fun aTaskWhoseProjectTheServerDeniesIsQueued_notDropped() = runBlocking<Unit> {
-        val f = RepoFixture()
-        f.db.seedProject("p1")
-        f.remoteTask.failWith = DataError.Remote.FORBIDDEN
+    fun aTaskWhoseProjectTheServerDeniesIsQueued_notDropped() =
+        runBlocking<Unit> {
+            val f = RepoFixture()
+            f.db.seedProject("p1")
+            f.remoteTask.failWith = DataError.Remote.FORBIDDEN
 
-        f.taskRepository.upsertProjectTask(f.db.newTask("t1", "p1"))
+            f.taskRepository.upsertProjectTask(f.db.newTask("t1", "p1"))
 
-        // Before the fix this fell through to the permanent-error branch and the task was lost.
-        assertEquals(PendingSyncOperation.OP_CREATE, f.queue.all().single().operationType)
-    }
-
-    @Test
-    fun aSubTaskWhoseTaskTheServerDeniesIsQueued_notDropped() = runBlocking<Unit> {
-        val f = RepoFixture()
-        f.seedProjectWithTask()
-        f.remoteSubTask.postFailWith = DataError.Remote.FORBIDDEN
-
-        f.subTaskRepository.upsertSubTask(f.db.newSubTask("s1", "t1", "p1"))
-
-        assertEquals("s1", f.queue.all().single().entityId)
-    }
+            // Before the fix this fell through to the permanent-error branch and the task was lost.
+            assertEquals(
+                PendingSyncOperation.OP_CREATE,
+                f.queue
+                    .all()
+                    .single()
+                    .operationType,
+            )
+        }
 
     @Test
-    fun aSubTaskIntervalWhoseSubTaskTheServerDeniesIsQueued_notDropped() = runBlocking<Unit> {
-        val f = RepoFixture()
-        f.seedProjectWithTaskAndSubTask()
-        f.remoteSubTaskInterval.postFailWith = DataError.Remote.FORBIDDEN
+    fun aSubTaskWhoseTaskTheServerDeniesIsQueued_notDropped() =
+        runBlocking<Unit> {
+            val f = RepoFixture()
+            f.seedProjectWithTask()
+            f.remoteSubTask.postFailWith = DataError.Remote.FORBIDDEN
 
-        f.subTaskIntervalRepository.createSubTaskInterval(
-            f.db.newSubTaskInterval("si1", "s1", "ti1", "p1")
-        )
+            f.subTaskRepository.upsertSubTask(f.db.newSubTask("s1", "t1", "p1"))
 
-        // Tracked time is exactly what must never be dropped on a miss.
-        assertEquals("si1", f.queue.all().single().entityId)
-    }
-
-    @Test
-    fun deletingASubTaskTheServerAlreadyDroppedReportsSuccess() = runBlocking<Unit> {
-        val f = RepoFixture()
-        f.seedProjectWithTaskAndSubTask()
-        f.remoteSubTask.deleteFailWith = DataError.Remote.FORBIDDEN
-
-        val result = f.subTaskRepository.deleteSubTask("s1")
-
-        // The local delete stands and there is nothing left to push, so this is not a failure.
-        assertTrue(result is Result.Success, "was $result")
-        assertTrue(f.queue.all().isEmpty())
-    }
+            assertEquals(
+                "s1",
+                f.queue
+                    .all()
+                    .single()
+                    .entityId,
+            )
+        }
 
     @Test
-    fun deletingATaskTheServerAlreadyDroppedReportsSuccess() = runBlocking<Unit> {
-        val f = RepoFixture()
-        f.seedProjectWithTask()
-        f.remoteTask.failWith = DataError.Remote.FORBIDDEN
+    fun aSubTaskIntervalWhoseSubTaskTheServerDeniesIsQueued_notDropped() =
+        runBlocking<Unit> {
+            val f = RepoFixture()
+            f.seedProjectWithTaskAndSubTask()
+            f.remoteSubTaskInterval.postFailWith = DataError.Remote.FORBIDDEN
 
-        val result = f.taskRepository.deleteProjectTask("p1", "t1")
+            f.subTaskIntervalRepository.createSubTaskInterval(
+                f.db.newSubTaskInterval("si1", "s1", "ti1", "p1"),
+            )
 
-        assertTrue(result is Result.Success, "was $result")
-        assertTrue(f.queue.all().isEmpty())
-    }
+            // Tracked time is exactly what must never be dropped on a miss.
+            assertEquals(
+                "si1",
+                f.queue
+                    .all()
+                    .single()
+                    .entityId,
+            )
+        }
+
+    @Test
+    fun deletingASubTaskTheServerAlreadyDroppedReportsSuccess() =
+        runBlocking<Unit> {
+            val f = RepoFixture()
+            f.seedProjectWithTaskAndSubTask()
+            f.remoteSubTask.deleteFailWith = DataError.Remote.FORBIDDEN
+
+            val result = f.subTaskRepository.deleteSubTask("s1")
+
+            // The local delete stands and there is nothing left to push, so this is not a failure.
+            assertTrue(result is Result.Success, "was $result")
+            assertTrue(f.queue.all().isEmpty())
+        }
+
+    @Test
+    fun deletingATaskTheServerAlreadyDroppedReportsSuccess() =
+        runBlocking<Unit> {
+            val f = RepoFixture()
+            f.seedProjectWithTask()
+            f.remoteTask.failWith = DataError.Remote.FORBIDDEN
+
+            val result = f.taskRepository.deleteProjectTask("p1", "t1")
+
+            assertTrue(result is Result.Success, "was $result")
+            assertTrue(f.queue.all().isEmpty())
+        }
 }

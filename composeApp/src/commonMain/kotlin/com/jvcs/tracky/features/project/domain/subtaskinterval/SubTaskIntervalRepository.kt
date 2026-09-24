@@ -21,6 +21,7 @@ interface SubTaskIntervalRepository {
     suspend fun updateSubTaskInterval(interval: SubTaskInterval): EmptyResult<DataError>
 
     suspend fun deleteSubTaskInterval(intervalId: String): EmptyResult<DataError>
+
     suspend fun getOpenIntervalBySubTaskId(subTaskId: String): Result<SubTaskInterval?, DataError>
 
     /**

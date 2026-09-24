@@ -34,16 +34,17 @@ internal class StrandedTimerViewModelTest {
     private val repository = FakeStrandedTimerRepository()
     private lateinit var viewModel: StrandedTimerViewModel
 
-    private fun timer(id: String, hoursLong: Long = 75) = StrandedTimer(
-        taskIntervalId = id,
-        subTaskIntervalId = null,
-        taskId = "t-$id",
-        taskTitle = "Project Detail Screen",
-        projectTitle = "Tracky App",
-        subTaskTitle = null,
-        startedAt = Instant.fromEpochMilliseconds(0),
-        proposedEndAt = Instant.fromEpochMilliseconds(hoursLong * 60 * 60 * 1000L)
-    )
+    private fun timer(id: String, hoursLong: Long = 75) =
+        StrandedTimer(
+            taskIntervalId = id,
+            subTaskIntervalId = null,
+            taskId = "t-$id",
+            taskTitle = "Project Detail Screen",
+            projectTitle = "Tracky App",
+            subTaskTitle = null,
+            startedAt = Instant.fromEpochMilliseconds(0),
+            proposedEndAt = Instant.fromEpochMilliseconds(hoursLong * 60 * 60 * 1000L),
+        )
 
     @BeforeTest
     fun setUp() {
@@ -64,101 +65,127 @@ internal class StrandedTimerViewModelTest {
     }
 
     @Test
-    fun theQueueSurfacesOneItemAtATime() = runTest(UnconfinedTestDispatcher()) {
-        viewModel.state.test {
-            assertNull(awaitItem().current)
+    fun theQueueSurfacesOneItemAtATime() =
+        runTest(UnconfinedTestDispatcher()) {
+            viewModel.state.test {
+                assertNull(awaitItem().current)
+                parked.value = listOf(timer("a"), timer("b"))
+                val state = awaitItem()
+                assertEquals("a", state.current?.taskIntervalId)
+                assertEquals(2, state.pending.size)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun keepingResolvesTheTopItemAndAdvancesToTheNext() =
+        runTest(UnconfinedTestDispatcher()) {
             parked.value = listOf(timer("a"), timer("b"))
-            val state = awaitItem()
-            assertEquals("a", state.current?.taskIntervalId)
-            assertEquals(2, state.pending.size)
-            cancelAndIgnoreRemainingEvents()
+            viewModel.state.test {
+                awaitItem()
+
+                viewModel.onAction(StrandedTimerAction.OnKeep)
+
+                assertEquals(listOf("a"), repository.kept.map { it.taskIntervalId })
+                // The repository's flow is what drops it, so the dialog advances on its own.
+                assertEquals(
+                    "b",
+                    viewModel.state.value.current
+                        ?.taskIntervalId,
+                )
+                cancelAndIgnoreRemainingEvents()
+            }
         }
-    }
 
     @Test
-    fun keepingResolvesTheTopItemAndAdvancesToTheNext() = runTest(UnconfinedTestDispatcher()) {
-        parked.value = listOf(timer("a"), timer("b"))
-        viewModel.state.test {
-            awaitItem()
+    fun aFailedResolutionLeavesTheItemInTheQueueAndReportsIt() =
+        runTest(UnconfinedTestDispatcher()) {
+            parked.value = listOf(timer("a"))
+            repository.failNext = true
+            subscribeToState()
 
-            viewModel.onAction(StrandedTimerAction.OnKeep)
+            viewModel.events.test {
+                viewModel.onAction(StrandedTimerAction.OnKeep)
 
-            assertEquals(listOf("a"), repository.kept.map { it.taskIntervalId })
-            // The repository's flow is what drops it, so the dialog advances on its own.
-            assertEquals("b", viewModel.state.value.current?.taskIntervalId)
-            cancelAndIgnoreRemainingEvents()
+                assertTrue(awaitItem() is StrandedTimerEvent.Error)
+                // Still there: a resolution that did not happen must not look like one.
+                assertEquals(
+                    "a",
+                    viewModel.state.value.current
+                        ?.taskIntervalId,
+                )
+                assertFalse(viewModel.state.value.isResolving)
+                cancelAndIgnoreRemainingEvents()
+            }
         }
-    }
 
     @Test
-    fun aFailedResolutionLeavesTheItemInTheQueueAndReportsIt() = runTest(UnconfinedTestDispatcher()) {
-        parked.value = listOf(timer("a"))
-        repository.failNext = true
-        subscribeToState()
+    fun editingSeedsTheFieldWithTheOfferedDuration() =
+        runTest(UnconfinedTestDispatcher()) {
+            parked.value = listOf(timer("a"))
+            viewModel.state.test {
+                awaitItem()
 
-        viewModel.events.test {
-            viewModel.onAction(StrandedTimerAction.OnKeep)
+                viewModel.onAction(StrandedTimerAction.OnBeginEditDuration)
 
-            assertTrue(awaitItem() is StrandedTimerEvent.Error)
-            // Still there: a resolution that did not happen must not look like one.
-            assertEquals("a", viewModel.state.value.current?.taskIntervalId)
-            assertFalse(viewModel.state.value.isResolving)
-            cancelAndIgnoreRemainingEvents()
+                val state = viewModel.state.value
+                assertTrue(state.isEditingDuration)
+                assertEquals("75:00", state.editDurationState.text.toString())
+                cancelAndIgnoreRemainingEvents()
+            }
         }
-    }
 
     @Test
-    fun editingSeedsTheFieldWithTheOfferedDuration() = runTest(UnconfinedTestDispatcher()) {
-        parked.value = listOf(timer("a"))
-        viewModel.state.test {
-            awaitItem()
-
+    fun confirmingAnEditBanksWhatWasTyped() =
+        runTest(UnconfinedTestDispatcher()) {
+            subscribeToState()
+            parked.value = listOf(timer("a"))
             viewModel.onAction(StrandedTimerAction.OnBeginEditDuration)
+            viewModel.state.value.editDurationState
+                .setTextAndPlaceCursorAtEnd("2:30")
 
-            val state = viewModel.state.value
-            assertTrue(state.isEditingDuration)
-            assertEquals("75:00", state.editDurationState.text.toString())
-            cancelAndIgnoreRemainingEvents()
+            viewModel.onAction(StrandedTimerAction.OnConfirmEditedDuration)
+
+            assertEquals(listOf(2.hours + 30.minutes), repository.keptDurations)
         }
-    }
 
     @Test
-    fun confirmingAnEditBanksWhatWasTyped() = runTest(UnconfinedTestDispatcher()) {
-        subscribeToState()
-        parked.value = listOf(timer("a"))
-        viewModel.onAction(StrandedTimerAction.OnBeginEditDuration)
-        viewModel.state.value.editDurationState.setTextAndPlaceCursorAtEnd("2:30")
+    fun anUnparsableDurationResolvesNothing() =
+        runTest(UnconfinedTestDispatcher()) {
+            subscribeToState()
+            parked.value = listOf(timer("a"))
+            viewModel.onAction(StrandedTimerAction.OnBeginEditDuration)
+            viewModel.state.value.editDurationState
+                .setTextAndPlaceCursorAtEnd("not a time")
 
-        viewModel.onAction(StrandedTimerAction.OnConfirmEditedDuration)
+            viewModel.onAction(StrandedTimerAction.OnConfirmEditedDuration)
 
-        assertEquals(listOf(2.hours + 30.minutes), repository.keptDurations)
-    }
-
-    @Test
-    fun anUnparsableDurationResolvesNothing() = runTest(UnconfinedTestDispatcher()) {
-        subscribeToState()
-        parked.value = listOf(timer("a"))
-        viewModel.onAction(StrandedTimerAction.OnBeginEditDuration)
-        viewModel.state.value.editDurationState.setTextAndPlaceCursorAtEnd("not a time")
-
-        viewModel.onAction(StrandedTimerAction.OnConfirmEditedDuration)
-
-        assertTrue(repository.keptDurations.isEmpty())
-        assertEquals("a", viewModel.state.value.current?.taskIntervalId)
-    }
+            assertTrue(repository.keptDurations.isEmpty())
+            assertEquals(
+                "a",
+                viewModel.state.value.current
+                    ?.taskIntervalId,
+            )
+        }
 
     @Test
-    fun aHalfTypedDurationDoesNotCarryOntoTheNextItem() = runTest(UnconfinedTestDispatcher()) {
-        subscribeToState()
-        parked.value = listOf(timer("a"), timer("b"))
-        viewModel.onAction(StrandedTimerAction.OnBeginEditDuration)
-        viewModel.state.value.editDurationState.setTextAndPlaceCursorAtEnd("9:99")
+    fun aHalfTypedDurationDoesNotCarryOntoTheNextItem() =
+        runTest(UnconfinedTestDispatcher()) {
+            subscribeToState()
+            parked.value = listOf(timer("a"), timer("b"))
+            viewModel.onAction(StrandedTimerAction.OnBeginEditDuration)
+            viewModel.state.value.editDurationState
+                .setTextAndPlaceCursorAtEnd("9:99")
 
-        parked.value = listOf(timer("b"))
+            parked.value = listOf(timer("b"))
 
-        assertFalse(viewModel.state.value.isEditingDuration)
-        assertEquals("", viewModel.state.value.editDurationState.text.toString())
-    }
+            assertFalse(viewModel.state.value.isEditingDuration)
+            assertEquals(
+                "",
+                viewModel.state.value.editDurationState.text
+                    .toString(),
+            )
+        }
 
     @Test
     fun durationParsingAcceptsHoursAndMinutesAndRejectsNonsense() {
@@ -190,10 +217,7 @@ internal class StrandedTimerViewModelTest {
             return resolveOrFail(timer)
         }
 
-        override suspend fun keepWithDuration(
-            timer: StrandedTimer,
-            duration: Duration
-        ): EmptyResult<DataError> {
+        override suspend fun keepWithDuration(timer: StrandedTimer, duration: Duration): EmptyResult<DataError> {
             keptDurations += duration
             return resolveOrFail(timer)
         }

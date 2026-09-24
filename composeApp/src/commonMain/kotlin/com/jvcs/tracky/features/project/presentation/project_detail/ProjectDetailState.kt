@@ -35,5 +35,5 @@ data class ProjectDetailState(
      */
     val isRunningTimerForeign: Boolean = false,
     /** True while that foreign timer's figure is frozen at the last one the server confirmed. */
-    val isRunningTimerStale: Boolean = false
+    val isRunningTimerStale: Boolean = false,
 )

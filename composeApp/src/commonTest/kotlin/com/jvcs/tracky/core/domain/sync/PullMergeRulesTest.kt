@@ -55,8 +55,8 @@ class PullMergeRulesTest {
             serverWinsOnPullForInterval(
                 localEndDateTimeEpochMs = 500,
                 serverEndDateTimeEpochMs = 500,
-                hasPendingLocalPush = false
-            )
+                hasPendingLocalPush = false,
+            ),
         )
     }
 
@@ -69,8 +69,8 @@ class PullMergeRulesTest {
             serverWinsOnPullForInterval(
                 localEndDateTimeEpochMs = null,
                 serverEndDateTimeEpochMs = 800,
-                hasPendingLocalPush = false
-            )
+                hasPendingLocalPush = false,
+            ),
         )
     }
 
@@ -83,8 +83,8 @@ class PullMergeRulesTest {
             serverWinsOnPullForInterval(
                 localEndDateTimeEpochMs = 500,
                 serverEndDateTimeEpochMs = null,
-                hasPendingLocalPush = true
-            )
+                hasPendingLocalPush = true,
+            ),
         )
     }
 
@@ -96,15 +96,15 @@ class PullMergeRulesTest {
             serverWinsOnPullForInterval(
                 localEndDateTimeEpochMs = null,
                 serverEndDateTimeEpochMs = 800,
-                hasPendingLocalPush = true
-            )
+                hasPendingLocalPush = true,
+            ),
         )
         assertFalse(
             serverWinsOnPullForInterval(
                 localEndDateTimeEpochMs = 500,
                 serverEndDateTimeEpochMs = 900,
-                hasPendingLocalPush = true
-            )
+                hasPendingLocalPush = true,
+            ),
         )
     }
 
@@ -116,8 +116,8 @@ class PullMergeRulesTest {
             serverWinsOnPullForInterval(
                 localEndDateTimeEpochMs = 500,
                 serverEndDateTimeEpochMs = null,
-                hasPendingLocalPush = false
-            )
+                hasPendingLocalPush = false,
+            ),
         )
     }
 
@@ -129,8 +129,8 @@ class PullMergeRulesTest {
             serverWinsOnPullForInterval(
                 localEndDateTimeEpochMs = null,
                 serverEndDateTimeEpochMs = null,
-                hasPendingLocalPush = false
-            )
+                hasPendingLocalPush = false,
+            ),
         )
     }
 }

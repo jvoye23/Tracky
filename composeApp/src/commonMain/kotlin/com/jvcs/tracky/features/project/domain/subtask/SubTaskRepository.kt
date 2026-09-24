@@ -18,6 +18,7 @@ interface SubTaskRepository {
     fun getSubTasksForTask(taskId: String): Flow<List<ProjectSubTask>>
 
     suspend fun upsertSubTask(subTask: ProjectSubTask): EmptyResult<DataError>
+
     suspend fun deleteSubTask(subTaskId: String): EmptyResult<DataError>
 
     /** Starts the subtask's timer, starting its parent task's too when that is not running. */

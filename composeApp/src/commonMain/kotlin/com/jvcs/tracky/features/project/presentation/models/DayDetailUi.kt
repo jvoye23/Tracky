@@ -18,7 +18,7 @@ data class DayIntervalUi(
     val timeRangeLabel: String,
     /** "00:42:11" — hours, minutes and seconds, matching the totals above it. */
     val formattedDuration: String,
-    val projectColor: Color
+    val projectColor: Color,
 )
 
 /**
@@ -40,7 +40,7 @@ data class DayDetailUi(
     val totalDuration: String,
     val intervals: List<DayIntervalUi>,
     /** Distinct parent tasks represented, not distinct intervals and not subtasks. */
-    val taskCount: Int
+    val taskCount: Int,
 ) {
     val intervalCount: Int get() = intervals.size
 

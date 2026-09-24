@@ -20,7 +20,7 @@ data class ProjectTask(
     val subTasks: List<ProjectSubTask>? = null,
     // Manual order within the parent project. Null until the task is first dragged; see
     // sortedByTaskOrder, which sorts nulls last so a new task lands at the bottom of the list.
-    val sortIndex: Long? = null
+    val sortIndex: Long? = null,
 ) : Timestamped {
     override val children: List<Timestamped> get() = intervals + subTasks.orEmpty()
 }

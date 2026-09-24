@@ -19,7 +19,7 @@ data class ProjectDto(
     @SerialName("trashedAtUtc") val trashedAt: String? = null,
     val isPinned: Boolean = false,
     @SerialName("updatedAtUtc") val updatedAt: String? = null,
-    val sortIndex: Long? = null
+    val sortIndex: Long? = null,
 )
 
 @Serializable
@@ -113,7 +113,6 @@ data class SubTaskIntervalDto(
     // and a pulled foreign interval then looks like one this device started.
     val startedByDeviceId: String? = null,
 )
-
 
 @Serializable
 data class TaskIntervalDto(

@@ -21,20 +21,20 @@ import org.koin.compose.viewmodel.koinViewModel
  * the one that was forgotten.
  */
 @Composable
-fun StrandedTimerDialogHost(
-    viewModel: StrandedTimerViewModel = koinViewModel()
-) {
+fun StrandedTimerDialogHost(viewModel: StrandedTimerViewModel = koinViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
     ObserveAsEvents(viewModel.events) { event ->
         when (event) {
-            is StrandedTimerEvent.Error -> coroutineScope.launch {
-                snackbarHostState.showSnackbar(
-                    message = event.error.asStringAsync(),
-                    duration = SnackbarDuration.Short
-                )
+            is StrandedTimerEvent.Error -> {
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar(
+                        message = event.error.asStringAsync(),
+                        duration = SnackbarDuration.Short,
+                    )
+                }
             }
         }
     }
@@ -47,7 +47,7 @@ fun StrandedTimerDialogHost(
         isEditingDuration = state.isEditingDuration,
         editDurationState = state.editDurationState,
         isResolving = state.isResolving,
-        onAction = viewModel::onAction
+        onAction = viewModel::onAction,
     )
     SnackbarHost(hostState = snackbarHostState)
 }

@@ -16,10 +16,11 @@ import kotlin.time.Instant
 internal const val KIND_TASK = "task"
 internal const val KIND_SUB_TASK = "sub_task"
 
-fun ActiveTimerKind.toWire(): String = when (this) {
-    ActiveTimerKind.TASK -> KIND_TASK
-    ActiveTimerKind.SUB_TASK -> KIND_SUB_TASK
-}
+fun ActiveTimerKind.toWire(): String =
+    when (this) {
+        ActiveTimerKind.TASK -> KIND_TASK
+        ActiveTimerKind.SUB_TASK -> KIND_SUB_TASK
+    }
 
 /**
  * An unrecognised `kind` is read as a task rather than rejected.
@@ -30,26 +31,28 @@ fun ActiveTimerKind.toWire(): String = when (this) {
 fun String.toActiveTimerKind(): ActiveTimerKind =
     if (this == KIND_SUB_TASK) ActiveTimerKind.SUB_TASK else ActiveTimerKind.TASK
 
-fun ActiveTimerDto.toActiveTimer(): ActiveTimer = ActiveTimer(
-    intervalId = intervalId,
-    kind = kind.toActiveTimerKind(),
-    parentProjectId = parentProjectId,
-    parentTaskId = parentTaskId,
-    parentSubTaskId = parentSubTaskId,
-    parentTaskIntervalId = parentTaskIntervalId,
-    startedAt = Instant.parse(startedAtUtc),
-    startedByDeviceId = startedByDeviceId
-)
+fun ActiveTimerDto.toActiveTimer(): ActiveTimer =
+    ActiveTimer(
+        intervalId = intervalId,
+        kind = kind.toActiveTimerKind(),
+        parentProjectId = parentProjectId,
+        parentTaskId = parentTaskId,
+        parentSubTaskId = parentSubTaskId,
+        parentTaskIntervalId = parentTaskIntervalId,
+        startedAt = Instant.parse(startedAtUtc),
+        startedByDeviceId = startedByDeviceId,
+    )
 
-fun StartActiveTimer.toRequest(): StartActiveTimerRequest = StartActiveTimerRequest(
-    intervalId = intervalId,
-    kind = kind.toWire(),
-    parentTaskId = parentTaskId,
-    parentSubTaskId = parentSubTaskId,
-    parentTaskIntervalId = parentTaskIntervalId,
-    startedAtUtc = startedAt.toString(),
-    deviceId = deviceId
-)
+fun StartActiveTimer.toRequest(): StartActiveTimerRequest =
+    StartActiveTimerRequest(
+        intervalId = intervalId,
+        kind = kind.toWire(),
+        parentTaskId = parentTaskId,
+        parentSubTaskId = parentSubTaskId,
+        parentTaskIntervalId = parentTaskIntervalId,
+        startedAtUtc = startedAt.toString(),
+        deviceId = deviceId,
+    )
 
 /**
  * Splits the touched rows by level, dropping any the client could not write anyway.
@@ -60,18 +63,20 @@ fun StartActiveTimer.toRequest(): StartActiveTimerRequest = StartActiveTimerRequ
  * `parentProjectId`: one malformed entry should not cost the whole response, and the caller's
  * next pull will carry the row properly.
  */
-fun ActiveTimerChangeDto.toActiveTimerChange(): ActiveTimerChange.Applied = ActiveTimerChange.Applied(
-    active = active?.toActiveTimer(),
-    touchedTaskIntervals = touched.filter { it.kind != KIND_SUB_TASK }.mapNotNull { it.toTaskInterval() },
-    touchedSubTaskIntervals = touched.filter { it.kind == KIND_SUB_TASK }.mapNotNull { it.toSubTaskInterval() },
-    serverNow = serverNowUtc?.toInstantOrNull()
-)
+fun ActiveTimerChangeDto.toActiveTimerChange(): ActiveTimerChange.Applied =
+    ActiveTimerChange.Applied(
+        active = active?.toActiveTimer(),
+        touchedTaskIntervals = touched.filter { it.kind != KIND_SUB_TASK }.mapNotNull { it.toTaskInterval() },
+        touchedSubTaskIntervals = touched.filter { it.kind == KIND_SUB_TASK }.mapNotNull { it.toSubTaskInterval() },
+        serverNow = serverNowUtc?.toInstantOrNull(),
+    )
 
-fun ActiveTimerConflictDto.toRejected(): ActiveTimerChange.Rejected = ActiveTimerChange.Rejected(
-    active = active?.toActiveTimer(),
-    // The conflict body has no envelope timestamp, but the timer it names carries one.
-    serverNow = active?.serverNowUtc?.toInstantOrNull()
-)
+fun ActiveTimerConflictDto.toRejected(): ActiveTimerChange.Rejected =
+    ActiveTimerChange.Rejected(
+        active = active?.toActiveTimer(),
+        // The conflict body has no envelope timestamp, but the timer it names carries one.
+        serverNow = active?.serverNowUtc?.toInstantOrNull(),
+    )
 
 private fun TouchedIntervalDto.toTaskInterval(): TaskInterval? {
     val taskId = parentTaskId ?: return null
@@ -82,7 +87,7 @@ private fun TouchedIntervalDto.toTaskInterval(): TaskInterval? {
         startDateTimeUtc = Instant.parse(startDateTimeUtc),
         endDateTimeUtc = endDateTimeUtc?.let(Instant::parse),
         durationMillis = durationMillis,
-        startedByDeviceId = startedByDeviceId
+        startedByDeviceId = startedByDeviceId,
     )
 }
 
@@ -100,7 +105,7 @@ private fun TouchedIntervalDto.toSubTaskInterval(): SubTaskInterval? {
         // Purely local facts with no wire counterpart; the merge keeps whatever the local row
         // holds, exactly as it does for a pulled interval.
         startedParentTimer = false,
-        startedByDeviceId = startedByDeviceId
+        startedByDeviceId = startedByDeviceId,
     )
 }
 

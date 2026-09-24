@@ -37,7 +37,7 @@ class ProjectSyncManager(
     private val appLifecycleObserver: AppLifecycleObserver,
     private val syncRepository: SyncRepository,
     private val pullCoordinator: SyncPullCoordinator,
-    private val applicationScope: CoroutineScope
+    private val applicationScope: CoroutineScope,
 ) {
     private var started = false
 
@@ -48,27 +48,28 @@ class ProjectSyncManager(
 
         combine(
             connectivityObserver.isConnected.debounce(1.seconds),
-            appLifecycleObserver.isInForeground
+            appLifecycleObserver.isInForeground,
         ) { online, foreground -> online && foreground }
             .distinctUntilChanged()
             .flatMapLatest { active ->
                 // flatMapLatest, so going offline or backgrounding cancels the ticker outright
                 // rather than leaving it running against a device that cannot reach the server.
-                if (!active) emptyFlow()
-                else flow {
-                    while (true) {
-                        emit(Unit)
-                        delay(FOREGROUND_PULL_INTERVAL)
+                if (!active) {
+                    emptyFlow()
+                } else {
+                    flow {
+                        while (true) {
+                            emit(Unit)
+                            delay(FOREGROUND_PULL_INTERVAL)
+                        }
                     }
                 }
-            }
-            .onEach {
+            }.onEach {
                 syncRepository.syncPendingOperations()
                 // Through the coordinator, not straight at the applier: this tick is no longer the
                 // only thing that pulls, and two pulls overlapping can walk the cursor backwards.
                 pullCoordinator.pullNow()
-            }
-            .launchIn(applicationScope)
+            }.launchIn(applicationScope)
     }
 
     private companion object {

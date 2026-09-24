@@ -9,7 +9,6 @@ import androidx.lifecycle.viewModelScope
 import com.jvcs.tracky.core.domain.auth.AuthService
 import com.jvcs.tracky.core.domain.auth.SessionStorage
 import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
-import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.core.domain.sync.DeltaSyncApplier
 import com.jvcs.tracky.core.domain.sync.SyncCursorStore
 import com.jvcs.tracky.core.domain.util.DataError
@@ -19,12 +18,13 @@ import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.core.domain.util.TimerState
 import com.jvcs.tracky.core.domain.util.onFailure
 import com.jvcs.tracky.core.domain.util.onSuccess
+import com.jvcs.tracky.design_system.theme.defaultProjectColor
+import com.jvcs.tracky.features.project.domain.models.Project
+import com.jvcs.tracky.features.project.domain.project.ProjectRepository
+import com.jvcs.tracky.features.project.domain.project.sortedByCustomOrder
 import com.jvcs.tracky.features.project.presentation.mappers.toProjectUi
 import com.jvcs.tracky.features.project.presentation.models.ProjectUi
 import com.jvcs.tracky.features.project.presentation.util.toUiText
-import com.jvcs.tracky.design_system.theme.defaultProjectColor
-import com.jvcs.tracky.features.project.domain.project.ProjectRepository
-import com.jvcs.tracky.features.project.domain.project.sortedByCustomOrder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -62,14 +62,15 @@ class ProjectOverviewViewModel(
     private val connectivityObserver: ConnectivityObserver,
     private val syncCursorStore: SyncCursorStore,
     private val deltaSyncApplier: DeltaSyncApplier,
-    private val applicationScope: CoroutineScope
-): ViewModel() {
+    private val applicationScope: CoroutineScope,
+) : ViewModel() {
 
     private val _sortOption = MutableStateFlow(SortOption.CUSTOM)
     val sortOption = _sortOption.asStateFlow()
     private val eventChannel = Channel<ProjectOverviewEvent>()
 
     val events = eventChannel.receiveAsFlow()
+
     /**
      * True from the first move of a drag until the reorder it produced is visible in the source
      * again (or is abandoned). Only while this holds may the displayed order outrank the database's.
@@ -77,150 +78,200 @@ class ProjectOverviewViewModel(
     private var reorderInFlight = false
     private var hasLoadedInitialData = false
     private val _state = MutableStateFlow(ProjectOverviewState())
-    val state = combine(
-        _state,
-        sessionStorage.observeAuthInfo(),
-        connectivityObserver.isConnected.debounce(1.seconds)
-    ) { currentState, authInfo, isOnline ->
-        if (authInfo == null) {
-            return@combine ProjectOverviewState()
-        }
-        currentState.copy(
-            localUser = authInfo.user,
-            isOnline = isOnline
-        )
-    }
-        .onStart {
+    val state =
+        combine(
+            _state,
+            sessionStorage.observeAuthInfo(),
+            connectivityObserver.isConnected.debounce(1.seconds),
+        ) { currentState, authInfo, isOnline ->
+            if (authInfo == null) {
+                return@combine ProjectOverviewState()
+            }
+            currentState.copy(
+                localUser = authInfo.user,
+                isOnline = isOnline,
+            )
+        }.onStart {
             if (!hasLoadedInitialData) {
                 hasLoadedInitialData = true
                 loadProjectsFromServer()
                 observeProjects()
             }
-        }
-
-        .stateIn(
+        }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = _state.value
+            initialValue = _state.value,
         )
 
     fun onAction(action: ProjectOverviewAction) {
-        when(action){
+        when (action) {
             is ProjectOverviewAction.OnProjectCardClick -> {}
-            ProjectOverviewAction.OnStartTrackerClick -> {}
-            ProjectOverviewAction.OnToggleAddNewProjectBottomSheet -> {
-                _state.update { it.copy(
-                    isAddNewProjectBottomSheetVisible = !it.isAddNewProjectBottomSheetVisible
-                ) }
-            }
-            ProjectOverviewAction.OnCalendarIconClick -> {
 
+            ProjectOverviewAction.OnStartTrackerClick -> {}
+
+            ProjectOverviewAction.OnToggleAddNewProjectBottomSheet -> {
+                _state.update {
+                    it.copy(
+                        isAddNewProjectBottomSheetVisible = !it.isAddNewProjectBottomSheetVisible,
+                    )
+                }
             }
-            is ProjectOverviewAction.OnAddProjectClick -> { addProject(action.projectTitle)}
+
+            ProjectOverviewAction.OnCalendarIconClick -> {
+            }
+
+            is ProjectOverviewAction.OnAddProjectClick -> {
+                addProject(action.projectTitle)
+            }
+
             ProjectOverviewAction.OnFabClick -> {
-                _state.update { it.copy(
-                    isAddNewProjectBottomSheetVisible = !it.isAddNewProjectBottomSheetVisible
-                ) }
+                _state.update {
+                    it.copy(
+                        isAddNewProjectBottomSheetVisible = !it.isAddNewProjectBottomSheetVisible,
+                    )
+                }
             }
+
             ProjectOverviewAction.OnMenuClick -> { /* Handle menu */ }
+
             is ProjectOverviewAction.OnSearchQueryChange -> {
                 // Reordering is unavailable while searching, so no drag can still be in flight.
                 reorderInFlight = false
                 _state.update { it.copy(searchQuery = action.query).withSectionsFromProjects() }
             }
+
             ProjectOverviewAction.OnToggleViewMode -> {
                 _state.update { it.copy(isGridView = !it.isGridView) }
             }
+
             is ProjectOverviewAction.OnProjectCardLongPress -> {
-                _state.update { it.copy(
-                    isEditModeActive = true,
-                    selectedProjectIds = it.selectedProjectIds + action.projectId
-                ) }
-            }
-            is ProjectOverviewAction.OnProjectCardToggleSelection -> {
                 _state.update {
-                    val updated = if (action.projectId in it.selectedProjectIds) {
-                        it.selectedProjectIds - action.projectId
-                    } else {
-                        it.selectedProjectIds + action.projectId
-                    }
                     it.copy(
-                        selectedProjectIds = updated,
-                        isEditModeActive = updated.isNotEmpty()
+                        isEditModeActive = true,
+                        selectedProjectIds = it.selectedProjectIds + action.projectId,
                     )
                 }
             }
-            ProjectOverviewAction.OnExitEditMode -> {
-                _state.update { it.copy(
-                    isEditModeActive = false,
-                    selectedProjectIds = emptySet(),
-                    isDeleteConfirmationDialogVisible = false
-                ) }
+
+            is ProjectOverviewAction.OnProjectCardToggleSelection -> {
+                _state.update {
+                    val updated =
+                        if (action.projectId in it.selectedProjectIds) {
+                            it.selectedProjectIds - action.projectId
+                        } else {
+                            it.selectedProjectIds + action.projectId
+                        }
+                    it.copy(
+                        selectedProjectIds = updated,
+                        isEditModeActive = updated.isNotEmpty(),
+                    )
+                }
             }
+
+            ProjectOverviewAction.OnExitEditMode -> {
+                _state.update {
+                    it.copy(
+                        isEditModeActive = false,
+                        selectedProjectIds = emptySet(),
+                        isDeleteConfirmationDialogVisible = false,
+                    )
+                }
+            }
+
             ProjectOverviewAction.OnPinSelectedClick -> {
                 pinSelectedProjects()
             }
+
             ProjectOverviewAction.OnArchiveSelectedClick -> {
                 archiveSelectedProjects()
             }
+
             ProjectOverviewAction.OnDeleteSelectedClick -> {
                 _state.update { it.copy(isDeleteConfirmationDialogVisible = true) }
             }
+
             ProjectOverviewAction.OnDismissDeleteDialog -> {
                 _state.update { it.copy(isDeleteConfirmationDialogVisible = false) }
             }
+
             ProjectOverviewAction.OnConfirmDelete -> {
                 deleteSelectedProjects()
             }
+
             ProjectOverviewAction.OnToggleSortBottomSheet -> {
-                _state.update { it.copy(
-                    isSortBottomSheetVisible = !it.isSortBottomSheetVisible
-                ) }
+                _state.update {
+                    it.copy(
+                        isSortBottomSheetVisible = !it.isSortBottomSheetVisible,
+                    )
+                }
             }
+
             is ProjectOverviewAction.OnSortOptionSelected -> {
                 // A different sort discards the manual order the drag was holding on to.
                 reorderInFlight = false
                 _sortOption.update { action.sortOption }
-                _state.update { it.copy(
-                    isSortBottomSheetVisible = false
-                ) }
+                _state.update {
+                    it.copy(
+                        isSortBottomSheetVisible = false,
+                    )
+                }
             }
+
             ProjectOverviewAction.OnReorderDragStart -> {
                 // The card started moving: leave edit mode so it becomes a pure reorder drag.
-                _state.update { it.copy(
-                    isEditModeActive = false,
-                    selectedProjectIds = emptySet()
-                ) }
+                _state.update {
+                    it.copy(
+                        isEditModeActive = false,
+                        selectedProjectIds = emptySet(),
+                    )
+                }
             }
+
             is ProjectOverviewAction.OnReorderMove -> {
                 reorderInFlight = true
                 _state.update { it.withReorderMove(action.fromId, action.toId) }
             }
+
             ProjectOverviewAction.OnReorderCancel -> {
                 // Nothing was saved, so the persisted order is what [projects] already holds.
                 reorderInFlight = false
                 _state.update { it.withSectionsFromProjects() }
             }
+
             is ProjectOverviewAction.OnReorderCommit -> {
                 reorderProjects(action.projectId)
             }
-            is ProjectOverviewAction.OnLogoutClick -> showLogoutConfirmation()
-            is ProjectOverviewAction.OnConfirmLogout -> logout()
-            is ProjectOverviewAction.OnDismissLogoutConfirmation -> dismissLogoutConfirmation()
-            ProjectOverviewAction.OnPullToRefresh -> refreshProjectsFromServer()
+
+            is ProjectOverviewAction.OnLogoutClick -> {
+                showLogoutConfirmation()
+            }
+
+            is ProjectOverviewAction.OnConfirmLogout -> {
+                logout()
+            }
+
+            is ProjectOverviewAction.OnDismissLogoutConfirmation -> {
+                dismissLogoutConfirmation()
+            }
+
+            ProjectOverviewAction.OnPullToRefresh -> {
+                refreshProjectsFromServer()
+            }
         }
     }
 
     /** Persists the order of the section [draggedProjectId] now sits in. */
     private fun reorderProjects(draggedProjectId: String) {
         val state = _state.value
-        val section = when {
-            state.pinnedProjects.any { it.projectId == draggedProjectId } -> state.pinnedProjects
-            state.otherProjects.any { it.projectId == draggedProjectId } -> state.otherProjects
-            else -> return
-        }
+        val section =
+            when {
+                state.pinnedProjects.any { it.projectId == draggedProjectId } -> state.pinnedProjects
+                state.otherProjects.any { it.projectId == draggedProjectId } -> state.otherProjects
+                else -> return
+            }
         viewModelScope.launch {
-            projectRepository.reorderProjects(section.map { it.projectId })
+            projectRepository
+                .reorderProjects(section.map { it.projectId })
                 .onFailure { dataError ->
                     // Don't leave the user looking at an order that says it saved while the snackbar
                     // says it didn't: fall back to whatever is actually persisted.
@@ -232,11 +283,12 @@ class ProjectOverviewViewModel(
     }
 
     /** Moves [fromId] to [toId]'s slot. Cross-section moves are rejected: pin state must not change. */
-    private fun ProjectOverviewState.withReorderMove(fromId: String, toId: String): ProjectOverviewState = when {
-        pinnedProjects.holdsBoth(fromId, toId) -> copy(pinnedProjects = pinnedProjects.moved(fromId, toId))
-        otherProjects.holdsBoth(fromId, toId) -> copy(otherProjects = otherProjects.moved(fromId, toId))
-        else -> this
-    }
+    private fun ProjectOverviewState.withReorderMove(fromId: String, toId: String): ProjectOverviewState =
+        when {
+            pinnedProjects.holdsBoth(fromId, toId) -> copy(pinnedProjects = pinnedProjects.moved(fromId, toId))
+            otherProjects.holdsBoth(fromId, toId) -> copy(otherProjects = otherProjects.moved(fromId, toId))
+            else -> this
+        }
 
     private fun List<ProjectUi>.holdsBoth(fromId: String, toId: String) =
         any { it.projectId == fromId } && any { it.projectId == toId }
@@ -259,14 +311,14 @@ class ProjectOverviewViewModel(
      */
     private fun ProjectOverviewState.withSectionsFrom(
         latest: List<ProjectUi>,
-        adoptSourceOrder: Boolean
+        adoptSourceOrder: Boolean,
     ): ProjectOverviewState {
         if (adoptSourceOrder || sortOption != SortOption.CUSTOM || searchQuery.isNotBlank()) {
             return withSectionsFromProjects()
         }
         return copy(
             pinnedProjects = pinnedProjects.reconciledWith(latest.filter { it.isPinned }),
-            otherProjects = otherProjects.reconciledWith(latest.filterNot { it.isPinned })
+            otherProjects = otherProjects.reconciledWith(latest.filterNot { it.isPinned }),
         )
     }
 
@@ -304,31 +356,37 @@ class ProjectOverviewViewModel(
         val visible = projects.orEmpty().filterBySearchQuery(searchQuery)
         return copy(
             pinnedProjects = visible.filter { it.isPinned },
-            otherProjects = visible.filterNot { it.isPinned }
+            otherProjects = visible.filterNot { it.isPinned },
         )
     }
 
     private fun List<ProjectUi>.filterBySearchQuery(query: String) =
         if (query.isBlank()) this else filter { it.title.contains(query, ignoreCase = true) }
 
-    private fun List<Project>.sortedForOption(option: SortOption) = when (option) {
-        SortOption.CUSTOM -> sortedByCustomOrder()
-        SortOption.CREATION_DATE -> sortedByDescending { it.startDateTimeUtc }
-        // lastUpdatedAt, not ownUpdatedAt: editing a task counts as modifying its project, so the
-        // project moves up. The overview loads projects with their tasks, so the roll-up is real.
-        SortOption.MODIFICATION_DATE -> sortedByDescending { it.lastUpdatedAt ?: it.startDateTimeUtc }
-    }
+    private fun List<Project>.sortedForOption(option: SortOption) =
+        when (option) {
+            SortOption.CUSTOM -> sortedByCustomOrder()
+
+            SortOption.CREATION_DATE -> sortedByDescending { it.startDateTimeUtc }
+
+            // lastUpdatedAt, not ownUpdatedAt: editing a task counts as modifying its project, so the
+            // project moves up. The overview loads projects with their tasks, so the roll-up is real.
+            SortOption.MODIFICATION_DATE -> sortedByDescending { it.lastUpdatedAt ?: it.startDateTimeUtc }
+        }
 
     private fun archiveSelectedProjects() {
         val ids = _state.value.selectedProjectIds
         viewModelScope.launch {
-            val errors = ids.mapNotNull { id ->
-                (projectRepository.setProjectArchived(id, isArchived = true) as? Result.Error)?.error
+            val errors =
+                ids.mapNotNull { id ->
+                    (projectRepository.setProjectArchived(id, isArchived = true) as? Result.Error)?.error
+                }
+            _state.update {
+                it.copy(
+                    isEditModeActive = false,
+                    selectedProjectIds = emptySet(),
+                )
             }
-            _state.update { it.copy(
-                isEditModeActive = false,
-                selectedProjectIds = emptySet()
-            ) }
             if (errors.isNotEmpty()) eventChannel.send(ProjectOverviewEvent.ArchiveError)
         }
     }
@@ -343,10 +401,12 @@ class ProjectOverviewViewModel(
             // One call for the whole selection: the repository flips every flag and then re-indexes
             // the target section once, so the pinned projects land on top of it.
             val result = projectRepository.setProjectsPinned(ids.toList(), isPinned = targetPinned)
-            _state.update { it.copy(
-                isEditModeActive = false,
-                selectedProjectIds = emptySet()
-            ) }
+            _state.update {
+                it.copy(
+                    isEditModeActive = false,
+                    selectedProjectIds = emptySet(),
+                )
+            }
             result.onFailure { eventChannel.send(ProjectOverviewEvent.PinError) }
         }
     }
@@ -358,24 +418,31 @@ class ProjectOverviewViewModel(
         viewModelScope.launch {
             // One stamp for the whole selection — they were deleted by a single user action.
             val trashedAt = timeProvider.nowInstant
-            val results = ids.map { id ->
-                async { projectRepository.setProjectTrashed(id, trashedAt) }
-            }.awaitAll()
-            results.filterIsInstance<Result.Error<DataError>>()
+            val results =
+                ids
+                    .map { id ->
+                        async { projectRepository.setProjectTrashed(id, trashedAt) }
+                    }.awaitAll()
+            results
+                .filterIsInstance<Result.Error<DataError>>()
                 .firstOrNull()
                 ?.let { result ->
-                eventChannel.send(ProjectOverviewEvent.AddToTrashError(result.error.toUiText()))
+                    eventChannel.send(ProjectOverviewEvent.AddToTrashError(result.error.toUiText()))
+                }
+            _state.update {
+                it.copy(
+                    isEditModeActive = false,
+                    selectedProjectIds = emptySet(),
+                    isDeleteConfirmationDialogVisible = false,
+                )
             }
-            _state.update { it.copy(
-                isEditModeActive = false,
-                selectedProjectIds = emptySet(),
-                isDeleteConfirmationDialogVisible = false
-            ) }
         }
     }
+
     private fun loadProjectsFromServer() {
         viewModelScope.launch {
-            projectRepository.fetchProjects()
+            projectRepository
+                .fetchProjects()
                 .onFailure { error ->
                     eventChannel.send(ProjectOverviewEvent.Error(error.toUiText()))
                 }
@@ -395,7 +462,8 @@ class ProjectOverviewViewModel(
     private fun refreshProjectsFromServer() {
         viewModelScope.launch {
             _state.update { it.copy(isRefreshing = true) }
-            deltaSyncApplier.pullChanges()
+            deltaSyncApplier
+                .pullChanges()
                 .onFailure { error ->
                     eventChannel.send(ProjectOverviewEvent.Error(error.toUiText()))
                 }
@@ -406,41 +474,46 @@ class ProjectOverviewViewModel(
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun observeProjects() {
         // We only care whether a session exists, not what changed inside it
-        sessionStorage.observeAuthInfo()
+        sessionStorage
+            .observeAuthInfo()
             .map { it != null }
             .distinctUntilChanged()
             // switch onto the local stream while authenticated, drop it on logout.
             // flatMapLatest cancels the previous inner flow for you, so you never
             // end up with two collectors after a re-login
             .flatMapLatest { isAuthenticated ->
-                if (!isAuthenticated) emptyFlow()
-                else combine(
-                    projectRepository.getActiveProjects(),
-                    timeManager.taskStates,
-                    _sortOption
-                ){ projects, activeTimers, sortOption ->
-                    val runningTimer = activeTimers.entries
-                        .firstOrNull() { it.value.isRunning }
-                        ?.let { it.key to it.value }
-                    projects.sortedForOption(sortOption)
-                        .map { it.toProjectUi().withRunningTimer(runningTimer) } to sortOption
+                if (!isAuthenticated) {
+                    emptyFlow()
+                } else {
+                    combine(
+                        projectRepository.getActiveProjects(),
+                        timeManager.taskStates,
+                        _sortOption,
+                    ) { projects, activeTimers, sortOption ->
+                        val runningTimer =
+                            activeTimers.entries
+                                .firstOrNull { it.value.isRunning }
+                                ?.let { it.key to it.value }
+                        projects
+                            .sortedForOption(sortOption)
+                            .map { it.toProjectUi().withRunningTimer(runningTimer) } to sortOption
+                    }
                 }
-            }
-            .onEach { (uiProjects, sortOption) ->
+            }.onEach { (uiProjects, sortOption) ->
                 val sortChanged = _state.value.sortOption != sortOption
                 val adoptSourceOrder = sortChanged || !reorderInFlight
                 _state.update { state ->
-                    state.copy(
-                        projects = uiProjects,
-                        sortOption = sortOption,
-                    ).withSectionsFrom(uiProjects, adoptSourceOrder)
+                    state
+                        .copy(
+                            projects = uiProjects,
+                            sortOption = sortOption,
+                        ).withSectionsFrom(uiProjects, adoptSourceOrder)
                 }
                 // The reorder has made it back through Room, so the source is authoritative again.
                 if (reorderInFlight && _state.value.matchesSourceOrder(uiProjects)) {
                     reorderInFlight = false
                 }
-            }
-            .launchIn(viewModelScope)
+            }.launchIn(viewModelScope)
     }
 
     private fun ProjectUi.withRunningTimer(runningTimer: Pair<String, TimerState>?): ProjectUi {
@@ -448,68 +521,77 @@ class ProjectOverviewViewModel(
         val (runningTaskId, timerState) = runningTimer
         if (projectTasks?.none { it.projectTaskId == runningTaskId } == true) return this
 
-        val updatedTasks = projectTasks?.map { task ->
-            if (task.projectTaskId == runningTaskId) {
-                task.copy(
-                    durationMillis = timerState.totalDuration.inWholeMilliseconds,
-                    isTimerRunning = true
-                )
-            } else {
-                task
+        val updatedTasks =
+            projectTasks?.map { task ->
+                if (task.projectTaskId == runningTaskId) {
+                    task.copy(
+                        durationMillis = timerState.totalDuration.inWholeMilliseconds,
+                        isTimerRunning = true,
+                    )
+                } else {
+                    task
+                }
             }
-        }
         return copy(projectTasks = updatedTasks)
     }
 
     private fun addProject(projectTitle: String) {
         viewModelScope.launch {
-        val newProjectId = Uuid.random().toString()
+            val newProjectId = Uuid.random().toString()
 
-        val newProject = Project(
-            projectId = newProjectId,
-            title = projectTitle,
-            description = null,
-            colorArgb = defaultProjectColor.toArgb(),
-            totalDurationMillis = null,
-            startDateTimeUtc = timeProvider.nowInstant,
-            isFinished = false,
-            endDateTimeUtc = null,
-            isArchived = false,
-            trashedAt = null
-        )
+            val newProject =
+                Project(
+                    projectId = newProjectId,
+                    title = projectTitle,
+                    description = null,
+                    colorArgb = defaultProjectColor.toArgb(),
+                    totalDurationMillis = null,
+                    startDateTimeUtc = timeProvider.nowInstant,
+                    isFinished = false,
+                    endDateTimeUtc = null,
+                    isArchived = false,
+                    trashedAt = null,
+                )
 
-
-            when(val result = projectRepository.upsertProject(newProject)){
+            when (val result = projectRepository.upsertProject(newProject)) {
                 is Result.Error -> {
                     eventChannel.send(ProjectOverviewEvent.Error(result.error.toUiText()))
                 }
+
                 is Result.Success -> {
-                    _state.update { it.copy(
-                        isAddNewProjectBottomSheetVisible = false,
-                        addProjectTextFieldState = TextFieldState()
-                    ) }
+                    _state.update {
+                        it.copy(
+                            isAddNewProjectBottomSheetVisible = false,
+                            addProjectTextFieldState = TextFieldState(),
+                        )
+                    }
                     eventChannel.send(ProjectOverviewEvent.NewProjectSaved(projectId = newProjectId))
                 }
             }
         }
     }
+
     private fun logout() {
-        _state.update { it.copy(
-            showLogoutConfirmation = false
-        ) }
+        _state.update {
+            it.copy(
+                showLogoutConfirmation = false,
+            )
+        }
         viewModelScope.launch {
-            _state.update { it.copy(
-                isLoggingOut = true
-            ) }
+            _state.update {
+                it.copy(
+                    isLoggingOut = true,
+                )
+            }
             val authInfo = sessionStorage.observeAuthInfo().firstOrNull()
             val refreshToken = authInfo?.refreshToken ?: return@launch
 
-            authService.logout(refreshToken)
+            authService
+                .logout(refreshToken)
                 .onSuccess {
                     clearLocalSessionAndData()
                     eventChannel.send(ProjectOverviewEvent.OnLogoutSuccess)
-                }
-                .onFailure { error ->
+                }.onFailure { error ->
                     eventChannel.send(ProjectOverviewEvent.OnLogoutError(error.toUiText()))
                 }
         }
@@ -527,14 +609,18 @@ class ProjectOverviewViewModel(
     }
 
     private fun showLogoutConfirmation() {
-        _state.update { it.copy(
-            showLogoutConfirmation = true
-        ) }
+        _state.update {
+            it.copy(
+                showLogoutConfirmation = true,
+            )
+        }
     }
 
     private fun dismissLogoutConfirmation() {
-        _state.update { it.copy(
-            showLogoutConfirmation = false
-        ) }
+        _state.update {
+            it.copy(
+                showLogoutConfirmation = false,
+            )
+        }
     }
 }

@@ -55,75 +55,80 @@ fun SearchTopAppBar(
         title = {
             if (isSearchBoxExpanded) {
                 Surface(
-                    modifier = Modifier
-                        .height(48.dp)
-                        .padding(horizontal = 8.dp)
-                        .shadow(2.dp, CircleShape),
+                    modifier =
+                        Modifier
+                            .height(48.dp)
+                            .padding(horizontal = 8.dp)
+                            .shadow(2.dp, CircleShape),
                     shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         BasicTextField(
                             value = searchQuery,
                             onValueChange = { onQueryChange(it) },
                             modifier = Modifier.weight(1f),
                             singleLine = true,
-                            textStyle = MaterialTheme.typography.bodyLarge.copy(
-                                color = MaterialTheme.colorScheme.onSurface
-                            ),
+                            textStyle =
+                                MaterialTheme.typography.bodyLarge.copy(
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                ),
                             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                             decorationBox = { innerTextField ->
                                 if (searchQuery.isEmpty()) {
                                     Text(
                                         text = searchHint,
                                         style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                                     )
                                 }
                                 innerTextField()
-                            }
+                            },
                         )
                         if (sortOption != null) {
                             val isSortActive = sortOption != SortOption.CUSTOM
                             Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        if (isSortActive) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                                        else Color.Transparent
-                                    )
-                                    .clickable { onToggleSortBottomSheet() },
-                                contentAlignment = Alignment.Center
+                                modifier =
+                                    Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            if (isSortActive) {
+                                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                                            } else {
+                                                Color.Transparent
+                                            },
+                                        ).clickable { onToggleSortBottomSheet() },
+                                contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
                                     imageVector = Icon_Swap_Vert_Up,
                                     contentDescription = stringResource(Res.string.sort_by),
                                     modifier = Modifier.size(20.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 Icon(
                                     imageVector = Icon_Swap_Vert_Down,
                                     contentDescription = stringResource(Res.string.sort_by),
                                     modifier = Modifier.size(20.dp),
-                                    tint = if (isSortActive) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                                    tint = if (isSortActive) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
                     }
                 }
-            }
-            else {
+            } else {
                 if (title != null) {
                     Text(
                         text = title,
                         style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
             }

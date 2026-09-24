@@ -18,8 +18,10 @@ class LoginE2ETest {
     fun loginAndNavigateToProjectOverview() {
         // Wait for login screen to appear (auth check may show loading first)
         composeTestRule.waitUntil(5_000) {
-            composeTestRule.onAllNodesWithTag("login_email")
-                .fetchSemanticsNodes().isNotEmpty()
+            composeTestRule
+                .onAllNodesWithTag("login_email")
+                .fetchSemanticsNodes()
+                .isNotEmpty()
         }
 
         // Type email
@@ -33,8 +35,10 @@ class LoginE2ETest {
 
         // Wait for navigation to project overview (network call, allow up to 15s)
         composeTestRule.waitUntil(15_000) {
-            composeTestRule.onAllNodesWithTag("project_overview")
-                .fetchSemanticsNodes().isNotEmpty()
+            composeTestRule
+                .onAllNodesWithTag("project_overview")
+                .fetchSemanticsNodes()
+                .isNotEmpty()
         }
 
         // Assert project overview screen is displayed

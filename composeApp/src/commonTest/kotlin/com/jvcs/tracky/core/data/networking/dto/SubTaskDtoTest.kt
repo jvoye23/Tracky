@@ -27,7 +27,8 @@ class SubTaskDtoTest {
     private val json = Json { ignoreUnknownKeys = true }
 
     // The tree from backend_documentation.md, trimmed to the levels this test is about.
-    private val documentedTask = """
+    private val documentedTask =
+        """
         {
           "id": "fe316e35-bd3f-4c6f-9d7d-23d6b6e8877e",
           "title": "Work task",
@@ -61,7 +62,7 @@ class SubTaskDtoTest {
             }
           ]
         }
-    """.trimIndent()
+        """.trimIndent()
 
     @Test
     fun decodesTheDocumentedFourLevelTree() {
@@ -95,14 +96,20 @@ class SubTaskDtoTest {
 
     @Test
     fun mappingAnIntervalTakesStartedParentTimerFromTheCaller() {
-        val dto = json.decodeFromString<ProjectTaskDto>(documentedTask)
-            .subTasks.single().intervals.single()
+        val dto =
+            json
+                .decodeFromString<ProjectTaskDto>(documentedTask)
+                .subTasks
+                .single()
+                .intervals
+                .single()
 
-        val interval = dto.toSubTaskInterval(
-            parentProjectId = "p1",
-            startedParentTimer = true,
-            startedByDeviceId = "device-1"
-        )
+        val interval =
+            dto.toSubTaskInterval(
+                parentProjectId = "p1",
+                startedParentTimer = true,
+                startedByDeviceId = "device-1",
+            )
 
         // The fields with no wire counterpart: they must survive a server echo unchanged.
         assertTrue(interval.startedParentTimer)
@@ -115,12 +122,14 @@ class SubTaskDtoTest {
     @Test
     fun aTaskWithNoSubTasksDecodesEitherWay() {
         // The server always sends `[]`; the default only covers a pre-subtask deployment.
-        val explicit = json.decodeFromString<ProjectTaskDto>(
-            """{"id":"t1","title":"T","startDateTimeUtc":"2026-03-28T15:16:40Z","subTasks":[]}"""
-        )
-        val omitted = json.decodeFromString<ProjectTaskDto>(
-            """{"id":"t1","title":"T","startDateTimeUtc":"2026-03-28T15:16:40Z"}"""
-        )
+        val explicit =
+            json.decodeFromString<ProjectTaskDto>(
+                """{"id":"t1","title":"T","startDateTimeUtc":"2026-03-28T15:16:40Z","subTasks":[]}""",
+            )
+        val omitted =
+            json.decodeFromString<ProjectTaskDto>(
+                """{"id":"t1","title":"T","startDateTimeUtc":"2026-03-28T15:16:40Z"}""",
+            )
 
         assertTrue(explicit.subTasks.isEmpty())
         assertTrue(omitted.subTasks.isEmpty())
@@ -129,16 +138,17 @@ class SubTaskDtoTest {
     @Test
     fun decodesAnOpenSubTaskIntervalWithTheOptionalFieldsOmitted() {
         // The create response for a running timer: no end, no duration yet.
-        val dto = json.decodeFromString<SubTaskIntervalDto>(
-            """
-            {
-              "id": "7a41e0c9-2b8d-4f31-8c05-9e6a3d1f4b72",
-              "parentSubTaskId": "3d90b1ac-51f7-4a02-9e64-1c7b2f0e5d48",
-              "parentTaskIntervalId": "9c1f0b52-6a4e-4f0d-9d16-2b5b0f8c9a31",
-              "startDateTimeUtc": "2026-03-28T15:16:40Z"
-            }
-            """.trimIndent()
-        )
+        val dto =
+            json.decodeFromString<SubTaskIntervalDto>(
+                """
+                {
+                  "id": "7a41e0c9-2b8d-4f31-8c05-9e6a3d1f4b72",
+                  "parentSubTaskId": "3d90b1ac-51f7-4a02-9e64-1c7b2f0e5d48",
+                  "parentTaskIntervalId": "9c1f0b52-6a4e-4f0d-9d16-2b5b0f8c9a31",
+                  "startDateTimeUtc": "2026-03-28T15:16:40Z"
+                }
+                """.trimIndent(),
+            )
 
         assertNull(dto.endDateTimeUtc)
         assertEquals(0L, dto.durationMillis)
@@ -152,9 +162,11 @@ class SubTaskDtoTest {
         assertEquals("3d90b1ac-51f7-4a02-9e64-1c7b2f0e5d48", body.id)
         assertTrue(body.title.isNotBlank()) // the server's @NotBlank rule
 
-        val intervalBody: CreateSubTaskIntervalRequest = subTask.intervals.single()
-            .toSubTaskInterval("p1", startedParentTimer = true, startedByDeviceId = null)
-            .toCreateSubTaskIntervalRequest()
+        val intervalBody: CreateSubTaskIntervalRequest =
+            subTask.intervals
+                .single()
+                .toSubTaskInterval("p1", startedParentTimer = true, startedByDeviceId = null)
+                .toCreateSubTaskIntervalRequest()
         assertEquals("7a41e0c9-2b8d-4f31-8c05-9e6a3d1f4b72", intervalBody.id)
         // Required on create; a missing value is a 400.
         assertEquals("9c1f0b52-6a4e-4f0d-9d16-2b5b0f8c9a31", intervalBody.parentTaskIntervalId)

@@ -36,21 +36,28 @@ import kotlin.time.Instant
  * statuses carry meaning those helpers throw away: `204` means "nothing is running", which is an
  * answer rather than an empty body, and `409` carries the timer that *is* running.
  */
-class KtorRemoteActiveTimerDataSource(
-    private val httpClient: HttpClient
-) : RemoteActiveTimerDataSource {
+class KtorRemoteActiveTimerDataSource(private val httpClient: HttpClient) : RemoteActiveTimerDataSource {
 
     override suspend fun getActive(): Result<ActiveTimer?, DataError.Remote> {
-        val response = when (val r = safeResponse { httpClient.get { url(constructRoute(ACTIVE_ROUTE)) } }) {
-            is Result.Success -> r.data
-            is Result.Error -> return Result.Error(r.error)
-        }
+        val response =
+            when (val r = safeResponse { httpClient.get { url(constructRoute(ACTIVE_ROUTE)) } }) {
+                is Result.Success -> r.data
+                is Result.Error -> return Result.Error(r.error)
+            }
         return when {
-            response.status.value == NO_CONTENT -> Result.Success(null)
-            response.status.value in SUCCESS -> response.decode<ActiveTimerDto>()?.let {
-                Result.Success(it.toActiveTimer())
-            } ?: Result.Error(DataError.Remote.SERIALIZATION)
-            else -> Result.Error(httpStatusToRemoteError(response.status.value))
+            response.status.value == NO_CONTENT -> {
+                Result.Success(null)
+            }
+
+            response.status.value in SUCCESS -> {
+                response.decode<ActiveTimerDto>()?.let {
+                    Result.Success(it.toActiveTimer())
+                } ?: Result.Error(DataError.Remote.SERIALIZATION)
+            }
+
+            else -> {
+                Result.Error(httpStatusToRemoteError(response.status.value))
+            }
         }
     }
 
@@ -63,16 +70,14 @@ class KtorRemoteActiveTimerDataSource(
             }
         }
 
-    override suspend fun stop(
-        intervalId: String,
-        endedAt: Instant
-    ): Result<ActiveTimerChange, DataError.Remote> = changing {
-        httpClient.post {
-            url(constructRoute(STOP_ROUTE))
-            contentType(ContentType.Application.Json)
-            setBody(StopActiveTimerRequest(intervalId = intervalId, endedAtUtc = endedAt.toString()))
+    override suspend fun stop(intervalId: String, endedAt: Instant): Result<ActiveTimerChange, DataError.Remote> =
+        changing {
+            httpClient.post {
+                url(constructRoute(STOP_ROUTE))
+                contentType(ContentType.Application.Json)
+                setBody(StopActiveTimerRequest(intervalId = intervalId, endedAtUtc = endedAt.toString()))
+            }
         }
-    }
 
     /**
      * The shared success/conflict handling for start and stop, which answer identically.
@@ -81,26 +86,34 @@ class KtorRemoteActiveTimerDataSource(
      * transport error: retrying it would repeat a request the server has already ruled on.
      */
     private suspend inline fun changing(
-        crossinline execute: suspend () -> HttpResponse
+        crossinline execute: suspend () -> HttpResponse,
     ): Result<ActiveTimerChange, DataError.Remote> {
-        val response = when (val r = safeResponse { execute() }) {
-            is Result.Success -> r.data
-            is Result.Error -> return Result.Error(r.error)
-        }
+        val response =
+            when (val r = safeResponse { execute() }) {
+                is Result.Success -> r.data
+                is Result.Error -> return Result.Error(r.error)
+            }
         return when {
-            response.status.value in SUCCESS -> response.decode<ActiveTimerChangeDto>()?.let {
-                Result.Success(it.toActiveTimerChange())
-            } ?: Result.Error(DataError.Remote.SERIALIZATION)
-            response.status.value == CONFLICT -> Result.Success(
-                response.decode<ActiveTimerConflictDto>()?.toRejected()
-                    ?: ActiveTimerChange.Rejected(active = null, serverNow = null)
-            )
-            else -> Result.Error(httpStatusToRemoteError(response.status.value))
+            response.status.value in SUCCESS -> {
+                response.decode<ActiveTimerChangeDto>()?.let {
+                    Result.Success(it.toActiveTimerChange())
+                } ?: Result.Error(DataError.Remote.SERIALIZATION)
+            }
+
+            response.status.value == CONFLICT -> {
+                Result.Success(
+                    response.decode<ActiveTimerConflictDto>()?.toRejected()
+                        ?: ActiveTimerChange.Rejected(active = null, serverNow = null),
+                )
+            }
+
+            else -> {
+                Result.Error(httpStatusToRemoteError(response.status.value))
+            }
         }
     }
 
-    private suspend inline fun <reified T> HttpResponse.decode(): T? =
-        runCatching { body<T>() }.getOrNull()
+    private suspend inline fun <reified T> HttpResponse.decode(): T? = runCatching { body<T>() }.getOrNull()
 
     private companion object {
         const val ACTIVE_ROUTE = "/api/timer/active"

@@ -44,12 +44,12 @@ import com.jvcs.tracky.design_system.components.TrackyTextField
 import com.jvcs.tracky.design_system.components.Wordmark
 import com.jvcs.tracky.design_system.components.WordmarkSize
 import com.jvcs.tracky.design_system.theme.TrackyTheme
-import com.jvcs.tracky.design_system.util.ObserveAsEvents
-import com.jvcs.tracky.features.auth.presentation.login.LoginScreen
-import com.jvcs.tracky.features.auth.presentation.login.LoginState
 import com.jvcs.tracky.design_system.theme.authElevatedLabelStyle
 import com.jvcs.tracky.design_system.theme.authLabelStyle
 import com.jvcs.tracky.design_system.theme.authTextStyle
+import com.jvcs.tracky.design_system.util.ObserveAsEvents
+import com.jvcs.tracky.features.auth.presentation.login.LoginScreen
+import com.jvcs.tracky.features.auth.presentation.login.LoginState
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import tracky.composeapp.generated.resources.Res
@@ -78,7 +78,7 @@ import tracky.composeapp.generated.resources.terms_of_service
 fun RegisterScreenRoot(
     viewModel: RegisterViewModel = koinViewModel(),
     onRegisterSuccess: (email: String) -> Unit,
-    onLoginClick: () -> Unit
+    onLoginClick: () -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
@@ -96,23 +96,21 @@ fun RegisterScreenRoot(
                 else -> Unit
             }
             viewModel.onAction(action)
-        }
+        },
     )
 }
 
 @Composable
-fun RegisterScreen(
-    state: RegisterState,
-    onAction: (RegisterAction) -> Unit,
-) {
+fun RegisterScreen(state: RegisterState, onAction: (RegisterAction) -> Unit) {
     Scaffold { paddingValues ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .imePadding()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 28.dp, vertical = 20.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .imePadding()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 28.dp, vertical = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Wordmark(size = WordmarkSize.Md)
@@ -136,8 +134,6 @@ fun RegisterScreen(
             )
 
             Spacer(Modifier.height(24.dp))
-
-
 
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -192,7 +188,6 @@ fun RegisterScreen(
                     elevatedLabelStyle = MaterialTheme.typography.authElevatedLabelStyle,
                     textStyle = MaterialTheme.typography.authTextStyle,
                 )
-
             }
 
             Spacer(Modifier.height(16.dp))
@@ -213,16 +208,17 @@ fun RegisterScreen(
                 val tos = stringResource(Res.string.terms_of_service)
                 val andWord = stringResource(Res.string.and_word)
                 val privacy = stringResource(Res.string.privacy_policy)
-                val termsAnnotated = buildAnnotatedString {
-                    withStyle(SpanStyle(color = onSurfaceVariantColor)) { append(prefix) }
-                    withStyle(SpanStyle(color = primaryColor, fontWeight = FontWeight.Medium)) {
-                        append(tos)
+                val termsAnnotated =
+                    buildAnnotatedString {
+                        withStyle(SpanStyle(color = onSurfaceVariantColor)) { append(prefix) }
+                        withStyle(SpanStyle(color = primaryColor, fontWeight = FontWeight.Medium)) {
+                            append(tos)
+                        }
+                        withStyle(SpanStyle(color = onSurfaceVariantColor)) { append(andWord) }
+                        withStyle(SpanStyle(color = primaryColor, fontWeight = FontWeight.Medium)) {
+                            append(privacy)
+                        }
                     }
-                    withStyle(SpanStyle(color = onSurfaceVariantColor)) { append(andWord) }
-                    withStyle(SpanStyle(color = primaryColor, fontWeight = FontWeight.Medium)) {
-                        append(privacy)
-                    }
-                }
                 Text(
                     text = termsAnnotated,
                     style = MaterialTheme.typography.bodySmall,
@@ -237,9 +233,10 @@ fun RegisterScreen(
                     text = state.termsError.asString(),
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 4.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(start = 4.dp),
                 )
             }
 
@@ -304,21 +301,17 @@ fun RegisterScreen(
                 enabled = !state.isRegistering,
                 modifier = Modifier.fillMaxWidth(),
             )
-
-
-
-
         }
     }
 }
 
-@Preview (showSystemUi = false, device = Devices.PIXEL_9_PRO)
+@Preview(showSystemUi = false, device = Devices.PIXEL_9_PRO)
 @Composable
 private fun RegisterScreenPreview() {
     TrackyTheme {
         RegisterScreen(
             state = RegisterState(),
-            onAction = {}
+            onAction = {},
         )
     }
 }

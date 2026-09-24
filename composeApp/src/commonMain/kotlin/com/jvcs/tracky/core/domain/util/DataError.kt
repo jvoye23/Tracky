@@ -1,8 +1,8 @@
 package com.jvcs.tracky.core.domain.util
 
-sealed interface DataError: Error {
+sealed interface DataError : Error {
 
-    enum class Remote: DataError {
+    enum class Remote : DataError {
         REQUEST_TIMEOUT,
         UNAUTHORIZED,
         FORBIDDEN,
@@ -15,25 +15,28 @@ sealed interface DataError: Error {
         SERIALIZATION,
         BAD_REQUEST,
         NOT_FOUND,
-        UNKNOWN
+        UNKNOWN,
     }
 
-    enum class Local: DataError {
+    enum class Local : DataError {
         DISK_FULL,
         NOT_FOUND,
-        UNKNOWN
+        UNKNOWN,
     }
 }
 
-fun DataError.Remote.isTransient(): Boolean = when (this) {
-    DataError.Remote.NO_INTERNET,
-    DataError.Remote.REQUEST_TIMEOUT,
-    DataError.Remote.SERVER_ERROR,
-    DataError.Remote.SERVICE_UNAVAILABLE,
-    DataError.Remote.TOO_MANY_REQUESTS,
-    DataError.Remote.UNKNOWN -> true
-    else -> false
-}
+fun DataError.Remote.isTransient(): Boolean =
+    when (this) {
+        DataError.Remote.NO_INTERNET,
+        DataError.Remote.REQUEST_TIMEOUT,
+        DataError.Remote.SERVER_ERROR,
+        DataError.Remote.SERVICE_UNAVAILABLE,
+        DataError.Remote.TOO_MANY_REQUESTS,
+        DataError.Remote.UNKNOWN,
+        -> true
+
+        else -> false
+    }
 
 /**
  * True when the server is saying "that row is not there for you" — it never existed, it was already

@@ -25,25 +25,23 @@ import tracky.composeapp.generated.resources.tracky_icon
 enum class WordmarkSize { Md, Lg }
 
 @Composable
-fun Wordmark(
-    size: WordmarkSize = WordmarkSize.Md,
-    modifier: Modifier = Modifier,
-) {
+fun Wordmark(size: WordmarkSize = WordmarkSize.Md, modifier: Modifier = Modifier) {
     val iconBoxSize: Dp = if (size == WordmarkSize.Lg) 44.dp else 32.dp
     val iconSize: Dp = iconBoxSize * 0.55f
-    val textStyle: TextStyle = if (size == WordmarkSize.Lg) {
-        MaterialTheme.typography.headlineLarge.copy(
-            fontWeight = FontWeight.Bold,
-            fontSize = 28.sp,
-            letterSpacing = (-0.5).sp,
-        )
-    } else {
-        MaterialTheme.typography.titleLarge.copy(
-            fontWeight = FontWeight.Bold,
-            fontSize = 20.sp,
-            letterSpacing = (-0.5).sp,
-        )
-    }
+    val textStyle: TextStyle =
+        if (size == WordmarkSize.Lg) {
+            MaterialTheme.typography.headlineLarge.copy(
+                fontWeight = FontWeight.Bold,
+                fontSize = 28.sp,
+                letterSpacing = (-0.5).sp,
+            )
+        } else {
+            MaterialTheme.typography.titleLarge.copy(
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                letterSpacing = (-0.5).sp,
+            )
+        }
 
     Row(
         modifier = modifier,
@@ -51,16 +49,17 @@ fun Wordmark(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            modifier = Modifier
-                .size(iconBoxSize)
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.primaryContainer),
+            modifier =
+                Modifier
+                    .size(iconBoxSize)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center,
         ) {
             Image(
                 painter = painterResource(Res.drawable.tracky_icon),
                 contentDescription = null,
-                modifier = Modifier.size(50.dp)
+                modifier = Modifier.size(50.dp),
 
             )
         }

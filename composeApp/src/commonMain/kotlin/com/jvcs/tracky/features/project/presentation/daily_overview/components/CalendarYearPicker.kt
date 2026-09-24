@@ -44,7 +44,7 @@ fun CalendarYearPicker(
     selectedYear: Int,
     projectColor: Color,
     onYearSelected: (Int) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val gridState = rememberLazyGridState()
 
@@ -60,14 +60,14 @@ fun CalendarYearPicker(
         modifier = modifier.heightIn(max = 180.dp),
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items(years, key = { it }) { year ->
             YearCell(
                 year = year,
                 isSelected = year == selectedYear,
                 projectColor = projectColor,
-                onClick = { onYearSelected(year) }
+                onClick = { onYearSelected(year) },
             )
         }
     }
@@ -79,28 +79,32 @@ private fun YearCell(
     isSelected: Boolean,
     projectColor: Color,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(if (isSelected) projectColor else Color.Transparent)
-            .then(
-                if (isSelected) Modifier
-                else Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
-            )
-            .clickable(onClick = onClick)
-            .padding(vertical = 10.dp),
-        contentAlignment = Alignment.Center
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(16.dp))
+                .background(if (isSelected) projectColor else Color.Transparent)
+                .then(
+                    if (isSelected) {
+                        Modifier
+                    } else {
+                        Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
+                    },
+                ).clickable(onClick = onClick)
+                .padding(vertical = 10.dp),
+        contentAlignment = Alignment.Center,
     ) {
         Text(
             text = year.toString(),
-            style = MaterialTheme.typography.labelLarge.copy(
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-            ),
+            style =
+                MaterialTheme.typography.labelLarge.copy(
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                ),
             // The selected cell is filled with the project colour, so its label takes the same
             // black-or-white treatment the day cells use rather than a theme colour.
-            color = if (isSelected) onProjectColor(projectColor) else MaterialTheme.colorScheme.onSurface
+            color = if (isSelected) onProjectColor(projectColor) else MaterialTheme.colorScheme.onSurface,
         )
     }
 }
@@ -128,7 +132,7 @@ private fun CalendarYearPickerPreview() {
             years = (2024..2026).toList(),
             selectedYear = 2026,
             projectColor = PreviewProjectColor,
-            onYearSelected = {}
+            onYearSelected = {},
         )
     }
 }
@@ -142,7 +146,7 @@ private fun CalendarYearPickerSingleYearPreview() {
             years = listOf(2026),
             selectedYear = 2026,
             projectColor = PreviewProjectColor,
-            onYearSelected = {}
+            onYearSelected = {},
         )
     }
 }
@@ -156,7 +160,7 @@ private fun CalendarYearPickerManyYearsPreview() {
             years = (2015..2026).toList(),
             selectedYear = 2025,
             projectColor = PreviewProjectColor,
-            onYearSelected = {}
+            onYearSelected = {},
         )
     }
 }
@@ -169,7 +173,7 @@ private fun CalendarYearPickerFontScalePreview() {
             years = (2024..2026).toList(),
             selectedYear = 2026,
             projectColor = PreviewProjectColor,
-            onYearSelected = {}
+            onYearSelected = {},
         )
     }
 }

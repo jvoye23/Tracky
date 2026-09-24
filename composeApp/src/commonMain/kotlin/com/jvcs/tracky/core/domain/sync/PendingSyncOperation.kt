@@ -57,6 +57,7 @@ data class PendingSyncOperation(
         const val ENTITY_SUBTASK_ORDER = "sub_task_order"
 
         fun taskOrderEntityId(projectId: String) = "$ENTITY_TASK_ORDER:$projectId"
+
         fun subTaskOrderEntityId(taskId: String) = "$ENTITY_SUBTASK_ORDER:$taskId"
 
         const val OP_CREATE = "CREATE"

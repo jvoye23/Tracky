@@ -2,5 +2,5 @@ package com.jvcs.tracky.features.project.presentation.timer_permission
 
 data class TimerNotificationPermissionState(
     /** Set when the platform refused, so the user learns what they have given up. */
-    val showDeniedDialog: Boolean = false
+    val showDeniedDialog: Boolean = false,
 )

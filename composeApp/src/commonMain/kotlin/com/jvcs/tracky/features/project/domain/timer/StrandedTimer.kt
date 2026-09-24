@@ -32,7 +32,7 @@ data class StrandedTimer(
      * inflating the task and project totals. The timer never opens such an interval deliberately,
      * so its existence is itself evidence of the bug; the dialog says so and defaults to discard.
      */
-    val keepingWouldNotBeCounted: Boolean = false
+    val keepingWouldNotBeCounted: Boolean = false,
 ) {
     /** What [proposedEndAt] is worth. Never negative: a clock that went backwards yields zero. */
     val proposedDuration: Duration

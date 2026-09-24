@@ -23,19 +23,23 @@ internal class IntervalDaySplitterTest {
 
     private val berlin = TimeZone.of("Europe/Berlin")
 
-    private fun at(date: String, time: String, zone: TimeZone = TimeZone.UTC): Instant =
-        LocalDateTime(LocalDate.parse(date), LocalTime.parse(time)).toInstant(zone)
+    private fun at(
+        date: String,
+        time: String,
+        zone: TimeZone = TimeZone.UTC,
+    ): Instant = LocalDateTime(LocalDate.parse(date), LocalTime.parse(time)).toInstant(zone)
 
     private fun hoursMillis(h: Double): Long = (h * 60 * 60 * 1000).toLong()
 
     @Test
     fun aSameDayIntervalIsOneSliceCarryingItsRealStartAndEnd() {
-        val slices = splitAcrossLocalDays(
-            startedAt = at("2026-09-09", "09:30"),
-            endedAt = at("2026-09-09", "10:12"),
-            totalDurationMillis = 42 * 60 * 1000L,
-            timeZone = TimeZone.UTC
-        )
+        val slices =
+            splitAcrossLocalDays(
+                startedAt = at("2026-09-09", "09:30"),
+                endedAt = at("2026-09-09", "10:12"),
+                totalDurationMillis = 42 * 60 * 1000L,
+                timeZone = TimeZone.UTC,
+            )
 
         assertEquals(1, slices.size)
         val slice = slices.single()
@@ -50,12 +54,13 @@ internal class IntervalDaySplitterTest {
 
     @Test
     fun anIntervalCrossingMidnightGivesEachDayItsOwnShare() {
-        val slices = splitAcrossLocalDays(
-            startedAt = at("2026-09-09", "23:40"),
-            endedAt = at("2026-09-10", "00:20"),
-            totalDurationMillis = 40 * 60 * 1000L,
-            timeZone = TimeZone.UTC
-        )
+        val slices =
+            splitAcrossLocalDays(
+                startedAt = at("2026-09-09", "23:40"),
+                endedAt = at("2026-09-10", "00:20"),
+                totalDurationMillis = 40 * 60 * 1000L,
+                timeZone = TimeZone.UTC,
+            )
 
         assertEquals(2, slices.size)
         assertEquals(LocalDate(2026, 9, 9), slices[0].date)
@@ -74,19 +79,20 @@ internal class IntervalDaySplitterTest {
     fun theReportedBugSpreadsAcrossItsFourDaysAndNoDayExceedsTwentyFourHours() {
         // 2026-09-09 14:57 -> 2026-09-12 18:18, the 75:21:06 that started this.
         val total = 271_266_120L
-        val slices = splitAcrossLocalDays(
-            startedAt = at("2026-09-09", "14:57"),
-            endedAt = at("2026-09-12", "18:18:06.120"),
-            totalDurationMillis = total,
-            timeZone = TimeZone.UTC
-        )
+        val slices =
+            splitAcrossLocalDays(
+                startedAt = at("2026-09-09", "14:57"),
+                endedAt = at("2026-09-12", "18:18:06.120"),
+                totalDurationMillis = total,
+                timeZone = TimeZone.UTC,
+            )
 
         assertEquals(4, slices.size)
         assertEquals(total, slices.sumOf { it.durationMillis })
         slices.forEach {
             assertTrue(
                 it.durationMillis <= 24 * 60 * 60 * 1000L,
-                "no day can hold more than 24h, but ${it.date} got ${it.durationMillis}"
+                "no day can hold more than 24h, but ${it.date} got ${it.durationMillis}",
             )
         }
         assertEquals(hoursMillis(9.05), slices[0].durationMillis)
@@ -96,12 +102,13 @@ internal class IntervalDaySplitterTest {
     fun sliceDurationsAlwaysSumToTheStoredTotal() {
         // A deliberately awkward total that does not divide evenly across three days.
         val total = 1_000_001L
-        val slices = splitAcrossLocalDays(
-            startedAt = at("2026-09-09", "23:00"),
-            endedAt = at("2026-09-11", "01:00"),
-            totalDurationMillis = total,
-            timeZone = TimeZone.UTC
-        )
+        val slices =
+            splitAcrossLocalDays(
+                startedAt = at("2026-09-09", "23:00"),
+                endedAt = at("2026-09-11", "01:00"),
+                totalDurationMillis = total,
+                timeZone = TimeZone.UTC,
+            )
 
         assertEquals(3, slices.size)
         // The remainder lands on the last slice rather than being lost to integer division.
@@ -111,12 +118,13 @@ internal class IntervalDaySplitterTest {
     @Test
     fun theStoredDurationIsApportionedNotRecomputedFromTheClock() {
         // An edited row: two hours of wall clock, but only one hour banked.
-        val slices = splitAcrossLocalDays(
-            startedAt = at("2026-09-09", "23:00"),
-            endedAt = at("2026-09-10", "01:00"),
-            totalDurationMillis = hoursMillis(1.0),
-            timeZone = TimeZone.UTC
-        )
+        val slices =
+            splitAcrossLocalDays(
+                startedAt = at("2026-09-09", "23:00"),
+                endedAt = at("2026-09-10", "01:00"),
+                totalDurationMillis = hoursMillis(1.0),
+                timeZone = TimeZone.UTC,
+            )
 
         assertEquals(2, slices.size)
         // Half the span each, so half the banked hour each - not an hour each.
@@ -126,12 +134,13 @@ internal class IntervalDaySplitterTest {
 
     @Test
     fun aZeroLengthIntervalStaysOnItsStartDay() {
-        val slices = splitAcrossLocalDays(
-            startedAt = at("2026-09-09", "12:00"),
-            endedAt = at("2026-09-09", "12:00"),
-            totalDurationMillis = 0L,
-            timeZone = TimeZone.UTC
-        )
+        val slices =
+            splitAcrossLocalDays(
+                startedAt = at("2026-09-09", "12:00"),
+                endedAt = at("2026-09-09", "12:00"),
+                totalDurationMillis = 0L,
+                timeZone = TimeZone.UTC,
+            )
 
         assertEquals(1, slices.size)
         assertEquals(LocalDate(2026, 9, 9), slices.single().date)
@@ -140,12 +149,13 @@ internal class IntervalDaySplitterTest {
 
     @Test
     fun anIntervalEndingExactlyAtMidnightIsNotSplit() {
-        val slices = splitAcrossLocalDays(
-            startedAt = at("2026-09-09", "23:00"),
-            endedAt = at("2026-09-10", "00:00"),
-            totalDurationMillis = hoursMillis(1.0),
-            timeZone = TimeZone.UTC
-        )
+        val slices =
+            splitAcrossLocalDays(
+                startedAt = at("2026-09-09", "23:00"),
+                endedAt = at("2026-09-10", "00:00"),
+                totalDurationMillis = hoursMillis(1.0),
+                timeZone = TimeZone.UTC,
+            )
 
         // The next day gets nothing, so it earns no slice and no calendar tint.
         assertEquals(1, slices.size)
@@ -164,7 +174,7 @@ internal class IntervalDaySplitterTest {
         assertEquals(1, splitAcrossLocalDays(started, ended, hoursMillis(1.0), berlin).size)
         assertEquals(
             LocalDate(2026, 9, 10),
-            splitAcrossLocalDays(started, ended, hoursMillis(1.0), berlin).single().date
+            splitAcrossLocalDays(started, ended, hoursMillis(1.0), berlin).single().date,
         )
     }
 

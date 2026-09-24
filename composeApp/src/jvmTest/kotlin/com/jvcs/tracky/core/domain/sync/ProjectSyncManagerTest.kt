@@ -2,11 +2,11 @@
 
 package com.jvcs.tracky.core.domain.sync
 
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
 import com.jvcs.tracky.core.domain.lifecycle.AppLifecycleObserver
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -37,23 +37,23 @@ internal class ProjectSyncManagerTest {
     private val syncRepository = RecordingSyncRepository()
     private val syncRecency = SyncRecency()
 
-    private fun manager(
-        remote: CountingRemoteSyncDataSource,
-        scope: CoroutineScope
-    ) = ProjectSyncManager(
-        connectivityObserver = ConnectivityObserver(),
-        appLifecycleObserver = AppLifecycleObserver(),
-        syncRepository = syncRepository,
-        pullCoordinator = SyncPullCoordinator(
-            deltaSyncApplier = testDeltaSyncApplier(
-                remote = remote,
-                timeProvider = timeProvider,
-                syncRecency = syncRecency
-            ),
-            applicationScope = scope
-        ),
-        applicationScope = scope
-    )
+    private fun manager(remote: CountingRemoteSyncDataSource, scope: CoroutineScope) =
+        ProjectSyncManager(
+            connectivityObserver = ConnectivityObserver(),
+            appLifecycleObserver = AppLifecycleObserver(),
+            syncRepository = syncRepository,
+            pullCoordinator =
+                SyncPullCoordinator(
+                    deltaSyncApplier =
+                        testDeltaSyncApplier(
+                            remote = remote,
+                            timeProvider = timeProvider,
+                            syncRecency = syncRecency,
+                        ),
+                    applicationScope = scope,
+                ),
+            applicationScope = scope,
+        )
 
     /**
      * The regression this class exists for. A device that stays online and foregrounded used to
@@ -63,87 +63,93 @@ internal class ProjectSyncManagerTest {
      * event that never re-fired. Device B therefore never learned about device A.
      */
     @Test
-    fun keepsPullingWhileTheAppStaysOnlineAndForegrounded() = runTest {
-        val remote = CountingRemoteSyncDataSource()
-        manager(remote, backgroundScope).start()
+    fun keepsPullingWhileTheAppStaysOnlineAndForegrounded() =
+        runTest {
+            val remote = CountingRemoteSyncDataSource()
+            manager(remote, backgroundScope).start()
 
-        advanceTimeBy(90.seconds)
+            advanceTimeBy(90.seconds)
 
-        // Launch, plus one per 30s tick. The exact count matters less than "more than one".
-        assertTrue(
-            remote.calls >= 3,
-            "expected repeated pulls while foregrounded, but the feed was asked ${remote.calls} time(s)"
-        )
-    }
+            // Launch, plus one per 30s tick. The exact count matters less than "more than one".
+            assertTrue(
+                remote.calls >= 3,
+                "expected repeated pulls while foregrounded, but the feed was asked ${remote.calls} time(s)",
+            )
+        }
 
     @Test
-    fun drainsThePushQueueOnEveryTickToo() = runTest {
-        manager(CountingRemoteSyncDataSource(), backgroundScope).start()
+    fun drainsThePushQueueOnEveryTickToo() =
+        runTest {
+            manager(CountingRemoteSyncDataSource(), backgroundScope).start()
 
-        advanceTimeBy(90.seconds)
+            advanceTimeBy(90.seconds)
 
-        assertTrue(
-            syncRepository.drains >= 3,
-            "expected the outbox to drain on every tick, but it drained ${syncRepository.drains} time(s)"
-        )
-    }
+            assertTrue(
+                syncRepository.drains >= 3,
+                "expected the outbox to drain on every tick, but it drained ${syncRepository.drains} time(s)",
+            )
+        }
 
     /**
      * `lastPull` used to be stamped outside the success check, so one failed pull burned the whole
      * throttle window. With the tick as the retry interval, a failure must simply be retried.
      */
     @Test
-    fun retriesOnTheNextTickAfterAFailedPull() = runTest {
-        val remote = CountingRemoteSyncDataSource(failures = 1)
-        manager(remote, backgroundScope).start()
+    fun retriesOnTheNextTickAfterAFailedPull() =
+        runTest {
+            val remote = CountingRemoteSyncDataSource(failures = 1)
+            manager(remote, backgroundScope).start()
 
-        advanceTimeBy(90.seconds)
+            advanceTimeBy(90.seconds)
 
-        assertTrue(
-            remote.calls >= 3,
-            "a failed pull must not burn the window, but the feed was asked ${remote.calls} time(s)"
-        )
-        assertTrue(
-            syncRecency.lastSuccessfulSync.value != null,
-            "a later successful pull should still stamp SyncRecency"
-        )
-    }
+            assertTrue(
+                remote.calls >= 3,
+                "a failed pull must not burn the window, but the feed was asked ${remote.calls} time(s)",
+            )
+            assertTrue(
+                syncRecency.lastSuccessfulSync.value != null,
+                "a later successful pull should still stamp SyncRecency",
+            )
+        }
 
     /** Only a pull that landed counts as hearing from the server. */
     @Test
-    fun doesNotStampRecencyWhileEveryPullFails() = runTest {
-        val remote = CountingRemoteSyncDataSource(failures = Int.MAX_VALUE)
-        manager(remote, backgroundScope).start()
+    fun doesNotStampRecencyWhileEveryPullFails() =
+        runTest {
+            val remote = CountingRemoteSyncDataSource(failures = Int.MAX_VALUE)
+            manager(remote, backgroundScope).start()
 
-        advanceTimeBy(90.seconds)
+            advanceTimeBy(90.seconds)
 
-        assertEquals(null, syncRecency.lastSuccessfulSync.value)
-    }
+            assertEquals(null, syncRecency.lastSuccessfulSync.value)
+        }
 
     @Test
-    fun startIsIdempotent() = runTest {
-        val remote = CountingRemoteSyncDataSource()
-        val manager = manager(remote, backgroundScope)
+    fun startIsIdempotent() =
+        runTest {
+            val remote = CountingRemoteSyncDataSource()
+            val manager = manager(remote, backgroundScope)
 
-        manager.start()
-        manager.start()
-        advanceTimeBy(100.milliseconds)
-        val afterOneLaunch = remote.calls
+            manager.start()
+            manager.start()
+            advanceTimeBy(100.milliseconds)
+            val afterOneLaunch = remote.calls
 
-        assertEquals(1, afterOneLaunch, "a second start() must not add a second polling loop")
-    }
+            assertEquals(1, afterOneLaunch, "a second start() must not add a second polling loop")
+        }
 
     /** The cadence is a safety net, not a busy loop. */
     @Test
-    fun doesNotPullFasterThanTheCadence() = runTest {
-        val remote = CountingRemoteSyncDataSource()
-        manager(remote, backgroundScope).start()
+    fun doesNotPullFasterThanTheCadence() =
+        runTest {
+            val remote = CountingRemoteSyncDataSource()
+            manager(remote, backgroundScope).start()
 
-        advanceTimeBy(5.minutes)
+            advanceTimeBy(5.minutes)
 
-        assertTrue(
-            remote.calls <= 12,
-            "expected roughly one pull per 30s, but the feed was asked ${remote.calls} time(s)"
-        )
-    }
+            assertTrue(
+                remote.calls <= 12,
+                "expected roughly one pull per 30s, but the feed was asked ${remote.calls} time(s)",
+            )
+        }
 }

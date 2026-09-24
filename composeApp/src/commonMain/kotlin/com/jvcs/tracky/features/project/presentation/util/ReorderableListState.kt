@@ -37,7 +37,7 @@ import kotlinx.coroutines.launch
 class ReorderableListState internal constructor(
     private val lazyListState: LazyListState,
     private val scope: CoroutineScope,
-    private val onMove: (fromKey: String, toKey: String) -> Unit
+    private val onMove: (fromKey: String, toKey: String) -> Unit,
 ) {
     var draggingItemKey by mutableStateOf<String?>(null)
         private set
@@ -66,22 +66,25 @@ class ReorderableListState internal constructor(
     }
 
     private val draggingItemLayoutInfo
-        get() = lazyListState.layoutInfo.visibleItemsInfo
-            .firstOrNull { it.key == draggingItemKey }
+        get() =
+            lazyListState.layoutInfo.visibleItemsInfo
+                .firstOrNull { it.key == draggingItemKey }
 
     /** Vertical translation that keeps the dragged row pinned under the finger. */
     val draggingItemOffset: Float
-        get() = draggingItemLayoutInfo?.let { item ->
-            (draggingItemInitialOffset + draggingItemDraggedDelta) - item.offset
-        } ?: 0f
+        get() =
+            draggingItemLayoutInfo?.let { item ->
+                (draggingItemInitialOffset + draggingItemDraggedDelta) - item.offset
+            } ?: 0f
 
     /** Vertical translation of the row gliding into place after release. */
     val settlingItemOffset: Float
         get() = settleOffset.value
 
     fun onDragStart(key: String) {
-        val info = lazyListState.layoutInfo.visibleItemsInfo
-            .firstOrNull { it.key == key } ?: return
+        val info =
+            lazyListState.layoutInfo.visibleItemsInfo
+                .firstOrNull { it.key == key } ?: return
         draggingItemKey = key
         draggingItemInitialOffset = info.offset
         draggingItemDraggedDelta = 0f
@@ -98,22 +101,25 @@ class ReorderableListState internal constructor(
         val endOffset = startOffset + dragging.size
         val middleOffset = startOffset + (endOffset - startOffset) / 2f
 
-        val target = lazyListState.layoutInfo.visibleItemsInfo.firstOrNull { item ->
-            val key = item.key
-            key is String && key != draggingKey &&
-                middleOffset.toInt() in item.offset..(item.offset + item.size)
-        }
+        val target =
+            lazyListState.layoutInfo.visibleItemsInfo.firstOrNull { item ->
+                val key = item.key
+                key is String &&
+                    key != draggingKey &&
+                    middleOffset.toInt() in item.offset..(item.offset + item.size)
+            }
         if (target != null) {
             onMove(draggingKey, target.key as String)
         }
 
         // Auto-scroll when the dragged row is pushed past a viewport edge.
         val viewport = lazyListState.layoutInfo
-        val overscroll = when {
-            draggingItemDraggedDelta > 0 -> (endOffset - viewport.viewportEndOffset).coerceAtLeast(0f)
-            draggingItemDraggedDelta < 0 -> (startOffset - viewport.viewportStartOffset).coerceAtMost(0f)
-            else -> 0f
-        }
+        val overscroll =
+            when {
+                draggingItemDraggedDelta > 0 -> (endOffset - viewport.viewportEndOffset).coerceAtLeast(0f)
+                draggingItemDraggedDelta < 0 -> (startOffset - viewport.viewportStartOffset).coerceAtMost(0f)
+                else -> 0f
+            }
         if (overscroll != 0f) scrollChannel.trySend(overscroll)
     }
 
@@ -149,7 +155,7 @@ class ReorderableListState internal constructor(
 @Composable
 fun rememberReorderableListState(
     lazyListState: LazyListState,
-    onMove: (fromKey: String, toKey: String) -> Unit
+    onMove: (fromKey: String, toKey: String) -> Unit,
 ): ReorderableListState {
     val scope = rememberCoroutineScope()
     // The state outlives the lambda: onMove is recreated on every recomposition (it closes over the

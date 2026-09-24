@@ -15,10 +15,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class RegisterSuccessViewModel(
-    private val authService: AuthService,
-    private val email: String
-) : ViewModel() {
+class RegisterSuccessViewModel(private val authService: AuthService, private val email: String) : ViewModel() {
 
     private var hasLoadedInitialData = false
 
@@ -26,14 +23,14 @@ class RegisterSuccessViewModel(
     val events = eventChannel.receiveAsFlow()
 
     private val _state = MutableStateFlow(RegisterSuccessState())
-    val state = _state
-        .onStart {
-            if (!hasLoadedInitialData) {
-                _state.update { it.copy(registeredEmail = email) }
-                hasLoadedInitialData = true
-            }
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), RegisterSuccessState())
+    val state =
+        _state
+            .onStart {
+                if (!hasLoadedInitialData) {
+                    _state.update { it.copy(registeredEmail = email) }
+                    hasLoadedInitialData = true
+                }
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), RegisterSuccessState())
 
     fun onAction(action: RegisterSuccessAction) {
         when (action) {
@@ -45,16 +42,16 @@ class RegisterSuccessViewModel(
     private fun resendVerificationEmail() {
         viewModelScope.launch {
             _state.update { it.copy(isResendingVerificationEmail = true, resendVerificationError = null) }
-            authService.resendVerificationEmail(email)
+            authService
+                .resendVerificationEmail(email)
                 .onSuccess {
                     _state.update { it.copy(isResendingVerificationEmail = false) }
                     eventChannel.send(RegisterSuccessEvent.ResendVerificationEmailSuccess)
-                }
-                .onFailure { error ->
+                }.onFailure { error ->
                     _state.update {
                         it.copy(
                             isResendingVerificationEmail = false,
-                            resendVerificationError = error.toUiText()
+                            resendVerificationError = error.toUiText(),
                         )
                     }
                 }

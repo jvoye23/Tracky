@@ -43,7 +43,7 @@ fun SelectionTopAppBar(
             Text(
                 text = selectedCount.toString(),
                 style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
             )
         },
         modifier = modifier,
@@ -52,15 +52,16 @@ fun SelectionTopAppBar(
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = stringResource(Res.string.exit_edit_mode),
-                    tint = MaterialTheme.colorScheme.onSurface
+                    tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
         },
         actions = actions,
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        ),
-        scrollBehavior = scrollBehavior
+        colors =
+            TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            ),
+        scrollBehavior = scrollBehavior,
     )
 }
 
@@ -77,32 +78,32 @@ private fun SelectionTopAppBarPreview() {
                     Icon(
                         imageVector = Icon_Pin,
                         contentDescription = stringResource(Res.string.pin_selected),
-                        tint = MaterialTheme.colorScheme.onSurface
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 IconButton(onClick = {}) {
                     Icon(
                         imageVector = Icon_Archive,
                         contentDescription = stringResource(Res.string.archive_selected),
-                        tint = MaterialTheme.colorScheme.onSurface
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 IconButton(onClick = {}) {
                     Icon(
                         imageVector = Icon_Delete,
                         contentDescription = stringResource(Res.string.delete_selected),
-                        tint = MaterialTheme.colorScheme.onSurface
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
-                //TODO("Implement Export action")
+                // TODO("Implement Export action")
                 IconButton(onClick = {}) {
                     Icon(
                         imageVector = Icon_File_Export,
                         contentDescription = stringResource(Res.string.file_export_selected),
-                        tint = MaterialTheme.colorScheme.onSurface
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
-            }
+            },
         )
     }
 }

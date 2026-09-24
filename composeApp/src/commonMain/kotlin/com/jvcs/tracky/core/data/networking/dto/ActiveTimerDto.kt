@@ -21,7 +21,7 @@ data class ActiveTimerDto(
     val startedAtUtc: String,
     val startedByDeviceId: String? = null,
     /** Present on the active timer itself as well as on the envelope. */
-    val serverNowUtc: String? = null
+    val serverNowUtc: String? = null,
 )
 
 /**
@@ -43,7 +43,7 @@ data class TouchedIntervalDto(
     val endDateTimeUtc: String? = null,
     val durationMillis: Long = 0L,
     val startedByDeviceId: String? = null,
-    val updatedAtUtc: String? = null
+    val updatedAtUtc: String? = null,
 )
 
 /** The `200` envelope shared by start and stop. */
@@ -51,7 +51,7 @@ data class TouchedIntervalDto(
 data class ActiveTimerChangeDto(
     val active: ActiveTimerDto? = null,
     val touched: List<TouchedIntervalDto> = emptyList(),
-    val serverNowUtc: String? = null
+    val serverNowUtc: String? = null,
 )
 
 /**
@@ -64,7 +64,7 @@ data class ActiveTimerChangeDto(
 data class ActiveTimerConflictDto(
     val code: String? = null,
     val message: String? = null,
-    val active: ActiveTimerDto? = null
+    val active: ActiveTimerDto? = null,
 )
 
 /** `PUT /api/timer/active`. */
@@ -76,12 +76,9 @@ data class StartActiveTimerRequest(
     val parentSubTaskId: String? = null,
     val parentTaskIntervalId: String? = null,
     val startedAtUtc: String,
-    val deviceId: String
+    val deviceId: String,
 )
 
 /** `POST /api/timer/active/stop`. Names the interval, because the stop is a compare-and-swap. */
 @Serializable
-data class StopActiveTimerRequest(
-    val intervalId: String,
-    val endedAtUtc: String
-)
+data class StopActiveTimerRequest(val intervalId: String, val endedAtUtc: String)

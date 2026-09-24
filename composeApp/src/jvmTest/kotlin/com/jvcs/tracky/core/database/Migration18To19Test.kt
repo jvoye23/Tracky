@@ -48,7 +48,7 @@ class Migration18To19Test {
                 "`startDateTimeEpochMs` INTEGER NOT NULL, `isFinished` INTEGER NOT NULL, " +
                 "`useLightTextColor` INTEGER NOT NULL, `endDateTimeEpochMs` INTEGER, " +
                 "`isArchived` INTEGER NOT NULL, `trashedAtEpochMs` INTEGER, `isPinned` INTEGER NOT NULL, " +
-                "`updatedAtEpochMs` INTEGER, `sortIndex` INTEGER, PRIMARY KEY(`projectId`))"
+                "`updatedAtEpochMs` INTEGER, `sortIndex` INTEGER, PRIMARY KEY(`projectId`))",
         )
         connection.execSQL(
             "CREATE TABLE IF NOT EXISTS `project_tasks` (`projectTaskId` TEXT NOT NULL, " +
@@ -58,7 +58,7 @@ class Migration18To19Test {
                 "`isTimerRunning` INTEGER NOT NULL, `updatedAtEpochMs` INTEGER, `sortIndex` INTEGER, " +
                 "PRIMARY KEY(`projectTaskId`), " +
                 "FOREIGN KEY(`parentProjectId`) REFERENCES `projects`(`projectId`) " +
-                "ON UPDATE NO ACTION ON DELETE CASCADE )"
+                "ON UPDATE NO ACTION ON DELETE CASCADE )",
         )
         connection.execSQL(
             "CREATE TABLE IF NOT EXISTS `project_sub_tasks` (`projectSubTaskId` TEXT NOT NULL, " +
@@ -70,7 +70,7 @@ class Migration18To19Test {
                 "FOREIGN KEY(`parentProjectTaskId`) REFERENCES `project_tasks`(`projectTaskId`) " +
                 "ON UPDATE NO ACTION ON DELETE CASCADE , " +
                 "FOREIGN KEY(`parentProjectId`) REFERENCES `projects`(`projectId`) " +
-                "ON UPDATE NO ACTION ON DELETE CASCADE )"
+                "ON UPDATE NO ACTION ON DELETE CASCADE )",
         )
         connection.execSQL(
             "CREATE TABLE IF NOT EXISTS `task_intervals` (`intervalId` TEXT NOT NULL, " +
@@ -80,7 +80,7 @@ class Migration18To19Test {
                 "FOREIGN KEY(`parentTaskId`) REFERENCES `project_tasks`(`projectTaskId`) " +
                 "ON UPDATE NO ACTION ON DELETE CASCADE , " +
                 "FOREIGN KEY(`parentProjectId`) REFERENCES `projects`(`projectId`) " +
-                "ON UPDATE NO ACTION ON DELETE CASCADE )"
+                "ON UPDATE NO ACTION ON DELETE CASCADE )",
         )
         connection.execSQL(
             "CREATE TABLE IF NOT EXISTS `sub_task_intervals` (`subTaskIntervalId` TEXT NOT NULL, " +
@@ -93,7 +93,7 @@ class Migration18To19Test {
                 "FOREIGN KEY(`parentTaskIntervalId`) REFERENCES `task_intervals`(`intervalId`) " +
                 "ON UPDATE NO ACTION ON DELETE CASCADE , " +
                 "FOREIGN KEY(`parentProjectId`) REFERENCES `projects`(`projectId`) " +
-                "ON UPDATE NO ACTION ON DELETE CASCADE )"
+                "ON UPDATE NO ACTION ON DELETE CASCADE )",
         )
     }
 
@@ -103,33 +103,33 @@ class Migration18To19Test {
     private fun seedV18() {
         connection.execSQL(
             "INSERT INTO projects (projectId, title, startDateTimeEpochMs, isFinished, " +
-                "useLightTextColor, isArchived, isPinned) VALUES ('p1', 'project', 0, 0, 0, 0, 0)"
+                "useLightTextColor, isArchived, isPinned) VALUES ('p1', 'project', 0, 0, 0, 0, 0)",
         )
         connection.execSQL(
             "INSERT INTO project_tasks (projectTaskId, parentProjectId, title, durationMillis, " +
                 "startDateTimeEpochMs, isFinished, isTimerRunning) " +
-                "VALUES ('t1', 'p1', 'Write the report', 90000, 1000, 0, 1)"
+                "VALUES ('t1', 'p1', 'Write the report', 90000, 1000, 0, 1)",
         )
         connection.execSQL(
             "INSERT INTO project_sub_tasks (projectSubTaskId, parentProjectTaskId, parentProjectId, " +
                 "title, durationMillis, isTimerRunning, startDateTimeEpochMs, isFinished) " +
-                "VALUES ('s1', 't1', 'p1', 'Draft it', 5000, 1, 2000, 0)"
+                "VALUES ('s1', 't1', 'p1', 'Draft it', 5000, 1, 2000, 0)",
         )
         connection.execSQL(
             "INSERT INTO task_intervals (intervalId, parentTaskId, parentProjectId, " +
                 "startDateTimeEpochMs, endDateTimeEpochMs, durationMillis) " +
-                "VALUES ('i-closed', 't1', 'p1', 1000, 91000, 90000)"
+                "VALUES ('i-closed', 't1', 'p1', 1000, 91000, 90000)",
         )
         connection.execSQL(
             "INSERT INTO task_intervals (intervalId, parentTaskId, parentProjectId, " +
                 "startDateTimeEpochMs, endDateTimeEpochMs, durationMillis) " +
-                "VALUES ('i-open', 't1', 'p1', 95000, NULL, 0)"
+                "VALUES ('i-open', 't1', 'p1', 95000, NULL, 0)",
         )
         connection.execSQL(
             "INSERT INTO sub_task_intervals (subTaskIntervalId, parentSubTaskId, " +
                 "parentTaskIntervalId, parentProjectId, startDateTimeEpochMs, endDateTimeEpochMs, " +
                 "durationMillis, startedParentTimer) " +
-                "VALUES ('si-open', 's1', 'i-open', 'p1', 95000, NULL, 0, 1)"
+                "VALUES ('si-open', 's1', 'i-open', 'p1', 95000, NULL, 0, 1)",
         )
     }
 
@@ -178,18 +178,18 @@ class Migration18To19Test {
         // before sync existed actually means. A NOT NULL column would need a value invented for it.
         assertEquals(
             0L,
-            queryLong("SELECT \"notnull\" FROM pragma_table_info('task_intervals') WHERE name = 'startedByDeviceId'")
+            queryLong("SELECT \"notnull\" FROM pragma_table_info('task_intervals') WHERE name = 'startedByDeviceId'"),
         )
         assertEquals(
             0L,
             queryLong(
                 "SELECT \"notnull\" FROM pragma_table_info('sub_task_intervals') " +
-                    "WHERE name = 'startedByDeviceId'"
-            )
+                    "WHERE name = 'startedByDeviceId'",
+            ),
         )
         assertNull(queryText("SELECT startedByDeviceId FROM task_intervals WHERE intervalId = 'i-open'"))
         assertNull(
-            queryText("SELECT startedByDeviceId FROM sub_task_intervals WHERE subTaskIntervalId = 'si-open'")
+            queryText("SELECT startedByDeviceId FROM sub_task_intervals WHERE subTaskIntervalId = 'si-open'"),
         )
     }
 
@@ -205,7 +205,7 @@ class Migration18To19Test {
         // startedParentTimer is the other local-only column on this table; a rewrite would lose it.
         assertEquals(
             1L,
-            queryLong("SELECT startedParentTimer FROM sub_task_intervals WHERE subTaskIntervalId = 'si-open'")
+            queryLong("SELECT startedParentTimer FROM sub_task_intervals WHERE subTaskIntervalId = 'si-open'"),
         )
     }
 
@@ -216,13 +216,13 @@ class Migration18To19Test {
         TrackyDatabase.MIGRATION_18_19.migrate(connection)
         connection.execSQL("UPDATE task_intervals SET startedByDeviceId = 'device-a' WHERE intervalId = 'i-open'")
         connection.execSQL(
-            "UPDATE sub_task_intervals SET startedByDeviceId = 'device-a' WHERE subTaskIntervalId = 'si-open'"
+            "UPDATE sub_task_intervals SET startedByDeviceId = 'device-a' WHERE subTaskIntervalId = 'si-open'",
         )
 
         assertEquals("device-a", queryText("SELECT startedByDeviceId FROM task_intervals WHERE intervalId = 'i-open'"))
         assertEquals(
             "device-a",
-            queryText("SELECT startedByDeviceId FROM sub_task_intervals WHERE subTaskIntervalId = 'si-open'")
+            queryText("SELECT startedByDeviceId FROM sub_task_intervals WHERE subTaskIntervalId = 'si-open'"),
         )
     }
 
@@ -239,15 +239,15 @@ class Migration18To19Test {
             0L,
             queryLong(
                 "SELECT count(*) FROM task_intervals WHERE endDateTimeEpochMs IS NULL " +
-                    "AND (startedByDeviceId IS NULL OR startedByDeviceId = 'device-a')"
-            )
+                    "AND (startedByDeviceId IS NULL OR startedByDeviceId = 'device-a')",
+            ),
         )
         assertEquals(
             1L,
             queryLong(
                 "SELECT count(*) FROM task_intervals WHERE endDateTimeEpochMs IS NULL " +
-                    "AND (startedByDeviceId IS NULL OR startedByDeviceId = 'device-b')"
-            )
+                    "AND (startedByDeviceId IS NULL OR startedByDeviceId = 'device-b')",
+            ),
         )
     }
 }

@@ -32,11 +32,11 @@ fun ProjectOverviewSelectionTopAppBar(
     modifier: Modifier = Modifier,
     state: ProjectOverviewState,
     onAction: (ProjectOverviewAction) -> Unit,
-    scrollBehavior: TopAppBarScrollBehavior
+    scrollBehavior: TopAppBarScrollBehavior,
 ) {
     SelectionTopAppBar(
         selectedCount = state.selectedProjectIds.size,
-        onExit = { onAction(ProjectOverviewAction.OnExitEditMode)},
+        onExit = { onAction(ProjectOverviewAction.OnExitEditMode) },
         scrollBehavior = scrollBehavior,
         modifier = modifier,
         actions = {
@@ -44,32 +44,32 @@ fun ProjectOverviewSelectionTopAppBar(
                 Icon(
                     imageVector = Icon_Pin,
                     contentDescription = stringResource(Res.string.pin_selected),
-                    tint = MaterialTheme.colorScheme.onSurface
+                    tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
             IconButton(onClick = { onAction(ProjectOverviewAction.OnArchiveSelectedClick) }) {
                 Icon(
                     imageVector = Icon_Archive,
                     contentDescription = stringResource(Res.string.archive_selected),
-                    tint = MaterialTheme.colorScheme.onSurface
+                    tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
             IconButton(onClick = { onAction(ProjectOverviewAction.OnDeleteSelectedClick) }) {
                 Icon(
                     imageVector = Icon_Delete,
                     contentDescription = stringResource(Res.string.delete_selected),
-                    tint = MaterialTheme.colorScheme.onSurface
+                    tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
-            //TODO("Implement Export action")
-            IconButton(onClick = {  }) {
+            // TODO("Implement Export action")
+            IconButton(onClick = { }) {
                 Icon(
                     imageVector = Icon_File_Export,
                     contentDescription = stringResource(Res.string.file_export_selected),
-                    tint = MaterialTheme.colorScheme.onSurface
+                    tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
-        }
+        },
     )
 }
 
@@ -80,7 +80,7 @@ private fun ProjectOverviewSelectionTopAppBarPreview() {
         ProjectOverviewSelectionTopAppBar(
             onAction = {},
             state = ProjectOverviewState(),
-            scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+            scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(),
         )
     }
 }

@@ -11,7 +11,7 @@ interface TimeProvider {
     val nowInstant: Instant
 }
 
-data object SystemTimeProvider: TimeProvider {
+data object SystemTimeProvider : TimeProvider {
     override val nowZoneTimeInUtc: LocalDateTime
         get() {
             val currentInstant = Clock.System.now()

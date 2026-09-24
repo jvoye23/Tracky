@@ -2,20 +2,20 @@ package com.jvcs.tracky.features.project.presentation.task_detail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.core.domain.util.TimeManager
 import com.jvcs.tracky.core.domain.util.TimerState
-import com.jvcs.tracky.features.project.domain.subtask.SubTaskRepository
-import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
-import com.jvcs.tracky.features.project.presentation.mappers.CountedInterval
-import com.jvcs.tracky.features.project.presentation.mappers.countedDayIntervals
-import com.jvcs.tracky.features.project.presentation.mappers.toProjectTaskUi
 import com.jvcs.tracky.design_system.util.formatDurationHoursMinutesSeconds
+import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
+import com.jvcs.tracky.features.project.domain.subtask.SubTaskRepository
 import com.jvcs.tracky.features.project.domain.task.ProjectTaskRepository
+import com.jvcs.tracky.features.project.presentation.mappers.CountedInterval
 import com.jvcs.tracky.features.project.presentation.mappers.END_OF_DAY
 import com.jvcs.tracky.features.project.presentation.mappers.clockFormat
+import com.jvcs.tracky.features.project.presentation.mappers.countedDayIntervals
+import com.jvcs.tracky.features.project.presentation.mappers.toProjectTaskUi
 import com.jvcs.tracky.features.project.presentation.mappers.toProjectUi
+import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
 import com.jvcs.tracky.features.project.presentation.task_detail.model.DailyStatistic
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -35,25 +35,25 @@ class TaskDetailViewModel(
     private val projectTaskRepository: ProjectTaskRepository,
     private val subTaskRepository: SubTaskRepository,
     private val projectRepository: ProjectRepository,
-    private val timeManager: TimeManager
+    private val timeManager: TimeManager,
 ) : ViewModel() {
 
     private var hasLoadedInitialData = false
     private var loadedProjectId: String? = null
 
     private val _state = MutableStateFlow(TaskDetailState())
-    val state = _state
-        .onStart {
-            if (!hasLoadedInitialData) {
-                observeTask()
-                hasLoadedInitialData = true
-            }
-        }
-        .stateIn(
-            viewModelScope,
-            SharingStarted.WhileSubscribed(5000),
-            TaskDetailState()
-        )
+    val state =
+        _state
+            .onStart {
+                if (!hasLoadedInitialData) {
+                    observeTask()
+                    hasLoadedInitialData = true
+                }
+            }.stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5000),
+                TaskDetailState(),
+            )
 
     /**
      * The task row, its subtasks and the live clock, derived together.
@@ -71,7 +71,7 @@ class TaskDetailViewModel(
         combine(
             projectTaskRepository.getProjectTaskWithIntervalsById(taskId).filterNotNull(),
             subTaskRepository.getSubTasksForTask(taskId),
-            timeManager.taskStates
+            timeManager.taskStates,
         ) { task, subTasks, activeTimers ->
             val domainTask = task.copy(subTasks = subTasks)
             val taskUi = domainTask.toProjectTaskUi().withLiveTimer(activeTimers)
@@ -80,7 +80,7 @@ class TaskDetailViewModel(
                     task = taskUi,
                     projectId = task.parentProjectId,
                     dailyStatistics = domainTask.toDailyStatistics(),
-                    isTimerRunning = taskUi.isTimerRunning
+                    isTimerRunning = taskUi.isTimerRunning,
                 )
             }
             loadProjectColors(task.parentProjectId)
@@ -95,17 +95,18 @@ class TaskDetailViewModel(
      * displayed duration is their sum, so it takes no tick of its own.
      */
     private fun ProjectTaskUi.withLiveTimer(activeTimers: Map<String, TimerState>): ProjectTaskUi {
-        val liveSubTasks = subTasks.map { subTask ->
-            val tick = activeTimers[subTask.projectSubTaskId]
-            if (tick != null && tick.isRunning) {
-                subTask.copy(
-                    durationMillis = tick.totalDuration.inWholeMilliseconds,
-                    isTimerRunning = true
-                )
-            } else {
-                subTask.copy(isTimerRunning = false)
+        val liveSubTasks =
+            subTasks.map { subTask ->
+                val tick = activeTimers[subTask.projectSubTaskId]
+                if (tick != null && tick.isRunning) {
+                    subTask.copy(
+                        durationMillis = tick.totalDuration.inWholeMilliseconds,
+                        isTimerRunning = true,
+                    )
+                } else {
+                    subTask.copy(isTimerRunning = false)
+                }
             }
-        }
         if (liveSubTasks.isNotEmpty()) {
             return copy(subTasks = liveSubTasks, isTimerRunning = liveSubTasks.any { it.isTimerRunning })
         }
@@ -129,7 +130,7 @@ class TaskDetailViewModel(
         _state.update {
             it.copy(
                 projectColor = project.color,
-                useLightTextColor = project.useLightTextColor
+                useLightTextColor = project.useLightTextColor,
             )
         }
     }
@@ -156,19 +157,26 @@ class TaskDetailViewModel(
                     intervalId = interval.intervalId,
                     formattedDate = interval.date.toString(),
                     formattedStartTime = interval.start.format(clockFormat),
-                    formattedEndTime = if (interval.endsAtMidnight) END_OF_DAY
-                        else interval.end.format(clockFormat),
-                    formattedDuration = formatDurationHoursMinutesSeconds(interval.durationMillis.milliseconds)
+                    formattedEndTime =
+                        if (interval.endsAtMidnight) {
+                            END_OF_DAY
+                        } else {
+                            interval.end.format(clockFormat)
+                        },
+                    formattedDuration = formatDurationHoursMinutesSeconds(interval.durationMillis.milliseconds),
                 )
             }
 
     fun onAction(action: TaskDetailAction) {
         when (action) {
             TaskDetailAction.OnToggleTimer -> toggleTimer()
+
             // Nothing to save or revert here: the text is edited and saved on the edit-text screen,
             // so leaving edit mode either way only drops the outline.
             TaskDetailAction.OnEditModeClick -> _state.update { it.copy(isEditMode = true) }
+
             TaskDetailAction.OnCloseEditModeClick -> _state.update { it.copy(isEditMode = false) }
+
             else -> Unit
         }
     }
@@ -192,9 +200,10 @@ class TaskDetailViewModel(
                     return@launch
                 }
                 val lastStartedId = subTaskRepository.lastStartedSubTaskId(taskId)
-                val target = task.subTasks.find { it.projectSubTaskId == lastStartedId && !it.isFinished }
-                    ?: task.subTasks.firstOrNull { !it.isFinished }
-                    ?: return@launch
+                val target =
+                    task.subTasks.find { it.projectSubTaskId == lastStartedId && !it.isFinished }
+                        ?: task.subTasks.firstOrNull { !it.isFinished }
+                        ?: return@launch
                 subTaskRepository.startSubTask(target.projectSubTaskId)
             } else if (task.isTimerRunning) {
                 projectTaskRepository.stopProjectTask(taskId)

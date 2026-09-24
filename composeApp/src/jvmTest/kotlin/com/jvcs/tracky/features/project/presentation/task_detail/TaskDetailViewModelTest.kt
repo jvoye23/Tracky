@@ -7,10 +7,10 @@ import com.jvcs.tracky.core.domain.util.FakeRunningTimerRepository
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.runningTimer
 import com.jvcs.tracky.core.domain.util.testTimeManager
+import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.features.project.domain.subtask.SubTaskRepository
-import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.task.ProjectTaskRepository
 import com.jvcs.tracky.features.project.presentation.fakes.FakeProjectRepository
 import com.jvcs.tracky.features.project.presentation.fakes.interval
@@ -69,217 +69,258 @@ internal class TaskDetailViewModelTest {
         // task row carries none.
         stored.value = task.copy(subTasks = null)
         storedSubTasks.value = task.subTasks.orEmpty()
-        val viewModel = TaskDetailViewModel(
-            taskId = task.projectTaskId,
-            projectTaskRepository = taskRepository,
-            subTaskRepository = subTaskRepository,
-            projectRepository = FakeProjectRepository(project),
-            timeManager = testTimeManager(repository = running)
-        )
+        val viewModel =
+            TaskDetailViewModel(
+                taskId = task.projectTaskId,
+                projectTaskRepository = taskRepository,
+                subTaskRepository = subTaskRepository,
+                projectRepository = FakeProjectRepository(project),
+                timeManager = testTimeManager(repository = running),
+            )
         // state is a WhileSubscribed stateIn, so loadSession does not run until something collects.
         backgroundScope.launch { viewModel.state.collect {} }
         return viewModel
     }
 
     @Test
-    fun aDayTotalIsFormattedWithoutCentiseconds() = runTest(UnconfinedTestDispatcher()) {
-        val viewModel = viewModelFor(
-            task(intervals = listOf(interval("2026-09-09T12:00:00Z", minutes = 30)))
-        )
-
-        // Three segments, not formatDuration's four: a day total is not a stopwatch reading, and
-        // the unbounded-hours dialect is what let an impossible number render.
-        assertEquals("00:30:00", viewModel.state.value.dailyStatistics.single().formattedDuration)
-    }
-
-    @Test
-    fun aTaskWithSubTasksIsCountedThroughThemOnly() = runTest(UnconfinedTestDispatcher()) {
-        val viewModel = viewModelFor(
-            task(
-                // The enclosing task interval a subtask timer opens. Counting it as well would
-                // double-bill the same stretch of wall clock.
-                intervals = listOf(interval("2026-09-09T12:00:00Z", minutes = 60)),
-                subTasks = listOf(
-                    subTask(intervals = listOf(subInterval("2026-09-09T12:00:00Z", minutes = 30)))
+    fun aDayTotalIsFormattedWithoutCentiseconds() =
+        runTest(UnconfinedTestDispatcher()) {
+            val viewModel =
+                viewModelFor(
+                    task(intervals = listOf(interval("2026-09-09T12:00:00Z", minutes = 30))),
                 )
+
+            // Three segments, not formatDuration's four: a day total is not a stopwatch reading, and
+            // the unbounded-hours dialect is what let an impossible number render.
+            assertEquals(
+                "00:30:00",
+                viewModel.state.value.dailyStatistics
+                    .single()
+                    .formattedDuration,
             )
-        )
-
-        val stats = viewModel.state.value.dailyStatistics
-        assertEquals(1, stats.size)
-        assertEquals("00:30:00", stats.single().formattedDuration)
-    }
+        }
 
     @Test
-    fun anIntervalRunningPastMidnightIsSplitAcrossTheTwoDays() = runTest(UnconfinedTestDispatcher()) {
-        val viewModel = viewModelFor(
-            // Noon-to-noon: two calendar days in every zone, and exactly 24h banked.
-            task(intervals = listOf(interval("2026-09-09T12:00:00Z", minutes = 24 * 60)))
-        )
-
-        val stats = viewModel.state.value.dailyStatistics
-        assertEquals(2, stats.size, "one day cannot hold a 24-hour stretch that started at noon")
-        // Still 24 hours in total, just no longer all on one row.
-        assertEquals(
-            24 * 60 * 60L,
-            stats.sumOf { stat ->
-                stat.formattedDuration.split(":").let { (h, m, s) ->
-                    h.toLong() * 3600 + m.toLong() * 60 + s.toLong()
-                }
-            }
-        )
-    }
-
-    @Test
-    fun anOpenIntervalContributesNothing() = runTest(UnconfinedTestDispatcher()) {
-        val viewModel = viewModelFor(
-            task(intervals = listOf(interval("2026-09-09T12:00:00Z", minutes = 30, open = true)))
-        )
-
-        // A running timer banks nothing until it stops - and a stranded one banks nothing at all
-        // until it is reviewed.
-        assertEquals(emptyList(), viewModel.state.value.dailyStatistics)
-    }
-
-    @Test
-    fun everyIntervalGetsItsOwnRowWithItsOwnTimes() = runTest(UnconfinedTestDispatcher()) {
-        val viewModel = viewModelFor(
-            task(
-                intervals = listOf(
-                    interval("2026-09-09T12:00:00Z", minutes = 10, id = "early"),
-                    interval("2026-09-09T12:30:00Z", minutes = 20, id = "late"),
+    fun aTaskWithSubTasksIsCountedThroughThemOnly() =
+        runTest(UnconfinedTestDispatcher()) {
+            val viewModel =
+                viewModelFor(
+                    task(
+                        // The enclosing task interval a subtask timer opens. Counting it as well would
+                        // double-bill the same stretch of wall clock.
+                        intervals = listOf(interval("2026-09-09T12:00:00Z", minutes = 60)),
+                        subTasks =
+                            listOf(
+                                subTask(intervals = listOf(subInterval("2026-09-09T12:00:00Z", minutes = 30))),
+                            ),
+                    ),
                 )
+
+            val stats = viewModel.state.value.dailyStatistics
+            assertEquals(1, stats.size)
+            assertEquals("00:30:00", stats.single().formattedDuration)
+        }
+
+    @Test
+    fun anIntervalRunningPastMidnightIsSplitAcrossTheTwoDays() =
+        runTest(UnconfinedTestDispatcher()) {
+            val viewModel =
+                viewModelFor(
+                    // Noon-to-noon: two calendar days in every zone, and exactly 24h banked.
+                    task(intervals = listOf(interval("2026-09-09T12:00:00Z", minutes = 24 * 60))),
+                )
+
+            val stats = viewModel.state.value.dailyStatistics
+            assertEquals(2, stats.size, "one day cannot hold a 24-hour stretch that started at noon")
+            // Still 24 hours in total, just no longer all on one row.
+            assertEquals(
+                24 * 60 * 60L,
+                stats.sumOf { stat ->
+                    stat.formattedDuration.split(":").let { (h, m, s) ->
+                        h.toLong() * 3600 + m.toLong() * 60 + s.toLong()
+                    }
+                },
             )
-        )
-
-        val stats = viewModel.state.value.dailyStatistics
-        // Newest first, one row each rather than one summed row for the day.
-        assertEquals(listOf("late", "early"), stats.map { it.intervalId })
-        assertEquals(listOf("00:20:00", "00:10:00"), stats.map { it.formattedDuration })
-        assertEquals(localClock("2026-09-09T12:30:00Z"), stats[0].formattedStartTime)
-        assertEquals(localClock("2026-09-09T12:50:00Z"), stats[0].formattedEndTime)
-        assertEquals(localClock("2026-09-09T12:00:00Z"), stats[1].formattedStartTime)
-        assertEquals(localClock("2026-09-09T12:10:00Z"), stats[1].formattedEndTime)
-    }
+        }
 
     @Test
-    fun aSliceCutAtMidnightEndsAtTwentyFour() = runTest(UnconfinedTestDispatcher()) {
-        val viewModel = viewModelFor(
-            task(intervals = listOf(interval("2026-09-09T12:00:00Z", minutes = 24 * 60)))
-        )
+    fun anOpenIntervalContributesNothing() =
+        runTest(UnconfinedTestDispatcher()) {
+            val viewModel =
+                viewModelFor(
+                    task(intervals = listOf(interval("2026-09-09T12:00:00Z", minutes = 30, open = true))),
+                )
 
-        val stats = viewModel.state.value.dailyStatistics
-        // The older slice is the second row; it runs up to its day's midnight.
-        assertEquals("24:00", stats[1].formattedEndTime)
-        assertEquals("00:00", stats[0].formattedStartTime)
-    }
-
-    @Test
-    fun editModeTogglesOnAndOff() = runTest(UnconfinedTestDispatcher()) {
-        val viewModel = viewModelFor(task())
-
-        viewModel.onAction(TaskDetailAction.OnEditModeClick)
-        assertTrue(viewModel.state.value.isEditMode)
-
-        viewModel.onAction(TaskDetailAction.OnCloseEditModeClick)
-        assertFalse(viewModel.state.value.isEditMode)
-    }
+            // A running timer banks nothing until it stops - and a stranded one banks nothing at all
+            // until it is reviewed.
+            assertEquals(emptyList(), viewModel.state.value.dailyStatistics)
+        }
 
     @Test
-    fun theParentProjectsColoursAreLoaded() = runTest(UnconfinedTestDispatcher()) {
-        val viewModel = viewModelFor(
-            task(),
-            project = project().copy(colorArgb = 0xFF3F51B5.toInt(), useLightTextColor = true)
-        )
+    fun everyIntervalGetsItsOwnRowWithItsOwnTimes() =
+        runTest(UnconfinedTestDispatcher()) {
+            val viewModel =
+                viewModelFor(
+                    task(
+                        intervals =
+                            listOf(
+                                interval("2026-09-09T12:00:00Z", minutes = 10, id = "early"),
+                                interval("2026-09-09T12:30:00Z", minutes = 20, id = "late"),
+                            ),
+                    ),
+                )
 
-        val state = viewModel.state.value
-        assertEquals("project", state.projectId)
-        assertEquals(0xFF3F51B5.toInt(), state.projectColor?.toArgb())
-        assertTrue(state.useLightTextColor)
-    }
-
-    @Test
-    fun aTaskWithSubTasksShowsTheirSum() = runTest(UnconfinedTestDispatcher()) {
-        val viewModel = viewModelFor(
-            task(subTasks = listOf(sub("s1", millis = 60_000), sub("s2", millis = 30_000)))
-                .copy(durationMillis = 999_000)
-        )
-
-        // The figure Project Detail's task card shows, not the task's own banked total.
-        assertEquals(90_000, viewModel.state.value.task!!.displayDurationMillis)
-    }
-
-    @Test
-    fun aRunningSubTaskTicksTheTaskDuration() = runTest(UnconfinedTestDispatcher()) {
-        val viewModel = viewModelFor(
-            task(subTasks = listOf(sub("s1", millis = 60_000), sub("s2", millis = 30_000)))
-        )
-
-        running.startTimer(runningTimer(taskId = "task-0", subTaskId = "s2", bankedDuration = 45_000.milliseconds))
-
-        val state = viewModel.state.value
-        assertEquals(105_000, state.task!!.displayDurationMillis)
-        assertTrue(state.isTimerRunning)
-    }
+            val stats = viewModel.state.value.dailyStatistics
+            // Newest first, one row each rather than one summed row for the day.
+            assertEquals(listOf("late", "early"), stats.map { it.intervalId })
+            assertEquals(listOf("00:20:00", "00:10:00"), stats.map { it.formattedDuration })
+            assertEquals(localClock("2026-09-09T12:30:00Z"), stats[0].formattedStartTime)
+            assertEquals(localClock("2026-09-09T12:50:00Z"), stats[0].formattedEndTime)
+            assertEquals(localClock("2026-09-09T12:00:00Z"), stats[1].formattedStartTime)
+            assertEquals(localClock("2026-09-09T12:10:00Z"), stats[1].formattedEndTime)
+        }
 
     @Test
-    fun aRowEmissionDoesNotDropTheLiveValue() = runTest(UnconfinedTestDispatcher()) {
-        val viewModel = viewModelFor(task().copy(durationMillis = 10_000))
-        running.startTimer(runningTimer(taskId = "task-0", bankedDuration = 25_000.milliseconds))
+    fun aSliceCutAtMidnightEndsAtTwentyFour() =
+        runTest(UnconfinedTestDispatcher()) {
+            val viewModel =
+                viewModelFor(
+                    task(intervals = listOf(interval("2026-09-09T12:00:00Z", minutes = 24 * 60))),
+                )
 
-        // Any write to the row while the timer runs - an interval opening, a title saved.
-        stored.value = stored.value!!.copy(title = "Renamed")
-
-        assertEquals(25_000, viewModel.state.value.task!!.displayDurationMillis)
-        assertTrue(viewModel.state.value.isTimerRunning)
-    }
-
-    @Test
-    fun resumingATaskWithSubTasksStartsTheLastStartedOne() = runTest(UnconfinedTestDispatcher()) {
-        subTaskRepository.lastStarted = "s2"
-        val viewModel = viewModelFor(task(subTasks = listOf(sub("s1"), sub("s2"))))
-
-        viewModel.onAction(TaskDetailAction.OnToggleTimer)
-
-        assertEquals(listOf("s2"), subTaskRepository.started)
-        assertEquals(emptyList(), taskRepository.started)
-    }
+            val stats = viewModel.state.value.dailyStatistics
+            // The older slice is the second row; it runs up to its day's midnight.
+            assertEquals("24:00", stats[1].formattedEndTime)
+            assertEquals("00:00", stats[0].formattedStartTime)
+        }
 
     @Test
-    fun resumingSkipsAFinishedSubTask() = runTest(UnconfinedTestDispatcher()) {
-        subTaskRepository.lastStarted = "s1"
-        val viewModel = viewModelFor(
-            task(subTasks = listOf(sub("s1").copy(isFinished = true), sub("s2")))
-        )
+    fun editModeTogglesOnAndOff() =
+        runTest(UnconfinedTestDispatcher()) {
+            val viewModel = viewModelFor(task())
 
-        viewModel.onAction(TaskDetailAction.OnToggleTimer)
+            viewModel.onAction(TaskDetailAction.OnEditModeClick)
+            assertTrue(viewModel.state.value.isEditMode)
 
-        assertEquals(listOf("s2"), subTaskRepository.started)
-    }
-
-    @Test
-    fun pausingATaskWithSubTasksStopsTheRunningSubTask() = runTest(UnconfinedTestDispatcher()) {
-        val viewModel = viewModelFor(task(subTasks = listOf(sub("s1"), sub("s2"))))
-        running.startTimer(runningTimer(taskId = "task-0", subTaskId = "s1"))
-
-        viewModel.onAction(TaskDetailAction.OnToggleTimer)
-
-        assertEquals(listOf("s1"), subTaskRepository.stopped)
-        assertEquals(emptyList(), taskRepository.stopped)
-    }
+            viewModel.onAction(TaskDetailAction.OnCloseEditModeClick)
+            assertFalse(viewModel.state.value.isEditMode)
+        }
 
     @Test
-    fun aTaskWithoutSubTasksStartsAndStopsItself() = runTest(UnconfinedTestDispatcher()) {
-        val viewModel = viewModelFor(task())
+    fun theParentProjectsColoursAreLoaded() =
+        runTest(UnconfinedTestDispatcher()) {
+            val viewModel =
+                viewModelFor(
+                    task(),
+                    project = project().copy(colorArgb = 0xFF3F51B5.toInt(), useLightTextColor = true),
+                )
 
-        viewModel.onAction(TaskDetailAction.OnToggleTimer)
-        assertEquals(listOf("task-0"), taskRepository.started)
-        assertTrue(viewModel.state.value.isTimerRunning)
+            val state = viewModel.state.value
+            assertEquals("project", state.projectId)
+            assertEquals(0xFF3F51B5.toInt(), state.projectColor?.toArgb())
+            assertTrue(state.useLightTextColor)
+        }
 
-        viewModel.onAction(TaskDetailAction.OnToggleTimer)
-        assertEquals(listOf("task-0"), taskRepository.stopped)
-        assertFalse(viewModel.state.value.isTimerRunning)
-    }
+    @Test
+    fun aTaskWithSubTasksShowsTheirSum() =
+        runTest(UnconfinedTestDispatcher()) {
+            val viewModel =
+                viewModelFor(
+                    task(subTasks = listOf(sub("s1", millis = 60_000), sub("s2", millis = 30_000)))
+                        .copy(durationMillis = 999_000),
+                )
+
+            // The figure Project Detail's task card shows, not the task's own banked total.
+            assertEquals(
+                90_000,
+                viewModel.state.value.task!!
+                    .displayDurationMillis,
+            )
+        }
+
+    @Test
+    fun aRunningSubTaskTicksTheTaskDuration() =
+        runTest(UnconfinedTestDispatcher()) {
+            val viewModel =
+                viewModelFor(
+                    task(subTasks = listOf(sub("s1", millis = 60_000), sub("s2", millis = 30_000))),
+                )
+
+            running.startTimer(runningTimer(taskId = "task-0", subTaskId = "s2", bankedDuration = 45_000.milliseconds))
+
+            val state = viewModel.state.value
+            assertEquals(105_000, state.task!!.displayDurationMillis)
+            assertTrue(state.isTimerRunning)
+        }
+
+    @Test
+    fun aRowEmissionDoesNotDropTheLiveValue() =
+        runTest(UnconfinedTestDispatcher()) {
+            val viewModel = viewModelFor(task().copy(durationMillis = 10_000))
+            running.startTimer(runningTimer(taskId = "task-0", bankedDuration = 25_000.milliseconds))
+
+            // Any write to the row while the timer runs - an interval opening, a title saved.
+            stored.value = stored.value!!.copy(title = "Renamed")
+
+            assertEquals(
+                25_000,
+                viewModel.state.value.task!!
+                    .displayDurationMillis,
+            )
+            assertTrue(viewModel.state.value.isTimerRunning)
+        }
+
+    @Test
+    fun resumingATaskWithSubTasksStartsTheLastStartedOne() =
+        runTest(UnconfinedTestDispatcher()) {
+            subTaskRepository.lastStarted = "s2"
+            val viewModel = viewModelFor(task(subTasks = listOf(sub("s1"), sub("s2"))))
+
+            viewModel.onAction(TaskDetailAction.OnToggleTimer)
+
+            assertEquals(listOf("s2"), subTaskRepository.started)
+            assertEquals(emptyList(), taskRepository.started)
+        }
+
+    @Test
+    fun resumingSkipsAFinishedSubTask() =
+        runTest(UnconfinedTestDispatcher()) {
+            subTaskRepository.lastStarted = "s1"
+            val viewModel =
+                viewModelFor(
+                    task(subTasks = listOf(sub("s1").copy(isFinished = true), sub("s2"))),
+                )
+
+            viewModel.onAction(TaskDetailAction.OnToggleTimer)
+
+            assertEquals(listOf("s2"), subTaskRepository.started)
+        }
+
+    @Test
+    fun pausingATaskWithSubTasksStopsTheRunningSubTask() =
+        runTest(UnconfinedTestDispatcher()) {
+            val viewModel = viewModelFor(task(subTasks = listOf(sub("s1"), sub("s2"))))
+            running.startTimer(runningTimer(taskId = "task-0", subTaskId = "s1"))
+
+            viewModel.onAction(TaskDetailAction.OnToggleTimer)
+
+            assertEquals(listOf("s1"), subTaskRepository.stopped)
+            assertEquals(emptyList(), taskRepository.stopped)
+        }
+
+    @Test
+    fun aTaskWithoutSubTasksStartsAndStopsItself() =
+        runTest(UnconfinedTestDispatcher()) {
+            val viewModel = viewModelFor(task())
+
+            viewModel.onAction(TaskDetailAction.OnToggleTimer)
+            assertEquals(listOf("task-0"), taskRepository.started)
+            assertTrue(viewModel.state.value.isTimerRunning)
+
+            viewModel.onAction(TaskDetailAction.OnToggleTimer)
+            assertEquals(listOf("task-0"), taskRepository.stopped)
+            assertFalse(viewModel.state.value.isTimerRunning)
+        }
 
     private fun sub(id: String, millis: Long = 0L) = subTask(id = id).copy(durationMillis = millis)
 
@@ -294,28 +335,42 @@ internal class TaskDetailViewModelTest {
         val stopped = mutableListOf<String>()
 
         override fun getProjectTaskWithIntervalsById(taskId: String): Flow<ProjectTask?> = stored
-        override suspend fun upsertProjectTask(projectTask: ProjectTask): EmptyResult<DataError> =
-            Result.Success(Unit)
+
+        override suspend fun upsertProjectTask(projectTask: ProjectTask): EmptyResult<DataError> = Result.Success(Unit)
+
         override suspend fun deleteProjectTask(projectId: String, taskId: String): EmptyResult<DataError> =
             Result.Success(Unit)
-        override suspend fun updateProjectTaskDuration(taskId: String, newDurationMillis: Long): EmptyResult<DataError> =
-            Result.Success(Unit)
+
+        override suspend fun updateProjectTaskDuration(
+            taskId: String,
+            newDurationMillis: Long,
+        ): EmptyResult<DataError> = Result.Success(Unit)
+
         override suspend fun updateProjectTaskTitle(taskId: String, title: String): EmptyResult<DataError> =
             Result.Success(Unit)
-        override suspend fun updateProjectTaskText(taskId: String, title: String, description: String?) = Result.Success(Unit)
+
+        override suspend fun updateProjectTaskText(
+            taskId: String,
+            title: String,
+            description: String?,
+        ) = Result.Success(Unit)
+
         // Opening and closing the interval is what production's running-timer query reports.
         override suspend fun startProjectTask(taskId: String): EmptyResult<DataError> {
             started += taskId
             running.startTimer(runningTimer(taskId = taskId))
             return Result.Success(Unit)
         }
+
         override suspend fun stopProjectTask(taskId: String): EmptyResult<DataError> {
             stopped += taskId
             running.stopTimer()
             return Result.Success(Unit)
         }
+
         override suspend fun reorderTasks(projectId: String, orderedTaskIds: List<String>): EmptyResult<DataError> =
             Result.Success(Unit)
+
         override suspend fun syncPendingTasks() = Unit
     }
 
@@ -325,21 +380,28 @@ internal class TaskDetailViewModelTest {
         var lastStarted: String? = null
 
         override fun getSubTasksForTask(taskId: String): Flow<List<ProjectSubTask>> = storedSubTasks
+
         override suspend fun upsertSubTask(subTask: ProjectSubTask): EmptyResult<DataError> = Result.Success(Unit)
+
         override suspend fun deleteSubTask(subTaskId: String): EmptyResult<DataError> = Result.Success(Unit)
+
         override suspend fun startSubTask(subTaskId: String): EmptyResult<DataError> {
             started += subTaskId
             running.startTimer(runningTimer(taskId = "task-0", subTaskId = subTaskId))
             return Result.Success(Unit)
         }
+
         override suspend fun stopSubTask(subTaskId: String): EmptyResult<DataError> {
             stopped += subTaskId
             running.stopTimer()
             return Result.Success(Unit)
         }
+
         override suspend fun lastStartedSubTaskId(taskId: String): String? = lastStarted
+
         override suspend fun reorderSubTasks(taskId: String, orderedSubTaskIds: List<String>): EmptyResult<DataError> =
             Result.Success(Unit)
+
         override suspend fun syncPendingSubTasks() = Unit
     }
 }

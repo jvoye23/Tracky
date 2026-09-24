@@ -15,6 +15,7 @@ interface LocalSubTaskDataSource {
     suspend fun getSubTaskById(subTaskId: String): Result<ProjectSubTask?, DataError.Local>
 
     suspend fun upsertSubTask(subTask: ProjectSubTask): EmptyResult<DataError.Local>
+
     suspend fun deleteSubTask(subTaskId: String): EmptyResult<DataError.Local>
 
     /**
@@ -46,8 +47,5 @@ interface LocalSubTaskDataSource {
     suspend fun getSubTaskSortIndices(taskId: String): Result<Map<String, Long?>, DataError.Local>
 
     /** Writes a whole reorder in one transaction — see LocalTaskDataSource.updateTaskSortIndices. */
-    suspend fun updateSubTaskSortIndices(
-        indices: Map<String, Long>,
-        updatedAt: Instant
-    ): EmptyResult<DataError.Local>
+    suspend fun updateSubTaskSortIndices(indices: Map<String, Long>, updatedAt: Instant): EmptyResult<DataError.Local>
 }

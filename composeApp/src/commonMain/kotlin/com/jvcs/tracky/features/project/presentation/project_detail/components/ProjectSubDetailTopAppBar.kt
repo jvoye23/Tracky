@@ -26,7 +26,6 @@ import org.jetbrains.compose.resources.stringResource
 import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.back
 import tracky.composeapp.generated.resources.edit_uppercase
-
 import kotlin.time.ExperimentalTime
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,29 +37,31 @@ fun ProjectSubDetailTopAppBar(
     onNavigateBack: () -> Unit,
     onEditClick: () -> Unit = {},
     onSaveClick: () -> Unit = {},
-    projectColor: Color = MaterialTheme.colorScheme.primary
+    projectColor: Color = MaterialTheme.colorScheme.primary,
 ) {
     TopAppBar(
         title = {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center
+                modifier =
+                    Modifier
+                        .fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
             ) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.labelMedium,
-                    color = projectColor
+                    color = projectColor,
                 )
             }
         },
         navigationIcon = {
             IconButton(
                 onClick = { onNavigateBack() },
-                colors = IconButtonDefaults.iconButtonColors(
-                    containerColor = projectColor.copy(alpha = 0.12f),
-                    contentColor = projectColor
-                )
+                colors =
+                    IconButtonDefaults.iconButtonColors(
+                        containerColor = projectColor.copy(alpha = 0.12f),
+                        contentColor = projectColor,
+                    ),
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -73,10 +74,11 @@ fun ProjectSubDetailTopAppBar(
                 if (isEditMode) {
                     IconButton(
                         onClick = { onSaveClick() },
-                        colors = IconButtonDefaults.iconButtonColors(
-                            containerColor = projectColor.copy(alpha = 0.12f),
-                            contentColor = projectColor
-                        )
+                        colors =
+                            IconButtonDefaults.iconButtonColors(
+                                containerColor = projectColor.copy(alpha = 0.12f),
+                                contentColor = projectColor,
+                            ),
                     ) {
                         Icon(
                             imageVector = Icons.Default.Check,
@@ -86,27 +88,27 @@ fun ProjectSubDetailTopAppBar(
                 } else {
                     IconButton(
                         onClick = { onEditClick() },
-                        colors = IconButtonDefaults.iconButtonColors(
-                            containerColor = projectColor.copy(alpha = 0.12f),
-                            contentColor = projectColor
-                        )
+                        colors =
+                            IconButtonDefaults.iconButtonColors(
+                                containerColor = projectColor.copy(alpha = 0.12f),
+                                contentColor = projectColor,
+                            ),
                     ) {
                         Icon(
                             imageVector = Icons.Default.Edit,
                             contentDescription = stringResource(Res.string.edit_uppercase),
-                            tint = projectColor
+                            tint = projectColor,
                         )
                     }
                 }
-
             }
         },
-        colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = Color.Transparent
-        )
+        colors =
+            TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.Transparent,
+            ),
     )
 }
-
 
 private val PreviewEditTextProjectColor = Color(0xFF4CAF50)
 
@@ -116,9 +118,10 @@ private val PreviewEditTextProjectColor = Color(0xFF4CAF50)
 private fun EditTextTopAppBarEditModePreview() {
     TrackyTheme {
         Column(
-            modifier = Modifier
-                .fillMaxSize(),
-            verticalArrangement = Arrangement.Top
+            modifier =
+                Modifier
+                    .fillMaxSize(),
+            verticalArrangement = Arrangement.Top,
         ) {
             ProjectSubDetailTopAppBar(
                 title = "EDIT PROJECT",
@@ -126,7 +129,7 @@ private fun EditTextTopAppBarEditModePreview() {
                 onNavigateBack = {},
                 onEditClick = {},
                 onSaveClick = {},
-                projectColor = PreviewEditTextProjectColor
+                projectColor = PreviewEditTextProjectColor,
             )
         }
     }
@@ -138,9 +141,10 @@ private fun EditTextTopAppBarEditModePreview() {
 private fun ProjectSubDetailTopAppBarReadModePreview() {
     TrackyTheme {
         Column(
-            modifier = Modifier
-                .fillMaxSize(),
-            verticalArrangement = Arrangement.Top
+            modifier =
+                Modifier
+                    .fillMaxSize(),
+            verticalArrangement = Arrangement.Top,
         ) {
             ProjectSubDetailTopAppBar(
                 title = "PROJECT DETAILS",
@@ -148,7 +152,7 @@ private fun ProjectSubDetailTopAppBarReadModePreview() {
                 onNavigateBack = {},
                 onEditClick = {},
                 onSaveClick = {},
-                projectColor = PreviewEditTextProjectColor
+                projectColor = PreviewEditTextProjectColor,
             )
         }
     }

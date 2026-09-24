@@ -12,7 +12,7 @@ import androidx.room.PrimaryKey
             entity = ProjectTaskEntity::class,
             parentColumns = ["projectTaskId"],
             childColumns = ["parentTaskId"],
-            onDelete = ForeignKey.CASCADE // Deleting a task will delete the time it tracked
+            onDelete = ForeignKey.CASCADE, // Deleting a task will delete the time it tracked
         ),
         // parentProjectId is denormalised rather than derived through the task on purpose: it makes
         // the project the direct parent of its intervals, so a project delete cascades to them even
@@ -21,11 +21,11 @@ import androidx.room.PrimaryKey
             entity = ProjectEntity::class,
             parentColumns = ["projectId"],
             childColumns = ["parentProjectId"],
-            onDelete = ForeignKey.CASCADE // Deleting a project will delete all associated intervals
-        )
+            onDelete = ForeignKey.CASCADE, // Deleting a project will delete all associated intervals
+        ),
     ],
     // Indexing the foreign keys is a best practice for performance
-    indices = [Index(value = ["parentTaskId"]), Index(value = ["parentProjectId"])]
+    indices = [Index(value = ["parentTaskId"]), Index(value = ["parentProjectId"])],
 )
 data class TaskIntervalEntity(
     @PrimaryKey(autoGenerate = false)
@@ -39,5 +39,5 @@ data class TaskIntervalEntity(
     // multi-device sync is, and which is read as "this device" — the behaviour those rows already
     // had. See DeviceIdProvider: an open interval this device started is a crash to recover from,
     // one another device started is a timer to display.
-    val startedByDeviceId: String? = null
+    val startedByDeviceId: String? = null,
 )

@@ -2,8 +2,8 @@ package com.jvcs.tracky.core.data.networking
 
 import com.jvcs.tracky.core.data.networking.dto.HelloEnvelopeDto
 import com.jvcs.tracky.core.data.networking.dto.RealtimeEnvelopeParser
-import com.jvcs.tracky.core.domain.realtime.RealtimeEvent
 import com.jvcs.tracky.core.data.realtime.KtorRealtimeChannel
+import com.jvcs.tracky.core.domain.realtime.RealtimeEvent
 import com.jvcs.tracky.core.domain.util.Result
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -21,7 +21,7 @@ internal class RealtimeUrlTest {
     fun httpsBecomesWss() {
         assertEquals(
             "wss://tracky.jv-coding-solutions.com/api/realtime",
-            realtimeUrl("https://tracky.jv-coding-solutions.com:443")
+            realtimeUrl("https://tracky.jv-coding-solutions.com:443"),
         )
     }
 
@@ -62,11 +62,11 @@ internal class RealtimeEnvelopeParserTest {
         assertEquals(RealtimeEvent.Ready, parser.parse("""{"type":"ready"}"""))
         assertEquals(
             RealtimeEvent.Invalidate(84219),
-            parser.parse("""{"type":"invalidate","cursor":84219}""")
+            parser.parse("""{"type":"invalidate","cursor":84219}"""),
         )
         assertEquals(
             RealtimeEvent.Timer(84219),
-            parser.parse("""{"type":"timer","cursor":84219,"active":null}""")
+            parser.parse("""{"type":"timer","cursor":84219,"active":null}"""),
         )
     }
 
@@ -92,7 +92,7 @@ internal class RealtimeEnvelopeParserTest {
     fun unknownExtraFieldsAreIgnored() {
         assertEquals(
             RealtimeEvent.Invalidate(3),
-            parser.parse("""{"type":"invalidate","cursor":3,"somethingNew":{"a":1}}""")
+            parser.parse("""{"type":"invalidate","cursor":3,"somethingNew":{"a":1}}"""),
         )
     }
 
@@ -102,7 +102,7 @@ internal class RealtimeEnvelopeParserTest {
         assertEquals(RealtimeEvent.Invalidate(0), parser.parse("""{"type":"invalidate"}"""))
         assertEquals(
             RealtimeEvent.Invalidate(0),
-            parser.parse("""{"type":"invalidate","cursor":"not-a-number"}""")
+            parser.parse("""{"type":"invalidate","cursor":"not-a-number"}"""),
         )
     }
 
@@ -117,9 +117,10 @@ internal class RealtimeEnvelopeParserTest {
 
     @Test
     fun theHelloEnvelopeCarriesTheDeviceAndCursor() {
-        val json = Json.encodeToString(
-            HelloEnvelopeDto(deviceId = "d-1", cursor = 84213)
-        )
+        val json =
+            Json.encodeToString(
+                HelloEnvelopeDto(deviceId = "d-1", cursor = 84213),
+            )
         assertTrue(json.contains(""""type":"hello""""), json)
         assertTrue(json.contains(""""deviceId":"d-1""""), json)
         assertTrue(json.contains(""""cursor":84213"""), json)
@@ -134,12 +135,13 @@ internal class KtorRealtimeChannelTest {
      * here" rather than something to back off and retry forever.
      */
     @Test
-    fun withoutAConfiguredUrlItRefusesToOpen() = runTest {
-        // Never reached: the null url short-circuits before the client is touched.
-        val client = HttpClient(MockEngine { respondBadRequest() })
+    fun withoutAConfiguredUrlItRefusesToOpen() =
+        runTest {
+            // Never reached: the null url short-circuits before the client is touched.
+            val client = HttpClient(MockEngine { respondBadRequest() })
 
-        val result = KtorRealtimeChannel(httpClient = client, url = null).open()
+            val result = KtorRealtimeChannel(httpClient = client, url = null).open()
 
-        assertTrue(result is Result.Error)
-    }
+            assertTrue(result is Result.Error)
+        }
 }

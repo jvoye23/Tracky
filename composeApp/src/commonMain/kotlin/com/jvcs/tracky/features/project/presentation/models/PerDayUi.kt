@@ -22,12 +22,11 @@ data class PerDayUi(
      * The day this tile stands for, so a tap can carry it. Last and defaulted, because the
      * previews build tiles positionally; [dateLabel] cannot stand in, as "25.8" has no year.
      */
-    val date: LocalDate? = null
+    val date: LocalDate? = null,
 )
-
 
 data class PerDayStripUi(
     val days: List<PerDayUi>,
     /** Weekday plus date of the busiest day, e.g. "Sat 05.9"; `null` when nothing was tracked. */
-    val busiestDayLabel: String?
+    val busiestDayLabel: String?,
 )

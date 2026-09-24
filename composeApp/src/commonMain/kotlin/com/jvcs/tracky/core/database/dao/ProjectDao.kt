@@ -11,9 +11,9 @@ import com.jvcs.tracky.core.database.entity.StrandedIntervalEntity
 import com.jvcs.tracky.core.database.entity.SubTaskIntervalEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
 import com.jvcs.tracky.core.database.relation.ProjectSortIndexEntity
-import com.jvcs.tracky.core.database.relation.SubTaskSortIndexEntity
 import com.jvcs.tracky.core.database.relation.ProjectWithTaskTreeEntity
 import com.jvcs.tracky.core.database.relation.ProjectWithTasksEntity
+import com.jvcs.tracky.core.database.relation.SubTaskSortIndexEntity
 import com.jvcs.tracky.core.database.relation.SubTaskWithIntervals
 import com.jvcs.tracky.core.database.relation.TaskSortIndexEntity
 import com.jvcs.tracky.core.database.relation.TaskWithIntervals
@@ -57,7 +57,7 @@ interface ProjectDao {
         tasks: List<ProjectTaskEntity>,
         intervals: List<TaskIntervalEntity>,
         subTasks: List<ProjectSubTaskEntity> = emptyList(),
-        subTaskIntervals: List<SubTaskIntervalEntity> = emptyList()
+        subTaskIntervals: List<SubTaskIntervalEntity> = emptyList(),
     ) {
         val pendingIntervalIds = getPendingIntervalIds().toSet()
 
@@ -75,11 +75,13 @@ interface ProjectDao {
         }
         intervals.forEach { incoming ->
             val local = getIntervalById(incoming.intervalId)
-            val serverWins = local == null || serverWinsOnPullForInterval(
-                localEndDateTimeEpochMs = local.endDateTimeEpochMs,
-                serverEndDateTimeEpochMs = incoming.endDateTimeEpochMs,
-                hasPendingLocalPush = incoming.intervalId in pendingIntervalIds
-            )
+            val serverWins =
+                local == null ||
+                    serverWinsOnPullForInterval(
+                        localEndDateTimeEpochMs = local.endDateTimeEpochMs,
+                        serverEndDateTimeEpochMs = incoming.endDateTimeEpochMs,
+                        hasPendingLocalPush = incoming.intervalId in pendingIntervalIds,
+                    )
             if (serverWins) {
                 // The server does carry startedByDeviceId, so the incoming value is preferred: a
                 // row this device has never seen must keep the provenance of the device that
@@ -89,8 +91,8 @@ interface ProjectDao {
                 // open interval look foreign and unrecoverable.
                 upsertTaskInterval(
                     incoming.copy(
-                        startedByDeviceId = incoming.startedByDeviceId ?: local?.startedByDeviceId
-                    )
+                        startedByDeviceId = incoming.startedByDeviceId ?: local?.startedByDeviceId,
+                    ),
                 )
             }
         }
@@ -107,11 +109,13 @@ interface ProjectDao {
             if (getSubTaskById(incoming.parentSubTaskId) == null) return@forEach
             if (getIntervalById(incoming.parentTaskIntervalId) == null) return@forEach
             val local = getSubTaskIntervalById(incoming.subTaskIntervalId)
-            val serverWins = local == null || serverWinsOnPullForInterval(
-                localEndDateTimeEpochMs = local.endDateTimeEpochMs,
-                serverEndDateTimeEpochMs = incoming.endDateTimeEpochMs,
-                hasPendingLocalPush = incoming.subTaskIntervalId in pendingIntervalIds
-            )
+            val serverWins =
+                local == null ||
+                    serverWinsOnPullForInterval(
+                        localEndDateTimeEpochMs = local.endDateTimeEpochMs,
+                        serverEndDateTimeEpochMs = incoming.endDateTimeEpochMs,
+                        hasPendingLocalPush = incoming.subTaskIntervalId in pendingIntervalIds,
+                    )
             if (serverWins) {
                 // startedParentTimer has no wire counterpart, so the local value is kept to
                 // preserve "stopping this subtask also stops its parent task"; a row this device
@@ -121,8 +125,8 @@ interface ProjectDao {
                 upsertSubTaskInterval(
                     incoming.copy(
                         startedParentTimer = local?.startedParentTimer ?: false,
-                        startedByDeviceId = incoming.startedByDeviceId ?: local?.startedByDeviceId
-                    )
+                        startedByDeviceId = incoming.startedByDeviceId ?: local?.startedByDeviceId,
+                    ),
                 )
             }
         }
@@ -157,7 +161,7 @@ interface ProjectDao {
         deletedTaskIds: List<String>,
         deletedIntervalIds: List<String>,
         deletedSubTaskIds: List<String>,
-        deletedSubTaskIntervalIds: List<String>
+        deletedSubTaskIntervalIds: List<String>,
     ) {
         upsertServerTree(projects, tasks, intervals, subTasks, subTaskIntervals)
 
@@ -212,7 +216,9 @@ interface ProjectDao {
     @Query("SELECT * FROM projects WHERE trashedAtEpochMs IS NOT NULL ORDER BY trashedAtEpochMs DESC")
     fun getTrashedProjectsWithTasks(): Flow<List<ProjectWithTasksEntity>>
 
-    @Query("SELECT * FROM projects WHERE isArchived = 0 AND isFinished = 0 AND trashedAtEpochMs IS NULL AND isPinned = 1")
+    @Query(
+        "SELECT * FROM projects WHERE isArchived = 0 AND isFinished = 0 AND trashedAtEpochMs IS NULL AND isPinned = 1",
+    )
     fun getPinnedProjectsWithTasks(): Flow<List<ProjectWithTasksEntity>>
 
     @Query("SELECT projectId FROM projects WHERE trashedAtEpochMs IS NOT NULL AND trashedAtEpochMs < :cutoffEpochMs")
@@ -222,7 +228,11 @@ interface ProjectDao {
     suspend fun getSortIndices(): List<ProjectSortIndexEntity>
 
     @Query("UPDATE projects SET sortIndex = :sortIndex, updatedAtEpochMs = :updatedAt WHERE projectId = :projectId")
-    suspend fun setSortIndex(projectId: String, sortIndex: Long, updatedAt: Long)
+    suspend fun setSortIndex(
+        projectId: String,
+        sortIndex: Long,
+        updatedAt: Long,
+    )
 
     // A reorder is one gesture, so it is one write: either every index lands or none does. Doing it
     // row by row outside a transaction can leave two projects sharing an index if one write fails.
@@ -283,14 +293,16 @@ interface ProjectDao {
     @Query(
         "SELECT * FROM task_intervals WHERE parentTaskId = :sessionId AND endDateTimeEpochMs IS NULL " +
             "AND intervalId NOT IN (SELECT intervalId FROM stranded_intervals) " +
-            "ORDER BY startDateTimeEpochMs DESC LIMIT 1"
+            "ORDER BY startDateTimeEpochMs DESC LIMIT 1",
     )
     suspend fun getOpenIntervalBySessionId(sessionId: String): TaskIntervalEntity?
 
     @Query("UPDATE project_tasks SET isTimerRunning = :isRunning WHERE projectTaskId = :sessionId")
     suspend fun updateSessionTimerStatus(sessionId: String, isRunning: Boolean)
 
-    @Query("UPDATE project_tasks SET durationMillis = durationMillis + :additionalDuration WHERE projectTaskId = :taskId")
+    @Query(
+        "UPDATE project_tasks SET durationMillis = durationMillis + :additionalDuration WHERE projectTaskId = :taskId",
+    )
     suspend fun addTaskDuration(taskId: String, additionalDuration: Long)
 
     /**
@@ -307,14 +319,14 @@ interface ProjectDao {
      */
     @Query(
         "SELECT COALESCE(SUM(durationMillis), 0) FROM task_intervals " +
-            "WHERE parentTaskId = :taskId AND endDateTimeEpochMs IS NOT NULL"
+            "WHERE parentTaskId = :taskId AND endDateTimeEpochMs IS NOT NULL",
     )
     suspend fun getBankedTaskDuration(taskId: String): Long
 
     /** The subtask twin of [getBankedTaskDuration]; `parentSubTaskId` is indexed too. */
     @Query(
         "SELECT COALESCE(SUM(durationMillis), 0) FROM sub_task_intervals " +
-            "WHERE parentSubTaskId = :subTaskId AND endDateTimeEpochMs IS NOT NULL"
+            "WHERE parentSubTaskId = :subTaskId AND endDateTimeEpochMs IS NOT NULL",
     )
     suspend fun getBankedSubTaskDuration(subTaskId: String): Long
 
@@ -325,8 +337,14 @@ interface ProjectDao {
     @Query("SELECT projectTaskId, sortIndex FROM project_tasks WHERE parentProjectId = :projectId")
     suspend fun getTaskSortIndices(projectId: String): List<TaskSortIndexEntity>
 
-    @Query("UPDATE project_tasks SET sortIndex = :sortIndex, updatedAtEpochMs = :updatedAt WHERE projectTaskId = :taskId")
-    suspend fun setTaskSortIndex(taskId: String, sortIndex: Long, updatedAt: Long)
+    @Query(
+        "UPDATE project_tasks SET sortIndex = :sortIndex, updatedAtEpochMs = :updatedAt WHERE projectTaskId = :taskId",
+    )
+    suspend fun setTaskSortIndex(
+        taskId: String,
+        sortIndex: Long,
+        updatedAt: Long,
+    )
 
     // One gesture, one write — see updateSortIndices for why this has to be transactional.
     @Transaction
@@ -356,15 +374,23 @@ interface ProjectDao {
     @Query("UPDATE project_sub_tasks SET isTimerRunning = :isRunning WHERE projectSubTaskId = :subTaskId")
     suspend fun updateSubTaskTimerStatus(subTaskId: String, isRunning: Boolean)
 
-    @Query("UPDATE project_sub_tasks SET durationMillis = COALESCE(durationMillis, 0) + :additionalDuration WHERE projectSubTaskId = :subTaskId")
+    @Query(
+        "UPDATE project_sub_tasks SET durationMillis = COALESCE(durationMillis, 0) + :additionalDuration WHERE projectSubTaskId = :subTaskId",
+    )
     suspend fun addSubTaskDuration(subTaskId: String, additionalDuration: Long)
 
     // Subtask order is per task, one level further down than the task queries above.
     @Query("SELECT projectSubTaskId, sortIndex FROM project_sub_tasks WHERE parentProjectTaskId = :taskId")
     suspend fun getSubTaskSortIndices(taskId: String): List<SubTaskSortIndexEntity>
 
-    @Query("UPDATE project_sub_tasks SET sortIndex = :sortIndex, updatedAtEpochMs = :updatedAt WHERE projectSubTaskId = :subTaskId")
-    suspend fun setSubTaskSortIndex(subTaskId: String, sortIndex: Long, updatedAt: Long)
+    @Query(
+        "UPDATE project_sub_tasks SET sortIndex = :sortIndex, updatedAtEpochMs = :updatedAt WHERE projectSubTaskId = :subTaskId",
+    )
+    suspend fun setSubTaskSortIndex(
+        subTaskId: String,
+        sortIndex: Long,
+        updatedAt: Long,
+    )
 
     // One gesture, one write — see updateSortIndices for why this has to be transactional.
     @Transaction
@@ -386,7 +412,7 @@ interface ProjectDao {
     @Query(
         "SELECT * FROM sub_task_intervals WHERE parentSubTaskId = :subTaskId AND endDateTimeEpochMs IS NULL " +
             "AND subTaskIntervalId NOT IN (SELECT intervalId FROM stranded_intervals) " +
-            "ORDER BY startDateTimeEpochMs DESC LIMIT 1"
+            "ORDER BY startDateTimeEpochMs DESC LIMIT 1",
     )
     suspend fun getOpenSubTaskInterval(subTaskId: String): SubTaskIntervalEntity?
 
@@ -398,7 +424,7 @@ interface ProjectDao {
             "JOIN project_sub_tasks AS s ON s.projectSubTaskId = si.parentSubTaskId " +
             "WHERE s.parentProjectTaskId = :taskId AND si.endDateTimeEpochMs IS NULL " +
             "AND si.subTaskIntervalId NOT IN (SELECT intervalId FROM stranded_intervals) " +
-            "ORDER BY si.startDateTimeEpochMs DESC LIMIT 1"
+            "ORDER BY si.startDateTimeEpochMs DESC LIMIT 1",
     )
     suspend fun getOpenSubTaskIntervalForTask(taskId: String): SubTaskIntervalEntity?
 
@@ -430,14 +456,14 @@ interface ProjectDao {
     @Query(
         "SELECT * FROM task_intervals WHERE endDateTimeEpochMs IS NULL " +
             "AND intervalId NOT IN (SELECT intervalId FROM stranded_intervals) " +
-            "ORDER BY startDateTimeEpochMs DESC LIMIT 1"
+            "ORDER BY startDateTimeEpochMs DESC LIMIT 1",
     )
     fun observeOpenTaskInterval(): Flow<TaskIntervalEntity?>
 
     @Query(
         "SELECT * FROM sub_task_intervals WHERE endDateTimeEpochMs IS NULL " +
             "AND subTaskIntervalId NOT IN (SELECT intervalId FROM stranded_intervals) " +
-            "ORDER BY startDateTimeEpochMs DESC LIMIT 1"
+            "ORDER BY startDateTimeEpochMs DESC LIMIT 1",
     )
     fun observeOpenSubTaskInterval(): Flow<SubTaskIntervalEntity?>
 
@@ -452,7 +478,7 @@ interface ProjectDao {
      */
     @Query(
         "SELECT entityId FROM pending_sync_operations " +
-            "WHERE entityType IN ('task_interval', 'sub_task_interval')"
+            "WHERE entityType IN ('task_interval', 'sub_task_interval')",
     )
     suspend fun getPendingIntervalIds(): List<String>
 
@@ -466,13 +492,13 @@ interface ProjectDao {
     // sync and means this device, which is what those rows have always meant.
     @Query(
         "SELECT * FROM task_intervals WHERE endDateTimeEpochMs IS NULL " +
-            "AND (startedByDeviceId IS NULL OR startedByDeviceId = :deviceId)"
+            "AND (startedByDeviceId IS NULL OR startedByDeviceId = :deviceId)",
     )
     suspend fun getAllOpenTaskIntervalsForDevice(deviceId: String): List<TaskIntervalEntity>
 
     @Query(
         "SELECT * FROM sub_task_intervals WHERE endDateTimeEpochMs IS NULL " +
-            "AND (startedByDeviceId IS NULL OR startedByDeviceId = :deviceId)"
+            "AND (startedByDeviceId IS NULL OR startedByDeviceId = :deviceId)",
     )
     suspend fun getAllOpenSubTaskIntervalsForDevice(deviceId: String): List<SubTaskIntervalEntity>
 
@@ -485,7 +511,7 @@ interface ProjectDao {
         "SELECT si.parentSubTaskId FROM sub_task_intervals AS si " +
             "JOIN project_sub_tasks AS s ON s.projectSubTaskId = si.parentSubTaskId " +
             "WHERE s.parentProjectTaskId = :taskId " +
-            "ORDER BY si.startDateTimeEpochMs DESC LIMIT 1"
+            "ORDER BY si.startDateTimeEpochMs DESC LIMIT 1",
     )
     suspend fun getLastStartedSubTaskId(taskId: String): String?
 }

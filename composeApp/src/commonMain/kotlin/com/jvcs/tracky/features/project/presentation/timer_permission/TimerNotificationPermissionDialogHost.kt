@@ -12,9 +12,7 @@ import org.koin.compose.viewmodel.koinViewModel
  * is actually running.
  */
 @Composable
-fun TimerNotificationPermissionDialogHost(
-    viewModel: TimerNotificationPermissionViewModel = koinViewModel()
-) {
+fun TimerNotificationPermissionDialogHost(viewModel: TimerNotificationPermissionViewModel = koinViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     if (!state.showDeniedDialog) return

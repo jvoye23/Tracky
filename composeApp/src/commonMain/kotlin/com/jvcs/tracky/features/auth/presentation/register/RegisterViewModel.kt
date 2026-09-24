@@ -9,10 +9,10 @@ import com.jvcs.tracky.core.domain.auth.SocialAuthProvider
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.onFailure
 import com.jvcs.tracky.core.domain.util.onSuccess
+import com.jvcs.tracky.design_system.util.UiText
 import com.jvcs.tracky.features.auth.domain.EmailValidator
 import com.jvcs.tracky.features.auth.domain.PasswordValidator
 import com.jvcs.tracky.features.project.presentation.util.toUiText
-import com.jvcs.tracky.design_system.util.UiText
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -45,51 +45,81 @@ class RegisterViewModel(
     val events = eventChannel.receiveAsFlow()
 
     private val _state = MutableStateFlow(RegisterState())
-    val state = _state
-        .onStart {
-            if (!hasLoadedInitialData) {
-                observeTextStates()
-                hasLoadedInitialData = true
-            }
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), RegisterState())
+    val state =
+        _state
+            .onStart {
+                if (!hasLoadedInitialData) {
+                    observeTextStates()
+                    hasLoadedInitialData = true
+                }
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), RegisterState())
 
-    private val isNameValidFlow = snapshotFlow { _state.value.nameTextState.text.toString() }
-        .map { it.trim().length >= 2 }
-        .distinctUntilChanged()
+    private val isNameValidFlow =
+        snapshotFlow {
+            _state.value.nameTextState.text
+                .toString()
+        }.map { it.trim().length >= 2 }
+            .distinctUntilChanged()
 
-    private val isEmailValidFlow = snapshotFlow { _state.value.emailTextState.text.toString() }
-        .map { EmailValidator.validate(it) }
-        .distinctUntilChanged()
+    private val isEmailValidFlow =
+        snapshotFlow {
+            _state.value.emailTextState.text
+                .toString()
+        }.map { EmailValidator.validate(it) }
+            .distinctUntilChanged()
 
-    private val isPasswordValidFlow = snapshotFlow { _state.value.passwordTextState.text.toString() }
-        .map { PasswordValidator.validate(it).isValidPassword }
-        .distinctUntilChanged()
+    private val isPasswordValidFlow =
+        snapshotFlow {
+            _state.value.passwordTextState.text
+                .toString()
+        }.map { PasswordValidator.validate(it).isValidPassword }
+            .distinctUntilChanged()
 
-    private val isConfirmPasswordValidFlow = combine(
-        snapshotFlow { _state.value.passwordTextState.text.toString() },
-        snapshotFlow { _state.value.confirmPasswordTextState.text.toString() },
-    ) { pwd, confirm -> pwd.isNotEmpty() && pwd == confirm }
-        .distinctUntilChanged()
+    private val isConfirmPasswordValidFlow =
+        combine(
+            snapshotFlow {
+                _state.value.passwordTextState.text
+                    .toString()
+            },
+            snapshotFlow {
+                _state.value.confirmPasswordTextState.text
+                    .toString()
+            },
+        ) { pwd, confirm -> pwd.isNotEmpty() && pwd == confirm }
+            .distinctUntilChanged()
 
     private val agreedFlow = _state.map { it.agreedToTerms }.distinctUntilChanged()
     private val isRegisteringFlow = _state.map { it.isRegistering }.distinctUntilChanged()
 
     fun onAction(action: RegisterAction) {
         when (action) {
-            RegisterAction.OnRegisterClick -> register()
+            RegisterAction.OnRegisterClick -> {
+                register()
+            }
+
             RegisterAction.OnTogglePasswordVisibilityClick -> {
                 _state.update { it.copy(isPasswordVisible = !it.isPasswordVisible) }
             }
+
             RegisterAction.OnToggleConfirmPasswordVisibilityClick -> {
                 _state.update { it.copy(isConfirmPasswordVisible = !it.isConfirmPasswordVisible) }
             }
+
             is RegisterAction.OnTermsToggle -> {
                 _state.update { it.copy(agreedToTerms = action.agreed, termsError = null) }
             }
-            RegisterAction.OnGoogleSignInClick -> signInWithGoogle()
-            RegisterAction.OnAppleSignInClick -> signInWithApple()
-            else -> Unit
+
+            RegisterAction.OnGoogleSignInClick -> {
+                signInWithGoogle()
+            }
+
+            RegisterAction.OnAppleSignInClick -> {
+                signInWithApple()
+            }
+
+            else -> {
+                Unit
+            }
         }
     }
 
@@ -117,7 +147,8 @@ class RegisterViewModel(
                     isEmailValid = validity.email,
                     isPasswordValid = validity.password,
                     isConfirmPasswordValid = validity.confirmPassword,
-                    canRegister = !isRegistering &&
+                    canRegister =
+                        !isRegistering &&
                             validity.name &&
                             validity.email &&
                             validity.password &&
@@ -129,10 +160,18 @@ class RegisterViewModel(
     }
 
     private fun validateFormInputs(): Boolean {
-        val name = _state.value.nameTextState.text.toString()
-        val email = _state.value.emailTextState.text.toString()
-        val password = _state.value.passwordTextState.text.toString()
-        val confirm = _state.value.confirmPasswordTextState.text.toString()
+        val name =
+            _state.value.nameTextState.text
+                .toString()
+        val email =
+            _state.value.emailTextState.text
+                .toString()
+        val password =
+            _state.value.passwordTextState.text
+                .toString()
+        val confirm =
+            _state.value.confirmPasswordTextState.text
+                .toString()
         val agreed = _state.value.agreedToTerms
 
         val nameValid = name.trim().length >= 2
@@ -157,40 +196,49 @@ class RegisterViewModel(
         if (!validateFormInputs()) return
         viewModelScope.launch {
             _state.update { it.copy(isRegistering = true, registrationError = null) }
-            val email = state.value.emailTextState.text.toString()
-            authService.register(
-                email = email,
-                name = state.value.nameTextState.text.toString().trim(),
-                password = state.value.passwordTextState.text.toString()
-            ).onSuccess {
-                _state.update { it.copy(isRegistering = false) }
-                eventChannel.send(RegisterEvent.Success(email))
-            }.onFailure { error ->
-                val errorMessage = when (error) {
-                    DataError.Remote.CONFLICT -> UiText.Resource(Res.string.error_account_exists)
-                    else -> error.toUiText()
+            val email =
+                state.value.emailTextState.text
+                    .toString()
+            authService
+                .register(
+                    email = email,
+                    name =
+                        state.value.nameTextState.text
+                            .toString()
+                            .trim(),
+                    password =
+                        state.value.passwordTextState.text
+                            .toString(),
+                ).onSuccess {
+                    _state.update { it.copy(isRegistering = false) }
+                    eventChannel.send(RegisterEvent.Success(email))
+                }.onFailure { error ->
+                    val errorMessage =
+                        when (error) {
+                            DataError.Remote.CONFLICT -> UiText.Resource(Res.string.error_account_exists)
+                            else -> error.toUiText()
+                        }
+                    _state.update { it.copy(registrationError = errorMessage, isRegistering = false) }
                 }
-                _state.update { it.copy(registrationError = errorMessage, isRegistering = false) }
-            }
         }
     }
 
     private fun signInWithGoogle() {
         viewModelScope.launch {
             _state.update { it.copy(isRegistering = true, registrationError = null) }
-            socialAuthProvider.signInWithGoogle()
+            socialAuthProvider
+                .signInWithGoogle()
                 .onSuccess { idToken ->
-                    authService.loginWithGoogle(idToken)
+                    authService
+                        .loginWithGoogle(idToken)
                         .onSuccess { authInfo ->
                             sessionStorage.set(authInfo)
                             _state.update { it.copy(isRegistering = false) }
                             eventChannel.send(RegisterEvent.Success(""))
-                        }
-                        .onFailure { error ->
+                        }.onFailure { error ->
                             _state.update { it.copy(registrationError = error.toUiText(), isRegistering = false) }
                         }
-                }
-                .onFailure { error ->
+                }.onFailure { error ->
                     _state.update { it.copy(registrationError = error.toUiText(), isRegistering = false) }
                 }
         }
@@ -199,19 +247,19 @@ class RegisterViewModel(
     private fun signInWithApple() {
         viewModelScope.launch {
             _state.update { it.copy(isRegistering = true, registrationError = null) }
-            socialAuthProvider.signInWithApple()
+            socialAuthProvider
+                .signInWithApple()
                 .onSuccess { idToken ->
-                    authService.loginWithApple(idToken)
+                    authService
+                        .loginWithApple(idToken)
                         .onSuccess { authInfo ->
                             sessionStorage.set(authInfo)
                             _state.update { it.copy(isRegistering = false) }
                             eventChannel.send(RegisterEvent.Success(""))
-                        }
-                        .onFailure { error ->
+                        }.onFailure { error ->
                             _state.update { it.copy(registrationError = error.toUiText(), isRegistering = false) }
                         }
-                }
-                .onFailure { error ->
+                }.onFailure { error ->
                     _state.update { it.copy(registrationError = error.toUiText(), isRegistering = false) }
                 }
         }

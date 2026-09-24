@@ -30,7 +30,7 @@ data class TimerNotificationSession(
     val elapsed: Duration,
     val asOf: Instant,
     val isRunning: Boolean,
-    val isForeign: Boolean = false
+    val isForeign: Boolean = false,
 ) {
     /**
      * What the clock reads at [now]. A running session keeps counting past the instant it was

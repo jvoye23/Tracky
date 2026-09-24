@@ -26,10 +26,11 @@ fun AuthHeaderIcon(
     iconTint: Color = MaterialTheme.colorScheme.primary,
 ) {
     Box(
-        modifier = modifier
-            .size(containerSize)
-            .clip(RoundedCornerShape(cornerRadius))
-            .background(containerColor),
+        modifier =
+            modifier
+                .size(containerSize)
+                .clip(RoundedCornerShape(cornerRadius))
+                .background(containerColor),
         contentAlignment = Alignment.Center,
     ) {
         Icon(

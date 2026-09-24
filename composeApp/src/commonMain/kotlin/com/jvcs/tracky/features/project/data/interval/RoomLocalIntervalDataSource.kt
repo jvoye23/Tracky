@@ -12,41 +12,42 @@ import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withContext
 
-class RoomLocalIntervalDataSource(
-    private val projectDao: ProjectDao
-) : LocalIntervalDataSource {
+class RoomLocalIntervalDataSource(private val projectDao: ProjectDao) : LocalIntervalDataSource {
 
     // Same single-writer funnel as the other Room data sources — see RoomLocalProjectDataSource.
     private val dbWriteDispatcher = platformIoDispatcher.limitedParallelism(1)
 
-    override suspend fun upsertTaskInterval(interval: TaskInterval): EmptyResult<DataError.Local> = write {
-        projectDao.upsertTaskInterval(interval.toTaskIntervalEntity())
-    }
+    override suspend fun upsertTaskInterval(interval: TaskInterval): EmptyResult<DataError.Local> =
+        write {
+            projectDao.upsertTaskInterval(interval.toTaskIntervalEntity())
+        }
 
-    override suspend fun getIntervalById(intervalId: String): Result<TaskInterval?, DataError.Local> = read {
-        projectDao.getIntervalById(intervalId)?.toTaskInterval()
-    }
+    override suspend fun getIntervalById(intervalId: String): Result<TaskInterval?, DataError.Local> =
+        read {
+            projectDao.getIntervalById(intervalId)?.toTaskInterval()
+        }
 
-    override suspend fun getOpenIntervalByTaskId(taskId: String): Result<TaskInterval?, DataError.Local> = read {
-        projectDao.getOpenIntervalBySessionId(taskId)?.toTaskInterval()
-    }
+    override suspend fun getOpenIntervalByTaskId(taskId: String): Result<TaskInterval?, DataError.Local> =
+        read {
+            projectDao.getOpenIntervalBySessionId(taskId)?.toTaskInterval()
+        }
 
-    override suspend fun deleteTaskInterval(intervalId: String): EmptyResult<DataError.Local> = write {
-        projectDao.deleteTaskInterval(intervalId)
-    }
+    override suspend fun deleteTaskInterval(intervalId: String): EmptyResult<DataError.Local> =
+        write {
+            projectDao.deleteTaskInterval(intervalId)
+        }
 
-    private inline fun <T> read(block: () -> T): Result<T, DataError.Local> {
-        return try {
+    private inline fun <T> read(block: () -> T): Result<T, DataError.Local> =
+        try {
             Result.Success(block())
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             Result.Error(DataError.Local.UNKNOWN)
         }
-    }
 
-    private suspend fun write(block: suspend () -> Unit): EmptyResult<DataError.Local> {
-        return try {
+    private suspend fun write(block: suspend () -> Unit): EmptyResult<DataError.Local> =
+        try {
             withContext(dbWriteDispatcher) { block() }
             Result.Success(Unit)
         } catch (e: CancellationException) {
@@ -54,5 +55,4 @@ class RoomLocalIntervalDataSource(
         } catch (e: Exception) {
             Result.Error(DataError.Local.DISK_FULL)
         }
-    }
 }

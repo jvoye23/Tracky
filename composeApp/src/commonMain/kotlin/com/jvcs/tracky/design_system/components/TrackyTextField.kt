@@ -100,15 +100,16 @@ fun TrackyTextField(
     borderErrorColor: Color = MaterialTheme.colorScheme.error,
     borderIsFocusedColor: Color = MaterialTheme.colorScheme.primary,
     backgroundDefaultColor: Color = MaterialTheme.colorScheme.surfaceContainer,
-    backgroundErrorColor: Color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.33f ),
+    backgroundErrorColor: Color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.33f),
     labelDefaultColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     labelErrorColor: Color = MaterialTheme.colorScheme.error,
-    labelIsFocusedColor: Color = MaterialTheme.colorScheme.onSurfaceVariant
+    labelIsFocusedColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
 
 ) {
-    val keyboardActionHandler: KeyboardActionHandler? = onImeAction?.let { handler ->
-        KeyboardActionHandler { _ -> handler() }
-    }
+    val keyboardActionHandler: KeyboardActionHandler? =
+        onImeAction?.let { handler ->
+            KeyboardActionHandler { _ -> handler() }
+        }
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
 
@@ -123,61 +124,67 @@ fun TrackyTextField(
     val elevated = isFocused || hasText
 
     val borderColor by animateColorAsState(
-        targetValue = when {
-            isError -> borderErrorColor
-            isFocused -> borderIsFocusedColor
-            else -> borderDefaultColor
-        }
+        targetValue =
+            when {
+                isError -> borderErrorColor
+                isFocused -> borderIsFocusedColor
+                else -> borderDefaultColor
+            },
     )
 
     val backgroundColor by animateColorAsState(
-        targetValue = when {
-            isError -> backgroundErrorColor
-            else -> backgroundDefaultColor
-        }
+        targetValue =
+            when {
+                isError -> backgroundErrorColor
+                else -> backgroundDefaultColor
+            },
     )
 
     val labelColor by animateColorAsState(
-        targetValue = when {
-            isError -> labelErrorColor
-            isFocused -> labelIsFocusedColor
-            else -> labelDefaultColor
+        targetValue =
+            when {
+                isError -> labelErrorColor
+                isFocused -> labelIsFocusedColor
+                else -> labelDefaultColor
+            },
+    )
+
+    val resolvedTextStyle =
+        if (textStyle.color.isSpecified) {
+            textStyle
+        } else {
+            textStyle.copy(color = MaterialTheme.colorScheme.onSurface)
         }
-    )
 
-    val resolvedTextStyle = if (textStyle.color.isSpecified) {
-        textStyle
-    } else {
-        textStyle.copy(color = MaterialTheme.colorScheme.onSurface)
-    }
-
-    val selectionColors = TextSelectionColors(
-        handleColor = MaterialTheme.colorScheme.primary,
-        backgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
-    )
+    val selectionColors =
+        TextSelectionColors(
+            handleColor = MaterialTheme.colorScheme.primary,
+            backgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+        )
 
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .then(if (fillHeight) Modifier.weight(1f) else Modifier)
-                .heightIn(min = 56.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(backgroundColor)
-                .border(
-                    width = 1.5.dp,
-                    color = borderColor,
-                    shape = RoundedCornerShape(12.dp),
-                )
-                .padding(horizontal = 16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .then(if (fillHeight) Modifier.weight(1f) else Modifier)
+                    .heightIn(min = 56.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(backgroundColor)
+                    .border(
+                        width = 1.5.dp,
+                        color = borderColor,
+                        shape = RoundedCornerShape(12.dp),
+                    ).padding(horizontal = 16.dp),
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .then(if (fillHeight) Modifier.fillMaxHeight() else Modifier),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .then(if (fillHeight) Modifier.fillMaxHeight() else Modifier),
                 verticalAlignment = if (fillHeight) Alignment.Top else Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
@@ -191,10 +198,11 @@ fun TrackyTextField(
                 }
 
                 Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .then(if (fillHeight) Modifier.fillMaxHeight() else Modifier)
-                        .padding(vertical = 8.dp),
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .then(if (fillHeight) Modifier.fillMaxHeight() else Modifier)
+                            .padding(vertical = 8.dp),
                 ) {
                     if (elevated && showLabel) {
                         Text(
@@ -207,7 +215,7 @@ fun TrackyTextField(
 
                     Box(
                         modifier = if (fillHeight) Modifier.weight(1f) else Modifier,
-                        contentAlignment = if (fillHeight) Alignment.TopStart else Alignment.CenterStart
+                        contentAlignment = if (fillHeight) Alignment.TopStart else Alignment.CenterStart,
                     ) {
                         if (!elevated && showLabel) {
                             Text(
@@ -228,16 +236,18 @@ fun TrackyTextField(
                                     textStyle = resolvedTextStyle,
                                     cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                                     interactionSource = interactionSource,
-                                    keyboardOptions = KeyboardOptions(
-                                        keyboardType = KeyboardType.Password,
-                                        imeAction = imeAction,
-                                    ),
+                                    keyboardOptions =
+                                        KeyboardOptions(
+                                            keyboardType = KeyboardType.Password,
+                                            imeAction = imeAction,
+                                        ),
                                     onKeyboardAction = keyboardActionHandler,
-                                    textObfuscationMode = if (passwordVisible) {
-                                        TextObfuscationMode.Visible
-                                    } else {
-                                        TextObfuscationMode.RevealLastTyped
-                                    },
+                                    textObfuscationMode =
+                                        if (passwordVisible) {
+                                            TextObfuscationMode.Visible
+                                        } else {
+                                            TextObfuscationMode.RevealLastTyped
+                                        },
                                 )
                             } else {
                                 BasicTextField(
@@ -247,11 +257,12 @@ fun TrackyTextField(
                                     textStyle = resolvedTextStyle,
                                     cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                                     lineLimits = lineLimits,
-                                    keyboardOptions = KeyboardOptions(
-                                        keyboardType = keyboardType,
-                                        imeAction = imeAction,
-                                        capitalization = capitalization,
-                                    ),
+                                    keyboardOptions =
+                                        KeyboardOptions(
+                                            keyboardType = keyboardType,
+                                            imeAction = imeAction,
+                                            capitalization = capitalization,
+                                        ),
                                     interactionSource = interactionSource,
                                     onKeyboardAction = keyboardActionHandler,
                                 )
@@ -262,10 +273,11 @@ fun TrackyTextField(
 
                 if (isPassword) {
                     Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .clickable { passwordVisible = !passwordVisible },
+                        modifier =
+                            Modifier
+                                .size(32.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .clickable { passwordVisible = !passwordVisible },
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
@@ -282,15 +294,17 @@ fun TrackyTextField(
         if (error != null || hint != null) {
             Text(
                 text = error ?: hint.orEmpty(),
-                color = if (isError) {
-                    MaterialTheme.colorScheme.error
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontSize = 11.sp,
-                    fontWeight = if (isError) FontWeight.Medium else FontWeight.Normal,
-                ),
+                color =
+                    if (isError) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                style =
+                    MaterialTheme.typography.labelSmall.copy(
+                        fontSize = 11.sp,
+                        fontWeight = if (isError) FontWeight.Medium else FontWeight.Normal,
+                    ),
                 modifier = Modifier.padding(start = 20.dp),
             )
         }
@@ -302,9 +316,10 @@ private fun TrackyTextFieldPreviewContainer(content: @Composable ColumnScope.() 
     TrackyTheme {
         Surface(color = MaterialTheme.colorScheme.surface) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 content = content,
             )
@@ -468,13 +483,15 @@ private fun TrackyTextFieldDisabledPreview() {
 private fun TrackyTextFieldLongContentPreview() {
     TrackyTextFieldPreviewContainer {
         TrackyTextField(
-            state = rememberTextFieldState(
-                "A really long single-line value that runs well past the right edge of the field",
-            ),
+            state =
+                rememberTextFieldState(
+                    "A really long single-line value that runs well past the right edge of the field",
+                ),
             label = "Work email address used for account recovery",
             leadingIcon = Icon_Mail,
-            error = "This address is already registered to another Tracky account, " +
-                "try signing in instead or use a different address",
+            error =
+                "This address is already registered to another Tracky account, " +
+                    "try signing in instead or use a different address",
             modifier = Modifier.fillMaxWidth(),
         )
     }
@@ -485,10 +502,11 @@ private fun TrackyTextFieldLongContentPreview() {
 private fun TrackyTextFieldMultiLinePreview() {
     TrackyTextFieldPreviewContainer {
         TrackyTextField(
-            state = rememberTextFieldState(
-                "Rebuild the onboarding flow so new users land on the project list " +
-                    "instead of the empty timer screen.",
-            ),
+            state =
+                rememberTextFieldState(
+                    "Rebuild the onboarding flow so new users land on the project list " +
+                        "instead of the empty timer screen.",
+                ),
             label = "Description",
             lineLimits = TextFieldLineLimits.MultiLine(1, 4),
             labelStyle = MaterialTheme.typography.projectLabelStyle,
@@ -641,9 +659,10 @@ private fun TrackyTextFieldFillHeightPreview() {
                     textStyle = MaterialTheme.typography.bodyMedium,
                     lineLimits = TextFieldLineLimits.Default,
                     fillHeight = true,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
                 )
             }
         }

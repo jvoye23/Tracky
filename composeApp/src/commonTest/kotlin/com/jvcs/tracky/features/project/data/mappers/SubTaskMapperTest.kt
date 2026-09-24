@@ -30,7 +30,7 @@ class SubTaskMapperTest {
         description: String? = "notes",
         endDateTimeUtc: Instant? = t300,
         ownUpdatedAt: Instant? = t300,
-        intervals: List<SubTaskInterval> = emptyList()
+        intervals: List<SubTaskInterval> = emptyList(),
     ) = ProjectSubTask(
         projectSubTaskId = "s1",
         parentProjectTaskId = "t1",
@@ -46,15 +46,16 @@ class SubTaskMapperTest {
         ownUpdatedAt = ownUpdatedAt,
     )
 
-    private fun interval(id: String = "si1", endDateTimeUtc: Instant? = t300) = SubTaskInterval(
-        subTaskIntervalId = id,
-        parentSubTaskId = "s1",
-        parentTaskIntervalId = "i1",
-        parentProjectId = "p1",
-        startDateTimeUtc = t100,
-        endDateTimeUtc = endDateTimeUtc,
-        durationMillis = 200L
-    )
+    private fun interval(id: String = "si1", endDateTimeUtc: Instant? = t300) =
+        SubTaskInterval(
+            subTaskIntervalId = id,
+            parentSubTaskId = "s1",
+            parentTaskIntervalId = "i1",
+            parentProjectId = "p1",
+            startDateTimeUtc = t100,
+            endDateTimeUtc = endDateTimeUtc,
+            durationMillis = 200L,
+        )
 
     @Test
     fun subTaskSurvivesARoundTrip() {
@@ -97,10 +98,11 @@ class SubTaskMapperTest {
 
     @Test
     fun subTaskCarriesItsIntervalsWhenReadAsARelation() {
-        val relation = SubTaskWithIntervals(
-            subTask = subTask().toProjectSubTaskEntity(),
-            intervals = listOf(interval("si1"), interval("si2")).map { it.toSubTaskIntervalEntity() }
-        )
+        val relation =
+            SubTaskWithIntervals(
+                subTask = subTask().toProjectSubTaskEntity(),
+                intervals = listOf(interval("si1"), interval("si2")).map { it.toSubTaskIntervalEntity() },
+            )
 
         val mapped = relation.toProjectSubTask()
 
@@ -110,36 +112,46 @@ class SubTaskMapperTest {
     /** A subtask interval carries no stamp of its own, so the task rolls up to the subtask's. */
     @Test
     fun taskRelationCarriesBothItsIntervalsAndItsSubTasks() {
-        val relation = TaskWithSubTasks(
-            task = ProjectTaskEntity(
-                projectTaskId = "t1",
-                parentProjectId = "p1",
-                title = "task title",
-                description = null,
-                durationMillis = 0,
-                startDateTimeEpochMs = 0,
-                endDateTimeEpochMs = null,
-                isFinished = false,
-                isTimerRunning = false,
-                updatedAtEpochMs = 100,
-            ),
-            intervals = listOf(
-                TaskIntervalEntity("i1", "t1", "p1", 0, 60_000, 60_000)
-            ),
-            subTasks = listOf(
-                SubTaskWithIntervals(
-                    subTask = subTask().toProjectSubTaskEntity(),
-                    intervals = listOf(interval().toSubTaskIntervalEntity())
-                )
+        val relation =
+            TaskWithSubTasks(
+                task =
+                    ProjectTaskEntity(
+                        projectTaskId = "t1",
+                        parentProjectId = "p1",
+                        title = "task title",
+                        description = null,
+                        durationMillis = 0,
+                        startDateTimeEpochMs = 0,
+                        endDateTimeEpochMs = null,
+                        isFinished = false,
+                        isTimerRunning = false,
+                        updatedAtEpochMs = 100,
+                    ),
+                intervals =
+                    listOf(
+                        TaskIntervalEntity("i1", "t1", "p1", 0, 60_000, 60_000),
+                    ),
+                subTasks =
+                    listOf(
+                        SubTaskWithIntervals(
+                            subTask = subTask().toProjectSubTaskEntity(),
+                            intervals = listOf(interval().toSubTaskIntervalEntity()),
+                        ),
+                    ),
             )
-        )
 
         val mapped = relation.toProjectTask()
 
         assertEquals("task title", mapped.title) // the entity column is named `description`
         assertEquals(listOf("i1"), mapped.intervals.map { it.intervalId })
         assertEquals(listOf("s1"), mapped.subTasks?.map { it.projectSubTaskId })
-        assertEquals(listOf("si1"), mapped.subTasks?.single()?.subTaskIntervals?.map { it.subTaskIntervalId })
+        assertEquals(
+            listOf("si1"),
+            mapped.subTasks
+                ?.single()
+                ?.subTaskIntervals
+                ?.map { it.subTaskIntervalId },
+        )
         // Both branches stay visible to the Timestamped roll-up.
         assertEquals(2, mapped.children.size)
         assertEquals(t300, mapped.lastUpdatedAt)

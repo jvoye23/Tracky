@@ -14,7 +14,4 @@ import com.jvcs.tracky.features.project.domain.models.TaskInterval
  * @param taskInterval the task interval this write opened or closed, or null when the task's timer
  *   was already running and is left alone.
  */
-data class SubTaskTimerChange(
-    val subTaskInterval: SubTaskInterval,
-    val taskInterval: TaskInterval? = null
-)
+data class SubTaskTimerChange(val subTaskInterval: SubTaskInterval, val taskInterval: TaskInterval? = null)

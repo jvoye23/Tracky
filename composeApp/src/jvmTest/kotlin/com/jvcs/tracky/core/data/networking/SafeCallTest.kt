@@ -32,7 +32,7 @@ class SafeCallTest {
         // to the catch-all and surface as "an unknown error happened".
         assertEquals(
             Result.Error(DataError.Remote.NO_INTERNET),
-            classify(UnknownHostException("api.example.com"))
+            classify(UnknownHostException("api.example.com")),
         )
     }
 
@@ -40,7 +40,7 @@ class SafeCallTest {
     fun connectionRefused_isReportedAsNoInternet() {
         assertEquals(
             Result.Error(DataError.Remote.NO_INTERNET),
-            classify(ConnectException("Connection refused"))
+            classify(ConnectException("Connection refused")),
         )
     }
 
@@ -48,7 +48,7 @@ class SafeCallTest {
     fun networkUnreachable_isReportedAsNoInternet() {
         assertEquals(
             Result.Error(DataError.Remote.NO_INTERNET),
-            classify(SocketException("Network is unreachable"))
+            classify(SocketException("Network is unreachable")),
         )
     }
 
@@ -57,7 +57,7 @@ class SafeCallTest {
         // Still correct if the engine is ever swapped to CIO.
         assertEquals(
             Result.Error(DataError.Remote.NO_INTERNET),
-            classify(UnresolvedAddressException())
+            classify(UnresolvedAddressException()),
         )
     }
 
@@ -65,7 +65,7 @@ class SafeCallTest {
     fun socketTimeout_isReportedAsRequestTimeout() {
         assertEquals(
             Result.Error(DataError.Remote.REQUEST_TIMEOUT),
-            classify(SocketTimeoutException("Read timed out"))
+            classify(SocketTimeoutException("Read timed out")),
         )
     }
 
@@ -76,7 +76,7 @@ class SafeCallTest {
         // handling, a timeout starts masquerading as "no internet" and this test fails.
         assertEquals(
             Result.Error(DataError.Remote.REQUEST_TIMEOUT),
-            classify(ConnectTimeoutException("Connect timeout has expired"))
+            classify(ConnectTimeoutException("Connect timeout has expired")),
         )
     }
 
@@ -84,7 +84,7 @@ class SafeCallTest {
     fun serializationFailure_isReportedAsSerialization() {
         assertEquals(
             Result.Error(DataError.Remote.SERIALIZATION),
-            classify(SerializationException("Unexpected JSON token"))
+            classify(SerializationException("Unexpected JSON token")),
         )
     }
 
@@ -92,7 +92,7 @@ class SafeCallTest {
     fun unrecognisedFailure_staysUnknown() {
         assertEquals(
             Result.Error(DataError.Remote.UNKNOWN),
-            classify(IllegalStateException("boom"))
+            classify(IllegalStateException("boom")),
         )
     }
 

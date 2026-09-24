@@ -14,9 +14,7 @@ import kotlinx.coroutines.flow.first
  * the skew between two physical clocks does not change meaningfully between launches, so last
  * session's measurement is a far better guess than assuming zero.
  */
-class DataStoreServerClockOffsetStore(
-    private val dataStore: DataStore<Preferences>
-) : ServerClockOffsetStore {
+class DataStoreServerClockOffsetStore(private val dataStore: DataStore<Preferences>) : ServerClockOffsetStore {
 
     private val offsetKey = longPreferencesKey(KEY_SERVER_CLOCK_OFFSET_MS)
 

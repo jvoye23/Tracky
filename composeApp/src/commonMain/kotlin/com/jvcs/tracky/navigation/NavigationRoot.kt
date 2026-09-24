@@ -18,238 +18,244 @@ import com.jvcs.tracky.features.auth.presentation.register_success.RegisterSucce
 import com.jvcs.tracky.features.auth.presentation.register_success.RegisterSuccessViewModel
 import com.jvcs.tracky.features.auth.presentation.reset_password.ResetPasswordScreenRoot
 import com.jvcs.tracky.features.auth.presentation.reset_password.ResetPasswordViewModel
+import com.jvcs.tracky.features.project.presentation.daily_overview.DailyOverviewScreenRoot
+import com.jvcs.tracky.features.project.presentation.daily_overview.DailyOverviewViewModel
 import com.jvcs.tracky.features.project.presentation.edit_text.EditTextScreenRoot
 import com.jvcs.tracky.features.project.presentation.edit_text.EditTextTarget
 import com.jvcs.tracky.features.project.presentation.edit_text.EditTextViewModel
 import com.jvcs.tracky.features.project.presentation.project_archive.ProjectArchiveScreenRoot
 import com.jvcs.tracky.features.project.presentation.project_archive_detail.ProjectArchiveDetailScreen
-import com.jvcs.tracky.features.project.presentation.project_trash.ProjectTrashScreenRoot
 import com.jvcs.tracky.features.project.presentation.project_detail.ProjectDetailScreenRoot
 import com.jvcs.tracky.features.project.presentation.project_detail.ProjectDetailViewModel
 import com.jvcs.tracky.features.project.presentation.project_overview.ProjectOverviewScreenRoot
-import com.jvcs.tracky.features.project.presentation.daily_overview.DailyOverviewScreenRoot
-import com.jvcs.tracky.features.project.presentation.daily_overview.DailyOverviewViewModel
+import com.jvcs.tracky.features.project.presentation.project_trash.ProjectTrashScreenRoot
 import com.jvcs.tracky.features.project.presentation.task_detail.TaskDetailScreenRoot
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
 @Composable
-fun NavigationRoot(
-    backStack: NavBackStack<NavKey>
-) {
+fun NavigationRoot(backStack: NavBackStack<NavKey>) {
     NavDisplay(
         modifier = Modifier.fillMaxSize(),
         backStack = backStack,
-        entryDecorators = listOf(
-            rememberSaveableStateHolderNavEntryDecorator(),
-            rememberViewModelStoreNavEntryDecorator(),
-        ),
-        entryProvider = entryProvider {
-            // Auth screens
-            entry<Route.AuthRoute.Login> {
-                LoginScreenRoot(
-                    onLoginSuccess = {
-                        backStack.removeAll { true }
-                        backStack.add(Route.ProjectRoute.ProjectOverview)
-                    },
-                    onForgotPasswordClick = {
-                        backStack.add(Route.AuthRoute.ForgotPassword)
-                    },
-                    onCreateAccountClick = {
-                        backStack.add(Route.AuthRoute.Register)
-                    }
-                )
-            }
-            entry<Route.AuthRoute.Register> {
-                RegisterScreenRoot(
-                    onRegisterSuccess = { email ->
-                        backStack.add(Route.AuthRoute.RegisterSuccess(email))
-                    },
-                    onLoginClick = {
-                        backStack.removeLastOrNull()
-                    }
-                )
-            }
-            entry<Route.AuthRoute.RegisterSuccess> { key ->
-                val vm: RegisterSuccessViewModel = koinViewModel {
-                    parametersOf(key.email)
+        entryDecorators =
+            listOf(
+                rememberSaveableStateHolderNavEntryDecorator(),
+                rememberViewModelStoreNavEntryDecorator(),
+            ),
+        entryProvider =
+            entryProvider {
+                // Auth screens
+                entry<Route.AuthRoute.Login> {
+                    LoginScreenRoot(
+                        onLoginSuccess = {
+                            backStack.removeAll { true }
+                            backStack.add(Route.ProjectRoute.ProjectOverview)
+                        },
+                        onForgotPasswordClick = {
+                            backStack.add(Route.AuthRoute.ForgotPassword)
+                        },
+                        onCreateAccountClick = {
+                            backStack.add(Route.AuthRoute.Register)
+                        },
+                    )
                 }
-                RegisterSuccessScreenRoot(
-                    viewModel = vm,
-                    onLoginClick = {
-                        backStack.removeAll { true }
-                        backStack.add(Route.AuthRoute.Login)
-                    }
-                )
-            }
-            entry<Route.AuthRoute.EmailVerification> { key ->
-                val vm: EmailVerificationViewModel = koinViewModel {
-                    parametersOf(key.token)
+                entry<Route.AuthRoute.Register> {
+                    RegisterScreenRoot(
+                        onRegisterSuccess = { email ->
+                            backStack.add(Route.AuthRoute.RegisterSuccess(email))
+                        },
+                        onLoginClick = {
+                            backStack.removeLastOrNull()
+                        },
+                    )
                 }
-                EmailVerificationScreenRoot(
-                    viewModel = vm,
-                    onLoginClick = {
-                        backStack.removeAll { true }
-                        backStack.add(Route.AuthRoute.Login)
-                    },
-                    onCloseClick = {
-                        backStack.removeAll { true }
-                        backStack.add(Route.AuthRoute.Login)
-                    }
-                )
-            }
-            entry<Route.AuthRoute.ForgotPassword> {
-                ForgotPasswordScreenRoot(
-                    onBackClick = {
-                        backStack.removeLastOrNull()
-                    }
-                )
-            }
-            entry<Route.AuthRoute.ResetPassword> { key ->
-                val vm: ResetPasswordViewModel = koinViewModel {
-                    parametersOf(key.token)
+                entry<Route.AuthRoute.RegisterSuccess> { key ->
+                    val vm: RegisterSuccessViewModel =
+                        koinViewModel {
+                            parametersOf(key.email)
+                        }
+                    RegisterSuccessScreenRoot(
+                        viewModel = vm,
+                        onLoginClick = {
+                            backStack.removeAll { true }
+                            backStack.add(Route.AuthRoute.Login)
+                        },
+                    )
                 }
-                ResetPasswordScreenRoot(
-                    viewModel = vm,
-                    onLoginClick = {
-                        backStack.removeAll { true }
-                        backStack.add(Route.AuthRoute.Login)
-                    }
-                )
-            }
+                entry<Route.AuthRoute.EmailVerification> { key ->
+                    val vm: EmailVerificationViewModel =
+                        koinViewModel {
+                            parametersOf(key.token)
+                        }
+                    EmailVerificationScreenRoot(
+                        viewModel = vm,
+                        onLoginClick = {
+                            backStack.removeAll { true }
+                            backStack.add(Route.AuthRoute.Login)
+                        },
+                        onCloseClick = {
+                            backStack.removeAll { true }
+                            backStack.add(Route.AuthRoute.Login)
+                        },
+                    )
+                }
+                entry<Route.AuthRoute.ForgotPassword> {
+                    ForgotPasswordScreenRoot(
+                        onBackClick = {
+                            backStack.removeLastOrNull()
+                        },
+                    )
+                }
+                entry<Route.AuthRoute.ResetPassword> { key ->
+                    val vm: ResetPasswordViewModel =
+                        koinViewModel {
+                            parametersOf(key.token)
+                        }
+                    ResetPasswordScreenRoot(
+                        viewModel = vm,
+                        onLoginClick = {
+                            backStack.removeAll { true }
+                            backStack.add(Route.AuthRoute.Login)
+                        },
+                    )
+                }
 
-            // Project screens
-            entry<Route.ProjectRoute.ProjectOverview> {
-                ProjectOverviewScreenRoot(
-                    onNavigateToDetailScreen = { projectId ->
-                        backStack.add(
-                            Route.ProjectRoute.ProjectDetail(
-                                isEditMode = false,
-                                projectId = projectId
+                // Project screens
+                entry<Route.ProjectRoute.ProjectOverview> {
+                    ProjectOverviewScreenRoot(
+                        onNavigateToDetailScreen = { projectId ->
+                            backStack.add(
+                                Route.ProjectRoute.ProjectDetail(
+                                    isEditMode = false,
+                                    projectId = projectId,
+                                ),
                             )
-                        )
-                    },
-                    onNavigateToArchive = {
-                        backStack.add(Route.ProjectRoute.ProjectArchive)
-                    },
-                    onNavigateToTrash = {
-                        backStack.add(Route.ProjectRoute.ProjectTrash)
-                    },
-                    onSuccessfulLogout = {
-                        backStack.removeAll { true }
-                        backStack.add(Route.AuthRoute.Login)
-                    }
-                )
-            }
-            entry<Route.ProjectRoute.ProjectArchive> {
-                ProjectArchiveScreenRoot(
-                    onNavigateToDetail = { projectId ->
-                        backStack.add(Route.ProjectRoute.ProjectArchiveDetail(projectId))
-                    },
-                    onNavigateToProjects = {
-                        backStack.removeLastOrNull()
-                    },
-                    onNavigateToTrash = {
-                        backStack.removeLastOrNull()
-                        backStack.add(Route.ProjectRoute.ProjectTrash)
-                    }
-                )
-            }
-            entry<Route.ProjectRoute.ProjectTrash> {
-                ProjectTrashScreenRoot(
-                    onNavigateToProjects = {
-                        backStack.removeLastOrNull()
-                    },
-                    onNavigateToArchive = {
-                        backStack.removeLastOrNull()
-                        backStack.add(Route.ProjectRoute.ProjectArchive)
-                    }
-                )
-            }
-            entry<Route.ProjectRoute.ProjectArchiveDetail> { key ->
-                ProjectArchiveDetailScreen(
-                    projectId = key.projectId,
-                    onNavigateBack = {
-                        backStack.remove(key)
-                    }
-                )
-            }
-            entry<Route.ProjectRoute.ProjectDetail> { key ->
-                val detailVm: ProjectDetailViewModel = koinViewModel {
-                    parametersOf(key.isEditMode, key.projectId)
+                        },
+                        onNavigateToArchive = {
+                            backStack.add(Route.ProjectRoute.ProjectArchive)
+                        },
+                        onNavigateToTrash = {
+                            backStack.add(Route.ProjectRoute.ProjectTrash)
+                        },
+                        onSuccessfulLogout = {
+                            backStack.removeAll { true }
+                            backStack.add(Route.AuthRoute.Login)
+                        },
+                    )
                 }
-                ProjectDetailScreenRoot(
-                    navigateBack = {
-                        backStack.remove(key)
-                    },
-                    viewModel = detailVm,
-                    onEditTextClick = { isEditMode, projectId, target, taskId, subTaskId ->
-                        backStack.add(
-                            Route.ProjectRoute.EditTextNavKey(
-                                isEditMode = isEditMode,
-                                projectId = projectId,
-                                target = target,
-                                taskId = taskId,
-                                subTaskId = subTaskId
-                            )
-                        )
-                    },
-                    onProjectTaskClick = { sessionId ->
-                        backStack.add(
-                            Route.ProjectRoute.TaskDetail(sessionId)
-                        )
-                    },
-                    onDailyOverviewClick = { epochDay ->
-                        backStack.add(
-                            Route.ProjectRoute.DailyOverview(
-                                projectId = key.projectId.orEmpty(),
-                                preselectedDateEpochDay = epochDay
-                            )
-                        )
-                    }
-                )
-            }
-            entry<Route.ProjectRoute.DailyOverview> { key ->
-                val dailyOverviewVm: DailyOverviewViewModel = koinViewModel {
-                    parametersOf(key.projectId, key.preselectedDateEpochDay)
+                entry<Route.ProjectRoute.ProjectArchive> {
+                    ProjectArchiveScreenRoot(
+                        onNavigateToDetail = { projectId ->
+                            backStack.add(Route.ProjectRoute.ProjectArchiveDetail(projectId))
+                        },
+                        onNavigateToProjects = {
+                            backStack.removeLastOrNull()
+                        },
+                        onNavigateToTrash = {
+                            backStack.removeLastOrNull()
+                            backStack.add(Route.ProjectRoute.ProjectTrash)
+                        },
+                    )
                 }
-                DailyOverviewScreenRoot(
-                    navigateBack = {
-                        backStack.remove(key)
-                    },
-                    viewModel = dailyOverviewVm
-                )
-            }
-            entry<Route.ProjectRoute.TaskDetail> { key ->
-                TaskDetailScreenRoot(
-                    taskId = key.taskId,
-                    navigateBack = {
-                        backStack.remove(key)
-                    },
-                    onEditTextClick = { isEditMode, projectId, taskId ->
-                        backStack.add(
-                            Route.ProjectRoute.EditTextNavKey(
-                                isEditMode = isEditMode,
-                                projectId = projectId,
-                                target = EditTextTarget.TASK,
-                                taskId = taskId,
-                                subTaskId = null
-                            )
-                        )
-                    }
-                )
-            }
-            entry<Route.ProjectRoute.EditTextNavKey> { key ->
-                val editTextVm: EditTextViewModel = koinViewModel {
-                    parametersOf(key.isEditMode, key.projectId, key.target, key.taskId, key.subTaskId)
+                entry<Route.ProjectRoute.ProjectTrash> {
+                    ProjectTrashScreenRoot(
+                        onNavigateToProjects = {
+                            backStack.removeLastOrNull()
+                        },
+                        onNavigateToArchive = {
+                            backStack.removeLastOrNull()
+                            backStack.add(Route.ProjectRoute.ProjectArchive)
+                        },
+                    )
                 }
-                EditTextScreenRoot(
-                    onNavigateBack = {
-                        backStack.remove(key)
-                    },
-                    viewModel = editTextVm
-                )
-            }
-        }
+                entry<Route.ProjectRoute.ProjectArchiveDetail> { key ->
+                    ProjectArchiveDetailScreen(
+                        projectId = key.projectId,
+                        onNavigateBack = {
+                            backStack.remove(key)
+                        },
+                    )
+                }
+                entry<Route.ProjectRoute.ProjectDetail> { key ->
+                    val detailVm: ProjectDetailViewModel =
+                        koinViewModel {
+                            parametersOf(key.isEditMode, key.projectId)
+                        }
+                    ProjectDetailScreenRoot(
+                        navigateBack = {
+                            backStack.remove(key)
+                        },
+                        viewModel = detailVm,
+                        onEditTextClick = { isEditMode, projectId, target, taskId, subTaskId ->
+                            backStack.add(
+                                Route.ProjectRoute.EditTextNavKey(
+                                    isEditMode = isEditMode,
+                                    projectId = projectId,
+                                    target = target,
+                                    taskId = taskId,
+                                    subTaskId = subTaskId,
+                                ),
+                            )
+                        },
+                        onProjectTaskClick = { sessionId ->
+                            backStack.add(
+                                Route.ProjectRoute.TaskDetail(sessionId),
+                            )
+                        },
+                        onDailyOverviewClick = { epochDay ->
+                            backStack.add(
+                                Route.ProjectRoute.DailyOverview(
+                                    projectId = key.projectId.orEmpty(),
+                                    preselectedDateEpochDay = epochDay,
+                                ),
+                            )
+                        },
+                    )
+                }
+                entry<Route.ProjectRoute.DailyOverview> { key ->
+                    val dailyOverviewVm: DailyOverviewViewModel =
+                        koinViewModel {
+                            parametersOf(key.projectId, key.preselectedDateEpochDay)
+                        }
+                    DailyOverviewScreenRoot(
+                        navigateBack = {
+                            backStack.remove(key)
+                        },
+                        viewModel = dailyOverviewVm,
+                    )
+                }
+                entry<Route.ProjectRoute.TaskDetail> { key ->
+                    TaskDetailScreenRoot(
+                        taskId = key.taskId,
+                        navigateBack = {
+                            backStack.remove(key)
+                        },
+                        onEditTextClick = { isEditMode, projectId, taskId ->
+                            backStack.add(
+                                Route.ProjectRoute.EditTextNavKey(
+                                    isEditMode = isEditMode,
+                                    projectId = projectId,
+                                    target = EditTextTarget.TASK,
+                                    taskId = taskId,
+                                    subTaskId = null,
+                                ),
+                            )
+                        },
+                    )
+                }
+                entry<Route.ProjectRoute.EditTextNavKey> { key ->
+                    val editTextVm: EditTextViewModel =
+                        koinViewModel {
+                            parametersOf(key.isEditMode, key.projectId, key.target, key.taskId, key.subTaskId)
+                        }
+                    EditTextScreenRoot(
+                        onNavigateBack = {
+                            backStack.remove(key)
+                        },
+                        viewModel = editTextVm,
+                    )
+                }
+            },
     )
 }

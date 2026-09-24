@@ -2,11 +2,11 @@ package com.jvcs.tracky.features.project.presentation.mappers
 
 import androidx.compose.ui.graphics.Color
 import com.jvcs.tracky.features.project.domain.models.Project
+import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
+import com.jvcs.tracky.features.project.presentation.models.ProjectSubTaskUi
 import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
 import com.jvcs.tracky.features.project.presentation.models.ProjectUi
-import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
-import com.jvcs.tracky.features.project.presentation.models.ProjectSubTaskUi
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
@@ -15,23 +15,24 @@ import kotlinx.datetime.format.MonthNames
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.ExperimentalTime
 
-private val dateTimeFormat = LocalDate.Format {
-    monthName(MonthNames.ENGLISH_ABBREVIATED)
-    chars(", ")
-    day()
-    chars(", ")
-    year()
-}
+private val dateTimeFormat =
+    LocalDate.Format {
+        monthName(MonthNames.ENGLISH_ABBREVIATED)
+        chars(", ")
+        day()
+        chars(", ")
+        year()
+    }
 
 @OptIn(ExperimentalTime::class)
 fun Project.toProjectUi(): ProjectUi {
+    val startDateTimeInLocalDateTime =
+        startDateTimeUtc
+            .toLocalDateTime(TimeZone.currentSystemDefault())
 
-    val startDateTimeInLocalDateTime = startDateTimeUtc
-        .toLocalDateTime(TimeZone.currentSystemDefault())
-
-
-    val endDateTimeInLocalDateTime = endDateTimeUtc
-        ?.toLocalDateTime(TimeZone.currentSystemDefault())
+    val endDateTimeInLocalDateTime =
+        endDateTimeUtc
+            ?.toLocalDateTime(TimeZone.currentSystemDefault())
 
     return ProjectUi(
         projectId = projectId,
@@ -44,47 +45,57 @@ fun Project.toProjectUi(): ProjectUi {
         useLightTextColor = useLightTextColor,
         endDateTimeUtc = endDateTimeInLocalDateTime?.date?.format(dateTimeFormat),
         projectTasks = projectTasks?.map { it.toProjectTaskUi() },
-        isPinned = isPinned
+        isPinned = isPinned,
     )
 }
 
 @OptIn(ExperimentalTime::class)
-fun ProjectTask.toProjectTaskUi(): ProjectTaskUi {
-    return ProjectTaskUi(
+fun ProjectTask.toProjectTaskUi(): ProjectTaskUi =
+    ProjectTaskUi(
         projectTaskId = projectTaskId,
         title = title,
         description = description,
         durationMillis = durationMillis ?: 0L,
-        formattedStateDateTime =startDateTimeUtc.toLocalDateTime(TimeZone.currentSystemDefault()).date.format(dateTimeFormat),
-        formattedEndDateTimeUtc = endDateTimeUtc?.toLocalDateTime(TimeZone.currentSystemDefault())?.date?.format(dateTimeFormat) ?: "",
+        formattedStateDateTime =
+            startDateTimeUtc
+                .toLocalDateTime(
+                    TimeZone.currentSystemDefault(),
+                ).date
+                .format(dateTimeFormat),
+        formattedEndDateTimeUtc =
+            endDateTimeUtc?.toLocalDateTime(TimeZone.currentSystemDefault())?.date?.format(dateTimeFormat) ?: "",
         isTimerRunning = isTimerRunning,
         subTasks = subTasks?.map { it.toProjectSubTaskUi() } ?: emptyList(),
-        isFinished = isFinished
+        isFinished = isFinished,
     )
-}
 
 @OptIn(ExperimentalTime::class)
-fun ProjectTaskUi.toProjectTask(parentProjectId: String): ProjectTask {
-    return ProjectTask(
+fun ProjectTaskUi.toProjectTask(parentProjectId: String): ProjectTask =
+    ProjectTask(
         projectTaskId = projectTaskId,
         title = title,
         durationMillis = durationMillis,
-        startDateTimeUtc = LocalDate.parse(formattedStateDateTime, dateTimeFormat)
-            .atStartOfDayIn(TimeZone.currentSystemDefault()),
-        endDateTimeUtc = if (formattedEndDateTimeUtc.isNotEmpty()) {
-            LocalDate.parse(formattedEndDateTimeUtc, dateTimeFormat)
-                .atStartOfDayIn(TimeZone.currentSystemDefault())
-        } else null,
+        startDateTimeUtc =
+            LocalDate
+                .parse(formattedStateDateTime, dateTimeFormat)
+                .atStartOfDayIn(TimeZone.currentSystemDefault()),
+        endDateTimeUtc =
+            if (formattedEndDateTimeUtc.isNotEmpty()) {
+                LocalDate
+                    .parse(formattedEndDateTimeUtc, dateTimeFormat)
+                    .atStartOfDayIn(TimeZone.currentSystemDefault())
+            } else {
+                null
+            },
         isFinished = isFinished,
         parentProjectId = parentProjectId,
         isTimerRunning = isTimerRunning,
         description = description,
         subTasks = subTasks.map { it.toProjectSubTask(parentProjectId, projectTaskId) },
     )
-}
 
-fun ProjectSubTaskUi.toProjectSubTask(parentProjectId: String, parentTaskId: String): ProjectSubTask {
-    return ProjectSubTask(
+fun ProjectSubTaskUi.toProjectSubTask(parentProjectId: String, parentTaskId: String): ProjectSubTask =
+    ProjectSubTask(
         projectSubTaskId = projectSubTaskId,
         parentProjectTaskId = parentTaskId,
         parentProjectId = parentProjectId,
@@ -92,25 +103,39 @@ fun ProjectSubTaskUi.toProjectSubTask(parentProjectId: String, parentTaskId: Str
         description = description,
         durationMillis = durationMillis,
         isTimerRunning = isTimerRunning,
-        startDateTimeUtc = LocalDate.parse(formattedStartDateTime, dateTimeFormat)
-            .atStartOfDayIn(TimeZone.currentSystemDefault()),
-        endDateTimeUtc = if (!formattedEndDateTimeUtc.isNullOrEmpty()) {
-            LocalDate.parse(formattedEndDateTimeUtc, dateTimeFormat)
-                .atStartOfDayIn(TimeZone.currentSystemDefault())
-        } else null,
-        isFinished = isFinished
+        startDateTimeUtc =
+            LocalDate
+                .parse(formattedStartDateTime, dateTimeFormat)
+                .atStartOfDayIn(TimeZone.currentSystemDefault()),
+        endDateTimeUtc =
+            if (!formattedEndDateTimeUtc.isNullOrEmpty()) {
+                LocalDate
+                    .parse(formattedEndDateTimeUtc, dateTimeFormat)
+                    .atStartOfDayIn(TimeZone.currentSystemDefault())
+            } else {
+                null
+            },
+        isFinished = isFinished,
     )
-}
 
-fun ProjectSubTask.toProjectSubTaskUi(): ProjectSubTaskUi {
-    return ProjectSubTaskUi(
+fun ProjectSubTask.toProjectSubTaskUi(): ProjectSubTaskUi =
+    ProjectSubTaskUi(
         projectSubTaskId = projectSubTaskId,
         title = title,
         description = description,
         durationMillis = durationMillis ?: 0L,
-        formattedStartDateTime =startDateTimeUtc.toLocalDateTime(TimeZone.currentSystemDefault()).date.format(dateTimeFormat),
-        formattedEndDateTimeUtc = endDateTimeUtc?.toLocalDateTime(TimeZone.currentSystemDefault())?.date?.format(dateTimeFormat),
+        formattedStartDateTime =
+            startDateTimeUtc
+                .toLocalDateTime(
+                    TimeZone.currentSystemDefault(),
+                ).date
+                .format(dateTimeFormat),
+        formattedEndDateTimeUtc =
+            endDateTimeUtc
+                ?.toLocalDateTime(
+                    TimeZone.currentSystemDefault(),
+                )?.date
+                ?.format(dateTimeFormat),
         isTimerRunning = isTimerRunning,
-        isFinished = isFinished
+        isFinished = isFinished,
     )
-}
