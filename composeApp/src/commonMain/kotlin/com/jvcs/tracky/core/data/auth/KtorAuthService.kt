@@ -1,6 +1,6 @@
 package com.jvcs.tracky.core.data.auth
 
-import com.jvcs.tracky.core.data.dto.AuthInfoSerializable
+import com.jvcs.tracky.core.data.dto.AuthInfoDto
 import com.jvcs.tracky.core.data.dto.requests.EmailRequest
 import com.jvcs.tracky.core.data.dto.requests.LoginRequest
 import com.jvcs.tracky.core.data.dto.requests.RefreshRequest
@@ -32,7 +32,7 @@ class KtorAuthService(private val httpClient: HttpClient) : AuthService {
 
     override suspend fun login(email: String, password: String): Result<AuthInfo, DataError.Remote> =
         httpClient
-            .post<LoginRequest, AuthInfoSerializable>(
+            .post<LoginRequest, AuthInfoDto>(
                 route = "/api/auth/login",
                 body = LoginRequest(email = email, password = password),
             ).map { it.toDomain() }
@@ -44,7 +44,7 @@ class KtorAuthService(private val httpClient: HttpClient) : AuthService {
         password: String,
     ): Result<AuthInfo, DataError.Remote> =
         httpClient
-            .post<RegisterRequest, AuthInfoSerializable>(
+            .post<RegisterRequest, AuthInfoDto>(
                 route = "/api/auth/register",
                 body = RegisterRequest(email = email, name = name, password = password),
             ).map { it.toDomain() }
@@ -52,7 +52,7 @@ class KtorAuthService(private val httpClient: HttpClient) : AuthService {
 
     override suspend fun loginWithGoogle(idToken: String): Result<AuthInfo, DataError.Remote> =
         httpClient
-            .post<SocialLoginRequest, AuthInfoSerializable>(
+            .post<SocialLoginRequest, AuthInfoDto>(
                 route = "/api/auth/google",
                 body = SocialLoginRequest(idToken = idToken),
             ).map { it.toDomain() }
@@ -60,7 +60,7 @@ class KtorAuthService(private val httpClient: HttpClient) : AuthService {
 
     override suspend fun loginWithApple(idToken: String): Result<AuthInfo, DataError.Remote> =
         httpClient
-            .post<SocialLoginRequest, AuthInfoSerializable>(
+            .post<SocialLoginRequest, AuthInfoDto>(
                 route = "/api/auth/apple",
                 body = SocialLoginRequest(idToken = idToken),
             ).map { it.toDomain() }

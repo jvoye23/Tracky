@@ -2,8 +2,8 @@ package com.jvcs.tracky.core.data.di
 
 import androidx.sqlite.SQLiteException
 import co.touchlab.kermit.Logger
+import com.jvcs.tracky.core.data.realtime.RealtimeTimerConnection
 import com.jvcs.tracky.core.domain.notification.TimerNotificationCoordinator
-import com.jvcs.tracky.core.domain.realtime.RealtimeTimerConnection
 import com.jvcs.tracky.core.domain.sync.ProjectSyncManager
 import com.jvcs.tracky.core.domain.sync.SyncRepository
 import com.jvcs.tracky.core.domain.sync.SyncScheduler

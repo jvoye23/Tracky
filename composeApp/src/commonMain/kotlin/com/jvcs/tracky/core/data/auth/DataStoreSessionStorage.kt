@@ -5,7 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import co.touchlab.kermit.Logger
-import com.jvcs.tracky.core.data.dto.AuthInfoSerializable
+import com.jvcs.tracky.core.data.dto.AuthInfoDto
 import com.jvcs.tracky.core.data.mappers.toDomain
 import com.jvcs.tracky.core.data.mappers.toSerializable
 import com.jvcs.tracky.core.domain.auth.AuthInfo
@@ -23,7 +23,7 @@ class DataStoreSessionStorage(private val dataStore: DataStore<Preferences>) : S
         dataStore.data.map { preferences ->
             preferences[authInfoKey]?.let {
                 try {
-                    json.decodeFromString<AuthInfoSerializable>(it).toDomain()
+                    json.decodeFromString<AuthInfoDto>(it).toDomain()
                 } catch (exception: IllegalArgumentException) {
                     Logger.withTag("DataStoreSessionStorage").w(exception) {
                         "observeAuthInfo: ignored unreadable input (IllegalArgumentException)"
@@ -38,7 +38,7 @@ class DataStoreSessionStorage(private val dataStore: DataStore<Preferences>) : S
             dataStore.edit { it.remove(authInfoKey) }
             return
         }
-        val serialized = json.encodeToString(AuthInfoSerializable.serializer(), info.toSerializable())
+        val serialized = json.encodeToString(AuthInfoDto.serializer(), info.toSerializable())
         dataStore.edit { prefs -> prefs[authInfoKey] = serialized }
     }
 }

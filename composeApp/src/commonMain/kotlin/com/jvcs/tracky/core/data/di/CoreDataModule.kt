@@ -6,9 +6,10 @@ import com.jvcs.tracky.core.data.auth.KtorAuthService
 import com.jvcs.tracky.core.data.device.DataStoreDeviceIdProvider
 import com.jvcs.tracky.core.data.networking.ApiConfig
 import com.jvcs.tracky.core.data.networking.HttpClientFactory
-import com.jvcs.tracky.core.data.networking.dto.RealtimeEnvelopeParser
 import com.jvcs.tracky.core.data.networking.realtimeUrl
 import com.jvcs.tracky.core.data.realtime.KtorRealtimeChannel
+import com.jvcs.tracky.core.data.realtime.RealtimeEnvelopeParser
+import com.jvcs.tracky.core.data.realtime.RealtimeTimerConnection
 import com.jvcs.tracky.core.data.sync.DataStoreServerClockOffsetStore
 import com.jvcs.tracky.core.data.sync.DataStoreSyncCursorStore
 import com.jvcs.tracky.core.data.sync.KtorRemoteSyncDataSource
@@ -28,7 +29,6 @@ import com.jvcs.tracky.core.domain.lifecycle.AppLifecycleObserver
 import com.jvcs.tracky.core.domain.notification.TimerNotificationCoordinator
 import com.jvcs.tracky.core.domain.realtime.RealtimeChannel
 import com.jvcs.tracky.core.domain.realtime.RealtimeConnectivity
-import com.jvcs.tracky.core.domain.realtime.RealtimeTimerConnection
 import com.jvcs.tracky.core.domain.startup.StartupReconciliation
 import com.jvcs.tracky.core.domain.sync.DeltaSyncApplier
 import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource

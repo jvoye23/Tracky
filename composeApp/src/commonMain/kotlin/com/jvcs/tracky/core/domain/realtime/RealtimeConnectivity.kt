@@ -10,8 +10,8 @@ enum class RealtimeConnectionState { Idle, Connecting, Connected, Disconnected }
 /**
  * Whether the realtime socket is up.
  *
- * Its own small object rather than a field on [RealtimeTimerConnection], for the same reason
- * `SyncRecency` is one: the sync loop wants to read it — a device with a live socket can poll far
+ * Its own small object rather than a field on the RealtimeTimerConnection (core.data.realtime),
+ * for the same reason `SyncRecency` is one: the sync loop wants to read it — a device with a live socket can poll far
  * less often — without depending on the thing that drives the socket, and a test can pin it
  * without opening one.
  */

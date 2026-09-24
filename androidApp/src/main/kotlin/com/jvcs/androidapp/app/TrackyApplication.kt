@@ -1,8 +1,8 @@
 package com.jvcs.androidapp.app
 
 import android.app.Application
+import com.jvcs.tracky.core.data.realtime.RealtimeTimerConnection
 import com.jvcs.tracky.core.domain.notification.TimerNotificationCoordinator
-import com.jvcs.tracky.core.domain.realtime.RealtimeTimerConnection
 import com.jvcs.tracky.core.domain.sync.ProjectSyncManager
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
 import com.jvcs.tracky.core.domain.sync.TrashCleanupScheduler

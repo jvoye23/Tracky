@@ -1,5 +1,6 @@
 package com.jvcs.tracky.core.data.networking
 
+import com.jvcs.tracky.core.data.networking.dto.ProjectSortOrderDto
 import kotlinx.serialization.Serializable
 
 /**
@@ -8,6 +9,3 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class ReorderProjectsRequest(val updatedAtUtc: String, val items: List<ProjectSortOrderDto>)
-
-@Serializable
-data class ProjectSortOrderDto(val projectId: String, val sortIndex: Long)

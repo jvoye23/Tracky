@@ -1,7 +1,7 @@
 package com.jvcs.tracky.core.data.networking
 
 import co.touchlab.kermit.Logger
-import com.jvcs.tracky.core.data.dto.AuthInfoSerializable
+import com.jvcs.tracky.core.data.dto.AuthInfoDto
 import com.jvcs.tracky.core.data.dto.requests.RefreshRequest
 import com.jvcs.tracky.core.data.mappers.toDomain
 import com.jvcs.tracky.core.domain.auth.SessionStorage
@@ -93,7 +93,7 @@ class HttpClientFactory(private val sessionStorage: SessionStorage) {
 
         var bearerTokens: BearerTokens? = null
         client
-            .post<RefreshRequest, AuthInfoSerializable>(
+            .post<RefreshRequest, AuthInfoDto>(
                 route = "/api/auth/refresh",
                 body = RefreshRequest(refreshToken = authInfo.refreshToken),
                 builder = { markAsRefreshTokenRequest() },

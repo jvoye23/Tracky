@@ -5,8 +5,8 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
 import com.jvcs.tracky.core.data.networking.dto.HelloEnvelopeDto
-import com.jvcs.tracky.core.data.networking.dto.RealtimeEnvelopeParser
 import com.jvcs.tracky.core.data.realtime.KtorRealtimeChannel
+import com.jvcs.tracky.core.data.realtime.RealtimeEnvelopeParser
 import com.jvcs.tracky.core.domain.realtime.RealtimeEvent
 import com.jvcs.tracky.core.domain.util.Result
 import io.ktor.client.HttpClient

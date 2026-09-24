@@ -1,11 +1,11 @@
 package com.jvcs.tracky.features.project.data.project
 
 import com.jvcs.tracky.core.data.networking.CreateProjectRequest
-import com.jvcs.tracky.core.data.networking.ProjectSortOrderDto
 import com.jvcs.tracky.core.data.networking.ReorderProjectsRequest
 import com.jvcs.tracky.core.data.networking.UpdateProjectRequest
 import com.jvcs.tracky.core.data.networking.delete
 import com.jvcs.tracky.core.data.networking.dto.ProjectDto
+import com.jvcs.tracky.core.data.networking.dto.ProjectSortOrderDto
 import com.jvcs.tracky.core.data.networking.get
 import com.jvcs.tracky.core.data.networking.mappers.toProject
 import com.jvcs.tracky.core.data.networking.post

@@ -2,10 +2,10 @@ package com.jvcs.tracky.features.project.data.task
 
 import com.jvcs.tracky.core.data.networking.CreateProjectTaskRequest
 import com.jvcs.tracky.core.data.networking.ReorderTasksRequest
-import com.jvcs.tracky.core.data.networking.TaskSortOrderDto
 import com.jvcs.tracky.core.data.networking.UpdateProjectTaskRequest
 import com.jvcs.tracky.core.data.networking.delete
 import com.jvcs.tracky.core.data.networking.dto.ProjectTaskDto
+import com.jvcs.tracky.core.data.networking.dto.TaskSortOrderDto
 import com.jvcs.tracky.core.data.networking.get
 import com.jvcs.tracky.core.data.networking.mappers.toProjectTask
 import com.jvcs.tracky.core.data.networking.post
