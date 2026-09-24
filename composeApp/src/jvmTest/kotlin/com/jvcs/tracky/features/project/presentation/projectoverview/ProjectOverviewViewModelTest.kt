@@ -96,8 +96,8 @@ class ProjectOverviewViewModelTest {
             connectivityObserver = FakeConnectivityObserver(),
             syncCursorStore = FakeSyncCursorStore(),
             deltaSyncApplier = testDeltaSyncApplier(),
-            // Shares the test scheduler, so `advanceUntilIdle` drives the logout teardown and the
-            // scope dies with the test instead of outliving it.
+            // Shares the test scheduler, so `runCurrent` drives the logout teardown (`advanceUntilIdle`
+            // skips background work) and the scope dies with the test instead of outliving it.
             applicationScope = backgroundScope,
         )
 
@@ -363,6 +363,166 @@ class ProjectOverviewViewModelTest {
             assertThat(ids.toSet()).isEqualTo(setOf("p3", "p4"))
             assertThat(isPinned).isTrue()
         }
+
+    @Test
+    fun selectionAndDialogToggles_flipTheirFlags() =
+        runTest(dispatcher) {
+            val viewModel = viewModelWith(FakeProjectRepository(seededProjects()))
+
+            viewModel.onAction(ProjectOverviewAction.OnProjectCardLongPress("p3"))
+            assertThat(stateOf(viewModel).isEditModeActive).isTrue()
+            viewModel.onAction(ProjectOverviewAction.OnProjectCardToggleSelection("p3"))
+            assertThat(stateOf(viewModel).isEditModeActive).isFalse()
+            viewModel.onAction(ProjectOverviewAction.OnProjectCardToggleSelection("p4"))
+            viewModel.onAction(ProjectOverviewAction.OnReorderDragStart)
+            assertThat(stateOf(viewModel).selectedProjectIds).isEqualTo(emptySet())
+
+            viewModel.onAction(ProjectOverviewAction.OnDeleteSelectedClick)
+            assertThat(stateOf(viewModel).isDeleteConfirmationDialogVisible).isTrue()
+            viewModel.onAction(ProjectOverviewAction.OnDismissDeleteDialog)
+            viewModel.onAction(ProjectOverviewAction.OnFabClick)
+            viewModel.onAction(ProjectOverviewAction.OnToggleSortBottomSheet)
+            viewModel.onAction(ProjectOverviewAction.OnToggleViewMode)
+            viewModel.onAction(ProjectOverviewAction.OnLogoutClick)
+            with(stateOf(viewModel)) {
+                assertThat(isDeleteConfirmationDialogVisible).isFalse()
+                assertThat(isAddNewProjectBottomSheetVisible).isTrue()
+                assertThat(isSortBottomSheetVisible).isTrue()
+                assertThat(isGridView).isTrue()
+                assertThat(showLogoutConfirmation).isTrue()
+            }
+
+            viewModel.onAction(ProjectOverviewAction.OnToggleAddNewProjectBottomSheet)
+            viewModel.onAction(ProjectOverviewAction.OnDismissLogoutConfirmation)
+            viewModel.onAction(ProjectOverviewAction.OnExitEditMode)
+            assertThat(stateOf(viewModel).isAddNewProjectBottomSheetVisible).isFalse()
+            assertThat(stateOf(viewModel).showLogoutConfirmation).isFalse()
+        }
+
+    @Test
+    fun sortByCreationDate_putsTheNewestFirst_andClosesTheSheet() =
+        runTest(dispatcher) {
+            val projects =
+                listOf("old" to 1L, "new" to 3L, "mid" to 2L).map { (id, start) ->
+                    project(id).copy(startDateTimeUtc = Instant.fromEpochMilliseconds(start))
+                }
+            val viewModel = viewModelWith(FakeProjectRepository(projects))
+
+            viewModel.onAction(ProjectOverviewAction.OnToggleSortBottomSheet)
+            viewModel.onAction(ProjectOverviewAction.OnSortOptionSelected(SortOption.CREATION_DATE))
+
+            assertThat(stateOf(viewModel).otherProjects.map { it.projectId }).isEqualTo(listOf("new", "mid", "old"))
+            assertThat(stateOf(viewModel).isSortBottomSheetVisible).isFalse()
+        }
+
+    @Test
+    fun archivingAndTrashing_writeTheSelection_andReportAFailure() =
+        runTest(dispatcher) {
+            val repository =
+                FakeProjectRepository(seededProjects()).apply {
+                    writeResult =
+                        Result.Error(DataError.Local.DISK_FULL)
+                }
+            val viewModel = viewModelWith(repository)
+
+            viewModel.events.test {
+                viewModel.onAction(ProjectOverviewAction.OnProjectCardLongPress("p3"))
+                viewModel.onAction(ProjectOverviewAction.OnArchiveSelectedClick)
+                testScheduler.advanceUntilIdle()
+                assertThat(awaitItem()).isEqualTo(ProjectOverviewEvent.ArchiveError)
+
+                viewModel.onAction(ProjectOverviewAction.OnProjectCardLongPress("p4"))
+                viewModel.onAction(ProjectOverviewAction.OnConfirmDelete)
+                testScheduler.advanceUntilIdle()
+                assertThat(awaitItem())
+                    .isEqualTo(ProjectOverviewEvent.AddToTrashError(UiText.Resource(Res.string.error_disk_full)))
+
+                viewModel.onAction(ProjectOverviewAction.OnProjectCardLongPress("p1"))
+                viewModel.onAction(ProjectOverviewAction.OnPinSelectedClick)
+                testScheduler.advanceUntilIdle()
+                assertThat(awaitItem()).isEqualTo(ProjectOverviewEvent.PinError)
+            }
+
+            assertThat(repository.archivedIds).isEqualTo(listOf("p3"))
+            assertThat(repository.trashedIds).isEqualTo(listOf("p4"))
+            assertThat(stateOf(viewModel).isEditModeActive).isFalse()
+        }
+
+    @Test
+    fun addingAProject_savesIt_closesTheSheet_andOpensIt() =
+        runTest(dispatcher) {
+            val repository = FakeProjectRepository(emptyList())
+            val viewModel = viewModelWith(repository)
+            viewModel.onAction(ProjectOverviewAction.OnFabClick)
+
+            viewModel.events.test {
+                viewModel.onAction(ProjectOverviewAction.OnAddProjectClick("Garden"))
+                testScheduler.advanceUntilIdle()
+
+                val saved = repository.upserted.single()
+                assertThat(saved.title).isEqualTo("Garden")
+                assertThat(awaitItem()).isEqualTo(ProjectOverviewEvent.NewProjectSaved(saved.projectId))
+            }
+            assertThat(stateOf(viewModel).isAddNewProjectBottomSheetVisible).isFalse()
+        }
+
+    @Test
+    fun addingAProject_thatFailsToSave_reportsIt() =
+        runTest(dispatcher) {
+            val repository =
+                FakeProjectRepository(emptyList()).apply {
+                    writeResult =
+                        Result.Error(DataError.Local.DISK_FULL)
+                }
+            val viewModel = viewModelWith(repository)
+
+            viewModel.events.test {
+                viewModel.onAction(ProjectOverviewAction.OnAddProjectClick("Garden"))
+                testScheduler.advanceUntilIdle()
+
+                assertThat(
+                    awaitItem(),
+                ).isEqualTo(ProjectOverviewEvent.Error(UiText.Resource(Res.string.error_disk_full)))
+            }
+        }
+
+    @Test
+    fun loggingOut_endsTheSession_orReportsWhyItCouldNot() =
+        runTest(dispatcher) {
+            val sessionStorage = FakeSessionStorage()
+            val authService = FakeAuthService()
+            val viewModel = viewModelWith(FakeProjectRepository(seededProjects()), sessionStorage, authService)
+
+            viewModel.events.test {
+                authService.logoutResult = Result.Error(DataError.Remote.NO_INTERNET)
+                viewModel.onAction(ProjectOverviewAction.OnConfirmLogout)
+                testScheduler.advanceUntilIdle()
+                assertThat(awaitItem())
+                    .isEqualTo(ProjectOverviewEvent.OnLogoutError(UiText.Resource(Res.string.error_no_internet)))
+
+                authService.logoutResult = Result.Success(Unit)
+                viewModel.onAction(ProjectOverviewAction.OnConfirmLogout)
+                testScheduler.advanceUntilIdle()
+                assertThat(awaitItem()).isEqualTo(ProjectOverviewEvent.OnLogoutSuccess)
+            }
+
+            // The teardown runs on the application scope, which is background work: advanceUntilIdle
+            // stops short of it, runCurrent does not.
+            testScheduler.runCurrent()
+            assertThat(authService.logoutCalls.size).isEqualTo(2)
+            assertThat(authService.clearTokenCacheCount).isEqualTo(1)
+            assertThat(sessionStorage.current).isEqualTo(null)
+        }
+
+    @Test
+    fun pullToRefresh_clearsTheSpinnerWhenDone() =
+        runTest(dispatcher) {
+            val viewModel = viewModelWith(FakeProjectRepository(seededProjects()))
+
+            viewModel.onAction(ProjectOverviewAction.OnPullToRefresh)
+
+            assertThat(stateOf(viewModel).isRefreshing).isFalse()
+        }
 }
 
 // --- Fake -----------------------------------------------------------------------------------------
@@ -375,6 +535,12 @@ private class FakeProjectRepository(initial: List<Project>) :
     var fetchResult: EmptyResult<DataError> = Result.Success(Unit)
     val reorderCalls = mutableListOf<List<String>>()
     val pinCalls = mutableListOf<Pair<List<String>, Boolean>>()
+
+    /** What every archive, trash, pin and upsert returns. */
+    var writeResult: EmptyResult<DataError> = Result.Success(Unit)
+    val archivedIds = mutableListOf<String>()
+    val trashedIds = mutableListOf<String>()
+    val upserted = mutableListOf<Project>()
 
     fun emit(projects: List<Project>) {
         projectsFlow.value = projects
@@ -395,7 +561,7 @@ private class FakeProjectRepository(initial: List<Project>) :
 
     override suspend fun setProjectsPinned(projectIds: List<String>, isPinned: Boolean): EmptyResult<DataError> {
         pinCalls += projectIds to isPinned
-        return Result.Success(Unit)
+        return writeResult
     }
 
     override fun getArchivedProjects(): Flow<List<Project>> = flowOf(emptyList())
@@ -413,13 +579,20 @@ private class FakeProjectRepository(initial: List<Project>) :
     override suspend fun getProjectWithTasksByProjectId(projectId: String): Result<Project?, DataError> =
         getProjectById(projectId)
 
-    override suspend fun upsertProject(project: Project): EmptyResult<DataError> = Result.Success(Unit)
+    override suspend fun upsertProject(project: Project): EmptyResult<DataError> {
+        upserted += project
+        return writeResult
+    }
 
-    override suspend fun setProjectArchived(projectId: String, isArchived: Boolean): EmptyResult<DataError> =
-        Result.Success(Unit)
+    override suspend fun setProjectArchived(projectId: String, isArchived: Boolean): EmptyResult<DataError> {
+        archivedIds += projectId
+        return writeResult
+    }
 
-    override suspend fun setProjectTrashed(projectId: String, trashedAt: Instant?): EmptyResult<DataError> =
-        Result.Success(Unit)
+    override suspend fun setProjectTrashed(projectId: String, trashedAt: Instant?): EmptyResult<DataError> {
+        trashedIds += projectId
+        return writeResult
+    }
 
     override suspend fun purgeExpiredTrashedProjects(cutoff: Instant): EmptyResult<DataError> = Result.Success(Unit)
 
