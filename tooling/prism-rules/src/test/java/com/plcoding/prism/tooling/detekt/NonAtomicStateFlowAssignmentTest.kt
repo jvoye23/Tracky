@@ -57,6 +57,23 @@ class NonAtomicStateFlowAssignmentTest {
     }
 
     @Test
+    fun `does not report replacing the whole value`() {
+        val findings =
+            rule.lint(
+                """
+                class Controller {
+                    private val _session = MutableStateFlow<Session?>(null)
+                    fun show(session: Session) {
+                        _session.value = session
+                    }
+                }
+                """.trimIndent(),
+            )
+
+        assertThat(findings).isEmpty()
+    }
+
+    @Test
     fun `does not report reading the value`() {
         val findings = rule.lint("fun read(): State = _state.value")
 
@@ -67,7 +84,7 @@ class NonAtomicStateFlowAssignmentTest {
     fun `fires in a main source and is excluded in test sources`(
         @TempDir root: Path,
     ) {
-        val violation = "class ViewModel { fun go() { _state.value = 1 } }"
+        val violation = "class ViewModel { fun go() { _state.value = _state.value + 1 } }"
         val scoped = NonAtomicStateFlowAssignment(TestConfig(*MAIN_SOURCES_ONLY))
 
         assertThat(scoped.lintAt(root, MAIN_SOURCE_PATH, violation)).hasSize(1)

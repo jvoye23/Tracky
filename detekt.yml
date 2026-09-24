@@ -84,11 +84,15 @@ coroutines:
   # dispatcher still fails.
   #
   # Ships empty. Add yours if and when this fires on one.
+  # The DI modules and the platformIoDispatcher expect/actual files are where dispatchers are
+  # created for injection; everywhere else takes one.
   InjectDispatcher:
     excludes:
       - '**/test/**'
       - '**/*Test/**'
       - '**/androidTest/**'
+      - '**/di/**'
+      - '**/PlatformIoDispatcher*.kt'
 
 naming:
   # Composables are PascalCase by the Compose naming convention. Without this the
@@ -516,9 +520,13 @@ prism:
     excludes: ['**/test/**', '**/*Test/**', '**/androidTest/**']
   KoinViewModelOnlyInRoot:
     active: true
+    # App is Tracky's composition root; the *DialogHost composables are the Roots of the
+    # app-wide dialogs (stranded timer, notification permission).
+    rootSuffixes: ['Root', 'DialogHost', 'App']
     excludes: ['**/test/**', '**/*Test/**', '**/androidTest/**']
   ObserveAsEventsOnlyInRoot:
     active: true
+    rootSuffixes: ['Root', 'DialogHost', 'App']
     excludes: ['**/test/**', '**/*Test/**', '**/androidTest/**']
   RootComposableMustDefaultViewModel:
     active: true
@@ -601,9 +609,10 @@ prism:
     active: true
     excludes: ['**/test/**', '**/*Test/**', '**/androidTest/**', '**/app/src/**']
   # The Application class is the one sanctioned startKoin site, wherever it lives.
+  # initKoin.kt is the KMP-shared start, called from the Android Application and from iOS.
   StartKoinOnlyInAppModule:
     active: true
-    excludes: ['**/test/**', '**/*Test/**', '**/androidTest/**', '**/*Application.kt', '**/*App.kt']
+    excludes: ['**/test/**', '**/*Test/**', '**/androidTest/**', '**/*Application.kt', '**/*App.kt', '**/di/initKoin.kt']
   # HttpClientFactory is where the shared client is built; enumerated per file,
   # never a directory glob, so a second construction site still fails.
   HttpClientConstructionOutsideFactory:
