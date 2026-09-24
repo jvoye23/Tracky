@@ -1,5 +1,7 @@
 package com.jvcs.tracky.features.project.presentation.models
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
 import com.jvcs.tracky.features.project.presentation.fakes.project
 import com.jvcs.tracky.features.project.presentation.fakes.subTask
 import com.jvcs.tracky.features.project.presentation.fakes.task
@@ -8,7 +10,6 @@ import com.jvcs.tracky.features.project.presentation.mappers.toProjectTask
 import com.jvcs.tracky.features.project.presentation.mappers.toProjectTaskUi
 import com.jvcs.tracky.features.project.presentation.mappers.toProjectUi
 import kotlin.test.Test
-import kotlin.test.assertEquals
 
 /**
  * Durations must not round-trip through their own display string.
@@ -28,7 +29,7 @@ class ProjectUiDurationTest {
 
         val back = domain.toProjectTaskUi().toProjectTask(parentProjectId = "project")
 
-        assertEquals(oddDuration, back.durationMillis)
+        assertThat(back.durationMillis).isEqualTo(oddDuration)
     }
 
     @Test
@@ -37,7 +38,7 @@ class ProjectUiDurationTest {
 
         val back = domain.toProjectTaskUi().toProjectTask(parentProjectId = "project")
 
-        assertEquals(oddDuration, back.subTasks!!.single().durationMillis)
+        assertThat(back.subTasks!!.single().durationMillis).isEqualTo(oddDuration)
     }
 
     @Test
@@ -53,7 +54,7 @@ class ProjectUiDurationTest {
             ).toProjectTaskUi()
 
         // 3999 ms, not 3000: summing truncated strings loses a second per subtask.
-        assertEquals(3_999L, ui.displayDurationMillis)
+        assertThat(ui.displayDurationMillis).isEqualTo(3_999L)
     }
 
     @Test
@@ -67,7 +68,7 @@ class ProjectUiDurationTest {
                     ),
             ).toProjectUi()
 
-        assertEquals(3_999L, ui.totalProjectDurationMillis)
+        assertThat(ui.totalProjectDurationMillis).isEqualTo(3_999L)
     }
 
     /**
@@ -79,20 +80,20 @@ class ProjectUiDurationTest {
     fun aTasksFormattedDurationFollowsACopyThatSetsOnlyTheMilliseconds() {
         val ui = task(id = "t1").toProjectTaskUi().copy(durationMillis = 3_661_000L)
 
-        assertEquals("01:01:01", ui.formattedDuration)
+        assertThat(ui.formattedDuration).isEqualTo("01:01:01")
     }
 
     @Test
     fun aSubTasksFormattedDurationFollowsACopyThatSetsOnlyTheMilliseconds() {
         val ui = subTask(id = "s1").toProjectSubTaskUi().copy(durationMillis = 3_661_000L)
 
-        assertEquals("01:01:01", ui.formattedDuration)
+        assertThat(ui.formattedDuration).isEqualTo("01:01:01")
     }
 
     @Test
     fun aProjectsTotalDurationFollowsACopyThatSetsOnlyTheMilliseconds() {
         val ui = project().toProjectUi().copy(totalDurationMillis = 3_661_000L)
 
-        assertEquals("01:01:01", ui.totalDuration)
+        assertThat(ui.totalDuration).isEqualTo("01:01:01")
     }
 }

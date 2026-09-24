@@ -1,5 +1,9 @@
 package com.jvcs.tracky.features.project.presentation.mappers
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.features.project.presentation.fakes.interval
 import com.jvcs.tracky.features.project.presentation.fakes.project
@@ -9,9 +13,6 @@ import com.jvcs.tracky.features.project.presentation.fakes.task
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 /** Pure: data in, data out, with the day and the zone both passed explicitly. */
 class DayDetailUiMapperTest {
@@ -30,28 +31,28 @@ class DayDetailUiMapperTest {
     fun `a day with nothing tracked keeps its heading and reports zero`() {
         val detail = day()
 
-        assertTrue(detail.isEmpty)
-        assertEquals("Tue, Sep 08", detail.dateLabel)
-        assertEquals("00:00:00", detail.totalDuration)
-        assertEquals(0, detail.taskCount)
-        assertEquals(0, detail.intervalCount)
+        assertThat(detail.isEmpty).isTrue()
+        assertThat(detail.dateLabel).isEqualTo("Tue, Sep 08")
+        assertThat(detail.totalDuration).isEqualTo("00:00:00")
+        assertThat(detail.taskCount).isEqualTo(0)
+        assertThat(detail.intervalCount).isEqualTo(0)
     }
 
     @Test
     fun `the headline carries the year, which the day heading does not`() {
         val detail = day(on = LocalDate(2026, 10, 15))
 
-        assertEquals("Thu, Oct 15", detail.dateLabel)
+        assertThat(detail.dateLabel).isEqualTo("Thu, Oct 15")
         // Unpadded day, and a year: the calendar can be paged years away from today.
-        assertEquals("Oct 15, 2026", detail.headlineLabel)
-        assertEquals("Sep 8, 2026", day().headlineLabel)
+        assertThat(detail.headlineLabel).isEqualTo("Oct 15, 2026")
+        assertThat(day().headlineLabel).isEqualTo("Sep 8, 2026")
     }
 
     @Test
     fun `intervals from other days are left out`() {
         val detail = day(task(intervals = listOf(interval("2026-09-07T09:00:00Z", minutes = 30))))
 
-        assertTrue(detail.isEmpty)
+        assertThat(detail.isEmpty).isTrue()
     }
 
     // --- the cards ----------------------------------------------------------------------------
@@ -64,11 +65,11 @@ class DayDetailUiMapperTest {
             )
 
         val card = detail.intervals.single()
-        assertEquals("01", card.indexLabel)
-        assertEquals("Design review", card.taskTitle)
-        assertNull(card.subTaskTitle)
-        assertEquals("09:30 – 10:12", card.timeRangeLabel)
-        assertEquals("00:42:00", card.formattedDuration)
+        assertThat(card.indexLabel).isEqualTo("01")
+        assertThat(card.taskTitle).isEqualTo("Design review")
+        assertThat(card.subTaskTitle).isNull()
+        assertThat(card.timeRangeLabel).isEqualTo("09:30 – 10:12")
+        assertThat(card.formattedDuration).isEqualTo("00:42:00")
     }
 
     @Test
@@ -88,10 +89,10 @@ class DayDetailUiMapperTest {
             )
 
         val card = detail.intervals.single()
-        assertEquals("Auth endpoints", card.taskTitle)
-        assertEquals("Token refresh", card.subTaskTitle)
-        assertEquals("13:15 – 14:47", card.timeRangeLabel)
-        assertEquals("01:32:00", card.formattedDuration)
+        assertThat(card.taskTitle).isEqualTo("Auth endpoints")
+        assertThat(card.subTaskTitle).isEqualTo("Token refresh")
+        assertThat(card.timeRangeLabel).isEqualTo("13:15 – 14:47")
+        assertThat(card.formattedDuration).isEqualTo("01:32:00")
     }
 
     @Test
@@ -108,8 +109,8 @@ class DayDetailUiMapperTest {
                 ),
             )
 
-        assertEquals(listOf("early", "middle", "late"), detail.intervals.map { it.intervalId })
-        assertEquals(listOf("01", "02", "03"), detail.intervals.map { it.indexLabel })
+        assertThat(detail.intervals.map { it.intervalId }).isEqualTo(listOf("early", "middle", "late"))
+        assertThat(detail.intervals.map { it.indexLabel }).isEqualTo(listOf("01", "02", "03"))
     }
 
     @Test
@@ -119,31 +120,31 @@ class DayDetailUiMapperTest {
         val first = day(crossing)
         // 24:00, not 00:00: the same instant named from this day's side, so the range reads
         // forwards instead of looking like a session that ran backwards.
-        assertEquals("23:40 – 24:00", first.intervals.single().timeRangeLabel)
-        assertEquals("00:20:00", first.totalDuration)
+        assertThat(first.intervals.single().timeRangeLabel).isEqualTo("23:40 – 24:00")
+        assertThat(first.totalDuration).isEqualTo("00:20:00")
 
         val second = day(crossing, on = LocalDate(2026, 9, 9))
-        assertEquals("00:00 – 00:20", second.intervals.single().timeRangeLabel)
-        assertEquals("00:20:00", second.totalDuration)
+        assertThat(second.intervals.single().timeRangeLabel).isEqualTo("00:00 – 00:20")
+        assertThat(second.totalDuration).isEqualTo("00:20:00")
 
         // One task's worth of work, counted once on each day it touched.
-        assertEquals(1, first.taskCount)
-        assertEquals(1, second.taskCount)
+        assertThat(first.taskCount).isEqualTo(1)
+        assertThat(second.taskCount).isEqualTo(1)
     }
 
     @Test
     fun `a zero length interval is still listed`() {
         val detail = day(task(intervals = listOf(interval("2026-09-08T09:00:00Z", minutes = 0))))
 
-        assertEquals(1, detail.intervalCount)
-        assertEquals("00:00:00", detail.intervals.single().formattedDuration)
+        assertThat(detail.intervalCount).isEqualTo(1)
+        assertThat(detail.intervals.single().formattedDuration).isEqualTo("00:00:00")
     }
 
     @Test
     fun `an open interval is not listed`() {
         val detail = day(task(intervals = listOf(interval("2026-09-08T09:00:00Z", minutes = 30, open = true))))
 
-        assertTrue(detail.isEmpty)
+        assertThat(detail.isEmpty).isTrue()
     }
 
     // --- the counts and the total ---------------------------------------------------------------
@@ -162,7 +163,7 @@ class DayDetailUiMapperTest {
                 ),
             )
 
-        assertEquals("02:48:00", detail.totalDuration)
+        assertThat(detail.totalDuration).isEqualTo("02:48:00")
     }
 
     @Test
@@ -179,8 +180,8 @@ class DayDetailUiMapperTest {
             )
 
         // 90s + 88s is 178s: the seconds roll over into a second minute rather than being dropped.
-        assertEquals("00:02:58", detail.totalDuration)
-        assertEquals("00:01:30", detail.intervals.first().formattedDuration)
+        assertThat(detail.totalDuration).isEqualTo("00:02:58")
+        assertThat(detail.intervals.first().formattedDuration).isEqualTo("00:01:30")
     }
 
     @Test
@@ -198,8 +199,8 @@ class DayDetailUiMapperTest {
                 task(id = "task-b", intervals = listOf(interval("2026-09-08T13:00:00Z", minutes = 10, id = "b1"))),
             )
 
-        assertEquals(3, detail.intervalCount)
-        assertEquals(2, detail.taskCount)
+        assertThat(detail.intervalCount).isEqualTo(3)
+        assertThat(detail.taskCount).isEqualTo(2)
     }
 
     @Test
@@ -224,8 +225,8 @@ class DayDetailUiMapperTest {
                 ),
             )
 
-        assertEquals(2, detail.intervalCount)
-        assertEquals(1, detail.taskCount)
+        assertThat(detail.intervalCount).isEqualTo(2)
+        assertThat(detail.taskCount).isEqualTo(1)
     }
 
     // --- agreement with the calendar ------------------------------------------------------------
@@ -241,8 +242,8 @@ class DayDetailUiMapperTest {
             )
         val detail = day(*tasks)
 
-        assertEquals(1, detail.intervalCount)
-        assertEquals("00:42:00", detail.totalDuration)
+        assertThat(detail.intervalCount).isEqualTo(1)
+        assertThat(detail.totalDuration).isEqualTo("00:42:00")
 
         // The number the calendar tints that cell with must be the number the list totals.
         val cell =
@@ -250,8 +251,8 @@ class DayDetailUiMapperTest {
                 .toCalendarMonthsUi(today = sep8, timeZone = TimeZone.UTC)
                 .flatMap { it.monthDays }
                 .single { it.date == sep8 }
-        assertEquals(detail.totalDuration, "00:42:00")
-        assertEquals(42 * 60_000L, cell.trackedMillis)
+        assertThat("00:42:00").isEqualTo(detail.totalDuration)
+        assertThat(cell.trackedMillis).isEqualTo(42 * 60_000L)
     }
 
     @Test
@@ -259,11 +260,10 @@ class DayDetailUiMapperTest {
         val tasks = arrayOf(task(intervals = listOf(interval("2026-09-05T02:00:00Z", minutes = 30))))
         val ny = TimeZone.of("America/New_York")
 
-        assertTrue(day(*tasks, on = LocalDate(2026, 9, 5)).intervalCount == 1)
-        assertTrue(day(*tasks, on = LocalDate(2026, 9, 5), zone = ny).isEmpty)
-        assertEquals(
-            "22:00 – 22:30",
+        assertThat(day(*tasks, on = LocalDate(2026, 9, 5)).intervalCount == 1).isTrue()
+        assertThat(day(*tasks, on = LocalDate(2026, 9, 5), zone = ny).isEmpty).isTrue()
+        assertThat(
             day(*tasks, on = LocalDate(2026, 9, 4), zone = ny).intervals.single().timeRangeLabel,
-        )
+        ).isEqualTo("22:00 – 22:30")
     }
 }

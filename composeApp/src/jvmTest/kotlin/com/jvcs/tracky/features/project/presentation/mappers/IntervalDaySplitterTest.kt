@@ -1,14 +1,15 @@
 package com.jvcs.tracky.features.project.presentation.mappers
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isTrue
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
@@ -41,15 +42,15 @@ internal class IntervalDaySplitterTest {
                 timeZone = TimeZone.UTC,
             )
 
-        assertEquals(1, slices.size)
+        assertThat(slices.size).isEqualTo(1)
         val slice = slices.single()
-        assertEquals(LocalDate(2026, 9, 9), slice.date)
-        assertEquals(LocalTime(9, 30), slice.start)
-        assertEquals(LocalTime(10, 12), slice.end)
-        assertFalse(slice.endsAtMidnight)
-        assertEquals(42 * 60 * 1000L, slice.durationMillis)
-        assertEquals(0, slice.sliceIndex)
-        assertEquals(1, slice.sliceCount)
+        assertThat(slice.date).isEqualTo(LocalDate(2026, 9, 9))
+        assertThat(slice.start).isEqualTo(LocalTime(9, 30))
+        assertThat(slice.end).isEqualTo(LocalTime(10, 12))
+        assertThat(slice.endsAtMidnight).isFalse()
+        assertThat(slice.durationMillis).isEqualTo(42 * 60 * 1000L)
+        assertThat(slice.sliceIndex).isEqualTo(0)
+        assertThat(slice.sliceCount).isEqualTo(1)
     }
 
     @Test
@@ -62,17 +63,17 @@ internal class IntervalDaySplitterTest {
                 timeZone = TimeZone.UTC,
             )
 
-        assertEquals(2, slices.size)
-        assertEquals(LocalDate(2026, 9, 9), slices[0].date)
-        assertEquals(LocalTime(23, 40), slices[0].start)
-        assertEquals(20 * 60 * 1000L, slices[0].durationMillis)
-        assertTrue(slices[0].endsAtMidnight, "cut at the boundary, so it renders as 24:00")
+        assertThat(slices.size).isEqualTo(2)
+        assertThat(slices[0].date).isEqualTo(LocalDate(2026, 9, 9))
+        assertThat(slices[0].start).isEqualTo(LocalTime(23, 40))
+        assertThat(slices[0].durationMillis).isEqualTo(20 * 60 * 1000L)
+        assertThat(slices[0].endsAtMidnight, name = "cut at the boundary, so it renders as 24:00").isTrue()
 
-        assertEquals(LocalDate(2026, 9, 10), slices[1].date)
-        assertEquals(LocalTime(0, 0), slices[1].start)
-        assertEquals(LocalTime(0, 20), slices[1].end)
-        assertEquals(20 * 60 * 1000L, slices[1].durationMillis)
-        assertFalse(slices[1].endsAtMidnight)
+        assertThat(slices[1].date).isEqualTo(LocalDate(2026, 9, 10))
+        assertThat(slices[1].start).isEqualTo(LocalTime(0, 0))
+        assertThat(slices[1].end).isEqualTo(LocalTime(0, 20))
+        assertThat(slices[1].durationMillis).isEqualTo(20 * 60 * 1000L)
+        assertThat(slices[1].endsAtMidnight).isFalse()
     }
 
     @Test
@@ -87,15 +88,15 @@ internal class IntervalDaySplitterTest {
                 timeZone = TimeZone.UTC,
             )
 
-        assertEquals(4, slices.size)
-        assertEquals(total, slices.sumOf { it.durationMillis })
+        assertThat(slices.size).isEqualTo(4)
+        assertThat(slices.sumOf { it.durationMillis }).isEqualTo(total)
         slices.forEach {
-            assertTrue(
+            assertThat(
                 it.durationMillis <= 24 * 60 * 60 * 1000L,
-                "no day can hold more than 24h, but ${it.date} got ${it.durationMillis}",
-            )
+                name = "no day can hold more than 24h, but ${it.date} got ${it.durationMillis}",
+            ).isTrue()
         }
-        assertEquals(hoursMillis(9.05), slices[0].durationMillis)
+        assertThat(slices[0].durationMillis).isEqualTo(hoursMillis(9.05))
     }
 
     @Test
@@ -110,9 +111,9 @@ internal class IntervalDaySplitterTest {
                 timeZone = TimeZone.UTC,
             )
 
-        assertEquals(3, slices.size)
+        assertThat(slices.size).isEqualTo(3)
         // The remainder lands on the last slice rather than being lost to integer division.
-        assertEquals(total, slices.sumOf { it.durationMillis })
+        assertThat(slices.sumOf { it.durationMillis }).isEqualTo(total)
     }
 
     @Test
@@ -126,10 +127,10 @@ internal class IntervalDaySplitterTest {
                 timeZone = TimeZone.UTC,
             )
 
-        assertEquals(2, slices.size)
+        assertThat(slices.size).isEqualTo(2)
         // Half the span each, so half the banked hour each - not an hour each.
-        assertEquals(hoursMillis(0.5), slices[0].durationMillis)
-        assertEquals(hoursMillis(0.5), slices[1].durationMillis)
+        assertThat(slices[0].durationMillis).isEqualTo(hoursMillis(0.5))
+        assertThat(slices[1].durationMillis).isEqualTo(hoursMillis(0.5))
     }
 
     @Test
@@ -142,9 +143,9 @@ internal class IntervalDaySplitterTest {
                 timeZone = TimeZone.UTC,
             )
 
-        assertEquals(1, slices.size)
-        assertEquals(LocalDate(2026, 9, 9), slices.single().date)
-        assertEquals(0L, slices.single().durationMillis)
+        assertThat(slices.size).isEqualTo(1)
+        assertThat(slices.single().date).isEqualTo(LocalDate(2026, 9, 9))
+        assertThat(slices.single().durationMillis).isEqualTo(0L)
     }
 
     @Test
@@ -158,9 +159,9 @@ internal class IntervalDaySplitterTest {
             )
 
         // The next day gets nothing, so it earns no slice and no calendar tint.
-        assertEquals(1, slices.size)
-        assertEquals(LocalDate(2026, 9, 9), slices.single().date)
-        assertEquals(hoursMillis(1.0), slices.single().durationMillis)
+        assertThat(slices.size).isEqualTo(1)
+        assertThat(slices.single().date).isEqualTo(LocalDate(2026, 9, 9))
+        assertThat(slices.single().durationMillis).isEqualTo(hoursMillis(1.0))
     }
 
     @Test
@@ -170,12 +171,11 @@ internal class IntervalDaySplitterTest {
         val started = at("2026-09-09", "22:30")
         val ended = at("2026-09-09", "23:30")
 
-        assertEquals(1, splitAcrossLocalDays(started, ended, hoursMillis(1.0), TimeZone.UTC).size)
-        assertEquals(1, splitAcrossLocalDays(started, ended, hoursMillis(1.0), berlin).size)
-        assertEquals(
-            LocalDate(2026, 9, 10),
+        assertThat(splitAcrossLocalDays(started, ended, hoursMillis(1.0), TimeZone.UTC).size).isEqualTo(1)
+        assertThat(splitAcrossLocalDays(started, ended, hoursMillis(1.0), berlin).size).isEqualTo(1)
+        assertThat(
             splitAcrossLocalDays(started, ended, hoursMillis(1.0), berlin).single().date,
-        )
+        ).isEqualTo(LocalDate(2026, 9, 10))
     }
 
     @Test
@@ -188,10 +188,10 @@ internal class IntervalDaySplitterTest {
 
         val slices = splitAcrossLocalDays(started, ended, total, berlin)
 
-        assertEquals(3, slices.size)
-        assertEquals(total, slices.sumOf { it.durationMillis })
-        assertEquals(LocalDate(2026, 3, 29), slices[1].date)
+        assertThat(slices.size).isEqualTo(3)
+        assertThat(slices.sumOf { it.durationMillis }).isEqualTo(total)
+        assertThat(slices[1].date).isEqualTo(LocalDate(2026, 3, 29))
         // The short day really is 23 hours, and the slice says so.
-        assertEquals(23 * 60 * 60 * 1000L, slices[1].durationMillis)
+        assertThat(slices[1].durationMillis).isEqualTo(23 * 60 * 60 * 1000L)
     }
 }

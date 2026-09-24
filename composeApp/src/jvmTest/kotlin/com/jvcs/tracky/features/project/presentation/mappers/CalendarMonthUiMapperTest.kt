@@ -1,5 +1,9 @@
 package com.jvcs.tracky.features.project.presentation.mappers
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import com.jvcs.tracky.features.project.presentation.fakes.interval
 import com.jvcs.tracky.features.project.presentation.fakes.project
@@ -11,9 +15,6 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.YearMonth
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 /**
  * Pure: data in, data out, with `today` and the zone both passed explicitly.
@@ -40,14 +41,14 @@ class CalendarMonthUiMapperTest {
     fun `an empty project still gets pages from its start month through today`() {
         val pages = months()
 
-        assertEquals(listOf(YearMonth(2026, 8), september), pages.map { it.yearMonth })
+        assertThat(pages.map { it.yearMonth }).isEqualTo(listOf(YearMonth(2026, 8), september))
     }
 
     @Test
     fun `today's month always has a page, even for a project that banked nothing`() {
         val pages = months(on = LocalDate(2027, 3, 4))
 
-        assertEquals(YearMonth(2027, 3), pages.last().yearMonth)
+        assertThat(pages.last().yearMonth).isEqualTo(YearMonth(2027, 3))
     }
 
     @Test
@@ -56,9 +57,9 @@ class CalendarMonthUiMapperTest {
 
         // August through November inclusive - October has no activity but still gets a page,
         // otherwise the year picker could select a month the pager cannot show.
-        assertEquals(4, pages.size)
-        assertEquals(YearMonth(2026, 10), pages[2].yearMonth)
-        assertNull(pages[2].monthTotalLabel)
+        assertThat(pages.size).isEqualTo(4)
+        assertThat(pages[2].yearMonth).isEqualTo(YearMonth(2026, 10))
+        assertThat(pages[2].monthTotalLabel).isNull()
     }
 
     // --- the grid -----------------------------------------------------------------------------
@@ -68,8 +69,8 @@ class CalendarMonthUiMapperTest {
         val sep = months().september()
 
         // September 2026 opens on a Tuesday, so one leading cell (Mon 31 Aug) then its 30 days.
-        assertEquals(0, sep.days.size % 7)
-        assertEquals(LocalDate(2026, 8, 31), sep.days.first().date)
+        assertThat(sep.days.size % 7).isEqualTo(0)
+        assertThat(sep.days.first().date).isEqualTo(LocalDate(2026, 8, 31))
     }
 
     @Test
@@ -80,7 +81,7 @@ class CalendarMonthUiMapperTest {
                 task(intervals = listOf(interval("2027-02-01T09:00:00Z", minutes = 30))),
             ).map { it.days.size }
 
-        assertEquals(listOf(42), sizes.distinct())
+        assertThat(sizes.distinct()).isEqualTo(listOf(42))
     }
 
     @Test
@@ -88,29 +89,29 @@ class CalendarMonthUiMapperTest {
         val sep = months().september()
 
         // 35 cells would have ended on 4 Oct; the sixth week carries on to the 11th.
-        assertEquals(42, sep.days.size)
-        assertEquals(LocalDate(2026, 10, 11), sep.days.last().date)
-        assertTrue(sep.days.takeLast(7).none { it.isInMonth })
+        assertThat(sep.days.size).isEqualTo(42)
+        assertThat(sep.days.last().date).isEqualTo(LocalDate(2026, 10, 11))
+        assertThat(sep.days.takeLast(7).none { it.isInMonth }).isTrue()
     }
 
     @Test
     fun `padding cells are marked out of month and the rest are not`() {
         val sep = months().september()
 
-        assertEquals(30, sep.monthDays.size)
-        assertTrue(
+        assertThat(sep.monthDays.size).isEqualTo(30)
+        assertThat(
             sep.days
                 .first()
                 .isInMonth
                 .not(),
-        )
-        assertTrue(
+        ).isTrue()
+        assertThat(
             sep.days
                 .last()
                 .isInMonth
                 .not(),
-        )
-        assertTrue(sep.monthDays.all { it.date.month == september.month })
+        ).isTrue()
+        assertThat(sep.monthDays.all { it.date.month == september.month }).isTrue()
     }
 
     @Test
@@ -118,43 +119,41 @@ class CalendarMonthUiMapperTest {
         // June 2026 opens on a Monday.
         val june = months(on = LocalDate(2026, 6, 15)).single { it.yearMonth == YearMonth(2026, 6) }
 
-        assertEquals(LocalDate(2026, 6, 1), june.days.first().date)
-        assertTrue(june.days.first().isInMonth)
+        assertThat(june.days.first().date).isEqualTo(LocalDate(2026, 6, 1))
+        assertThat(june.days.first().isInMonth).isTrue()
     }
 
     @Test
     fun `february in a leap year carries all 29 days`() {
         val feb = months(on = LocalDate(2028, 2, 10)).single { it.yearMonth == YearMonth(2028, 2) }
 
-        assertEquals(29, feb.monthDays.size)
-        assertEquals(LocalDate(2028, 2, 29), feb.monthDays.last().date)
+        assertThat(feb.monthDays.size).isEqualTo(29)
+        assertThat(feb.monthDays.last().date).isEqualTo(LocalDate(2028, 2, 29))
     }
 
     @Test
     fun `day labels are zero padded`() {
-        assertEquals(
-            "01",
+        assertThat(
             months()
                 .september()
                 .monthDays
                 .first()
                 .dayLabel,
-        )
-        assertEquals(
-            "30",
+        ).isEqualTo("01")
+        assertThat(
             months()
                 .september()
                 .monthDays
                 .last()
                 .dayLabel,
-        )
+        ).isEqualTo("30")
     }
 
     @Test
     fun `today is marked on exactly one cell of its own month`() {
         val sep = months().september()
 
-        assertEquals(listOf(today), sep.monthDays.filter { it.isToday }.map { it.date })
+        assertThat(sep.monthDays.filter { it.isToday }.map { it.date }).isEqualTo(listOf(today))
     }
 
     // --- totals and tint ----------------------------------------------------------------------
@@ -163,8 +162,8 @@ class CalendarMonthUiMapperTest {
     fun `a day's tracked time lands on its cell and nowhere else`() {
         val sep = months(task(intervals = listOf(interval("2026-09-08T09:30:00Z", minutes = 42)))).september()
 
-        assertEquals(42 * 60_000L, sep.monthDays.single { it.date == LocalDate(2026, 9, 8) }.trackedMillis)
-        assertEquals(0L, sep.monthDays.single { it.date == LocalDate(2026, 9, 9) }.trackedMillis)
+        assertThat(sep.monthDays.single { it.date == LocalDate(2026, 9, 8) }.trackedMillis).isEqualTo(42 * 60_000L)
+        assertThat(sep.monthDays.single { it.date == LocalDate(2026, 9, 9) }.trackedMillis).isEqualTo(0L)
     }
 
     @Test
@@ -172,22 +171,20 @@ class CalendarMonthUiMapperTest {
         // 31 Aug is September's leading padding cell; its time belongs to August's page.
         val pages = months(task(intervals = listOf(interval("2026-08-31T09:00:00Z", minutes = 25))))
 
-        assertEquals(
-            0L,
+        assertThat(
             pages
                 .september()
                 .days
                 .first()
                 .trackedMillis,
-        )
-        assertEquals(
-            25 * 60_000L,
+        ).isEqualTo(0L)
+        assertThat(
             pages
                 .first()
                 .monthDays
                 .single { it.date == LocalDate(2026, 8, 31) }
                 .trackedMillis,
-        )
+        ).isEqualTo(25 * 60_000L)
     }
 
     @Test
@@ -203,15 +200,15 @@ class CalendarMonthUiMapperTest {
                 ),
             ).september()
 
-        assertEquals("01:42", sep.monthTotalLabel)
+        assertThat(sep.monthTotalLabel).isEqualTo("01:42")
     }
 
     @Test
     fun `a month that banked nothing has no total and no busiest day`() {
         val sep = months().september()
 
-        assertNull(sep.monthTotalLabel)
-        assertNull(sep.busiestDayLabel)
+        assertThat(sep.monthTotalLabel).isNull()
+        assertThat(sep.busiestDayLabel).isNull()
     }
 
     @Test
@@ -227,7 +224,7 @@ class CalendarMonthUiMapperTest {
                 ),
             ).september()
 
-        assertEquals("Sep, 08, 2026", sep.busiestDayLabel)
+        assertThat(sep.busiestDayLabel).isEqualTo("Sep, 08, 2026")
     }
 
     @Test
@@ -244,7 +241,7 @@ class CalendarMonthUiMapperTest {
             )
 
         // Every page shares one denominator - the busiest day in the whole project, not the month.
-        assertEquals(listOf(240 * 60_000L, 240 * 60_000L), pages.map { it.maxTrackedMillis })
+        assertThat(pages.map { it.maxTrackedMillis }).isEqualTo(listOf(240 * 60_000L, 240 * 60_000L))
     }
 
     // --- rules inherited from countedDayIntervals ---------------------------------------------
@@ -259,8 +256,8 @@ class CalendarMonthUiMapperTest {
                 ),
             ).september()
 
-        assertEquals(42 * 60_000L, sep.monthDays.single { it.date == LocalDate(2026, 9, 8) }.trackedMillis)
-        assertEquals("00:42", sep.monthTotalLabel)
+        assertThat(sep.monthDays.single { it.date == LocalDate(2026, 9, 8) }.trackedMillis).isEqualTo(42 * 60_000L)
+        assertThat(sep.monthTotalLabel).isEqualTo("00:42")
     }
 
     @Test
@@ -270,18 +267,17 @@ class CalendarMonthUiMapperTest {
                 task(intervals = listOf(interval("2026-09-08T09:00:00Z", minutes = 30, open = true))),
             ).september()
 
-        assertNull(sep.monthTotalLabel)
-        assertEquals(0L, sep.maxTrackedMillis)
+        assertThat(sep.monthTotalLabel).isNull()
+        assertThat(sep.maxTrackedMillis).isEqualTo(0L)
     }
 
     @Test
     fun `the zone decides which cell a day's time lands on`() {
         val tasks = arrayOf(task(intervals = listOf(interval("2026-09-05T02:00:00Z", minutes = 30))))
 
-        assertEquals("Sep, 05, 2026", months(*tasks).september().busiestDayLabel)
-        assertEquals(
-            "Sep, 04, 2026",
+        assertThat(months(*tasks).september().busiestDayLabel).isEqualTo("Sep, 05, 2026")
+        assertThat(
             months(*tasks, zone = TimeZone.of("America/New_York")).september().busiestDayLabel,
-        )
+        ).isEqualTo("Sep, 04, 2026")
     }
 }

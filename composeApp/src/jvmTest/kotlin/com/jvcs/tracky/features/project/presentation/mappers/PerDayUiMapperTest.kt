@@ -2,6 +2,9 @@
 
 package com.jvcs.tracky.features.project.presentation.mappers
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
@@ -10,8 +13,6 @@ import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
 import kotlin.time.Duration.Companion.days
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
@@ -29,14 +30,14 @@ class PerDayUiMapperTest {
     fun `returns null when the project has no tasks`() {
         val strip = project().toPerDayStripUi(TimeZone.UTC)
 
-        assertNull(strip)
+        assertThat(strip).isNull()
     }
 
     @Test
     fun `returns null when the tasks have no intervals`() {
         val strip = project(task()).toPerDayStripUi(TimeZone.UTC)
 
-        assertNull(strip)
+        assertThat(strip).isNull()
     }
 
     @Test
@@ -46,7 +47,7 @@ class PerDayUiMapperTest {
                 task(intervals = listOf(interval("2026-09-05T09:00:00Z", minutes = 30, open = true))),
             ).toPerDayStripUi(TimeZone.UTC)
 
-        assertNull(strip)
+        assertThat(strip).isNull()
     }
 
     @Test
@@ -56,7 +57,7 @@ class PerDayUiMapperTest {
                 task(intervals = listOf(interval("2026-09-05T09:00:00Z", minutes = 0))),
             ).toPerDayStripUi(TimeZone.UTC)
 
-        assertNull(strip)
+        assertThat(strip).isNull()
     }
 
     // --- the strip ---------------------------------------------------------------------------
@@ -68,12 +69,12 @@ class PerDayUiMapperTest {
                 task(intervals = listOf(interval("2026-09-08T09:00:00Z", minutes = 52))),
             ).toPerDayStripUi(TimeZone.UTC)!!
 
-        assertEquals(1, strip.days.size)
-        assertEquals("Tue", strip.days.single().weekdayLabel)
-        assertEquals("08.9", strip.days.single().dateLabel)
-        assertEquals("00:52:00", strip.days.single().formattedDuration)
-        assertEquals(52 * 60_000L, strip.days.single().trackedMillis)
-        assertEquals("Tue 08.9", strip.busiestDayLabel)
+        assertThat(strip.days.size).isEqualTo(1)
+        assertThat(strip.days.single().weekdayLabel).isEqualTo("Tue")
+        assertThat(strip.days.single().dateLabel).isEqualTo("08.9")
+        assertThat(strip.days.single().formattedDuration).isEqualTo("00:52:00")
+        assertThat(strip.days.single().trackedMillis).isEqualTo(52 * 60_000L)
+        assertThat(strip.busiestDayLabel).isEqualTo("Tue 08.9")
     }
 
     @Test
@@ -83,7 +84,7 @@ class PerDayUiMapperTest {
                 task(intervals = listOf(interval("2026-09-08T09:00:00Z", minutes = 52, seconds = 12))),
             ).toPerDayStripUi(TimeZone.UTC)!!
 
-        assertEquals("00:52:12", strip.days.single().formattedDuration)
+        assertThat(strip.days.single().formattedDuration).isEqualTo("00:52:12")
     }
 
     @Test
@@ -99,11 +100,8 @@ class PerDayUiMapperTest {
                 ),
             ).toPerDayStripUi(TimeZone.UTC)!!
 
-        assertEquals(listOf("05.9", "08.9"), strip.days.map { it.dateLabel })
-        assertEquals(
-            listOf("01:00:00", "00:12:00"),
-            strip.days.map { it.formattedDuration },
-        )
+        assertThat(strip.days.map { it.dateLabel }).isEqualTo(listOf("05.9", "08.9"))
+        assertThat(strip.days.map { it.formattedDuration }).isEqualTo(listOf("01:00:00", "00:12:00"))
     }
 
     @Test
@@ -113,8 +111,8 @@ class PerDayUiMapperTest {
                 task(intervals = listOf(interval("2026-09-05T09:00:00Z", minutes = 35))),
             ).toPerDayStripUi(TimeZone.UTC)!!
 
-        assertEquals(1, strip.days.size)
-        assertEquals("05.9", strip.days.single().dateLabel)
+        assertThat(strip.days.size).isEqualTo(1)
+        assertThat(strip.days.single().dateLabel).isEqualTo("05.9")
     }
 
     @Test
@@ -125,7 +123,7 @@ class PerDayUiMapperTest {
                 // The project row itself starts 2026-08-01; see the project() builder.
             ).toPerDayStripUi(TimeZone.UTC)!!
 
-        assertEquals("05.9", strip.days.first().dateLabel)
+        assertThat(strip.days.first().dateLabel).isEqualTo("05.9")
     }
 
     @Test
@@ -141,8 +139,8 @@ class PerDayUiMapperTest {
                 ),
             ).toPerDayStripUi(TimeZone.UTC)!!
 
-        assertEquals(listOf("30.8", "01.9"), strip.days.map { it.dateLabel })
-        assertEquals(listOf("Sun", "Tue"), strip.days.map { it.weekdayLabel })
+        assertThat(strip.days.map { it.dateLabel }).isEqualTo(listOf("30.8", "01.9"))
+        assertThat(strip.days.map { it.weekdayLabel }).isEqualTo(listOf("Sun", "Tue"))
     }
 
     // --- the ten-day window ---------------------------------------------------------------------
@@ -160,9 +158,9 @@ class PerDayUiMapperTest {
                 ),
             ).toPerDayStripUi(TimeZone.UTC)!!
 
-        assertEquals(10, strip.days.size)
-        assertEquals("31.8", strip.days.first().dateLabel)
-        assertEquals("09.9", strip.days.last().dateLabel)
+        assertThat(strip.days.size).isEqualTo(10)
+        assertThat(strip.days.first().dateLabel).isEqualTo("31.8")
+        assertThat(strip.days.last().dateLabel).isEqualTo("09.9")
     }
 
     @Test
@@ -177,8 +175,8 @@ class PerDayUiMapperTest {
                 ),
             ).toPerDayStripUi(TimeZone.UTC)!!
 
-        assertEquals(10, strip.days.size)
-        assertEquals("31.8", strip.days.first().dateLabel)
+        assertThat(strip.days.size).isEqualTo(10)
+        assertThat(strip.days.first().dateLabel).isEqualTo("31.8")
     }
 
     @Test
@@ -195,7 +193,7 @@ class PerDayUiMapperTest {
                 ),
             ).toPerDayStripUi(TimeZone.UTC)!!
 
-        assertEquals(listOf("05.9", "06.9", "08.9"), strip.days.map { it.dateLabel })
+        assertThat(strip.days.map { it.dateLabel }).isEqualTo(listOf("05.9", "06.9", "08.9"))
     }
 
     // --- which intervals count -----------------------------------------------------------------
@@ -215,7 +213,7 @@ class PerDayUiMapperTest {
                 ),
             ).toPerDayStripUi(TimeZone.UTC)!!
 
-        assertEquals(60 * 60_000L, strip.days.single().trackedMillis)
+        assertThat(strip.days.single().trackedMillis).isEqualTo(60 * 60_000L)
     }
 
     @Test
@@ -228,7 +226,7 @@ class PerDayUiMapperTest {
                 ),
             ).toPerDayStripUi(TimeZone.UTC)!!
 
-        assertEquals(20 * 60_000L, strip.days.single().trackedMillis)
+        assertThat(strip.days.single().trackedMillis).isEqualTo(20 * 60_000L)
     }
 
     @Test
@@ -244,7 +242,7 @@ class PerDayUiMapperTest {
                 ),
             ).toPerDayStripUi(TimeZone.UTC)!!
 
-        assertEquals(20 * 60_000L, strip.days.single().trackedMillis)
+        assertThat(strip.days.single().trackedMillis).isEqualTo(20 * 60_000L)
     }
 
     @Test
@@ -255,8 +253,8 @@ class PerDayUiMapperTest {
                 task(intervals = listOf(interval("2026-09-08T14:00:00Z", minutes = 25))),
             ).toPerDayStripUi(TimeZone.UTC)!!
 
-        assertEquals(45 * 60_000L, strip.days.single().trackedMillis)
-        assertEquals("00:45:00", strip.days.single().formattedDuration)
+        assertThat(strip.days.single().trackedMillis).isEqualTo(45 * 60_000L)
+        assertThat(strip.days.single().formattedDuration).isEqualTo("00:45:00")
     }
 
     // --- busiest day -------------------------------------------------------------------------
@@ -274,7 +272,7 @@ class PerDayUiMapperTest {
                 ),
             ).toPerDayStripUi(TimeZone.UTC)!!
 
-        assertEquals("Sat 05.9", strip.busiestDayLabel)
+        assertThat(strip.busiestDayLabel).isEqualTo("Sat 05.9")
     }
 
     @Test
@@ -290,7 +288,7 @@ class PerDayUiMapperTest {
                 ),
             ).toPerDayStripUi(TimeZone.UTC)!!
 
-        assertEquals("Sat 05.9", strip.busiestDayLabel)
+        assertThat(strip.busiestDayLabel).isEqualTo("Sat 05.9")
     }
 
     @Test
@@ -306,10 +304,10 @@ class PerDayUiMapperTest {
                 ),
             ).toPerDayStripUi(TimeZone.UTC)!!
 
-        assertEquals(10, strip.days.size)
-        assertEquals("31.8", strip.days.first().dateLabel)
+        assertThat(strip.days.size).isEqualTo(10)
+        assertThat(strip.days.first().dateLabel).isEqualTo("31.8")
         // 09.9 banks 10 + 5 minutes; every other visible day banks 10.
-        assertEquals("Wed 09.9", strip.busiestDayLabel)
+        assertThat(strip.busiestDayLabel).isEqualTo("Wed 09.9")
     }
 
     // --- time zones --------------------------------------------------------------------------
@@ -322,8 +320,8 @@ class PerDayUiMapperTest {
                 task(intervals = listOf(interval("2026-09-04T22:30:00Z", minutes = 30))),
             ).toPerDayStripUi(TimeZone.of("Australia/Sydney"))!!
 
-        assertEquals("05.9", strip.days.single().dateLabel)
-        assertEquals("Sat 05.9", strip.busiestDayLabel)
+        assertThat(strip.days.single().dateLabel).isEqualTo("05.9")
+        assertThat(strip.busiestDayLabel).isEqualTo("Sat 05.9")
     }
 
     @Test
@@ -334,8 +332,8 @@ class PerDayUiMapperTest {
                 task(intervals = listOf(interval("2026-09-05T02:00:00Z", minutes = 30))),
             ).toPerDayStripUi(TimeZone.of("America/New_York"))!!
 
-        assertEquals("04.9", strip.days.single().dateLabel)
-        assertEquals("Fri 04.9", strip.busiestDayLabel)
+        assertThat(strip.days.single().dateLabel).isEqualTo("04.9")
+        assertThat(strip.busiestDayLabel).isEqualTo("Fri 04.9")
     }
 
     @Test
@@ -346,7 +344,7 @@ class PerDayUiMapperTest {
             ).toPerDayStripUi(TimeZone.UTC)!!
 
         // "08.9" has no year, so tapping a tile needs the date itself.
-        assertEquals(LocalDate(2026, 9, 8), strip.days.single().date)
+        assertThat(strip.days.single().date).isEqualTo(LocalDate(2026, 9, 8))
     }
 
     /** "2026-08-29T09:00:00Z" plus n whole days, so a run of active days reads as a range. */
