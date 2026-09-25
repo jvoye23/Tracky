@@ -18,6 +18,8 @@ import com.jvcs.tracky.core.domain.sync.SyncScheduler
 import com.jvcs.tracky.core.domain.sync.TrashCleanupScheduler
 import com.jvcs.tracky.core.presentation.pdf.AndroidPdfDocumentWriter
 import com.jvcs.tracky.core.presentation.pdf.PdfDocumentWriter
+import com.jvcs.tracky.features.project.data.export.FileProviderExportFileSharer
+import com.jvcs.tracky.features.project.domain.export.ExportFileSharer
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.okhttp.OkHttp
 import okio.Path.Companion.toPath
@@ -44,6 +46,7 @@ actual val platformCoreDataModule =
         } bind TimerNotificationPermissionRequester::class
 
         singleOf(::AndroidPdfDocumentWriter) bind PdfDocumentWriter::class
+        single { FileProviderExportFileSharer(androidContext()) } bind ExportFileSharer::class
 
         single<HttpClientEngine> { OkHttp.create() }
         single<DataStore<Preferences>> {

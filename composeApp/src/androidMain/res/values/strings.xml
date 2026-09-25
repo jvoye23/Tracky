@@ -5,4 +5,5 @@
     <string name="timer_notification_pause">Pause</string>
     <string name="timer_notification_resume">Play</string>
     <string name="timer_notification_fgs_justification">Keeps the user\'s running time-tracking timer alive and visible while the app is in the background, so elapsed work time is recorded accurately and can be paused without reopening the app.</string>
+    <string name="export_share_chooser_title">Share export</string>
 </resources>

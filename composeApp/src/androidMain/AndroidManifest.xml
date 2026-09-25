@@ -24,6 +24,21 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="@string/timer_notification_fgs_justification" />
         </service>
+
+        <!--
+          Hands export files to the share target the user picks. Not exported: access is only ever
+          a per-URI read grant carried by the share intent, scoped by export_file_paths to the
+          export cache. The authority must match FileProviderExportFileSharer.
+        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.exportfileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/export_file_paths" />
+        </provider>
     </application>
 
 </manifest>
