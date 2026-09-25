@@ -1,5 +1,6 @@
 package com.jvcs.tracky.core.presentation.pdf
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
@@ -65,8 +66,7 @@ internal fun PdfMeasurer(
 
 /**
  * One page of [document]: header, [placements] and footer inside the margins, recorded into a
- * [CapturedPdfPage] for [onCapture] rather than drawn on screen. Page composables own their
- * background; the page itself is transparent.
+ * [CapturedPdfPage] for [onCapture] rather than drawn on screen, on the spec's background.
  */
 @Composable
 internal fun PdfPage(
@@ -81,6 +81,7 @@ internal fun PdfPage(
         Modifier
             .detachedPage(spec.pageSize)
             .capturePdfPage(onCapture)
+            .background(spec.background)
             .padding(spec.margins),
     ) {
         document.header?.invoke(info)

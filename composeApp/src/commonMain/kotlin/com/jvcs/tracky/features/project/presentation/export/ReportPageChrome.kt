@@ -12,15 +12,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
@@ -67,15 +69,30 @@ internal fun ReportPageHeader(exportedDate: String, modifier: Modifier = Modifie
     }
 }
 
-/** Closes every page: "Tracky · <project>" on the left, the export date on the right, under a hairline. */
+/**
+ * Closes every page: "Tracky · <project>" on the left, the export date on the right, under a
+ * hairline. The hairline reaches [ruleBleed] past both sides — the page margin, to run edge to edge.
+ */
 @Composable
 internal fun ReportPageFooter(
     projectTitle: String,
     exportedDate: String,
     modifier: Modifier = Modifier,
+    ruleBleed: Dp = 0.dp,
 ) {
-    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        HorizontalDivider(thickness = 0.75.dp, color = MaterialTheme.colorScheme.outlineVariant)
+    val ruleColor = MaterialTheme.colorScheme.outlineVariant
+    Column(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(top = 12.dp)
+                .drawBehind {
+                    val stroke = 0.75.dp.toPx()
+                    val ruleY = stroke / 2
+                    val bleed = ruleBleed.toPx()
+                    drawLine(ruleColor, Offset(-bleed, ruleY), Offset(size.width + bleed, ruleY), stroke)
+                }.padding(top = 6.5.dp),
+    ) {
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(
                 text =
