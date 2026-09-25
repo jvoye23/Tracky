@@ -315,4 +315,7 @@
         <item quantity="other">%1$d intervals</item>
     </plurals>
     <string name="report_subtask_intervals">%1$d int.</string>
+    <string name="report_column_date">DATE</string>
+    <string name="report_column_start_end">START – END</string>
+    <string name="report_column_subtask">SUBTASK</string>
 </resources>
