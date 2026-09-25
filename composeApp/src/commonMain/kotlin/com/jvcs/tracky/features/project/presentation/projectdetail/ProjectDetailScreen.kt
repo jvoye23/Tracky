@@ -139,8 +139,13 @@ fun ProjectDetailScreenRoot(
         val message =
             when (event) {
                 is ProjectDetailEvent.Error -> event.error.toString()
+
                 is ProjectDetailEvent.ReorderError -> event.error.toString()
+
                 is ProjectDetailEvent.NewProjectSessionSaved -> "Task saved successfully!"
+
+                // Nothing sends this until the export menu is on screen; drawing it lands with the menu.
+                is ProjectDetailEvent.RenderPdf -> return@ObserveAsEvents
             }
         coroutineScope.launch {
             snackbarHostState.showSnackbar(

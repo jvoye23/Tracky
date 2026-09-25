@@ -10,7 +10,7 @@ private const val NO_SUBTASK = "—"
 
 /** One task's detail pages: heading, subtasks and every interval. */
 @Immutable
-internal data class ReportTaskSectionUi(
+data class ReportTaskSectionUi(
     val title: String,
     val description: String?,
     val isFinished: Boolean,
@@ -24,7 +24,7 @@ internal data class ReportTaskSectionUi(
 )
 
 @Immutable
-internal data class ReportSubtaskRowUi(
+data class ReportSubtaskRowUi(
     val title: String,
     val isFinished: Boolean,
     val intervalCount: Int,
@@ -33,7 +33,7 @@ internal data class ReportSubtaskRowUi(
 )
 
 @Immutable
-internal data class ReportIntervalRowUi(
+data class ReportIntervalRowUi(
     /** "Wed 02 Sept". */
     val date: String,
     /** "06:58 – 07:05". */

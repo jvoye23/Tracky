@@ -21,7 +21,7 @@ private const val HEX_RADIX = 16
 
 /** A [ProjectReport] with every figure already formatted for the page; counts stay numbers for the plurals. */
 @Immutable
-internal data class ProjectReportUi(
+data class ProjectReportUi(
     val title: String,
     val description: String?,
     /** The project's color, or [reportDefaultAccent] when it has none. */
@@ -39,7 +39,7 @@ internal data class ProjectReportUi(
 )
 
 @Immutable
-internal data class ReportSummaryUi(
+data class ReportSummaryUi(
     /** "08:46:20". */
     val totalTracked: String,
     val taskCount: Int,
@@ -52,7 +52,7 @@ internal data class ReportSummaryUi(
 )
 
 @Immutable
-internal data class ReportTaskRowUi(
+data class ReportTaskRowUi(
     val title: String,
     val isFinished: Boolean,
     val subtaskCount: Int,

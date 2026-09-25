@@ -5,10 +5,14 @@ package com.jvcs.tracky.features.project.presentation.projectdetail
 import app.cash.turbine.test
 import assertk.assertThat
 import assertk.assertions.containsExactly
+import assertk.assertions.endsWith
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
+import assertk.assertions.isInstanceOf
 import assertk.assertions.isTrue
+import assertk.assertions.prop
+import assertk.assertions.startsWith
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.testTimeManager
@@ -36,7 +40,7 @@ import kotlin.time.Instant
 
 private const val PROJECT_TITLE = "Client work: Q3"
 
-/** The export menu: the chosen format is exported from the full task tree and shared. */
+/** The export menu: JSON is shared straight away, a PDF round-trips through the Root to be drawn. */
 class ProjectDetailExportTest {
 
     private val dispatcher = StandardTestDispatcher()
@@ -153,12 +157,74 @@ class ProjectDetailExportTest {
             val vm = viewModel(tree = null)
 
             vm.events.test {
-                vm.onAction(ProjectDetailAction.OnExportFormatClick(ExportFormat.Json))
+                vm.onAction(ProjectDetailAction.OnExportFormatClick(ExportFormat.Pdf))
                 runCurrent()
 
                 assertThat(awaitItem()).isEqualTo(ProjectDetailEvent.Error(ExportError.PROJECT_NOT_FOUND.toUiText()))
             }
             assertThat(exporter.exportedProjects).isEmpty()
+            assertThat(vm.isExporting()).isFalse()
+        }
+
+    @Test
+    fun pdfExportAsksTheRootToRenderThenSharesTheRenderedBytes() =
+        runTest {
+            val vm = viewModel()
+
+            vm.events.test {
+                vm.onAction(ProjectDetailAction.OnExportFormatClick(ExportFormat.Pdf))
+                runCurrent()
+
+                assertThat(awaitItem())
+                    .isInstanceOf<ProjectDetailEvent.RenderPdf>()
+                    .prop(ProjectDetailEvent.RenderPdf::report)
+                    .prop("title") { it.title }
+                    .isEqualTo(PROJECT_TITLE)
+            }
+            // Still exporting while the Root draws the page.
+            assertThat(vm.isExporting()).isTrue()
+            assertThat(sharer.sharedFiles).isEmpty()
+
+            vm.onAction(ProjectDetailAction.OnPdfRendered(byteArrayOf(1, 2, 3)))
+            runCurrent()
+
+            val shared = sharer.sharedFiles.single()
+            assertThat(shared.fileName).startsWith("Client_work_Q3_")
+            assertThat(shared.fileName).endsWith(".pdf")
+            assertThat(shared.mimeType).isEqualTo("application/pdf")
+            assertThat(shared.bytes.toList()).isEqualTo(listOf<Byte>(1, 2, 3))
+            assertThat(vm.isExporting()).isFalse()
+        }
+
+    @Test
+    fun pdfRenderFailureReportsAnErrorAndSharesNothing() =
+        runTest {
+            val vm = viewModel()
+
+            vm.events.test {
+                vm.onAction(ProjectDetailAction.OnExportFormatClick(ExportFormat.Pdf))
+                runCurrent()
+                awaitItem()
+
+                vm.onAction(ProjectDetailAction.OnPdfRenderFailed)
+                runCurrent()
+
+                assertThat(awaitItem()).isEqualTo(ProjectDetailEvent.Error(ExportError.RENDER_FAILED.toUiText()))
+            }
+            assertThat(sharer.sharedFiles).isEmpty()
+            assertThat(vm.isExporting()).isFalse()
+        }
+
+    @Test
+    fun renderedBytesWithoutARequestedPdfAreIgnored() =
+        runTest {
+            val vm = viewModel()
+
+            vm.onAction(ProjectDetailAction.OnPdfRendered(byteArrayOf(1)))
+            vm.onAction(ProjectDetailAction.OnPdfRenderFailed)
+            runCurrent()
+
+            assertThat(sharer.sharedFiles).isEmpty()
             assertThat(vm.isExporting()).isFalse()
         }
 
@@ -171,6 +237,19 @@ class ProjectDetailExportTest {
             vm.onAction(ProjectDetailAction.OnExportFormatClick(ExportFormat.Json))
             runCurrent()
             assertThat(exporter.exportedProjects).containsExactly(project)
+
+            // A PDF waiting on the Root still counts as exporting.
+            vm.events.test {
+                vm.onAction(ProjectDetailAction.OnExportFormatClick(ExportFormat.Pdf))
+                runCurrent()
+                awaitItem()
+            }
+            vm.onAction(ProjectDetailAction.OnExportMenuClick)
+            vm.onAction(ProjectDetailAction.OnExportFormatClick(ExportFormat.Json))
+            runCurrent()
+            assertThat(exporter.exportedProjects).containsExactly(project)
+            assertThat(vm.state.value.isExportMenuExpanded).isFalse()
+            assertThat(vm.isExporting()).isTrue()
         }
 }
 
