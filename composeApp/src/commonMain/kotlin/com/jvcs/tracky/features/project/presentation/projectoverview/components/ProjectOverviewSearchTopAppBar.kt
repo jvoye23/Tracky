@@ -34,7 +34,7 @@ fun ProjectOverviewSearchTopAppBar(
     searchQuery: String,
     sortOption: SortOption,
     scrollBehavior: TopAppBarScrollBehavior,
-    onMenuClick: () -> Unit,
+    onMenuClick: (() -> Unit)?,
     username: String?,
     email: String?,
     modifier: Modifier = Modifier,
@@ -45,12 +45,15 @@ fun ProjectOverviewSearchTopAppBar(
         searchQuery = searchQuery,
         onQueryChange = { onAction(ProjectOverviewAction.OnSearchQueryChange(it)) },
         navigationIcon = {
-            IconButton(onClick = onMenuClick) {
-                Icon(
-                    imageVector = Icons.Default.Menu,
-                    contentDescription = stringResource(Res.string.navigation_menu),
-                    tint = MaterialTheme.colorScheme.onSurface,
-                )
+            // Null when a navigation rail is showing instead of a drawer, so there is nothing to open.
+            if (onMenuClick != null) {
+                IconButton(onClick = onMenuClick) {
+                    Icon(
+                        imageVector = Icons.Default.Menu,
+                        contentDescription = stringResource(Res.string.navigation_menu),
+                        tint = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
             }
         },
         sortOption = sortOption,

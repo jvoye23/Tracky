@@ -5,16 +5,20 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.runComposeUiTest
+import androidx.compose.ui.test.runDesktopComposeUiTest
 import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.containsAtLeast
 import assertk.assertions.containsExactly
+import assertk.assertions.isEqualTo
+import assertk.assertions.isGreaterThan
 import com.jvcs.tracky.core.domain.auth.User
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.features.project.presentation.models.ProjectUi
@@ -80,7 +84,7 @@ internal class ProjectOverviewScreenTest {
 
     @Test
     fun cardsOpenOnClickAndSelectOnLongPress() =
-        runComposeUiTest {
+        runPhonePortraitTest {
             show(listState)
 
             onNodeWithText(text(Res.string.pinned)).assertExists()
@@ -199,7 +203,7 @@ internal class ProjectOverviewScreenTest {
 
     @Test
     fun theDrawerNavigatesToArchiveAndTrash() =
-        runComposeUiTest {
+        runPhonePortraitTest {
             show(listState)
 
             // Each item closes the drawer, so it is reopened from the menu before every tap.
@@ -217,6 +221,49 @@ internal class ProjectOverviewScreenTest {
 
             assertThat(navigation).containsExactly("archive", "trash")
         }
+
+    @Test
+    fun wideWindowsShowTheRailInsteadOfTheDrawer() =
+        runTabletLandscapeTest {
+            show(listState)
+
+            onNodeWithContentDescription(text(Res.string.navigation_menu)).assertDoesNotExist()
+            onNodeWithText(text(Res.string.drawer_archive)).performClick()
+            onNodeWithText(text(Res.string.drawer_trash)).performClick()
+
+            assertThat(navigation).containsExactly("archive", "trash")
+        }
+
+    @Test
+    fun landscapeWindowsLayCardsSideBySide() =
+        runTabletLandscapeTest {
+            show(twoOtherProjectsState)
+
+            val first = onNodeWithText("First project").getBoundsInRoot()
+            val second = onNodeWithText("Second project").getBoundsInRoot()
+
+            assertThat(second.top).isEqualTo(first.top)
+            assertThat(second.left).isGreaterThan(first.left)
+        }
+
+    @Test
+    fun portraitPhonesStackCardsInOneColumn() =
+        runPhonePortraitTest {
+            show(twoOtherProjectsState)
+
+            val first = onNodeWithText("First project").getBoundsInRoot()
+            val second = onNodeWithText("Second project").getBoundsInRoot()
+
+            assertThat(second.left).isEqualTo(first.left)
+            assertThat(second.top).isGreaterThan(first.top)
+        }
+
+    // The window size picks the navigation (drawer vs rail) and the number of card columns.
+    private fun runPhonePortraitTest(block: ComposeUiTest.() -> Unit) =
+        runDesktopComposeUiTest(width = 412, height = 915) { block() }
+
+    private fun runTabletLandscapeTest(block: ComposeUiTest.() -> Unit) =
+        runDesktopComposeUiTest(width = 1280, height = 800) { block() }
 
     private companion object {
         fun project(
@@ -246,6 +293,12 @@ internal class ProjectOverviewScreenTest {
                     ),
                 pinnedProjects = listOf(project("p-1", "Pinned project", pinned = true)),
                 otherProjects = listOf(project("p-2", "Other project")),
+                isLoading = false,
+            )
+
+        val twoOtherProjectsState =
+            ProjectOverviewState(
+                otherProjects = listOf(project("p-3", "First project"), project("p-4", "Second project")),
                 isLoading = false,
             )
     }
