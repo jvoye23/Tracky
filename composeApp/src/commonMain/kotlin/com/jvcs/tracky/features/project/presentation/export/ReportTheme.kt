@@ -24,6 +24,7 @@ import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.roboto_mono_variable
 
 private const val TITLE_TRACKING = -0.5f
+private const val TASK_TITLE_TRACKING = -0.2f
 
 /**
  * The look of an exported report page: [accent] is the project's color and becomes `primary`.
@@ -32,8 +33,8 @@ private const val TITLE_TRACKING = -0.5f
  * reader's viewer will not invert it. Blocks read everything from [MaterialTheme]; the slots map to:
  * - colors: `outline` grey labels, `outlineVariant` rules and borders, `surfaceVariant` bar tracks,
  *   `surfaceContainerLow` untracked calendar days, `tertiary` the "Finished" green.
- * - Inter text: `headlineLarge` project title, `headlineSmall` summary figures, `titleLarge`
- *   wordmark, `titleMedium` section headings, `titleSmall` table titles, `bodyMedium` description,
+ * - Inter text: `headlineLarge` project title, `headlineMedium` task title, `headlineSmall` summary
+ *   figures, `titleLarge` wordmark, `titleMedium` section headings, `titleSmall` table titles, `bodyMedium` description,
  *   `bodySmall` summary notes, `labelMedium` task status, `labelSmall` spaced caps labels.
  * - Roboto Mono: `displayMedium` total tracked, `displaySmall` table durations, `bodyLarge` table
  *   counts, `labelLarge` dates, color code and share percentages.
@@ -80,6 +81,7 @@ private fun reportTypography(): Typography {
 
     return Typography(
         headlineLarge = style(inter, FontWeight.Bold, 29.sp, TITLE_TRACKING.sp),
+        headlineMedium = style(inter, FontWeight.Bold, 15.sp, TASK_TITLE_TRACKING.sp),
         headlineSmall = style(inter, FontWeight.Medium, 17.sp),
         titleLarge = style(inter, FontWeight.Bold, 11.5.sp),
         titleMedium = style(inter, FontWeight.Bold, 13.sp),
