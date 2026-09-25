@@ -38,4 +38,7 @@ data class ProjectDetailState(
     val isRunningTimerForeign: Boolean = false,
     /** True while that foreign timer's figure is frozen at the last one the server confirmed. */
     val isRunningTimerStale: Boolean = false,
+    val isExportMenuExpanded: Boolean = false,
+    /** True from picking an export format until its file is handed to the share sheet (or fails). */
+    val isExporting: Boolean = false,
 )

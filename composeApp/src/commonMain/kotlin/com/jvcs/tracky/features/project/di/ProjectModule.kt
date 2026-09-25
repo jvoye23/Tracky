@@ -57,6 +57,8 @@ val projectModule =
                 subTaskRepository = get(),
                 timeManager = get(),
                 timeProvider = get(),
+                projectJsonExporter = get(),
+                exportFileSharer = get(),
             )
         }
 

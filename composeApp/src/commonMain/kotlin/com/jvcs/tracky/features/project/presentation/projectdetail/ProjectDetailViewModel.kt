@@ -15,6 +15,8 @@ import com.jvcs.tracky.core.domain.util.getOrDefault
 import com.jvcs.tracky.core.domain.util.onFailure
 import com.jvcs.tracky.core.domain.util.platformIoDispatcher
 import com.jvcs.tracky.designsystem.util.UiText
+import com.jvcs.tracky.features.project.domain.export.ExportFileSharer
+import com.jvcs.tracky.features.project.domain.export.ProjectJsonExporter
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
@@ -55,6 +57,8 @@ class ProjectDetailViewModel(
     private val subTaskRepository: SubTaskRepository,
     private val timeManager: TimeManager,
     private val timeProvider: TimeProvider,
+    projectJsonExporter: ProjectJsonExporter,
+    exportFileSharer: ExportFileSharer,
     // Injectable so tests can drive the initial load on their own scheduler; production keeps IO.
     private val ioDispatcher: CoroutineDispatcher = platformIoDispatcher,
 ) : ViewModel() {
@@ -72,6 +76,18 @@ class ProjectDetailViewModel(
             subTaskRepository = subTaskRepository,
             timeProvider = timeProvider,
             onTimeBanked = ::refreshPerDayStrip,
+        )
+
+    private val export =
+        ProjectDetailExport(
+            projectId = projectId,
+            state = _state,
+            scope = viewModelScope,
+            events = eventChannel,
+            projectRepository = projectRepository,
+            projectJsonExporter = projectJsonExporter,
+            exportFileSharer = exportFileSharer,
+            timeProvider = timeProvider,
         )
 
     private var hasLoadedInitialData = false
@@ -242,6 +258,18 @@ class ProjectDetailViewModel(
 
             is ProjectDetailAction.OnUseLightTextColorToggled -> {
                 onUseLightTextColorToggled(action.useLightTextColor)
+            }
+
+            ProjectDetailAction.OnExportMenuClick -> {
+                export.onExportMenuClick()
+            }
+
+            ProjectDetailAction.OnExportMenuDismiss -> {
+                export.onExportMenuDismiss()
+            }
+
+            is ProjectDetailAction.OnExportFormatClick -> {
+                export.onExportFormatClick(action.format)
             }
 
             else -> {
