@@ -77,7 +77,6 @@ import com.jvcs.tracky.designsystem.components.MainNavDrawerItem
 import com.jvcs.tracky.designsystem.components.layouts.TrackyAdaptiveNavigationLayout
 import com.jvcs.tracky.designsystem.theme.SampleProjectColors
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
-import com.jvcs.tracky.designsystem.util.DeviceConfiguration
 import com.jvcs.tracky.designsystem.util.ObserveAsEvents
 import com.jvcs.tracky.designsystem.util.PreviewDevices
 import com.jvcs.tracky.designsystem.util.currentDeviceConfiguration
@@ -93,6 +92,7 @@ import com.jvcs.tracky.features.project.presentation.projectoverview.components.
 import com.jvcs.tracky.features.project.presentation.projectoverview.components.SortBottomSheet
 import com.jvcs.tracky.features.project.presentation.projectoverview.components.SortSheetContent
 import com.jvcs.tracky.features.project.presentation.util.ReorderableGridState
+import com.jvcs.tracky.features.project.presentation.util.projectGridColumns
 import com.jvcs.tracky.features.project.presentation.util.rememberReorderableGridState
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
@@ -258,18 +258,7 @@ fun ProjectOverviewScreen(
     sortOption: SortOption = SortOption.CUSTOM,
     drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed),
 ) {
-    // Landscape windows are wide enough for cards side by side; portrait ones keep a single column.
-    val columns =
-        when (currentDeviceConfiguration()) {
-            DeviceConfiguration.MOBILE_LANDSCAPE,
-            DeviceConfiguration.TABLET_LANDSCAPE,
-            DeviceConfiguration.DESKTOP,
-            -> 2
-
-            DeviceConfiguration.MOBILE_PORTRAIT,
-            DeviceConfiguration.TABLET_PORTRAIT,
-            -> 1
-        }
+    val columns = currentDeviceConfiguration().projectGridColumns
 
     val gridState = rememberLazyGridState()
     // One instance, shared by both top app bars and the nested-scroll connection below. Calling

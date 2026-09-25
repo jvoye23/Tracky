@@ -32,7 +32,7 @@ fun ProjectArchiveSearchTopAppBar(
     isSearchActive: Boolean,
     searchQuery: String,
     onAction: (ProjectArchiveAction) -> Unit,
-    onMenuClick: () -> Unit,
+    onMenuClick: (() -> Unit)?,
     scrollBehavior: TopAppBarScrollBehavior,
     modifier: Modifier = Modifier,
 ) {
@@ -43,12 +43,15 @@ fun ProjectArchiveSearchTopAppBar(
         searchQuery = searchQuery,
         onQueryChange = { onAction(ProjectArchiveAction.OnSearchQueryChange(it)) },
         navigationIcon = {
-            IconButton(onClick = onMenuClick) {
-                Icon(
-                    imageVector = Icons.Default.Menu,
-                    contentDescription = stringResource(Res.string.navigation_menu),
-                    tint = MaterialTheme.colorScheme.onSurface,
-                )
+            // Null when a navigation rail is showing instead of a drawer, so there is nothing to open.
+            if (onMenuClick != null) {
+                IconButton(onClick = onMenuClick) {
+                    Icon(
+                        imageVector = Icons.Default.Menu,
+                        contentDescription = stringResource(Res.string.navigation_menu),
+                        tint = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
             }
         },
         scrollBehavior = scrollBehavior,
