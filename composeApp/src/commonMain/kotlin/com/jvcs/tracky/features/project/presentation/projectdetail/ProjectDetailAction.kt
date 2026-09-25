@@ -100,4 +100,7 @@ sealed interface ProjectDetailAction {
     class OnPdfRendered(val bytes: ByteArray) : ProjectDetailAction
 
     data object OnPdfRenderFailed : ProjectDetailAction
+
+    /** The Root stopped drawing the PDF before it was done, e.g. on rotation or navigation away. */
+    data object OnPdfRenderCancelled : ProjectDetailAction
 }

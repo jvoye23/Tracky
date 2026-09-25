@@ -27,11 +27,15 @@ import com.jvcs.tracky.features.project.presentation.projectdetail.ExportFormat
 import com.jvcs.tracky.features.project.presentation.projectdetail.ProjectDetailAction
 import org.jetbrains.compose.resources.stringResource
 import tracky.composeapp.generated.resources.Res
+import tracky.composeapp.generated.resources.back
+import tracky.composeapp.generated.resources.cancel
 import tracky.composeapp.generated.resources.cd_export_project
 import tracky.composeapp.generated.resources.daily_overview_title
 import tracky.composeapp.generated.resources.edit
+import tracky.composeapp.generated.resources.edit_project_uppercase
 import tracky.composeapp.generated.resources.export_json
 import tracky.composeapp.generated.resources.export_pdf
+import tracky.composeapp.generated.resources.project_details_uppercase
 import tracky.composeapp.generated.resources.save
 
 /** Sentinel for "open on today", matching the route's default. */
@@ -54,7 +58,9 @@ internal fun ProjectDetailTopAppBar(
         modifier = modifier,
         title = {
             Text(
-                if (isEditMode) "EDIT PROJECT" else "PROJECT DETAILS",
+                stringResource(
+                    if (isEditMode) Res.string.edit_project_uppercase else Res.string.project_details_uppercase,
+                ),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -69,7 +75,7 @@ internal fun ProjectDetailTopAppBar(
             }) {
                 Icon(
                     if (isEditMode) Icons.Default.Close else Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = if (isEditMode) "Cancel" else "Back",
+                    contentDescription = stringResource(if (isEditMode) Res.string.cancel else Res.string.back),
                 )
             }
         },
