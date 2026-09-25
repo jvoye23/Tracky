@@ -1,4 +1,4 @@
-package com.jvcs.tracky.features.project.presentation.mappers
+package com.jvcs.tracky.features.project.domain.interval
 
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate

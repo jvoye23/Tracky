@@ -1,4 +1,4 @@
-package com.jvcs.tracky.features.project.presentation.mappers
+package com.jvcs.tracky.features.project.domain.interval
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo

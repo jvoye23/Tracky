@@ -1,5 +1,7 @@
 package com.jvcs.tracky.features.project.presentation.mappers
 
+import com.jvcs.tracky.features.project.domain.interval.DaySlice
+import com.jvcs.tracky.features.project.domain.interval.splitAcrossLocalDays
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
 import kotlinx.datetime.LocalDate
