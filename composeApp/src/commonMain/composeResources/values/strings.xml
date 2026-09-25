@@ -199,6 +199,7 @@
     <string name="error_export_project_not_found">This project no longer exists, so it can't be exported.</string>
     <string name="error_export_serialization">The project couldn't be converted for export.</string>
     <string name="error_export_write_failed">The export file couldn't be saved.</string>
+    <string name="error_export_render_failed">The PDF couldn't be created.</string>
     <string name="error_export_share_failed">The export couldn't be shared.</string>
     <string name="reorder">Reorder</string>
 

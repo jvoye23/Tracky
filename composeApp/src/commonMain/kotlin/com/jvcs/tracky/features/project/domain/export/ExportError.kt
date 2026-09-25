@@ -13,6 +13,9 @@ enum class ExportError : Error {
     /** The encoded export could not be written to storage. */
     WRITE_FAILED,
 
+    /** The PDF could not be drawn from the project report. */
+    RENDER_FAILED,
+
     /** The platform share sheet could not be opened for the written file. */
     SHARE_FAILED,
 }

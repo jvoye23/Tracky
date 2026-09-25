@@ -11,7 +11,7 @@ internal const val DAYS_PER_WEEK = 7
 
 /** One month card of the "Per day" heat map. */
 @Immutable
-internal data class ReportMonthUi(
+data class ReportMonthUi(
     /** "August 2026". */
     val title: String,
     /** "01:42:48". */
@@ -21,7 +21,7 @@ internal data class ReportMonthUi(
 )
 
 @Immutable
-internal data class ReportDayUi(
+data class ReportDayUi(
     /** "01". */
     val dayOfMonth: String,
     /** "1h34"; `null` when the day banked no time. */

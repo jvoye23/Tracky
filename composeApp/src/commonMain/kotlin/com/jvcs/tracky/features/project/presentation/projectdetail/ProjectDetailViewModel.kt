@@ -272,6 +272,14 @@ class ProjectDetailViewModel(
                 export.onExportFormatClick(action.format)
             }
 
+            is ProjectDetailAction.OnPdfRendered -> {
+                export.onPdfRendered(action.bytes)
+            }
+
+            ProjectDetailAction.OnPdfRenderFailed -> {
+                export.onPdfRenderFailed()
+            }
+
             else -> {
                 Unit
             }

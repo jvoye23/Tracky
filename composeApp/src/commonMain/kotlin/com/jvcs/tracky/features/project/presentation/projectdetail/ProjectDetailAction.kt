@@ -91,4 +91,13 @@ sealed interface ProjectDetailAction {
     data object OnExportMenuDismiss : ProjectDetailAction
 
     data class OnExportFormatClick(val format: ExportFormat) : ProjectDetailAction
+
+    /**
+     * The Root finished drawing the PDF asked for by [ProjectDetailEvent.RenderPdf].
+     *
+     * A plain class: a data class would compare the [ByteArray] by identity anyway.
+     */
+    class OnPdfRendered(val bytes: ByteArray) : ProjectDetailAction
+
+    data object OnPdfRenderFailed : ProjectDetailAction
 }
