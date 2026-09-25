@@ -62,6 +62,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -73,11 +74,13 @@ import com.jvcs.tracky.core.domain.auth.User
 import com.jvcs.tracky.designsystem.Icon_Delete
 import com.jvcs.tracky.designsystem.components.FullScreenLoadingIndicator
 import com.jvcs.tracky.designsystem.components.MainNavDrawerItem
-import com.jvcs.tracky.designsystem.components.MainNavigationDrawer
+import com.jvcs.tracky.designsystem.components.layouts.TrackyAdaptiveNavigationLayout
 import com.jvcs.tracky.designsystem.theme.SampleProjectColors
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
+import com.jvcs.tracky.designsystem.util.DeviceConfiguration
 import com.jvcs.tracky.designsystem.util.ObserveAsEvents
 import com.jvcs.tracky.designsystem.util.PreviewDevices
+import com.jvcs.tracky.designsystem.util.currentDeviceConfiguration
 import com.jvcs.tracky.designsystem.util.rememberCollapsibleScrollBehavior
 import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
 import com.jvcs.tracky.features.project.presentation.models.ProjectUi
@@ -254,8 +257,20 @@ fun ProjectOverviewScreen(
     onNavigateToTrash: () -> Unit = {},
     sortOption: SortOption = SortOption.CUSTOM,
     drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed),
-    columns: Int = 1,
 ) {
+    // Landscape windows are wide enough for cards side by side; portrait ones keep a single column.
+    val columns =
+        when (currentDeviceConfiguration()) {
+            DeviceConfiguration.MOBILE_LANDSCAPE,
+            DeviceConfiguration.TABLET_LANDSCAPE,
+            DeviceConfiguration.DESKTOP,
+            -> 2
+
+            DeviceConfiguration.MOBILE_PORTRAIT,
+            DeviceConfiguration.TABLET_PORTRAIT,
+            -> 1
+        }
+
     val gridState = rememberLazyGridState()
     // One instance, shared by both top app bars and the nested-scroll connection below. Calling
     // the helper again at either site would orphan a behavior and freeze the list.
@@ -290,13 +305,13 @@ fun ProjectOverviewScreen(
         },
     )
 
-    MainNavigationDrawer(
+    TrackyAdaptiveNavigationLayout(
         modifier = modifier,
         drawerState = drawerState,
         selectedItem = MainNavDrawerItem.PROJECTS,
         onArchiveClick = onNavigateToArchive,
         onTrashClick = onNavigateToTrash,
-    ) {
+    ) { showMenuButton ->
         Scaffold(
             snackbarHost = {
                 SnackbarHost(hostState = snackbarHostState)
@@ -314,7 +329,12 @@ fun ProjectOverviewScreen(
                     username = state.localUser?.username,
                     email = state.localUser?.email,
                     scrollBehavior = scrollBehavior,
-                    onMenuClick = { drawerScope.launch { drawerState.open() } },
+                    onMenuClick =
+                        if (showMenuButton) {
+                            { drawerScope.launch { drawerState.open() } }
+                        } else {
+                            null
+                        },
                     onAction = onAction,
                 )
             },
@@ -426,7 +446,7 @@ private fun ProjectOverviewTopBar(
     username: String?,
     email: String?,
     scrollBehavior: TopAppBarScrollBehavior,
-    onMenuClick: () -> Unit,
+    onMenuClick: (() -> Unit)?,
     onAction: (ProjectOverviewAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -834,6 +854,7 @@ private fun previewProjects(): List<ProjectUi> =
     )
 
 @PreviewDevices
+@Preview(name = "Desktop", widthDp = 1440, heightDp = 1024)
 @Composable
 private fun ProjectOverviewDefaultPreview() {
     TrackyTheme {
