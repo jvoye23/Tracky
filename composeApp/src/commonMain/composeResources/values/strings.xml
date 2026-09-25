@@ -279,4 +279,11 @@
     <string name="add_task">Add Task</string>
     <string name="delete_session">Delete Session</string>
     <string name="hex_code">Hex code</string>
+
+    <!-- Project export report -->
+    <string name="report_status_active">Active</string>
+    <string name="report_status_finished">Finished</string>
+    <string name="report_status_archived">Archived</string>
+    <string name="report_status_trashed">Trashed</string>
+    <string name="report_status_open">Open</string>
 </resources>
