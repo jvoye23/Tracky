@@ -318,4 +318,6 @@
     <string name="report_column_date">DATE</string>
     <string name="report_column_start_end">START – END</string>
     <string name="report_column_subtask">SUBTASK</string>
+    <string name="report_heading_tasks">Tasks</string>
+    <string name="report_heading_per_day">Per day</string>
 </resources>

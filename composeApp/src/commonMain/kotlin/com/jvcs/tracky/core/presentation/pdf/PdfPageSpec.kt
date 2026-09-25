@@ -1,6 +1,7 @@
 package com.jvcs.tracky.core.presentation.pdf
 
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -14,11 +15,13 @@ data class PdfPageInfo(val pageNumber: Int, val pageCount: Int)
  * The paper every page of a generated PDF is laid out on: DIN A4 in the given [orientation].
  *
  * Page composables are laid out at a density where 1.dp is one PDF point (1/72 inch), so
- * sizes and [margins] here are points on paper.
+ * sizes and [margins] here are points on paper. [background] fills the whole sheet, margins
+ * included, beneath everything drawn on it.
  */
 data class PdfPageSpec(
     val orientation: PageOrientation = PageOrientation.Portrait,
     val margins: PaddingValues = PaddingValues(40.dp),
+    val background: Color = Color.White,
 ) {
 
     /** The whole sheet, with width and height swapped for [PageOrientation.Landscape]. */
