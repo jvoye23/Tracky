@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.koin.compose.koinInject
 
 /**
  * Renders [PdfDocumentScope] documents into PDF bytes. Rendering needs a composition, so a
@@ -108,9 +109,10 @@ class PdfGenerator internal constructor(
     }
 }
 
-/** A [PdfGenerator] writing through [writer]; platform default writers arrive with their actuals. */
+/** A [PdfGenerator] writing through [writer], by default the platform writer bound in Koin. */
 @Composable
-fun rememberPdfGenerator(writer: PdfDocumentWriter): PdfGenerator = remember(writer) { PdfGenerator(writer) }
+fun rememberPdfGenerator(writer: PdfDocumentWriter = koinInject()): PdfGenerator =
+    remember(writer) { PdfGenerator(writer) }
 
 private class PdfRenderRequest(val document: PdfDocument, val spec: PdfPageSpec) {
 
