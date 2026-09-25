@@ -59,6 +59,16 @@ kotlin {
 
     jvm()
 
+    // skikoMain: the targets Compose draws with Skia (jvm, ios) share PDF page capture.
+    applyDefaultHierarchyTemplate {
+        common {
+            group("skiko") {
+                withJvm()
+                group("ios")
+            }
+        }
+    }
+
     sourceSets {
         commonMain {
             kotlin.srcDir(tasks.named("generateApiConfig").map { it.outputs.files.singleFile })
