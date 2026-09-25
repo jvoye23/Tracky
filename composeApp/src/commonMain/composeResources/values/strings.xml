@@ -293,5 +293,11 @@
     <string name="report_intervals">INTERVALS</string>
     <string name="report_active_days">ACTIVE DAYS</string>
     <string name="report_task_breakdown">%1$d finished · %2$d open</string>
+    <string name="report_column_task">TASK</string>
+    <string name="report_column_status">STATUS</string>
+    <string name="report_column_subtasks">SUBTASKS</string>
+    <string name="report_column_share">SHARE</string>
+    <string name="report_column_duration">DURATION</string>
+    <string name="report_total">Total</string>
     <string name="report_exported_on">Exported %1$s</string>
 </resources>
