@@ -33,6 +33,7 @@ internal data class ProjectReportUi(
     val exportedDate: String,
     val summary: ReportSummaryUi,
     val taskRows: List<ReportTaskRowUi>,
+    val months: List<ReportMonthUi>,
 )
 
 @Immutable
@@ -71,6 +72,7 @@ internal fun ProjectReport.toProjectReportUi(): ProjectReportUi =
         exportedDate = formatReportDate(exportedAt),
         summary = summary.toReportSummaryUi(),
         taskRows = tasks.map { it.toReportTaskRowUi() },
+        months = months.toReportMonthUis(),
     )
 
 internal fun ProjectStatus.labelRes(): StringResource =
