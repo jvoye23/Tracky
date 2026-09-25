@@ -44,6 +44,7 @@ import com.jvcs.tracky.core.domain.util.ServerClock
 import com.jvcs.tracky.core.domain.util.ServerClockOffsetStore
 import com.jvcs.tracky.core.domain.util.SystemTimeProvider
 import com.jvcs.tracky.core.domain.util.TimeProvider
+import com.jvcs.tracky.features.project.data.export.KotlinxProjectJsonExporter
 import com.jvcs.tracky.features.project.data.interval.KtorRemoteIntervalDataSource
 import com.jvcs.tracky.features.project.data.interval.OfflineFirstIntervalRepository
 import com.jvcs.tracky.features.project.data.interval.RoomLocalIntervalDataSource
@@ -65,6 +66,7 @@ import com.jvcs.tracky.features.project.data.task.RoomLocalTaskDataSource
 import com.jvcs.tracky.features.project.data.timer.OfflineFirstRunningTimerRepository
 import com.jvcs.tracky.features.project.data.timer.OfflineFirstStrandedTimerRepository
 import com.jvcs.tracky.features.project.data.timer.StrandedTimerReconciler
+import com.jvcs.tracky.features.project.domain.export.ProjectJsonExporter
 import com.jvcs.tracky.features.project.domain.interval.IntervalRepository
 import com.jvcs.tracky.features.project.domain.interval.LocalIntervalDataSource
 import com.jvcs.tracky.features.project.domain.interval.RemoteIntervalDataSource
@@ -430,6 +432,10 @@ val coreDataModule =
 
         // How recently this device heard from the server; the timer freezes a foreign one without it.
         singleOf(::SyncRecency)
+
+        single<ProjectJsonExporter> {
+            KotlinxProjectJsonExporter(json = get(), dispatcher = get(named("DefaultDispatcher")))
+        }
 
         // Auth
         singleOf(::DataStoreSessionStorage) bind SessionStorage::class
