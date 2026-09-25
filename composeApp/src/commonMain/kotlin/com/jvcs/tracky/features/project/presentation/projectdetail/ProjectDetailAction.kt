@@ -85,4 +85,10 @@ sealed interface ProjectDetailAction {
     data class OnColorChanged(val color: Color) : ProjectDetailAction
 
     data class OnUseLightTextColorToggled(val useLightTextColor: Boolean) : ProjectDetailAction
+
+    data object OnExportMenuClick : ProjectDetailAction
+
+    data object OnExportMenuDismiss : ProjectDetailAction
+
+    data class OnExportFormatClick(val format: ExportFormat) : ProjectDetailAction
 }

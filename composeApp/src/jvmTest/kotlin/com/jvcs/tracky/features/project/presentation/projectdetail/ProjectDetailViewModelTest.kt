@@ -16,6 +16,8 @@ import com.jvcs.tracky.core.domain.util.FakeTimeProvider
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.runningTimer
 import com.jvcs.tracky.core.domain.util.testTimeManager
+import com.jvcs.tracky.features.project.domain.export.FakeExportFileSharer
+import com.jvcs.tracky.features.project.domain.export.FakeProjectJsonExporter
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
@@ -128,6 +130,8 @@ class ProjectDetailViewModelTest {
                 subTaskRepository = subTaskRepository,
                 timeManager = testTimeManager(repository = running),
                 timeProvider = FakeTimeProvider(),
+                projectJsonExporter = FakeProjectJsonExporter(),
+                exportFileSharer = FakeExportFileSharer(),
                 ioDispatcher = dispatcher,
             )
         return vm to subTaskRepository
@@ -1252,7 +1256,7 @@ class ProjectDetailViewModelTest {
 
 // --- fakes -------------------------------------------------------------------------------------
 
-private class FakeDetailProjectRepository(project: Project) : ProjectRepository {
+internal class FakeDetailProjectRepository(project: Project) : ProjectRepository {
     // Held in a MutableStateFlow so a test can push an edited row the way the edit-text screen does.
     private val projectFlow = MutableStateFlow(project)
 
@@ -1291,7 +1295,7 @@ private class FakeDetailProjectRepository(project: Project) : ProjectRepository 
     override suspend fun syncPendingProjects(): EmptyResult<DataError> = Result.Success(Unit)
 }
 
-private class FakeProjectTaskRepository(initial: ProjectTask? = null) : ProjectTaskRepository {
+internal class FakeProjectTaskRepository(initial: ProjectTask? = null) : ProjectTaskRepository {
     var running = FakeRunningTimerRepository()
     val started = mutableListOf<String>()
     val stopped = mutableListOf<String>()
@@ -1349,7 +1353,7 @@ private class FakeProjectTaskRepository(initial: ProjectTask? = null) : ProjectT
 /** What [FakeSubTaskRepository.stopSubTask] adds to a subtask's duration, standing in for a real interval. */
 private const val BANKED_MILLIS = 5_000L
 
-private class FakeSubTaskRepository(initial: List<ProjectSubTask> = emptyList()) : SubTaskRepository {
+internal class FakeSubTaskRepository(initial: List<ProjectSubTask> = emptyList()) : SubTaskRepository {
     var running = FakeRunningTimerRepository()
     val started = mutableListOf<String>()
     val stopped = mutableListOf<String>()

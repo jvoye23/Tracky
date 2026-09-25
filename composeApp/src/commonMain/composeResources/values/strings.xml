@@ -196,6 +196,10 @@
     <string name="error_add_to_trash">Failed to add all selected projects to trash bin.</string>
     <string name="error_reordering_projects">Failed to save the new project order.</string>
     <string name="error_reordering_tasks">Failed to save the new order.</string>
+    <string name="error_export_project_not_found">This project no longer exists, so it can't be exported.</string>
+    <string name="error_export_serialization">The project couldn't be converted for export.</string>
+    <string name="error_export_write_failed">The export file couldn't be saved.</string>
+    <string name="error_export_share_failed">The export couldn't be shared.</string>
     <string name="reorder">Reorder</string>
 
     <!-- Color Picker -->
