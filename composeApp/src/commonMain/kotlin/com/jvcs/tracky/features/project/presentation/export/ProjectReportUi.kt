@@ -34,6 +34,8 @@ internal data class ProjectReportUi(
     val summary: ReportSummaryUi,
     val taskRows: List<ReportTaskRowUi>,
     val months: List<ReportMonthUi>,
+    /** In the same order as [taskRows]. */
+    val taskSections: List<ReportTaskSectionUi>,
 )
 
 @Immutable
@@ -73,6 +75,7 @@ internal fun ProjectReport.toProjectReportUi(): ProjectReportUi =
         summary = summary.toReportSummaryUi(),
         taskRows = tasks.map { it.toReportTaskRowUi() },
         months = months.toReportMonthUis(),
+        taskSections = tasks.map { it.toReportTaskSectionUi() },
     )
 
 internal fun ProjectStatus.labelRes(): StringResource =

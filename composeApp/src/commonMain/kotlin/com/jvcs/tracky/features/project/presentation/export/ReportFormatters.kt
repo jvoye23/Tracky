@@ -1,7 +1,9 @@
 package com.jvcs.tracky.features.project.presentation.export
 
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
 import kotlinx.datetime.YearMonth
+import kotlinx.datetime.format.DayOfWeekNames
 import kotlinx.datetime.format.MonthNames
 import kotlinx.datetime.format.Padding
 import kotlinx.datetime.format.char
@@ -28,6 +30,22 @@ private val ReportDateFormat =
         monthName(ReportMonthNames)
         char(' ')
         year()
+    }
+
+private val ReportDayFormat =
+    LocalDate.Format {
+        dayOfWeek(DayOfWeekNames.ENGLISH_ABBREVIATED)
+        char(' ')
+        day(Padding.ZERO)
+        char(' ')
+        monthName(ReportMonthNames)
+    }
+
+private val ReportClockFormat =
+    LocalTime.Format {
+        hour()
+        char(':')
+        minute()
     }
 
 private val ReportMonthTitleFormat =
@@ -68,3 +86,10 @@ internal fun formatDayDuration(duration: Duration): String {
 
 /** "August 2026". */
 internal fun formatMonthTitle(month: YearMonth): String = ReportMonthTitleFormat.format(month)
+
+/** "Wed 02 Sept". */
+internal fun formatIntervalDate(date: LocalDate): String = ReportDayFormat.format(date)
+
+/** "06:58 – 07:05". */
+internal fun formatClockRange(start: LocalTime, end: LocalTime): String =
+    "${ReportClockFormat.format(start)} – ${ReportClockFormat.format(end)}"
