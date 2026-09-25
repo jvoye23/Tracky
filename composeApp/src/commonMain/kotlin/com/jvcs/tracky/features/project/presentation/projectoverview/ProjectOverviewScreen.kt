@@ -18,11 +18,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyItemScope
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridItemScope
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material.icons.Icons
@@ -87,8 +89,8 @@ import com.jvcs.tracky.features.project.presentation.projectoverview.components.
 import com.jvcs.tracky.features.project.presentation.projectoverview.components.ProjectOverviewSelectionTopAppBar
 import com.jvcs.tracky.features.project.presentation.projectoverview.components.SortBottomSheet
 import com.jvcs.tracky.features.project.presentation.projectoverview.components.SortSheetContent
-import com.jvcs.tracky.features.project.presentation.util.ReorderableListState
-import com.jvcs.tracky.features.project.presentation.util.rememberReorderableListState
+import com.jvcs.tracky.features.project.presentation.util.ReorderableGridState
+import com.jvcs.tracky.features.project.presentation.util.rememberReorderableGridState
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
@@ -252,16 +254,17 @@ fun ProjectOverviewScreen(
     onNavigateToTrash: () -> Unit = {},
     sortOption: SortOption = SortOption.CUSTOM,
     drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed),
+    columns: Int = 1,
 ) {
-    val listState = rememberLazyListState()
+    val gridState = rememberLazyGridState()
     // One instance, shared by both top app bars and the nested-scroll connection below. Calling
     // the helper again at either site would orphan a behavior and freeze the list.
     val scrollBehavior =
         rememberCollapsibleScrollBehavior(
-            listState = listState,
+            listState = gridState,
             pinned = state.isEditModeActive,
         )
-    val fabExpanded = listState.isScrollingUp()
+    val fabExpanded = gridState.isScrollingUp()
     val drawerScope = rememberCoroutineScope()
     val backState = rememberNavigationEventState(NavigationEventInfo.None)
 
@@ -272,8 +275,8 @@ fun ProjectOverviewScreen(
     val pinnedItems = state.pinnedProjects
     val otherItems = state.otherProjects
     val dragDropState =
-        rememberReorderableListState(
-            lazyListState = listState,
+        rememberReorderableGridState(
+            gridState = gridState,
             onMove = { fromKey, toKey ->
                 onAction(ProjectOverviewAction.OnReorderMove(fromId = fromKey, toId = toKey))
             },
@@ -381,8 +384,9 @@ fun ProjectOverviewScreen(
                             isEditModeActive = state.isEditModeActive,
                             selectedProjectIds = state.selectedProjectIds,
                             reorderEnabled = reorderEnabled,
-                            listState = listState,
+                            gridState = gridState,
                             dragDropState = dragDropState,
+                            columns = columns,
                             contentPadding = PaddingValues(top = contentTopInset, bottom = bottomInset),
                             onAction = onAction,
                         )
@@ -481,14 +485,16 @@ private fun ProjectList(
     isEditModeActive: Boolean,
     selectedProjectIds: Set<String>,
     reorderEnabled: Boolean,
-    listState: LazyListState,
-    dragDropState: ReorderableListState,
+    gridState: LazyGridState,
+    dragDropState: ReorderableGridState,
+    columns: Int,
     contentPadding: PaddingValues,
     onAction: (ProjectOverviewAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    LazyColumn(
-        state = listState,
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(columns),
+        state = gridState,
         modifier =
             modifier
                 .fillMaxSize()
@@ -496,9 +502,10 @@ private fun ProjectList(
                 .testTag("project_overview"),
         contentPadding = contentPadding,
         verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         if (pinnedItems.isNotEmpty()) {
-            item {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 ProjectSectionHeader(text = stringResource(Res.string.pinned))
             }
             items(
@@ -518,7 +525,7 @@ private fun ProjectList(
         }
 
         if (otherItems.isNotEmpty()) {
-            item {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 ProjectSectionHeader(
                     text =
                         if (isSearching) {
@@ -654,7 +661,7 @@ private fun LogoutConfirmationDialog(isOnline: Boolean, onAction: (ProjectOvervi
  * offset across recompositions and derives the direction from their deltas.
  */
 @Composable
-private fun LazyListState.isScrollingUp(): Boolean {
+private fun LazyGridState.isScrollingUp(): Boolean {
     var previousIndex by remember(this) { mutableStateOf(firstVisibleItemIndex) }
     var previousScrollOffset by remember(this) { mutableStateOf(firstVisibleItemScrollOffset) }
     return remember(this) {
@@ -684,13 +691,13 @@ private fun ProjectSectionHeader(text: String) {
 }
 
 @Composable
-private fun LazyItemScope.ProjectListCard(
+private fun LazyGridItemScope.ProjectListCard(
     item: ProjectUi,
     isEditModeActive: Boolean,
     isSelected: Boolean,
     onAction: (ProjectOverviewAction) -> Unit,
     reorderEnabled: Boolean,
-    dragDropState: ReorderableListState,
+    dragDropState: ReorderableGridState,
 ) {
     // The dragged card (and the one settling back after release) drives its own translation and rides
     // above the rest; every other card animates to its new slot via animateItem().
@@ -702,12 +709,14 @@ private fun LazyItemScope.ProjectListCard(
             Modifier
                 .zIndex(1f)
                 .graphicsLayer {
-                    translationY =
+                    val offset =
                         if (item.projectId == dragDropState.draggingItemKey) {
                             dragDropState.draggingItemOffset
                         } else {
                             dragDropState.settlingItemOffset
                         }
+                    translationX = offset.x
+                    translationY = offset.y
                 }
         } else {
             Modifier.animateItem()
@@ -726,10 +735,10 @@ private fun LazyItemScope.ProjectListCard(
             onAction(ProjectOverviewAction.OnProjectCardLongPress(item.projectId))
             dragDropState.onDragStart(item.projectId)
         },
-        onReorderDrag = { dragAmountY ->
+        onReorderDrag = { dragAmount ->
             // First movement turns the long-press into a reorder: leave edit mode.
             if (!dragDropState.hasMoved) onAction(ProjectOverviewAction.OnReorderDragStart)
-            dragDropState.onDrag(dragAmountY)
+            dragDropState.onDrag(dragAmount)
         },
         onReorderDragEnd = {
             if (dragDropState.hasMoved) {

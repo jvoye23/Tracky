@@ -1,6 +1,6 @@
 package com.jvcs.tracky.designsystem.util
 
-import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
@@ -11,7 +11,7 @@ import androidx.compose.runtime.snapshotFlow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun rememberCollapsibleScrollBehavior(listState: LazyListState, pinned: Boolean = false): TopAppBarScrollBehavior {
+fun rememberCollapsibleScrollBehavior(listState: ScrollableState, pinned: Boolean = false): TopAppBarScrollBehavior {
     // Without this guard the bar collapses on any drag, even when the whole list fits on screen and
     // there is nothing to scroll to. TopAppBarDefaults remembers the behavior keyed on this lambda,
     // so its identity has to stay stable across recompositions.
