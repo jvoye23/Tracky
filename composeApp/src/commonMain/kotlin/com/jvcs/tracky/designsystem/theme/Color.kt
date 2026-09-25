@@ -257,3 +257,8 @@ val readOnlyCardSurface = Color(0xFFF0F3FA)
 val rgbSliderRed = Color(0xFFB3261E)
 val rgbSliderGreen = Color(0xFF146C2E)
 val rgbSliderBlue = Color(0xFF0B57D0)
+
+// The exported report page: fixed light colours, see ReportTheme.
+val reportDefaultAccent = Color(0xFF06D9E5)
+val reportRuleLight = Color(0xFFE4E2EA)
+val reportFinishedLight = Color(0xFF2E7D4F)
