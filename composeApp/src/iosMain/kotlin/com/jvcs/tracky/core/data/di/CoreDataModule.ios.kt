@@ -16,6 +16,8 @@ import com.jvcs.tracky.core.domain.notification.TimerNotificationController
 import com.jvcs.tracky.core.domain.notification.TimerNotificationPermissionRequester
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
 import com.jvcs.tracky.core.domain.sync.TrashCleanupScheduler
+import com.jvcs.tracky.core.presentation.pdf.IosPdfDocumentWriter
+import com.jvcs.tracky.core.presentation.pdf.PdfDocumentWriter
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.darwin.Darwin
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -41,6 +43,8 @@ actual val platformCoreDataModule =
         // Live Activities are governed by a Settings toggle, not a runtime prompt, so there is still
         // nothing to ask for even now that the Live Activity has landed.
         single { NoOpTimerNotificationPermissionRequester() } bind TimerNotificationPermissionRequester::class
+
+        singleOf(::IosPdfDocumentWriter) bind PdfDocumentWriter::class
 
         single<HttpClientEngine> { Darwin.create() }
         single<DataStore<Preferences>> {
