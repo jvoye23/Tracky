@@ -18,6 +18,8 @@ import com.jvcs.tracky.core.domain.sync.SyncScheduler
 import com.jvcs.tracky.core.domain.sync.TrashCleanupScheduler
 import com.jvcs.tracky.core.presentation.pdf.IosPdfDocumentWriter
 import com.jvcs.tracky.core.presentation.pdf.PdfDocumentWriter
+import com.jvcs.tracky.features.project.data.export.UiActivityExportFileSharer
+import com.jvcs.tracky.features.project.domain.export.ExportFileSharer
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.darwin.Darwin
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -45,6 +47,7 @@ actual val platformCoreDataModule =
         single { NoOpTimerNotificationPermissionRequester() } bind TimerNotificationPermissionRequester::class
 
         singleOf(::IosPdfDocumentWriter) bind PdfDocumentWriter::class
+        single { UiActivityExportFileSharer() } bind ExportFileSharer::class
 
         single<HttpClientEngine> { Darwin.create() }
         single<DataStore<Preferences>> {

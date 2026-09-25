@@ -18,6 +18,8 @@ import com.jvcs.tracky.core.domain.sync.SyncScheduler
 import com.jvcs.tracky.core.domain.sync.TrashCleanupScheduler
 import com.jvcs.tracky.core.presentation.pdf.PdfBoxDocumentWriter
 import com.jvcs.tracky.core.presentation.pdf.PdfDocumentWriter
+import com.jvcs.tracky.features.project.data.export.AwtFileDialogExportFileSharer
+import com.jvcs.tracky.features.project.domain.export.ExportFileSharer
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.okhttp.OkHttp
 import okio.Path.Companion.toPath
@@ -38,6 +40,7 @@ actual val platformCoreDataModule =
         single { NoOpTimerNotificationPermissionRequester() } bind TimerNotificationPermissionRequester::class
 
         singleOf(::PdfBoxDocumentWriter) bind PdfDocumentWriter::class
+        single { AwtFileDialogExportFileSharer() } bind ExportFileSharer::class
 
         single<HttpClientEngine> { OkHttp.create() }
         single<DataStore<Preferences>> {
