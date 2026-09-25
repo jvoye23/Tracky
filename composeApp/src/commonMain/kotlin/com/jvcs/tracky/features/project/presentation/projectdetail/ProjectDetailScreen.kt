@@ -24,22 +24,15 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -53,9 +46,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -72,12 +63,20 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import co.touchlab.kermit.Logger
+import com.jvcs.tracky.core.presentation.pdf.PdfGenerator
+import com.jvcs.tracky.core.presentation.pdf.PdfGeneratorHost
+import com.jvcs.tracky.core.presentation.pdf.rememberPdfGenerator
 import com.jvcs.tracky.designsystem.components.DurationHeroCard
+import com.jvcs.tracky.designsystem.components.FullScreenLoadingIndicator
 import com.jvcs.tracky.designsystem.components.InfoCard
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.designsystem.util.ObserveAsEvents
 import com.jvcs.tracky.designsystem.util.rememberCollapsibleScrollBehavior
 import com.jvcs.tracky.features.project.presentation.edittext.EditTextTarget
+import com.jvcs.tracky.features.project.presentation.export.ProjectReportPageSpec
+import com.jvcs.tracky.features.project.presentation.export.ProjectReportUi
+import com.jvcs.tracky.features.project.presentation.export.projectReportDocument
 import com.jvcs.tracky.features.project.presentation.models.PerDayStripUi
 import com.jvcs.tracky.features.project.presentation.models.ProjectSubTaskUi
 import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
@@ -85,23 +84,22 @@ import com.jvcs.tracky.features.project.presentation.models.ProjectUi
 import com.jvcs.tracky.features.project.presentation.projectdetail.components.AddNewProjectTaskBottomSheet
 import com.jvcs.tracky.features.project.presentation.projectdetail.components.ColorInfoCard
 import com.jvcs.tracky.features.project.presentation.projectdetail.components.PerDayCard
+import com.jvcs.tracky.features.project.presentation.projectdetail.components.ProjectDetailTopAppBar
 import com.jvcs.tracky.features.project.presentation.projectdetail.components.TaskItemCard
 import com.jvcs.tracky.features.project.presentation.projectdetail.components.TrackyColorPicker
 import com.jvcs.tracky.features.project.presentation.util.ReorderableListState
 import com.jvcs.tracky.features.project.presentation.util.rememberReorderableListState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.add_task
-import tracky.composeapp.generated.resources.daily_overview_title
 import tracky.composeapp.generated.resources.description
-import tracky.composeapp.generated.resources.edit
 import tracky.composeapp.generated.resources.last_active
 import tracky.composeapp.generated.resources.light_text_color
 import tracky.composeapp.generated.resources.ok
 import tracky.composeapp.generated.resources.project_duration
-import tracky.composeapp.generated.resources.save
 import tracky.composeapp.generated.resources.select_project_color
 import tracky.composeapp.generated.resources.start_date
 import tracky.composeapp.generated.resources.task_completed_count
@@ -112,9 +110,6 @@ import tracky.composeapp.generated.resources.timer_stale_on_another_device
 import tracky.composeapp.generated.resources.title
 import tracky.composeapp.generated.resources.uncheck_task_blocked_message
 import tracky.composeapp.generated.resources.uncheck_task_blocked_title
-
-/** Sentinel for "open on today", matching the route's default. */
-private const val OPEN_ON_TODAY = -1L
 
 @Composable
 fun ProjectDetailScreenRoot(
@@ -128,6 +123,7 @@ fun ProjectDetailScreenRoot(
     ) -> Unit,
     onProjectTaskClick: (String) -> Unit,
     onDailyOverviewClick: (epochDay: Long) -> Unit,
+    modifier: Modifier = Modifier,
     viewModel: ProjectDetailViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -135,41 +131,70 @@ fun ProjectDetailScreenRoot(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
+    val pdfGenerator = rememberPdfGenerator()
+
     ObserveAsEvents(viewModel.events) { event ->
-        val message =
-            when (event) {
-                is ProjectDetailEvent.Error -> event.error.toString()
-
-                is ProjectDetailEvent.ReorderError -> event.error.toString()
-
-                is ProjectDetailEvent.NewProjectSessionSaved -> "Task saved successfully!"
-
-                // Nothing sends this until the export menu is on screen; drawing it lands with the menu.
-                is ProjectDetailEvent.RenderPdf -> return@ObserveAsEvents
-            }
         coroutineScope.launch {
-            snackbarHostState.showSnackbar(
-                message = message,
-                duration = SnackbarDuration.Short,
-            )
+            when (event) {
+                is ProjectDetailEvent.RenderPdf -> {
+                    viewModel.onAction(renderPdf(pdfGenerator, event.report))
+                }
+
+                is ProjectDetailEvent.Error -> {
+                    snackbarHostState.showShortSnackbar(event.error.asStringAsync())
+                }
+
+                is ProjectDetailEvent.ReorderError -> {
+                    snackbarHostState.showShortSnackbar(event.error.asStringAsync())
+                }
+
+                is ProjectDetailEvent.NewProjectSessionSaved -> {
+                    snackbarHostState.showShortSnackbar("Task saved successfully!")
+                }
+            }
         }
     }
 
-    ProjectDetailScreen(
-        state = state,
-        onAction = { action ->
-            navigateFor(
-                action = action,
-                projectId = state.project?.projectId,
-                navigateBack = navigateBack,
-                onEditTextClick = onEditTextClick,
-                onProjectTaskClick = onProjectTaskClick,
-                onDailyOverviewClick = onDailyOverviewClick,
-            )
-            viewModel.onAction(action)
-        },
-        snackbarHostState = snackbarHostState,
-    )
+    // The host has to sit in the full-size screen: a zero-sized one is never drawn, so no page
+    // would ever be captured.
+    Box(modifier = modifier.fillMaxSize()) {
+        ProjectDetailScreen(
+            state = state,
+            onAction = { action ->
+                navigateFor(
+                    action = action,
+                    projectId = state.project?.projectId,
+                    navigateBack = navigateBack,
+                    onEditTextClick = onEditTextClick,
+                    onProjectTaskClick = onProjectTaskClick,
+                    onDailyOverviewClick = onDailyOverviewClick,
+                )
+                viewModel.onAction(action)
+            },
+            snackbarHostState = snackbarHostState,
+        )
+        PdfGeneratorHost(pdfGenerator)
+        // Dims the whole screen and swallows touches until the file reaches the share sheet.
+        if (state.isExporting) {
+            FullScreenLoadingIndicator()
+        }
+    }
+}
+
+/** Draws [report] and wraps the outcome in the action that reports it back to the view model. */
+private suspend fun renderPdf(generator: PdfGenerator, report: ProjectReportUi): ProjectDetailAction =
+    runCatching { generator.generate(ProjectReportPageSpec) { projectReportDocument(report) } }
+        .fold(
+            onSuccess = { ProjectDetailAction.OnPdfRendered(it) },
+            onFailure = { failure ->
+                if (failure is CancellationException) throw failure
+                Logger.withTag("ProjectDetailScreen").e(failure) { "PDF rendering failed" }
+                ProjectDetailAction.OnPdfRenderFailed
+            },
+        )
+
+private suspend fun SnackbarHostState.showShortSnackbar(message: String) {
+    showSnackbar(message = message, duration = SnackbarDuration.Short)
 }
 
 /** The part of [action] that leaves this screen. The view model still sees every action. */
@@ -278,11 +303,15 @@ fun ProjectDetailScreen(
                 .fillMaxSize()
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            ProjectDetailTopBar(
+            ProjectDetailTopAppBar(
                 isEditMode = state.isEditMode,
                 headerColor = headerColor,
-                scrollBehavior = scrollBehavior,
+                isExportMenuExpanded = state.isExportMenuExpanded,
                 onAction = onAction,
+                onExportClick = { onAction(ProjectDetailAction.OnExportMenuClick) },
+                onExportMenuDismiss = { onAction(ProjectDetailAction.OnExportMenuDismiss) },
+                onExportFormatClick = { onAction(ProjectDetailAction.OnExportFormatClick(it)) },
+                scrollBehavior = scrollBehavior,
             )
         },
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -405,75 +434,6 @@ private fun LazyItemScope.reorderItemModifier(taskId: String, dragDropState: Reo
     } else {
         Modifier.animateItem()
     }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ProjectDetailTopBar(
-    isEditMode: Boolean,
-    headerColor: Color,
-    scrollBehavior: TopAppBarScrollBehavior,
-    onAction: (ProjectDetailAction) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    CenterAlignedTopAppBar(
-        modifier = modifier,
-        title = {
-            Text(
-                if (isEditMode) "EDIT PROJECT" else "PROJECT DETAILS",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-        },
-        navigationIcon = {
-            IconButton(onClick = {
-                if (isEditMode) {
-                    onAction(ProjectDetailAction.OnCloseAndCancelClick)
-                } else {
-                    onAction(ProjectDetailAction.OnBackClick)
-                }
-            }) {
-                Icon(
-                    if (isEditMode) Icons.Default.Close else Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = if (isEditMode) "Cancel" else "Back",
-                )
-            }
-        },
-        actions = {
-            // Hidden in edit mode: leaving the screen mid-edit would drop the changes.
-            if (!isEditMode) {
-                IconButton(onClick = {
-                    onAction(ProjectDetailAction.OnDailyOverviewClick(OPEN_ON_TODAY))
-                }) {
-                    Icon(
-                        imageVector = Icons.Outlined.CalendarMonth,
-                        contentDescription = stringResource(Res.string.daily_overview_title),
-                    )
-                }
-            }
-            IconButton(onClick = {
-                if (isEditMode) {
-                    onAction(ProjectDetailAction.OnSaveClick)
-                } else {
-                    onAction(ProjectDetailAction.OnEditModeClick)
-                }
-            }) {
-                Icon(
-                    if (isEditMode) Icons.Default.Check else Icons.Default.Edit,
-                    contentDescription =
-                        stringResource(
-                            if (isEditMode) Res.string.save else Res.string.edit,
-                        ),
-                )
-            }
-        },
-        colors =
-            TopAppBarDefaults.topAppBarColors(
-                containerColor = headerColor,
-                scrolledContainerColor = headerColor,
-            ),
-        scrollBehavior = scrollBehavior,
-    )
 }
 
 @Composable

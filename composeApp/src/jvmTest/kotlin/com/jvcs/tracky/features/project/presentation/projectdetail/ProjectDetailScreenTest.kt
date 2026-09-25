@@ -32,6 +32,7 @@ import org.jetbrains.compose.resources.getString
 import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.add_subtask
 import tracky.composeapp.generated.resources.add_task
+import tracky.composeapp.generated.resources.cd_export_project
 import tracky.composeapp.generated.resources.create_new_task
 import tracky.composeapp.generated.resources.daily_overview_title
 import tracky.composeapp.generated.resources.delete
@@ -91,6 +92,7 @@ internal class ProjectDetailScreenTest {
             onNodeWithContentDescription("Back").performClick()
             onNodeWithContentDescription(text(Res.string.daily_overview_title)).performClick()
             onNodeWithContentDescription(text(Res.string.edit)).performClick()
+            onNodeWithContentDescription(text(Res.string.cd_export_project)).performClick()
             onNodeWithText("Tue").performClick()
             scrollTo(hasContentDescription(text(Res.string.add_task)))
             onNodeWithContentDescription(text(Res.string.add_task)).performClick()
@@ -105,6 +107,7 @@ internal class ProjectDetailScreenTest {
                 ProjectDetailAction.OnBackClick,
                 ProjectDetailAction.OnDailyOverviewClick(-1),
                 ProjectDetailAction.OnEditModeClick,
+                ProjectDetailAction.OnExportMenuClick,
                 ProjectDetailAction.OnDailyOverviewClick(LocalDate(2026, 8, 25).toEpochDays()),
                 ProjectDetailAction.OnToggleAddNewProjectSessionBottomSheet,
                 ProjectDetailAction.OnProjectSessionCardClick(TASK_ID),
