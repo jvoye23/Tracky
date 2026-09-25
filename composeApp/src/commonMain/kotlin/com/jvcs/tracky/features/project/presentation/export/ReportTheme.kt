@@ -18,6 +18,7 @@ import com.jvcs.tracky.designsystem.theme.reportDefaultAccent
 import com.jvcs.tracky.designsystem.theme.reportFinishedLight
 import com.jvcs.tracky.designsystem.theme.reportRuleLight
 import com.jvcs.tracky.designsystem.theme.surfaceContainerLight
+import com.jvcs.tracky.designsystem.theme.surfaceContainerLowLight
 import org.jetbrains.compose.resources.Font
 import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.roboto_mono_variable
@@ -30,7 +31,7 @@ private const val TITLE_TRACKING = -0.5f
  * Light only, whatever the device is set to — a printed or shared page has no dark mode, and its
  * reader's viewer will not invert it. Blocks read everything from [MaterialTheme]; the slots map to:
  * - colors: `outline` grey labels, `outlineVariant` rules and borders, `surfaceVariant` bar tracks,
- *   `tertiary` the "Finished" green.
+ *   `surfaceContainerLow` untracked calendar days, `tertiary` the "Finished" green.
  * - Inter text: `headlineLarge` project title, `headlineSmall` summary figures, `titleLarge`
  *   wordmark, `titleMedium` section headings, `titleSmall` table titles, `bodyMedium` description,
  *   `bodySmall` summary notes, `labelMedium` task status, `labelSmall` spaced caps labels.
@@ -50,6 +51,7 @@ internal fun ReportTheme(accent: Color = reportDefaultAccent, content: @Composab
                 onSurface = onSurfaceLight,
                 onSurfaceVariant = onSurfaceVariantLight,
                 surfaceVariant = surfaceContainerLight,
+                surfaceContainerLow = surfaceContainerLowLight,
                 outline = outlineLight,
                 outlineVariant = reportRuleLight,
                 tertiary = reportFinishedLight,

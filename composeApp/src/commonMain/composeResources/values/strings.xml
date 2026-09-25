@@ -300,4 +300,13 @@
     <string name="report_column_duration">DURATION</string>
     <string name="report_total">Total</string>
     <string name="report_exported_on">Exported %1$s</string>
+    <string-array name="report_weekday_initials">
+        <item>M</item>
+        <item>T</item>
+        <item>W</item>
+        <item>T</item>
+        <item>F</item>
+        <item>S</item>
+        <item>S</item>
+    </string-array>
 </resources>

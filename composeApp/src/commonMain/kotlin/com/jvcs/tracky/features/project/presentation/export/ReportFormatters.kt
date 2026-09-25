@@ -1,6 +1,7 @@
 package com.jvcs.tracky.features.project.presentation.export
 
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.YearMonth
 import kotlinx.datetime.format.MonthNames
 import kotlinx.datetime.format.Padding
 import kotlinx.datetime.format.char
@@ -11,6 +12,7 @@ import kotlin.time.DurationUnit
 
 private const val SECONDS_PER_HOUR = 3_600L
 private const val SECONDS_PER_MINUTE = 60L
+private const val MINUTES_PER_HOUR = 60L
 private const val PERCENT = 100
 
 /** The report's own spelling — "Sept" and "June" rather than kotlinx's three-letter "Sep" and "Jun". */
@@ -24,6 +26,13 @@ private val ReportDateFormat =
         day(Padding.NONE)
         char(' ')
         monthName(ReportMonthNames)
+        char(' ')
+        year()
+    }
+
+private val ReportMonthTitleFormat =
+    YearMonth.Format {
+        monthName(MonthNames.ENGLISH_FULL)
         char(' ')
         year()
     }
@@ -50,3 +59,12 @@ internal fun formatReportDateRange(first: LocalDate, last: LocalDate): String =
 
 /** "44%", rounded to the nearest percent, so a sliver of tracked time reads "0%". */
 internal fun formatSharePercent(fraction: Float): String = "${(fraction * PERCENT).roundToInt()}%"
+
+/** "1h34", rounded to the nearest minute: a calendar day's figure, where seconds would not fit. */
+internal fun formatDayDuration(duration: Duration): String {
+    val totalMinutes = duration.toDouble(DurationUnit.MINUTES).roundToLong().coerceAtLeast(0)
+    return "${totalMinutes / MINUTES_PER_HOUR}h${(totalMinutes % MINUTES_PER_HOUR).toString().padStart(2, '0')}"
+}
+
+/** "August 2026". */
+internal fun formatMonthTitle(month: YearMonth): String = ReportMonthTitleFormat.format(month)
