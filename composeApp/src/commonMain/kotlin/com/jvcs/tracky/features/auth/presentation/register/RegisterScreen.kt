@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material3.MaterialTheme
@@ -100,10 +99,9 @@ fun RegisterScreen(
         contentWindowInsets = WindowInsets.safeDrawing,
     ) { paddingValues ->
         TrackyAdaptiveFormLayout(
-            modifier =
-                Modifier
-                    .padding(paddingValues)
-                    .imePadding(),
+            // safeDrawing already includes the IME inset, so paddingValues keep the form above the
+            // keyboard; an extra imePadding() would reserve the keyboard height a second time.
+            modifier = Modifier.padding(paddingValues),
             header = {
                 Wordmark(size = WordmarkSize.Md)
 
