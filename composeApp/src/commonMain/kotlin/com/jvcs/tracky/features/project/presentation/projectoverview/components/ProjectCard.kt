@@ -29,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
@@ -61,7 +62,7 @@ fun ProjectCard(
     isSelected: Boolean = false,
     isReorderable: Boolean = false,
     onReorderDragStart: () -> Unit = {},
-    onReorderDrag: (dragAmountY: Float) -> Unit = {},
+    onReorderDrag: (dragAmount: Offset) -> Unit = {},
     onReorderDragEnd: () -> Unit = {},
     onReorderDragCancel: () -> Unit = {},
 ) {
@@ -101,7 +102,7 @@ fun ProjectCard(
                                 onDragStart = { onReorderDragStart() },
                                 onDrag = { change, dragAmount ->
                                     change.consume()
-                                    onReorderDrag(dragAmount.y)
+                                    onReorderDrag(dragAmount)
                                 },
                                 onDragEnd = { onReorderDragEnd() },
                                 onDragCancel = { onReorderDragCancel() },

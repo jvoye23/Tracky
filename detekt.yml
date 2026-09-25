@@ -524,7 +524,7 @@ prism:
     active: true
     # Compose's own holders plus Tracky's two drag-and-drop holders, which are the same kind
     # of object (like LazyListState), not screen state.
-    allowedStateTypes: ['LazyListState', 'LazyGridState', 'LazyStaggeredGridState', 'ScrollState', 'TextFieldState', 'PagerState', 'SheetState', 'SnackbarHostState', 'DrawerState', 'TooltipState', 'PullToRefreshState', 'TopAppBarState', 'ReorderableListState', 'SubTaskDragDropState']
+    allowedStateTypes: ['LazyListState', 'LazyGridState', 'LazyStaggeredGridState', 'ScrollState', 'TextFieldState', 'PagerState', 'SheetState', 'SnackbarHostState', 'DrawerState', 'TooltipState', 'PullToRefreshState', 'TopAppBarState', 'ReorderableListState', 'ReorderableGridState', 'ScrollableState', 'SubTaskDragDropState']
     excludes: ['**/test/**', '**/*Test/**', '**/androidTest/**']
   RootAndScreenInSameFile:
     active: true

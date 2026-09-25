@@ -203,7 +203,7 @@ failing), 698 JVM tests passing, iOS and androidApp compiling, prism-doctor PASS
 - **MagicNumber**: `ignoreAnnotated: ['Preview','PreviewLightDark']`.
 - **StartKoinOnlyInAppModule**: excludes `**/di/InitKoin.kt`.
 - **InjectDispatcher**: excludes `**/di/**` and `**/PlatformIoDispatcher*.kt`.
-- **ScreenStateOnlyInScreenComposable**: `allowedStateTypes` adds `ReorderableListState`, `SubTaskDragDropState`.
+- **ScreenStateOnlyInScreenComposable**: `allowedStateTypes` adds `ReorderableListState`, `ReorderableGridState`, `SubTaskDragDropState`, and the Compose `ScrollableState` interface.
 - **LongParameterList**: `allowedConstructorParameters: 15` (Koin injection points take 7-14).
 - **LargeClass**: test source sets excluded, like the other size rules.
 - **konsist MviContractRules "State is an immutable data class"**: applies only in
