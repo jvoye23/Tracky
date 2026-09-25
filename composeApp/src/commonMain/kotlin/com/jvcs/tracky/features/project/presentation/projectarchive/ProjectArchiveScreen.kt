@@ -12,9 +12,10 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
@@ -41,6 +42,7 @@ import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigationevent.NavigationEventInfo
@@ -48,16 +50,18 @@ import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
 import com.jvcs.tracky.designsystem.Icon_Trash
 import com.jvcs.tracky.designsystem.components.MainNavDrawerItem
-import com.jvcs.tracky.designsystem.components.MainNavigationDrawer
+import com.jvcs.tracky.designsystem.components.layouts.TrackyAdaptiveNavigationLayout
 import com.jvcs.tracky.designsystem.theme.SampleProjectColors
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.designsystem.util.ObserveAsEvents
 import com.jvcs.tracky.designsystem.util.PreviewDevices
+import com.jvcs.tracky.designsystem.util.currentDeviceConfiguration
 import com.jvcs.tracky.designsystem.util.rememberCollapsibleScrollBehavior
 import com.jvcs.tracky.features.project.presentation.models.ProjectUi
 import com.jvcs.tracky.features.project.presentation.projectarchive.components.ProjectArchiveSearchTopAppBar
 import com.jvcs.tracky.features.project.presentation.projectarchive.components.ProjectArchiveSelectionTopAppBar
 import com.jvcs.tracky.features.project.presentation.projectoverview.components.ProjectCard
+import com.jvcs.tracky.features.project.presentation.util.projectGridColumns
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -130,19 +134,20 @@ fun ProjectArchiveScreen(
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed),
 ) {
-    val listState = rememberLazyListState()
+    val gridState = rememberLazyGridState()
+    val columns = currentDeviceConfiguration().projectGridColumns
     // One instance, shared by the app bar and the nested-scroll connection below. Calling the
     // helper again at either site would orphan a behavior and freeze the list.
     val scrollBehavior =
         rememberCollapsibleScrollBehavior(
-            listState = listState,
+            listState = gridState,
             pinned = state.isEditModeActive,
         )
 
     // If the content shrinks below one screen while the bar is collapsed, no scroll is left to
     // bring it back, so release it explicitly.
     LaunchedEffect(scrollBehavior) {
-        snapshotFlow { listState.canScrollForward || listState.canScrollBackward }
+        snapshotFlow { gridState.canScrollForward || gridState.canScrollBackward }
             .collect { scrollable -> if (!scrollable) scrollBehavior.state.heightOffset = 0f }
     }
     val drawerScope = rememberCoroutineScope()
@@ -156,13 +161,13 @@ fun ProjectArchiveScreen(
         },
     )
 
-    MainNavigationDrawer(
+    TrackyAdaptiveNavigationLayout(
         modifier = modifier,
         drawerState = drawerState,
         selectedItem = MainNavDrawerItem.ARCHIVE,
         onProjectsClick = onNavigateToProjects,
         onTrashClick = onNavigateToTrash,
-    ) {
+    ) { showMenuButton ->
         Scaffold(
             snackbarHost = {
                 SnackbarHost(hostState = snackbarHostState)
@@ -191,7 +196,12 @@ fun ProjectArchiveScreen(
                             isSearchActive = state.isSearchActive,
                             searchQuery = state.searchQuery,
                             onAction = onAction,
-                            onMenuClick = { drawerScope.launch { drawerState.open() } },
+                            onMenuClick =
+                                if (showMenuButton) {
+                                    { drawerScope.launch { drawerState.open() } }
+                                } else {
+                                    null
+                                },
                             scrollBehavior = scrollBehavior,
                         )
                     }
@@ -200,8 +210,9 @@ fun ProjectArchiveScreen(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
             contentWindowInsets = WindowInsets.safeDrawing,
         ) { innerPadding ->
-            LazyColumn(
-                state = listState,
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(columns),
+                state = gridState,
                 modifier =
                     Modifier
                         .fillMaxSize()
@@ -213,6 +224,7 @@ fun ProjectArchiveScreen(
                         bottom = innerPadding.calculateBottomPadding(),
                     ),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(
                     items = state.filteredProjects.orEmpty(),
@@ -310,6 +322,7 @@ private fun previewArchivedProjects(): List<ProjectUi> =
     )
 
 @PreviewDevices
+@Preview(name = "Desktop", widthDp = 1440, heightDp = 1024)
 @Composable
 private fun ProjectArchiveDefaultPreview() {
     TrackyTheme {

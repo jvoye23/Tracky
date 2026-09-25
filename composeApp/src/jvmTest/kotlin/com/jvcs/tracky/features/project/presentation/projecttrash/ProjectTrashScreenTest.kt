@@ -2,6 +2,7 @@ package com.jvcs.tracky.features.project.presentation.projecttrash
 
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -10,8 +11,11 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.runComposeUiTest
+import androidx.compose.ui.test.runDesktopComposeUiTest
 import assertk.assertThat
 import assertk.assertions.containsExactly
+import assertk.assertions.isEqualTo
+import assertk.assertions.isGreaterThan
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
@@ -127,7 +131,7 @@ internal class ProjectTrashScreenTest {
 
     @Test
     fun theDrawerLeadsToProjectsAndArchive() =
-        runComposeUiTest {
+        runPhonePortraitTest {
             showRoot()
 
             listOf(Res.string.drawer_projects, Res.string.drawer_archive).forEach { item ->
@@ -139,6 +143,40 @@ internal class ProjectTrashScreenTest {
 
             assertThat(navigation).containsExactly("projects", "archive")
         }
+
+    @Test
+    fun wideWindowsShowTheRailInsteadOfTheDrawer() =
+        runTabletLandscapeTest {
+            showRoot()
+
+            onNodeWithContentDescription(text(Res.string.navigation_menu)).assertDoesNotExist()
+            listOf(Res.string.drawer_projects, Res.string.drawer_archive).forEach { item ->
+                onNodeWithText(text(item)).performClick()
+                waitForIdle()
+            }
+
+            assertThat(navigation).containsExactly("projects", "archive")
+        }
+
+    @Test
+    fun landscapeWindowsLayCardsSideBySide() =
+        runTabletLandscapeTest {
+            showRoot()
+            waitForIdle()
+
+            val first = onNodeWithText("Old garden").getBoundsInRoot()
+            val second = onNodeWithText("Old kitchen").getBoundsInRoot()
+
+            assertThat(second.top).isEqualTo(first.top)
+            assertThat(second.left).isGreaterThan(first.left)
+        }
+
+    // The window size picks the navigation (drawer vs rail) and the number of card columns.
+    private fun runPhonePortraitTest(block: ComposeUiTest.() -> Unit) =
+        runDesktopComposeUiTest(width = 412, height = 915) { block() }
+
+    private fun runTabletLandscapeTest(block: ComposeUiTest.() -> Unit) =
+        runDesktopComposeUiTest(width = 1280, height = 800) { block() }
 
     private companion object {
         fun project(id: String, title: String) =
