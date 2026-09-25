@@ -6,6 +6,7 @@ import app.cash.turbine.test
 import assertk.assertThat
 import assertk.assertions.containsExactly
 import assertk.assertions.endsWith
+import assertk.assertions.hasSize
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
@@ -212,6 +213,31 @@ class ProjectDetailExportTest {
                 assertThat(awaitItem()).isEqualTo(ProjectDetailEvent.Error(ExportError.RENDER_FAILED.toUiText()))
             }
             assertThat(sharer.sharedFiles).isEmpty()
+            assertThat(vm.isExporting()).isFalse()
+        }
+
+    @Test
+    fun cancelledRenderResetsSilentlyAndAllowsANewExport() =
+        runTest {
+            val vm = viewModel()
+
+            vm.events.test {
+                vm.onAction(ProjectDetailAction.OnExportFormatClick(ExportFormat.Pdf))
+                runCurrent()
+                awaitItem()
+
+                vm.onAction(ProjectDetailAction.OnPdfRenderCancelled)
+                runCurrent()
+                assertThat(vm.isExporting()).isFalse()
+
+                vm.onAction(ProjectDetailAction.OnExportFormatClick(ExportFormat.Pdf))
+                runCurrent()
+                assertThat(awaitItem()).isInstanceOf<ProjectDetailEvent.RenderPdf>()
+                // The earlier name was dropped, but the new request's is pending, so the bytes are shared.
+                vm.onAction(ProjectDetailAction.OnPdfRendered(byteArrayOf(1)))
+                runCurrent()
+            }
+            assertThat(sharer.sharedFiles).hasSize(1)
             assertThat(vm.isExporting()).isFalse()
         }
 

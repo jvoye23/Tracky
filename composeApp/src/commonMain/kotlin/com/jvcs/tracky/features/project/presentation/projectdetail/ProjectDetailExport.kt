@@ -90,6 +90,13 @@ internal class ProjectDetailExport(
         scope.launch { fail(ExportError.RENDER_FAILED) }
     }
 
+    /** Nothing went wrong, so nothing is reported; the menu just becomes usable again. */
+    fun onPdfRenderCancelled() {
+        pendingPdfFileName ?: return
+        pendingPdfFileName = null
+        state.update { it.copy(isExporting = false) }
+    }
+
     private suspend fun share(file: ExportFile) {
         exportFileSharer
             .share(file)

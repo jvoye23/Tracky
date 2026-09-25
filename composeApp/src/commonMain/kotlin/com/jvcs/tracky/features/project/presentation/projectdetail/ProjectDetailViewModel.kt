@@ -280,6 +280,10 @@ class ProjectDetailViewModel(
                 export.onPdfRenderFailed()
             }
 
+            ProjectDetailAction.OnPdfRenderCancelled -> {
+                export.onPdfRenderCancelled()
+            }
+
             else -> {
                 Unit
             }

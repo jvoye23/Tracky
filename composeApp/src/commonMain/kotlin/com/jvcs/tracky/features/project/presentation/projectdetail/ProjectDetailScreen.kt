@@ -137,7 +137,13 @@ fun ProjectDetailScreenRoot(
         coroutineScope.launch {
             when (event) {
                 is ProjectDetailEvent.RenderPdf -> {
-                    viewModel.onAction(renderPdf(pdfGenerator, event.report))
+                    try {
+                        viewModel.onAction(renderPdf(pdfGenerator, event.report))
+                    } catch (cancellation: CancellationException) {
+                        // Rotation or navigating on cancels this scope; the view model must still hear of it.
+                        viewModel.onAction(ProjectDetailAction.OnPdfRenderCancelled)
+                        throw cancellation
+                    }
                 }
 
                 is ProjectDetailEvent.Error -> {
@@ -182,7 +188,7 @@ fun ProjectDetailScreenRoot(
 }
 
 /** Draws [report] and wraps the outcome in the action that reports it back to the view model. */
-private suspend fun renderPdf(generator: PdfGenerator, report: ProjectReportUi): ProjectDetailAction =
+internal suspend fun renderPdf(generator: PdfGenerator, report: ProjectReportUi): ProjectDetailAction =
     runCatching { generator.generate(ProjectReportPageSpec) { projectReportDocument(report) } }
         .fold(
             onSuccess = { ProjectDetailAction.OnPdfRendered(it) },
