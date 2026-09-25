@@ -8,6 +8,15 @@ internal sealed interface PdfMeasuredBlock {
     data object PageBreak : PdfMeasuredBlock
 }
 
+/** Heights in render pixels; [blockHeights] follows [PdfDocument.blocks], 0 for page breaks. */
+internal class PdfMeasurements(
+    val contentHeight: Int,
+    val headerHeight: Int,
+    val footerHeight: Int,
+    val blockHeights: List<Int>,
+    val sectionHeaderHeights: Map<Int, Int>,
+)
+
 internal sealed interface PdfPlacement {
 
     /** Block [index] of the document; [overflows] = taller than a page, placed alone, to be clipped. */
