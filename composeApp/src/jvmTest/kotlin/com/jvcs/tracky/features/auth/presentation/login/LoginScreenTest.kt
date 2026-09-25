@@ -26,8 +26,6 @@ import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.getString
 import tracky.composeapp.generated.resources.Res
-import tracky.composeapp.generated.resources.continue_with_apple
-import tracky.composeapp.generated.resources.continue_with_google
 import tracky.composeapp.generated.resources.error_invalid_credentials
 import tracky.composeapp.generated.resources.sign_up
 import kotlin.test.Test
@@ -59,15 +57,11 @@ internal class LoginScreenTest {
             onNodeWithTag("login_button").performScrollTo().performClick()
             onNodeWithTag("login_forgot_password").performScrollTo().performClick()
             onNodeWithText(text(Res.string.sign_up)).performScrollTo().performClick()
-            onNodeWithText(text(Res.string.continue_with_google)).performScrollTo().performClick()
-            onNodeWithText(text(Res.string.continue_with_apple)).performScrollTo().performClick()
 
             assertThat(actions).containsExactly(
                 LoginAction.OnLoginClick,
                 LoginAction.OnForgotPasswordClick,
                 LoginAction.OnSignUpClick,
-                LoginAction.OnGoogleSignInClick,
-                LoginAction.OnAppleSignInClick,
             )
         }
 
@@ -84,15 +78,6 @@ internal class LoginScreenTest {
             }
 
             onNodeWithText(text(Res.string.error_invalid_credentials)).assertExists()
-        }
-
-    @Test
-    fun whileLoggingInTheSocialButtonsAreDisabled() =
-        runComposeUiTest {
-            setContent { TrackyTheme { LoginScreen(state = LoginState(isLoggingIn = true), onAction = {}) } }
-
-            onNodeWithText(text(Res.string.continue_with_google)).performScrollTo().assertIsNotEnabled()
-            onNodeWithText(text(Res.string.continue_with_apple)).performScrollTo().assertIsNotEnabled()
         }
 
     @Test

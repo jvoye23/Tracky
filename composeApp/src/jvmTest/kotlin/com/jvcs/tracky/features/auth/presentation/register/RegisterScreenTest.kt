@@ -26,8 +26,6 @@ import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.getString
 import tracky.composeapp.generated.resources.Res
-import tracky.composeapp.generated.resources.continue_with_apple
-import tracky.composeapp.generated.resources.continue_with_google
 import tracky.composeapp.generated.resources.create_account
 import tracky.composeapp.generated.resources.error_account_exists
 import tracky.composeapp.generated.resources.login
@@ -64,15 +62,11 @@ internal class RegisterScreenTest {
             onNodeWithTag("register_terms_checkbox").performScrollTo().performClick()
             onNode(createAccountButton()).performScrollTo().performClick()
             onNodeWithText(text(Res.string.login)).performScrollTo().performClick()
-            onNodeWithText(text(Res.string.continue_with_google)).performScrollTo().performClick()
-            onNodeWithText(text(Res.string.continue_with_apple)).performScrollTo().performClick()
 
             assertThat(actions).containsExactly(
                 RegisterAction.OnTermsToggle(true),
                 RegisterAction.OnRegisterClick,
                 RegisterAction.OnLoginClick,
-                RegisterAction.OnGoogleSignInClick,
-                RegisterAction.OnAppleSignInClick,
             )
         }
 
@@ -94,15 +88,6 @@ internal class RegisterScreenTest {
 
             onNodeWithText(text(Res.string.terms_required)).performScrollTo().assertExists()
             onNodeWithText(text(Res.string.error_account_exists)).performScrollTo().assertExists()
-        }
-
-    @Test
-    fun whileRegisteringTheSocialButtonsAreDisabled() =
-        runComposeUiTest {
-            setContent { TrackyTheme { RegisterScreen(state = RegisterState(isRegistering = true), onAction = {}) } }
-
-            onNodeWithText(text(Res.string.continue_with_google)).performScrollTo().assertIsNotEnabled()
-            onNodeWithText(text(Res.string.continue_with_apple)).performScrollTo().assertIsNotEnabled()
         }
 
     @Test
