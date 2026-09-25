@@ -1,4 +1,4 @@
-package com.jvcs.tracky.features.project.presentation.util
+package com.jvcs.tracky.designsystem.util
 
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
@@ -35,14 +35,19 @@ enum class DeviceConfiguration {
                     minWidthDp < WIDTH_DP_MEDIUM_LOWER_BOUND &&
                         minHeightDp >= HEIGHT_DP_MEDIUM_LOWER_BOUND -> MOBILE_PORTRAIT
 
-                    minWidthDp >= WIDTH_DP_EXPANDED_LOWER_BOUND &&
+                    // Medium (not expanded) lower bound: smaller phones in landscape land in the
+                    // 600–839dp width bucket and must not fall through to DESKTOP.
+                    minWidthDp >= WIDTH_DP_MEDIUM_LOWER_BOUND &&
                         minHeightDp < HEIGHT_DP_MEDIUM_LOWER_BOUND -> MOBILE_LANDSCAPE
 
-                    minWidthDp in WIDTH_DP_MEDIUM_LOWER_BOUND..WIDTH_DP_EXPANDED_LOWER_BOUND &&
+                    // Exclusive upper bounds: bucketed sizes sit exactly on 840/900, and an inclusive
+                    // range would classify a large desktop window (840x900 bucket) as a tablet.
+                    minWidthDp in WIDTH_DP_MEDIUM_LOWER_BOUND until WIDTH_DP_EXPANDED_LOWER_BOUND &&
                         minHeightDp >= HEIGHT_DP_EXPANDED_LOWER_BOUND -> TABLET_PORTRAIT
 
                     minWidthDp >= WIDTH_DP_EXPANDED_LOWER_BOUND &&
-                        minHeightDp in HEIGHT_DP_MEDIUM_LOWER_BOUND..HEIGHT_DP_EXPANDED_LOWER_BOUND -> TABLET_LANDSCAPE
+                        minHeightDp in
+                        HEIGHT_DP_MEDIUM_LOWER_BOUND until HEIGHT_DP_EXPANDED_LOWER_BOUND -> TABLET_LANDSCAPE
 
                     else -> DESKTOP
                 }

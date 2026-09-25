@@ -12,8 +12,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.jvcs.tracky.features.project.presentation.util.DeviceConfiguration
-import com.jvcs.tracky.features.project.presentation.util.currentDeviceConfiguration
+import com.jvcs.tracky.designsystem.util.DeviceConfiguration
+import com.jvcs.tracky.designsystem.util.currentDeviceConfiguration
 import org.jetbrains.compose.resources.painterResource
 import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.tracky_icon

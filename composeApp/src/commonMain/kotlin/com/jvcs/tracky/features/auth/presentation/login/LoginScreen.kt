@@ -5,21 +5,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -27,39 +23,31 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jvcs.tracky.designsystem.Icon_Lock
 import com.jvcs.tracky.designsystem.Icon_Mail
-import com.jvcs.tracky.designsystem.components.AppleSignInButton
-import com.jvcs.tracky.designsystem.components.DividerWithLabel
-import com.jvcs.tracky.designsystem.components.GoogleSignInButton
 import com.jvcs.tracky.designsystem.components.TrackyPrimaryButton
 import com.jvcs.tracky.designsystem.components.TrackyTextField
 import com.jvcs.tracky.designsystem.components.Wordmark
 import com.jvcs.tracky.designsystem.components.WordmarkSize
+import com.jvcs.tracky.designsystem.components.layouts.TrackyAdaptiveFormLayout
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.designsystem.theme.authElevatedLabelStyle
 import com.jvcs.tracky.designsystem.theme.authLabelStyle
 import com.jvcs.tracky.designsystem.theme.authTextStyle
 import com.jvcs.tracky.designsystem.util.ObserveAsEvents
-import com.jvcs.tracky.features.auth.presentation.register.RegisterScreen
-import com.jvcs.tracky.features.auth.presentation.register.RegisterState
+import com.jvcs.tracky.designsystem.util.PreviewDevices
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import tracky.composeapp.generated.resources.Res
-import tracky.composeapp.generated.resources.continue_with_apple
-import tracky.composeapp.generated.resources.continue_with_google
 import tracky.composeapp.generated.resources.dont_have_account
 import tracky.composeapp.generated.resources.email
 import tracky.composeapp.generated.resources.forgot_password
 import tracky.composeapp.generated.resources.login
 import tracky.composeapp.generated.resources.login_subtitle
-import tracky.composeapp.generated.resources.or_continue_with
-import tracky.composeapp.generated.resources.or_continue_with_email
 import tracky.composeapp.generated.resources.password
 import tracky.composeapp.generated.resources.sign_up
 import tracky.composeapp.generated.resources.welcome_title
@@ -102,38 +90,35 @@ fun LoginScreen(
         modifier = modifier,
         contentWindowInsets = WindowInsets.safeDrawing,
     ) { paddingValues ->
-        Column(
+        TrackyAdaptiveFormLayout(
             modifier =
                 Modifier
-                    .fillMaxSize()
                     .padding(paddingValues)
-                    .imePadding()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 28.dp, vertical = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                    .imePadding(),
+            header = {
+                Spacer(Modifier.height(8.dp))
+
+                Wordmark(size = WordmarkSize.Lg)
+
+                Spacer(Modifier.height(36.dp))
+
+                Text(
+                    text = stringResource(Res.string.welcome_title),
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    textAlign = TextAlign.Center,
+                )
+
+                Spacer(Modifier.height(6.dp))
+
+                Text(
+                    text = stringResource(Res.string.login_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            },
         ) {
-            Spacer(Modifier.height(8.dp))
-
-            Wordmark(size = WordmarkSize.Lg)
-
-            Spacer(Modifier.height(36.dp))
-
-            Text(
-                text = stringResource(Res.string.welcome_title),
-                style = MaterialTheme.typography.headlineLarge,
-                color = MaterialTheme.colorScheme.onBackground,
-                textAlign = TextAlign.Center,
-            )
-
-            Spacer(Modifier.height(6.dp))
-
-            Text(
-                text = stringResource(Res.string.login_subtitle),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-
             Spacer(Modifier.height(20.dp))
 
             Column(
@@ -231,34 +216,14 @@ fun LoginScreen(
                     )
                 }
             }
-            Spacer(Modifier.height(20.dp))
-
-            DividerWithLabel(label = stringResource(Res.string.or_continue_with))
-
-            Spacer(Modifier.height(20.dp))
-
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                GoogleSignInButton(
-                    text = stringResource(Res.string.continue_with_google),
-                    onClick = { onAction(LoginAction.OnGoogleSignInClick) },
-                    enabled = !state.isLoggingIn,
-                )
-                AppleSignInButton(
-                    text = stringResource(Res.string.continue_with_apple),
-                    onClick = { onAction(LoginAction.OnAppleSignInClick) },
-                    enabled = !state.isLoggingIn,
-                )
-            }
         }
     }
 }
 
-@Preview(showSystemUi = false, device = Devices.PIXEL_9_PRO)
+@PreviewDevices
+@Preview(name = "Desktop", widthDp = 1440, heightDp = 1024)
 @Composable
-private fun RegisterScreenPreview() {
+private fun LoginScreenPreview() {
     TrackyTheme {
         LoginScreen(
             state = LoginState(),
