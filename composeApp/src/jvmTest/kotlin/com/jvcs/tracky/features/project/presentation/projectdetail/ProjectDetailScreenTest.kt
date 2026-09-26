@@ -2,10 +2,13 @@ package com.jvcs.tracky.features.project.presentation.projectdetail
 
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.SemanticsProperties.HorizontalScrollAxisRange
 import androidx.compose.ui.semantics.SemanticsProperties.VerticalScrollAxisRange
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.hasText
@@ -16,9 +19,13 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.runComposeUiTest
+import androidx.compose.ui.test.runDesktopComposeUiTest
 import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.containsAtLeast
+import assertk.assertions.hasSize
+import assertk.assertions.isEmpty
+import assertk.assertions.isGreaterThanOrEqualTo
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.features.project.presentation.models.PerDayStripUi
 import com.jvcs.tracky.features.project.presentation.models.PerDayUi
@@ -45,6 +52,7 @@ import tracky.composeapp.generated.resources.select
 import tracky.composeapp.generated.resources.select_project_color
 import tracky.composeapp.generated.resources.start_timer
 import tracky.composeapp.generated.resources.stop_timer
+import tracky.composeapp.generated.resources.tasks_completed
 import tracky.composeapp.generated.resources.timer_running_on_another_device
 import tracky.composeapp.generated.resources.timer_stale_on_another_device
 import tracky.composeapp.generated.resources.uncheck_task_blocked_title
@@ -74,6 +82,49 @@ internal class ProjectDetailScreenTest {
             .performScrollToNode(matcher)
 
     private fun ComposeUiTest.scrollTo(text: String) = scrollTo(hasText(text))
+
+    @Test
+    fun landscapePutsTheTasksBesideTheSummary() =
+        runDesktopComposeUiTest(width = 1280, height = 800) {
+            show(viewState)
+
+            // Summary and task list scroll independently, and the per-day strip wraps instead of scrolling sideways.
+            assertThat(onAllNodes(SemanticsMatcher.keyIsDefined(VerticalScrollAxisRange)).fetchSemanticsNodes())
+                .hasSize(2)
+            assertThat(onAllNodes(SemanticsMatcher.keyIsDefined(HorizontalScrollAxisRange)).fetchSemanticsNodes())
+                .isEmpty()
+            onNodeWithText("Tue").assertIsDisplayed()
+            onNodeWithText("Write report").assertIsDisplayed()
+            val summaryRight = onNodeWithText("A project").getUnclippedBoundsInRoot().right
+            val task = onNodeWithText("Write report").getUnclippedBoundsInRoot()
+            assertThat(task.left).isGreaterThanOrEqualTo(summaryRight)
+            // The progress card heads the task column rather than closing the summary.
+            val progress =
+                onNodeWithText(
+                    text(Res.string.tasks_completed),
+                    ignoreCase = true,
+                ).getUnclippedBoundsInRoot()
+            assertThat(progress.left).isGreaterThanOrEqualTo(summaryRight)
+            assertThat(task.top).isGreaterThanOrEqualTo(progress.bottom)
+        }
+
+    @Test
+    fun portraitStacksEverythingInOneList() =
+        runDesktopComposeUiTest(width = 412, height = 915) {
+            show(viewState)
+
+            assertThat(onAllNodes(SemanticsMatcher.keyIsDefined(VerticalScrollAxisRange)).fetchSemanticsNodes())
+                .hasSize(1)
+            assertThat(onAllNodes(SemanticsMatcher.keyIsDefined(HorizontalScrollAxisRange)).fetchSemanticsNodes())
+                .hasSize(1)
+            val progress =
+                onNodeWithText(
+                    text(Res.string.tasks_completed),
+                    ignoreCase = true,
+                ).getUnclippedBoundsInRoot()
+            val summary = onNodeWithText("A project").getUnclippedBoundsInRoot()
+            assertThat(progress.top).isGreaterThanOrEqualTo(summary.bottom)
+        }
 
     @Test
     fun loadingShowsNoProject() =

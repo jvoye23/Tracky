@@ -7,7 +7,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -17,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -60,6 +58,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -70,6 +69,7 @@ import com.jvcs.tracky.core.presentation.pdf.rememberPdfGenerator
 import com.jvcs.tracky.designsystem.components.DurationHeroCard
 import com.jvcs.tracky.designsystem.components.FullScreenLoadingIndicator
 import com.jvcs.tracky.designsystem.components.InfoCard
+import com.jvcs.tracky.designsystem.components.layouts.TrackyAdaptiveDetailLayout
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.designsystem.util.ObserveAsEvents
 import com.jvcs.tracky.designsystem.util.rememberCollapsibleScrollBehavior
@@ -329,14 +329,11 @@ fun ProjectDetailScreen(
             }
         } else {
             val projectColor = state.projectColor ?: MaterialTheme.colorScheme.primary
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = paddingValues.calculateBottomPadding()),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                // 1. Header
-                item {
+            TrackyAdaptiveDetailLayout(
+                listState = listState,
+                contentPadding = paddingValues,
+                listTopPadding = headerTopInset(),
+                summary = { isTwoPane ->
                     ProjectDetailHeader(
                         project = state.project,
                         title = state.titleText ?: stringResource(Res.string.title),
@@ -348,12 +345,9 @@ fun ProjectDetailScreen(
                         isRunningTimerStale = state.isRunningTimerStale,
                         isRunningTimerForeign = state.isRunningTimerForeign,
                         headerColor = headerColor,
+                        isTwoPane = isTwoPane,
                         onAction = onAction,
                     )
-                }
-
-                // 2. Info Grid
-                item {
                     InfoGrid(
                         modifier =
                             Modifier
@@ -361,6 +355,10 @@ fun ProjectDetailScreen(
                         startDate = state.project.startDateTimeUtc,
                         lastActive = state.project.startDateTimeUtc,
                         perDayStrip = state.perDayStrip,
+                        // The half-width column has no room for a sideways scroll of ten tiles.
+                        perDayTilesPerRow = if (isTwoPane) PER_DAY_TILES_PER_ROW else null,
+                        // Two-pane puts it on top of the task list instead.
+                        showTasksCompleted = !isTwoPane,
                         projectColor = projectColor,
                         doneTaskCount = state.project.doneTaskCount,
                         taskCount =
@@ -368,9 +366,19 @@ fun ProjectDetailScreen(
                         taskProgress = { state.project.taskProgress },
                         onAction = onAction,
                     )
+                },
+            ) { isTwoPane ->
+                if (isTwoPane) {
+                    item {
+                        TasksCompletedCard(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            doneTaskCount = state.project.doneTaskCount,
+                            taskCount = state.project.projectTasks?.size ?: 0,
+                            taskProgress = { state.project.taskProgress },
+                            projectColor = projectColor,
+                        )
+                    }
                 }
-
-                // 4. Sessions Header
                 item {
                     TasksHeader(
                         modifier =
@@ -384,7 +392,6 @@ fun ProjectDetailScreen(
                     )
                 }
 
-                // 5. Session Items
                 itemsIndexed(
                     items = state.project.projectTasks.orEmpty(),
                     // Stable String keys: the reorder state hit-tests on them, and every item above
@@ -417,6 +424,19 @@ fun ProjectDetailScreen(
         onAction = onAction,
     )
 }
+
+/** Per-day tiles per row when the strip wraps into a grid in the half-width summary column. */
+private const val PER_DAY_TILES_PER_ROW = 5
+
+/**
+ * The space the top bar and the status bar occupy. The header paints edge-to-edge behind both, so
+ * it reserves this itself, and the two-pane task list starts this far down. Both values are
+ * constant, unlike the Scaffold's top padding, which shrinks frame by frame as the bar collapses.
+ */
+@Composable
+private fun headerTopInset(): Dp =
+    WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding() +
+        TopAppBarDefaults.TopAppBarExpandedHeight
 
 /**
  * The dragged card (and the one settling back after release) drives its own translation and rides
@@ -454,23 +474,26 @@ private fun ProjectDetailHeader(
     isRunningTimerStale: Boolean,
     isRunningTimerForeign: Boolean,
     headerColor: Color,
+    isTwoPane: Boolean,
     onAction: (ProjectDetailAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // The header paints edge-to-edge behind the status bar, so it has to reserve the space
-    // the bar and the status bar occupy itself. Both values are constant, unlike the
-    // Scaffold's top padding, which shrinks frame by frame as the bar collapses.
-    val headerTopInset =
-        WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding() +
-            TopAppBarDefaults.TopAppBarExpandedHeight
-
-    Column(
-        modifier =
-            modifier
+    // Portrait paints the header edge-to-edge behind the top bar. Two-pane starts the column
+    // below the bar, so the header becomes a card lined up with the info cards beneath it.
+    val cardModifier =
+        if (isTwoPane) {
+            Modifier
+                .padding(horizontal = 16.dp)
+                .background(color = headerColor, shape = RoundedCornerShape(24.dp))
+        } else {
+            Modifier
                 .background(
                     color = headerColor,
                     shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
-                ).padding(top = headerTopInset),
+                ).padding(top = headerTopInset())
+        }
+    Column(
+        modifier = modifier.then(cardModifier),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         ProjectHeader(
@@ -730,6 +753,8 @@ private fun InfoGrid(
     startDate: String,
     lastActive: String,
     perDayStrip: PerDayStripUi?,
+    perDayTilesPerRow: Int?,
+    showTasksCompleted: Boolean,
     projectColor: Color,
     doneTaskCount: Int,
     taskCount: Int,
@@ -768,6 +793,7 @@ private fun InfoGrid(
                     days = strip.days,
                     busiestDayLabel = strip.busiestDayLabel,
                     projectColor = projectColor,
+                    tilesPerRow = perDayTilesPerRow,
                     // Each tile carries its own date, so the overview opens on the day that was
                     // tapped. The top-bar icon sends OPEN_ON_TODAY instead.
                     onDayClick = { onAction(ProjectDetailAction.OnDailyOverviewClick(it.toEpochDays())) },
@@ -775,35 +801,51 @@ private fun InfoGrid(
             }
         }
 
-        InfoCard(
-            modifier =
-                Modifier
-                    .fillMaxWidth(),
-            icon = Icons.Outlined.GridView,
-            label = stringResource(Res.string.tasks_completed),
-            value =
-                stringResource(
-                    Res.string.task_completed_count,
-                    doneTaskCount,
-                    taskCount,
-                ),
-        ) {
-            Spacer(modifier = Modifier.height(8.dp))
-            LinearProgressIndicator(
-                // Lambda overload: the progress is read in the draw phase, so animating it
-                // later will not recompose the card.
-                progress = taskProgress,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(6.dp),
-                color = projectColor,
-                trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                strokeCap = StrokeCap.Round,
-                gapSize = 0.dp,
-                drawStopIndicator = {},
+        if (showTasksCompleted) {
+            TasksCompletedCard(
+                doneTaskCount = doneTaskCount,
+                taskCount = taskCount,
+                taskProgress = taskProgress,
+                projectColor = projectColor,
             )
         }
+    }
+}
+
+@Composable
+private fun TasksCompletedCard(
+    doneTaskCount: Int,
+    taskCount: Int,
+    taskProgress: () -> Float,
+    projectColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    InfoCard(
+        modifier = modifier.fillMaxWidth(),
+        icon = Icons.Outlined.GridView,
+        label = stringResource(Res.string.tasks_completed),
+        value =
+            stringResource(
+                Res.string.task_completed_count,
+                doneTaskCount,
+                taskCount,
+            ),
+    ) {
+        Spacer(modifier = Modifier.height(8.dp))
+        LinearProgressIndicator(
+            // Lambda overload: the progress is read in the draw phase, so animating it
+            // later will not recompose the card.
+            progress = taskProgress,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(6.dp),
+            color = projectColor,
+            trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            strokeCap = StrokeCap.Round,
+            gapSize = 0.dp,
+            drawStopIndicator = {},
+        )
     }
 }
 
@@ -919,6 +961,34 @@ private fun ProjectDetailScreenEditModePreview() {
                             projectTasks = projectSessionsPreview,
                         ),
                     isEditMode = true,
+                ),
+            snackbarHostState = SnackbarHostState(),
+        )
+    }
+}
+
+@Preview(name = "Pixel 9 Pro · Landscape", device = "spec:parent=pixel_9_pro,orientation=landscape")
+@Preview(name = "Pixel Tablet · Landscape", device = "spec:parent=pixel_tablet,orientation=landscape")
+@Composable
+private fun ProjectDetailScreenTwoPanePreview() {
+    TrackyTheme {
+        ProjectDetailScreen(
+            onAction = {},
+            state =
+                ProjectDetailState(
+                    project =
+                        ProjectUi(
+                            projectId = "1",
+                            title = "Project One",
+                            description = "Description 1",
+                            color = Color.Red,
+                            totalDurationMillis = 36_000_000L,
+                            startDateTimeUtc = "2023-01-01T00:00:00Z",
+                            isFinished = false,
+                            endDateTimeUtc = null,
+                            projectTasks = projectSessionsPreview,
+                        ),
+                    isEditMode = false,
                 ),
             snackbarHostState = SnackbarHostState(),
         )
