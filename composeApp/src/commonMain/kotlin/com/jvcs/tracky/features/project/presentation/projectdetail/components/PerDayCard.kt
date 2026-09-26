@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -33,6 +34,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewLightDark
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
@@ -65,6 +68,20 @@ private const val MAX_INTENSITY = 0.55f
  */
 private val MIN_TILE_WIDTH = 80.dp
 
+/** Horizontal padding of a regular tile, sized so `HH:mm:ss` fits [MIN_TILE_WIDTH]. */
+private val TILE_HORIZONTAL_PADDING = 10.dp
+
+/**
+ * Horizontal padding of a grid tile. Five tiles share a half-width column on a phone in landscape,
+ * which leaves ~70dp each; the duration needs ~55dp of it.
+ */
+private val GRID_TILE_HORIZONTAL_PADDING = 4.dp
+
+private val TILE_SPACING = 6.dp
+
+/** Smallest the duration may shrink to in a grid tile before it would stop being legible. */
+private val GRID_MIN_DURATION_FONT_SIZE = 10.sp
+
 /**
  * "Per day" activity strip: one tile per day, tinted by how much time was tracked that
  * day relative to the busiest day in [days].
@@ -72,7 +89,8 @@ private val MIN_TILE_WIDTH = 80.dp
  * Stateless — the caller supplies already-formatted labels, so a tile whose
  * [PerDayUi.formattedDuration] is `null` still renders as untracked even though the mapper
  * now feeds only active days. The strip scrolls horizontally because ten tiles do not fit a
- * phone at the design's fixed tile width.
+ * phone at the design's fixed tile width — unless [tilesPerRow] is set, which wraps the tiles
+ * into rows of that many equal-width tiles instead.
  *
  * @param busiestDayLabel weekday plus date of the busiest day, carrying the month the
  * same way the tiles do (see [PerDayUi.dateLabel]), e.g. "Sat 05.9"; `null` when nothing
@@ -84,6 +102,7 @@ fun PerDayCard(
     busiestDayLabel: String?,
     projectColor: Color,
     modifier: Modifier = Modifier,
+    tilesPerRow: Int? = null,
     onDayClick: (LocalDate) -> Unit = {},
 ) {
     val maxMillis = days.maxOfOrNull { it.trackedMillis } ?: 0L
@@ -101,19 +120,30 @@ fun PerDayCard(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            LazyRow(
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 14.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                items(days) { day ->
-                    DayCell(
-                        day = day,
-                        maxMillis = maxMillis,
-                        projectColor = projectColor,
-                        onClick = day.date?.let { date -> { onDayClick(date) } },
-                    )
+            if (tilesPerRow == null) {
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(TILE_SPACING),
+                ) {
+                    items(days) { day ->
+                        DayCell(
+                            day = day,
+                            maxMillis = maxMillis,
+                            projectColor = projectColor,
+                            onClick = day.date?.let { date -> { onDayClick(date) } },
+                        )
+                    }
                 }
+            } else {
+                PerDayGrid(
+                    days = days,
+                    tilesPerRow = tilesPerRow,
+                    maxMillis = maxMillis,
+                    projectColor = projectColor,
+                    onDayClick = onDayClick,
+                    modifier = Modifier.padding(horizontal = 14.dp),
+                )
             }
 
             Spacer(modifier = Modifier.height(9.dp))
@@ -143,12 +173,62 @@ private fun PerDayHeader(modifier: Modifier = Modifier) {
     }
 }
 
+/** The strip wrapped into rows; a short last row keeps its tiles the width of the full ones. */
+@Composable
+private fun PerDayGrid(
+    days: List<PerDayUi>,
+    tilesPerRow: Int,
+    maxMillis: Long,
+    projectColor: Color,
+    onDayClick: (LocalDate) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(TILE_SPACING),
+    ) {
+        days.chunked(tilesPerRow).forEach { rowDays ->
+            Row(horizontalArrangement = Arrangement.spacedBy(TILE_SPACING)) {
+                rowDays.forEach { day ->
+                    DayCell(
+                        day = day,
+                        maxMillis = maxMillis,
+                        projectColor = projectColor,
+                        isGridTile = true,
+                        modifier = Modifier.weight(1f),
+                        onClick = day.date?.let { date -> { onDayClick(date) } },
+                    )
+                }
+                repeat(tilesPerRow - rowDays.size) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+/** A grid tile takes its width from the row; a strip tile is sized to fit any duration. */
+private fun tileMinWidth(isGridTile: Boolean): Dp = if (isGridTile) Dp.Unspecified else MIN_TILE_WIDTH
+
+private fun tileHorizontalPadding(isGridTile: Boolean): Dp =
+    if (isGridTile) GRID_TILE_HORIZONTAL_PADDING else TILE_HORIZONTAL_PADDING
+
+/** A grid tile's width follows the column, so its duration shrinks rather than clip. */
+private fun durationAutoSize(isGridTile: Boolean, maxFontSize: TextUnit): TextAutoSize? =
+    if (isGridTile) {
+        TextAutoSize.StepBased(minFontSize = GRID_MIN_DURATION_FONT_SIZE, maxFontSize = maxFontSize)
+    } else {
+        null
+    }
+
 @Composable
 private fun DayCell(
     day: PerDayUi,
     maxMillis: Long,
     projectColor: Color,
     modifier: Modifier = Modifier,
+    // A grid tile takes its width from the row, so it drops the minimum width and most padding.
+    isGridTile: Boolean = false,
     // Null for a tile built without a date, which keeps the older previews inert.
     onClick: (() -> Unit)? = null,
 ) {
@@ -182,15 +262,17 @@ private fun DayCell(
             day.formattedDuration ?: stringResource(Res.string.per_day_cell_untracked),
         )
 
+    val durationStyle = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+
     Column(
         modifier =
             modifier
-                .widthIn(min = MIN_TILE_WIDTH)
+                .widthIn(min = tileMinWidth(isGridTile))
                 .clip(RoundedCornerShape(16.dp))
                 .background(background)
                 .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-                .padding(vertical = 16.dp)
-                .padding(10.dp)
+                .padding(vertical = 26.dp)
+                .padding(horizontal = tileHorizontalPadding(isGridTile))
                 .semantics(mergeDescendants = true) { contentDescription = description },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -218,7 +300,9 @@ private fun DayCell(
         )
         Text(
             text = day.formattedDuration ?: UNTRACKED_GLYPH,
-            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+            maxLines = 1,
+            style = durationStyle,
+            autoSize = durationAutoSize(isGridTile, maxFontSize = durationStyle.fontSize),
             color =
                 if (isTracked) {
                     onTile.copy(
@@ -389,6 +473,32 @@ private fun PerDayCardExpandedWidthPreview() {
             days = referenceDays(),
             busiestDayLabel = "Sat 05.9",
             projectColor = PreviewProjectColor,
+        )
+    }
+}
+
+@Preview(name = "Grid in a half-width column", widthDp = 420)
+@Composable
+private fun PerDayCardGridPreview() {
+    PerDayCardPreviewContainer {
+        PerDayCard(
+            days = referenceDays(),
+            busiestDayLabel = "Sat 05.9",
+            projectColor = PreviewProjectColor,
+            tilesPerRow = 5,
+        )
+    }
+}
+
+@Preview(name = "Grid with a short last row", widthDp = 420)
+@Composable
+private fun PerDayCardGridShortRowPreview() {
+    PerDayCardPreviewContainer {
+        PerDayCard(
+            days = referenceDays().take(7),
+            busiestDayLabel = "Sat 05.9",
+            projectColor = PreviewProjectColor,
+            tilesPerRow = 5,
         )
     }
 }
