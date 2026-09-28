@@ -63,6 +63,7 @@ private val TwoPaneTopGap = 16.dp
  * @param contentPadding the Scaffold's padding; only its bottom and horizontal sides are applied,
  * because in portrait the summary paints behind the top bar and pads for it itself.
  * @param listTopPadding the height the top bar covers.
+ * @param listItemSpacing the gap between list items, e.g. zero for rows that draw their own dividers.
  */
 @Composable
 fun TrackyAdaptiveDetailLayout(
@@ -71,6 +72,7 @@ fun TrackyAdaptiveDetailLayout(
     listTopPadding: Dp,
     summary: @Composable ColumnScope.(isTwoPane: Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    listItemSpacing: Dp = ItemSpacing,
     list: LazyListScope.(isTwoPane: Boolean) -> Unit,
 ) {
     // Movable so a rotation carries the summary's state (e.g. the per-day strip's scroll) across
@@ -90,7 +92,7 @@ fun TrackyAdaptiveDetailLayout(
                 state = listState,
                 modifier = modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = bottomPadding),
-                verticalArrangement = Arrangement.spacedBy(ItemSpacing),
+                verticalArrangement = Arrangement.spacedBy(listItemSpacing),
             ) {
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(ItemSpacing)) {
@@ -129,7 +131,7 @@ fun TrackyAdaptiveDetailLayout(
                     state = listState,
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(top = listTopPadding + TwoPaneTopGap, bottom = bottomPadding),
-                    verticalArrangement = Arrangement.spacedBy(ItemSpacing),
+                    verticalArrangement = Arrangement.spacedBy(listItemSpacing),
                 ) {
                     list(true)
                 }
