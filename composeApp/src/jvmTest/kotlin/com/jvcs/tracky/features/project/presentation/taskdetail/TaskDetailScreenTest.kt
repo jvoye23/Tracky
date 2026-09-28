@@ -6,6 +6,7 @@ import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -16,6 +17,7 @@ import androidx.compose.ui.test.runDesktopComposeUiTest
 import assertk.assertThat
 import assertk.assertions.containsExactly
 import assertk.assertions.hasSize
+import assertk.assertions.isGreaterThanOrEqualTo
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
 import com.jvcs.tracky.features.project.presentation.taskdetail.model.DailyStatistic
@@ -84,6 +86,21 @@ internal class TaskDetailScreenTest {
             lists[0].performScrollToNode(hasText("Day 30"))
             onNodeWithText("Day 30").assertIsDisplayed()
             onNodeWithText("Dig beds").assertDoesNotExist()
+        }
+
+    @Test
+    fun landscapePutsTheSessionsBesideTheHeader() =
+        runDesktopComposeUiTest(width = 1280, height = 800) {
+            show(taskState)
+
+            // Header and sessions scroll independently, side by side.
+            assertThat(onAllNodes(SemanticsMatcher.keyIsDefined(VerticalScrollAxisRange)).fetchSemanticsNodes())
+                .hasSize(2)
+            onNodeWithText("Dig beds").assertIsDisplayed()
+            onNodeWithText("Mon, Aug 24").assertIsDisplayed()
+            val headerRight = onNodeWithText("Dig beds").getUnclippedBoundsInRoot().right
+            val session = onNodeWithText("Mon, Aug 24").getUnclippedBoundsInRoot()
+            assertThat(session.left).isGreaterThanOrEqualTo(headerRight)
         }
 
     private companion object {

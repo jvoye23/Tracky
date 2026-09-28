@@ -6,19 +6,15 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.calculateEndPadding
-import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -47,7 +43,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -55,9 +50,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jvcs.tracky.designsystem.components.DurationHeroCard
+import com.jvcs.tracky.designsystem.components.layouts.TrackyAdaptiveDetailLayout
 import com.jvcs.tracky.designsystem.components.layouts.detailHeaderTopInset
 import com.jvcs.tracky.designsystem.theme.SampleProjectColors
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
+import com.jvcs.tracky.designsystem.util.PreviewDevices
 import com.jvcs.tracky.designsystem.util.rememberCollapsibleScrollBehavior
 import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
 import com.jvcs.tracky.features.project.presentation.taskdetail.model.DailyStatistic
@@ -151,20 +148,13 @@ fun TaskDetailScreen(
             )
         },
     ) { paddingValues ->
-        val layoutDirection = LocalLayoutDirection.current
-        // No top padding: the header paints behind the top bar and reserves that space itself.
-        LazyColumn(
-            state = listState,
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(
-                        start = paddingValues.calculateStartPadding(layoutDirection),
-                        end = paddingValues.calculateEndPadding(layoutDirection),
-                    ),
-            contentPadding = PaddingValues(bottom = paddingValues.calculateBottomPadding()),
-        ) {
-            item {
+        TrackyAdaptiveDetailLayout(
+            listState = listState,
+            contentPadding = paddingValues,
+            listTopPadding = detailHeaderTopInset(),
+            // The session rows draw their own dividers.
+            listItemSpacing = 0.dp,
+            summary = { isTwoPane ->
                 TaskDetailSummary(
                     title = state.task?.title ?: stringResource(Res.string.title),
                     description =
@@ -176,11 +166,14 @@ fun TaskDetailScreen(
                     isEditMode = state.isEditMode,
                     isTimerRunning = state.isTimerRunning,
                     headerColor = headerColor,
+                    isTwoPane = isTwoPane,
                     onAction = onAction,
                 )
-            }
+            },
+        ) { isTwoPane ->
             item {
-                SessionsHeader(modifier = Modifier.padding(top = 16.dp))
+                // Two-pane starts the column below the bar already; portrait follows the timer button.
+                SessionsHeader(modifier = Modifier.padding(top = if (isTwoPane) 0.dp else 16.dp))
             }
             itemsIndexed(
                 items = state.dailyStatistics,
@@ -216,9 +209,24 @@ private fun TaskDetailSummary(
     isEditMode: Boolean,
     isTimerRunning: Boolean,
     headerColor: Color,
+    isTwoPane: Boolean,
     onAction: (TaskDetailAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Portrait paints the header edge-to-edge behind the top bar. Two-pane starts the column
+    // below the bar, so the header becomes a card inset like the session table beside it.
+    val cardModifier =
+        if (isTwoPane) {
+            Modifier
+                .padding(horizontal = 16.dp)
+                .background(color = headerColor, shape = RoundedCornerShape(24.dp))
+        } else {
+            Modifier
+                .background(
+                    color = headerColor,
+                    shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
+                ).padding(top = detailHeaderTopInset())
+        }
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -227,10 +235,7 @@ private fun TaskDetailSummary(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .background(
-                        color = headerColor,
-                        shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
-                    ).padding(top = detailHeaderTopInset()),
+                    .then(cardModifier),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             TaskHeader(
@@ -504,7 +509,7 @@ private val previewState =
             ),
     )
 
-@Preview
+@PreviewDevices
 @Composable
 private fun TaskDetailScreenPreview() {
     TrackyTheme {
