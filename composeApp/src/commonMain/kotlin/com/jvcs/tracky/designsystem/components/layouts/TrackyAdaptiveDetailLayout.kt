@@ -7,12 +7,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
@@ -23,6 +26,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.movableContentWithReceiverOf
@@ -133,6 +137,17 @@ fun TrackyAdaptiveDetailLayout(
         }
     }
 }
+
+/**
+ * The space the top bar and the status bar occupy. A portrait header paints edge-to-edge behind
+ * both, so it reserves this itself, and pass it as `listTopPadding` so the two-pane columns start
+ * this far down. Both values are constant, unlike the Scaffold's top padding, which shrinks frame
+ * by frame as the bar collapses.
+ */
+@Composable
+fun detailHeaderTopInset(): Dp =
+    WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding() +
+        TopAppBarDefaults.TopAppBarExpandedHeight
 
 @PreviewDevices
 @Preview(name = "Desktop", widthDp = 1440, heightDp = 1024)

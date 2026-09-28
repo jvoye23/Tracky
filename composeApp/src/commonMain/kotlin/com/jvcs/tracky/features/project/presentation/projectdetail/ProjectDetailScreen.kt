@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -43,7 +42,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -58,7 +56,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -70,6 +67,7 @@ import com.jvcs.tracky.designsystem.components.DurationHeroCard
 import com.jvcs.tracky.designsystem.components.FullScreenLoadingIndicator
 import com.jvcs.tracky.designsystem.components.InfoCard
 import com.jvcs.tracky.designsystem.components.layouts.TrackyAdaptiveDetailLayout
+import com.jvcs.tracky.designsystem.components.layouts.detailHeaderTopInset
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.designsystem.util.ObserveAsEvents
 import com.jvcs.tracky.designsystem.util.rememberCollapsibleScrollBehavior
@@ -332,7 +330,7 @@ fun ProjectDetailScreen(
             TrackyAdaptiveDetailLayout(
                 listState = listState,
                 contentPadding = paddingValues,
-                listTopPadding = headerTopInset(),
+                listTopPadding = detailHeaderTopInset(),
                 summary = { isTwoPane ->
                     ProjectDetailHeader(
                         project = state.project,
@@ -429,16 +427,6 @@ fun ProjectDetailScreen(
 private const val PER_DAY_TILES_PER_ROW = 5
 
 /**
- * The space the top bar and the status bar occupy. The header paints edge-to-edge behind both, so
- * it reserves this itself, and the two-pane task list starts this far down. Both values are
- * constant, unlike the Scaffold's top padding, which shrinks frame by frame as the bar collapses.
- */
-@Composable
-private fun headerTopInset(): Dp =
-    WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding() +
-        TopAppBarDefaults.TopAppBarExpandedHeight
-
-/**
  * The dragged card (and the one settling back after release) drives its own translation and rides
  * above the rest; every other card animates to its new slot via animateItem().
  */
@@ -490,7 +478,7 @@ private fun ProjectDetailHeader(
                 .background(
                     color = headerColor,
                     shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
-                ).padding(top = headerTopInset())
+                ).padding(top = detailHeaderTopInset())
         }
     Column(
         modifier = modifier.then(cardModifier),
