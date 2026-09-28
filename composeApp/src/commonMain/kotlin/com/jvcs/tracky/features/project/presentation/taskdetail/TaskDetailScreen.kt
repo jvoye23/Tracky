@@ -6,10 +6,13 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -17,6 +20,7 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -36,11 +40,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -48,8 +55,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jvcs.tracky.designsystem.components.DurationHeroCard
+import com.jvcs.tracky.designsystem.components.layouts.detailHeaderTopInset
 import com.jvcs.tracky.designsystem.theme.SampleProjectColors
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
+import com.jvcs.tracky.designsystem.util.rememberCollapsibleScrollBehavior
 import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
 import com.jvcs.tracky.features.project.presentation.taskdetail.model.DailyStatistic
 import org.jetbrains.compose.resources.stringResource
@@ -118,110 +127,160 @@ fun TaskDetailScreen(
             ?.compositeOver(MaterialTheme.colorScheme.surfaceContainerLow)
             ?: MaterialTheme.colorScheme.surfaceContainerLow
 
+    val listState = rememberLazyListState()
+    // One instance, shared by the app bar and the nested-scroll connection below.
+    val scrollBehavior =
+        rememberCollapsibleScrollBehavior(
+            listState = listState,
+            pinned = state.isEditMode,
+        )
+
     Scaffold(
-        modifier = modifier,
+        modifier =
+            modifier
+                .fillMaxSize()
+                .nestedScroll(scrollBehavior.nestedScrollConnection),
         contentWindowInsets = WindowInsets.safeDrawing,
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         topBar = {
             TaskDetailTopBar(
                 isEditMode = state.isEditMode,
                 headerColor = headerColor,
+                scrollBehavior = scrollBehavior,
                 onAction = onAction,
             )
         },
     ) { paddingValues ->
-        Column(
+        val layoutDirection = LocalLayoutDirection.current
+        // No top padding: the header paints behind the top bar and reserves that space itself.
+        LazyColumn(
+            state = listState,
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .padding(paddingValues),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                    .padding(
+                        start = paddingValues.calculateStartPadding(layoutDirection),
+                        end = paddingValues.calculateEndPadding(layoutDirection),
+                    ),
+            contentPadding = PaddingValues(bottom = paddingValues.calculateBottomPadding()),
         ) {
-            // Header
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .background(
-                            color = headerColor,
-                            shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
-                        ),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                TaskHeader(
-                    modifier = Modifier.padding(horizontal = 16.dp),
+            item {
+                TaskDetailSummary(
                     title = state.task?.title ?: stringResource(Res.string.title),
                     description =
                         state.task?.description?.takeIf { it.isNotBlank() }
                             ?: stringResource(Res.string.description),
-                    isEditMode = state.isEditMode,
-                    onClick = { onAction(TaskDetailAction.OnHeaderClick) },
-                )
-                DurationHeroCard(
-                    modifier =
-                        Modifier
-                            .padding(horizontal = 16.dp)
-                            .padding(bottom = 16.dp),
-                    label = stringResource(Res.string.task_duration),
                     totalDuration = state.task?.displayDuration ?: "00:00:00",
                     projectColor = state.projectColor ?: MaterialTheme.colorScheme.primary,
                     useLightTextColor = state.useLightTextColor,
-                    onStartStopClick = { onAction(TaskDetailAction.OnToggleTimer) },
+                    isEditMode = state.isEditMode,
+                    isTimerRunning = state.isTimerRunning,
+                    headerColor = headerColor,
+                    onAction = onAction,
                 )
             }
-
-            // Timer
-            TimerToggleRow(
-                isTimerRunning = state.isTimerRunning,
-                onToggleTimer = { onAction(TaskDetailAction.OnToggleTimer) },
-            )
-
-            // Daily sessions
-            Text(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                text = stringResource(Res.string.daily_sessions),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-            )
-
-            Column(modifier = Modifier.weight(1f)) {
+            item {
+                SessionsHeader(modifier = Modifier.padding(top = 16.dp))
+            }
+            itemsIndexed(
+                items = state.dailyStatistics,
+                // A multi-day interval's slices share an id, but never a date.
+                key = { _, statistic -> statistic.intervalId + statistic.formattedDate },
+            ) { index, statistic ->
+                if (index > 0) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        thickness = 1.dp,
+                    )
+                }
                 SessionRow(
                     modifier = Modifier.padding(horizontal = 16.dp),
-                    date = stringResource(Res.string.date),
-                    startTime = stringResource(Res.string.start_time),
-                    endTime = stringResource(Res.string.end_time),
-                    duration = stringResource(Res.string.duration),
-                    fontWeight = FontWeight.Bold,
+                    date = statistic.formattedDate,
+                    startTime = statistic.formattedStartTime,
+                    endTime = statistic.formattedEndTime,
+                    duration = statistic.formattedDuration,
                 )
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    thickness = 1.dp,
-                )
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    itemsIndexed(
-                        items = state.dailyStatistics,
-                        // A multi-day interval's slices share an id, but never a date.
-                        key = { _, statistic -> statistic.intervalId + statistic.formattedDate },
-                    ) { index, statistic ->
-                        if (index > 0) {
-                            HorizontalDivider(
-                                modifier = Modifier.padding(horizontal = 16.dp),
-                                thickness = 1.dp,
-                            )
-                        }
-                        SessionRow(
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            date = statistic.formattedDate,
-                            startTime = statistic.formattedStartTime,
-                            endTime = statistic.formattedEndTime,
-                            duration = statistic.formattedDuration,
-                        )
-                    }
-                }
             }
         }
+    }
+}
+
+/** The task's header card and the timer button above the sessions. */
+@Composable
+private fun TaskDetailSummary(
+    title: String,
+    description: String,
+    totalDuration: String,
+    projectColor: Color,
+    useLightTextColor: Boolean,
+    isEditMode: Boolean,
+    isTimerRunning: Boolean,
+    headerColor: Color,
+    onAction: (TaskDetailAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .background(
+                        color = headerColor,
+                        shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
+                    ).padding(top = detailHeaderTopInset()),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            TaskHeader(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                title = title,
+                description = description,
+                isEditMode = isEditMode,
+                onClick = { onAction(TaskDetailAction.OnHeaderClick) },
+            )
+            DurationHeroCard(
+                modifier =
+                    Modifier
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 16.dp),
+                label = stringResource(Res.string.task_duration),
+                totalDuration = totalDuration,
+                projectColor = projectColor,
+                useLightTextColor = useLightTextColor,
+                onStartStopClick = { onAction(TaskDetailAction.OnToggleTimer) },
+            )
+        }
+        TimerToggleRow(
+            isTimerRunning = isTimerRunning,
+            onToggleTimer = { onAction(TaskDetailAction.OnToggleTimer) },
+        )
+    }
+}
+
+/** The "Daily sessions" title and the table's column header. */
+@Composable
+private fun SessionsHeader(modifier: Modifier = Modifier) {
+    Column(modifier = modifier) {
+        Text(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            text = stringResource(Res.string.daily_sessions),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+        )
+        SessionRow(
+            modifier = Modifier.padding(horizontal = 16.dp).padding(top = 16.dp),
+            date = stringResource(Res.string.date),
+            startTime = stringResource(Res.string.start_time),
+            endTime = stringResource(Res.string.end_time),
+            duration = stringResource(Res.string.duration),
+            fontWeight = FontWeight.Bold,
+        )
+        HorizontalDivider(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            thickness = 1.dp,
+        )
     }
 }
 
@@ -230,6 +289,7 @@ fun TaskDetailScreen(
 private fun TaskDetailTopBar(
     isEditMode: Boolean,
     headerColor: Color,
+    scrollBehavior: TopAppBarScrollBehavior?,
     onAction: (TaskDetailAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -275,7 +335,12 @@ private fun TaskDetailTopBar(
                 )
             }
         },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = headerColor),
+        colors =
+            TopAppBarDefaults.topAppBarColors(
+                containerColor = headerColor,
+                scrolledContainerColor = headerColor,
+            ),
+        scrollBehavior = scrollBehavior,
     )
 }
 

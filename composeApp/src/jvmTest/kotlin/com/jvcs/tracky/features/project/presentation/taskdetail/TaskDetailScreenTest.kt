@@ -1,14 +1,21 @@
 package com.jvcs.tracky.features.project.presentation.taskdetail
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.SemanticsProperties.VerticalScrollAxisRange
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.runComposeUiTest
+import androidx.compose.ui.test.runDesktopComposeUiTest
 import assertk.assertThat
 import assertk.assertions.containsExactly
+import assertk.assertions.hasSize
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
 import com.jvcs.tracky.features.project.presentation.taskdetail.model.DailyStatistic
@@ -66,7 +73,23 @@ internal class TaskDetailScreenTest {
             )
         }
 
+    @Test
+    fun portraitScrollsAsOneList() =
+        runDesktopComposeUiTest(width = 412, height = 915) {
+            show(taskState.copy(dailyStatistics = manySessions))
+
+            // Header and sessions share one list, so scrolling to the last session takes the header with it.
+            val lists = onAllNodes(SemanticsMatcher.keyIsDefined(VerticalScrollAxisRange))
+            assertThat(lists.fetchSemanticsNodes()).hasSize(1)
+            lists[0].performScrollToNode(hasText("Day 30"))
+            onNodeWithText("Day 30").assertIsDisplayed()
+            onNodeWithText("Dig beds").assertDoesNotExist()
+        }
+
     private companion object {
+        val manySessions =
+            (1..30).map { day -> DailyStatistic("i$day", "Day $day", "09:00", "10:00", "01:00:00") }
+
         val taskState =
             TaskDetailState(
                 task =
