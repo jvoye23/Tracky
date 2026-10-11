@@ -86,6 +86,7 @@ import com.jvcs.tracky.features.project.presentation.projectdetail.components.Pr
 import com.jvcs.tracky.features.project.presentation.projectdetail.components.TaskItemCard
 import com.jvcs.tracky.features.project.presentation.projectdetail.components.TrackyColorPicker
 import com.jvcs.tracky.features.project.presentation.util.ReorderableListState
+import com.jvcs.tracky.features.project.presentation.util.lastActiveText
 import com.jvcs.tracky.features.project.presentation.util.rememberReorderableListState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -351,7 +352,7 @@ fun ProjectDetailScreen(
                             Modifier
                                 .padding(vertical = 16.dp),
                         startDate = state.project.startDateTimeUtc,
-                        lastActive = state.project.startDateTimeUtc,
+                        lastActive = lastActiveText(state.project),
                         perDayStrip = state.perDayStrip,
                         // The half-width column has no room for a sideways scroll of ten tiles.
                         perDayTilesPerRow = if (isTwoPane) PER_DAY_TILES_PER_ROW else null,
@@ -919,6 +920,7 @@ private fun ProjectDetailScreenPreview() {
                             startDateTimeUtc = "2023-01-01T00:00:00Z",
                             isFinished = false,
                             endDateTimeUtc = null,
+                            lastActiveDate = "Dec, 3, 2025",
                             projectTasks = projectSessionsPreview,
                         ),
                     isEditMode = false,
@@ -946,6 +948,7 @@ private fun ProjectDetailScreenEditModePreview() {
                             startDateTimeUtc = "2023-01-01T00:00:00Z",
                             isFinished = false,
                             endDateTimeUtc = null,
+                            lastActiveDate = "Dec, 3, 2025",
                             projectTasks = projectSessionsPreview,
                         ),
                     isEditMode = true,
@@ -974,6 +977,7 @@ private fun ProjectDetailScreenTwoPanePreview() {
                             startDateTimeUtc = "2023-01-01T00:00:00Z",
                             isFinished = false,
                             endDateTimeUtc = null,
+                            lastActiveDate = "Dec, 3, 2025",
                             projectTasks = projectSessionsPreview,
                         ),
                     isEditMode = false,

@@ -41,6 +41,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -111,6 +112,7 @@ import tracky.composeapp.generated.resources.do_you_want_to_logout
 import tracky.composeapp.generated.resources.do_you_want_to_logout_desc
 import tracky.composeapp.generated.resources.error_archiving_projects
 import tracky.composeapp.generated.resources.error_pinning_projects
+import tracky.composeapp.generated.resources.error_pro_required
 import tracky.composeapp.generated.resources.log_out
 import tracky.composeapp.generated.resources.logout_not_possible
 import tracky.composeapp.generated.resources.logout_not_possible_desc
@@ -122,6 +124,7 @@ import tracky.composeapp.generated.resources.other
 import tracky.composeapp.generated.resources.pinned
 import tracky.composeapp.generated.resources.project_saved_successfully
 import tracky.composeapp.generated.resources.search_results
+import tracky.composeapp.generated.resources.upgrade_to_pro
 
 @Composable
 fun ProjectOverviewScreenRoot(
@@ -130,6 +133,7 @@ fun ProjectOverviewScreenRoot(
     modifier: Modifier = Modifier,
     onNavigateToArchive: () -> Unit = {},
     onNavigateToTrash: () -> Unit = {},
+    onNavigateToPro: () -> Unit = {},
     viewModel: ProjectOverviewViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -140,74 +144,17 @@ fun ProjectOverviewScreenRoot(
 
     ObserveAsEvents(viewModel.events) { event ->
         when (event) {
-            is ProjectOverviewEvent.Error -> {
-                coroutineScope.launch {
-                    snackbarHostState.showSnackbar(
-                        message = event.error.asStringAsync(),
-                        duration = SnackbarDuration.Long,
-                    )
-                }
-            }
-
-            is ProjectOverviewEvent.ArchiveError -> {
-                coroutineScope.launch {
-                    val errorMessage = getString(Res.string.error_archiving_projects)
-                    snackbarHostState.showSnackbar(
-                        message = errorMessage,
-                        duration = SnackbarDuration.Long,
-                    )
-                }
-            }
-
-            is ProjectOverviewEvent.PinError -> {
-                coroutineScope.launch {
-                    val errorMessage = getString(Res.string.error_pinning_projects)
-                    snackbarHostState.showSnackbar(
-                        message = errorMessage,
-                        duration = SnackbarDuration.Long,
-                    )
-                }
-            }
-
             is ProjectOverviewEvent.NewProjectSaved -> {
-                coroutineScope.launch {
-                    val confirmMessage = getString(Res.string.project_saved_successfully)
-                    snackbarHostState.showSnackbar(
-                        message = confirmMessage,
-                        duration = SnackbarDuration.Long,
-                    )
-                }
+                coroutineScope.launch { snackbarHostState.showEventSnackbar(event, onNavigateToPro) }
                 onNavigateToDetailScreen(event.projectId)
-            }
-
-            is ProjectOverviewEvent.AddToTrashError -> {
-                coroutineScope.launch {
-                    snackbarHostState.showSnackbar(
-                        message = event.error.asStringAsync(),
-                        duration = SnackbarDuration.Long,
-                    )
-                }
-            }
-
-            is ProjectOverviewEvent.ReorderError -> {
-                coroutineScope.launch {
-                    snackbarHostState.showSnackbar(
-                        message = event.error.asStringAsync(),
-                        duration = SnackbarDuration.Long,
-                    )
-                }
-            }
-
-            is ProjectOverviewEvent.OnLogoutError -> {
-                coroutineScope.launch {
-                    snackbarHostState.showSnackbar(
-                        message = event.error.asStringAsync(),
-                    )
-                }
             }
 
             ProjectOverviewEvent.OnLogoutSuccess -> {
                 onSuccessfulLogout()
+            }
+
+            else -> {
+                coroutineScope.launch { snackbarHostState.showEventSnackbar(event, onNavigateToPro) }
             }
         }
     }
@@ -237,6 +184,7 @@ fun ProjectOverviewScreenRoot(
             state = state,
             onNavigateToArchive = onNavigateToArchive,
             onNavigateToTrash = onNavigateToTrash,
+            onNavigateToPro = onNavigateToPro,
             snackbarHostState = snackbarHostState,
             sortOption = sortOption,
         )
@@ -255,6 +203,7 @@ fun ProjectOverviewScreen(
     modifier: Modifier = Modifier,
     onNavigateToArchive: () -> Unit = {},
     onNavigateToTrash: () -> Unit = {},
+    onNavigateToPro: () -> Unit = {},
     sortOption: SortOption = SortOption.CUSTOM,
     drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed),
 ) {
@@ -300,6 +249,7 @@ fun ProjectOverviewScreen(
         selectedItem = MainNavDrawerItem.PROJECTS,
         onArchiveClick = onNavigateToArchive,
         onTrashClick = onNavigateToTrash,
+        onProClick = onNavigateToPro,
     ) { showMenuButton ->
         Scaffold(
             snackbarHost = {
@@ -356,15 +306,17 @@ fun ProjectOverviewScreen(
             // through the top bar / status bar band instead of being clipped below it.
             val topInset = innerPadding.calculateTopPadding()
             val bottomInset = innerPadding.calculateBottomPadding()
+            // A local-only device has nothing to sync, so being offline costs it nothing to mention.
+            val showOfflineBanner = !state.isOnline && state.isCloudSyncEnabled
             // When the offline banner is shown it already sits under the bar and reserves the inset.
-            val contentTopInset = if (state.isOnline) topInset else 0.dp
+            val contentTopInset = if (showOfflineBanner) 0.dp else topInset
             Column(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.Top,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 // Internet status
-                if (!state.isOnline) {
+                if (showOfflineBanner) {
                     OfflineBanner(topInset = topInset)
                 }
                 if (!state.isLoading && state.pinnedProjects.isEmpty() && state.otherProjects.isEmpty()) {
@@ -379,13 +331,7 @@ fun ProjectOverviewScreen(
                                 .padding(horizontal = 8.dp),
                     )
                 } else {
-                    PullToRefreshBox(
-                        isRefreshing = state.isRefreshing,
-                        onRefresh = {
-                            onAction(ProjectOverviewAction.OnPullToRefresh)
-                        },
-                        modifier = Modifier.fillMaxSize(),
-                    ) {
+                    val projectList: @Composable () -> Unit = {
                         ProjectList(
                             pinnedItems = pinnedItems,
                             otherItems = otherItems,
@@ -399,6 +345,22 @@ fun ProjectOverviewScreen(
                             contentPadding = PaddingValues(top = contentTopInset, bottom = bottomInset),
                             onAction = onAction,
                         )
+                    }
+                    // Nothing to pull on the local-only tier: Room already holds everything there is.
+                    if (state.isCloudSyncEnabled) {
+                        PullToRefreshBox(
+                            isRefreshing = state.isRefreshing,
+                            onRefresh = {
+                                onAction(ProjectOverviewAction.OnPullToRefresh)
+                            },
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            projectList()
+                        }
+                    } else {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            projectList()
+                        }
                     }
                 }
             }
@@ -461,6 +423,53 @@ private fun ProjectOverviewTopBar(
                 email = email,
                 scrollBehavior = scrollBehavior,
             )
+        }
+    }
+}
+
+/** The snackbar each [ProjectOverviewEvent] shows. Events that only navigate show none. */
+private suspend fun SnackbarHostState.showEventSnackbar(event: ProjectOverviewEvent, onNavigateToPro: () -> Unit) {
+    when (event) {
+        is ProjectOverviewEvent.Error -> {
+            showSnackbar(message = event.error.asStringAsync(), duration = SnackbarDuration.Long)
+        }
+
+        is ProjectOverviewEvent.ProRequired -> {
+            val result =
+                showSnackbar(
+                    message = getString(Res.string.error_pro_required),
+                    actionLabel = getString(Res.string.upgrade_to_pro),
+                    duration = SnackbarDuration.Long,
+                )
+            if (result == SnackbarResult.ActionPerformed) onNavigateToPro()
+        }
+
+        is ProjectOverviewEvent.ArchiveError -> {
+            showSnackbar(message = getString(Res.string.error_archiving_projects), duration = SnackbarDuration.Long)
+        }
+
+        is ProjectOverviewEvent.PinError -> {
+            showSnackbar(message = getString(Res.string.error_pinning_projects), duration = SnackbarDuration.Long)
+        }
+
+        is ProjectOverviewEvent.NewProjectSaved -> {
+            showSnackbar(message = getString(Res.string.project_saved_successfully), duration = SnackbarDuration.Long)
+        }
+
+        is ProjectOverviewEvent.AddToTrashError -> {
+            showSnackbar(message = event.error.asStringAsync(), duration = SnackbarDuration.Long)
+        }
+
+        is ProjectOverviewEvent.ReorderError -> {
+            showSnackbar(message = event.error.asStringAsync(), duration = SnackbarDuration.Long)
+        }
+
+        is ProjectOverviewEvent.OnLogoutError -> {
+            showSnackbar(message = event.error.asStringAsync())
+        }
+
+        ProjectOverviewEvent.OnLogoutSuccess -> {
+            Unit
         }
     }
 }
@@ -789,6 +798,7 @@ private fun previewProjects(): List<ProjectUi> =
             startDateTimeUtc = "2025-12-01T10:00",
             isFinished = false,
             endDateTimeUtc = null,
+            lastActiveDate = "Dec, 3, 2025",
             projectTasks =
                 listOf(
                     ProjectTaskUi(
@@ -813,6 +823,7 @@ private fun previewProjects(): List<ProjectUi> =
             startDateTimeUtc = "2025-11-20T09:00",
             isFinished = true,
             endDateTimeUtc = "2025-11-25T17:00",
+            lastActiveDate = "Dec, 3, 2025",
             isPinned = true,
             projectTasks =
                 listOf(
@@ -838,6 +849,7 @@ private fun previewProjects(): List<ProjectUi> =
             startDateTimeUtc = "2025-12-05T08:00",
             isFinished = false,
             endDateTimeUtc = null,
+            lastActiveDate = "Dec, 3, 2025",
             projectTasks = emptyList(),
         ),
     )

@@ -39,6 +39,15 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/export_file_paths" />
         </provider>
+
+        <!--
+          Never remove androidx.startup.InitializationProvider as a whole: RevenueCat (Purchases)
+          and WorkManager both start through it. To drop a single initializer, declare the provider
+          with tools:node="merge" and put tools:node="remove" on that initializer's meta-data only.
+          WorkManagerInitializer must stay unless TrackyApplication implements
+          Configuration.Provider - AndroidSyncScheduler and AndroidTrashCleanupScheduler rely on
+          WorkManager's default initialization.
+        -->
     </application>
 
 </manifest>

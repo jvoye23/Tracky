@@ -57,7 +57,13 @@ fun EntryProviderScope<NavKey>.authAccountEntries(backStack: NavBackStack<NavKey
                 backStack.add(Route.AuthRoute.RegisterSuccess(email))
             },
             onLoginClick = {
-                backStack.removeLastOrNull()
+                // After a purchase, Register is the root of the stack: popping it would leave nothing
+                // to show, so Login takes its place instead.
+                if (backStack.size > 1) {
+                    backStack.removeLastOrNull()
+                } else {
+                    backStack[0] = Route.AuthRoute.Login
+                }
             },
         )
     }

@@ -1,5 +1,6 @@
 package com.jvcs.tracky.features.project.data.project
 
+import com.jvcs.tracky.core.domain.sync.CloudSyncGate
 import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
@@ -39,6 +40,7 @@ class OfflineFirstProjectOrganizationRepository(
     private val syncScheduler: SyncScheduler,
     private val applicationScope: CoroutineScope,
     private val timeProvider: TimeProvider,
+    private val cloudSyncGate: CloudSyncGate,
 ) : ProjectOrganizationRepository {
 
     override fun getArchivedProjects(): Flow<List<Project>> = localProjectOrganizationDataSource.getArchivedProjects()
@@ -135,6 +137,8 @@ class OfflineFirstProjectOrganizationRepository(
         if (localResult !is Result.Success) {
             return localResult.asEmptyDataResult()
         }
+        // Local-only: the new order lives in Room alone.
+        if (!cloudSyncGate.isEnabled()) return Result.Success(Unit)
 
         return when (val remoteResult = remoteProjectDataSource.reorderProjects(changed, updatedAt)) {
             is Result.Success -> {

@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
@@ -48,12 +49,13 @@ import org.jetbrains.compose.resources.stringResource
 import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.drawer_about_feedback
 import tracky.composeapp.generated.resources.drawer_archive
+import tracky.composeapp.generated.resources.drawer_pro
 import tracky.composeapp.generated.resources.drawer_projects
 import tracky.composeapp.generated.resources.drawer_reminders
 import tracky.composeapp.generated.resources.drawer_settings
 import tracky.composeapp.generated.resources.drawer_trash
 
-enum class MainNavDrawerItem { PROJECTS, ARCHIVE, TRASH }
+enum class MainNavDrawerItem { PROJECTS, ARCHIVE, TRASH, PRO }
 
 /** One destination, shared by the drawer and the rail so the two can never list different items. */
 private data class MainNavEntry(
@@ -71,6 +73,12 @@ private fun mainNavEntries(): List<MainNavEntry> =
         MainNavEntry(Res.string.drawer_reminders, Icons.Outlined.Notifications, target = null),
         MainNavEntry(Res.string.drawer_archive, Icon_Archive, MainNavDrawerItem.ARCHIVE, dividerBefore = true),
         MainNavEntry(Res.string.drawer_trash, Icon_Delete, MainNavDrawerItem.TRASH),
+        MainNavEntry(
+            Res.string.drawer_pro,
+            Icons.Outlined.WorkspacePremium,
+            MainNavDrawerItem.PRO,
+            dividerBefore = true,
+        ),
         MainNavEntry(Res.string.drawer_settings, Icon_Settings, target = null),
         MainNavEntry(Res.string.drawer_about_feedback, Icon_Help, target = null),
     )
@@ -83,6 +91,7 @@ fun MainNavigationDrawer(
     onProjectsClick: () -> Unit = {},
     onArchiveClick: () -> Unit = {},
     onTrashClick: () -> Unit = {},
+    onProClick: () -> Unit = {},
     content: @Composable () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -106,7 +115,7 @@ fun MainNavigationDrawer(
                         selected = entry.target != null && entry.target == selectedItem,
                         onClick = {
                             scope.launch { drawerState.close() }
-                            entry.navigate(onProjectsClick, onArchiveClick, onTrashClick)
+                            entry.navigate(onProjectsClick, onArchiveClick, onTrashClick, onProClick)
                         },
                         modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
                     )
@@ -128,13 +137,14 @@ fun MainNavigationRail(
     onProjectsClick: () -> Unit = {},
     onArchiveClick: () -> Unit = {},
     onTrashClick: () -> Unit = {},
+    onProClick: () -> Unit = {},
 ) {
     NavigationRail(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         windowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Vertical + WindowInsetsSides.Start),
     ) {
-        // Six labelled items barely fit a landscape phone's height, so the rail scrolls rather than clips.
+        // Seven labelled items barely fit a landscape phone's height, so the rail scrolls rather than clips.
         // Fixed at the compact rail width; longer labels wrap instead of widening the rail.
         Column(
             modifier =
@@ -150,7 +160,7 @@ fun MainNavigationRail(
                 }
                 NavigationRailItem(
                     selected = entry.target != null && entry.target == selectedItem,
-                    onClick = { entry.navigate(onProjectsClick, onArchiveClick, onTrashClick) },
+                    onClick = { entry.navigate(onProjectsClick, onArchiveClick, onTrashClick, onProClick) },
                     icon = { Icon(imageVector = entry.icon, contentDescription = null) },
                     label = {
                         Text(
@@ -173,11 +183,13 @@ private fun MainNavEntry.navigate(
     onProjectsClick: () -> Unit,
     onArchiveClick: () -> Unit,
     onTrashClick: () -> Unit,
+    onProClick: () -> Unit,
 ) {
     when (target) {
         MainNavDrawerItem.PROJECTS -> onProjectsClick()
         MainNavDrawerItem.ARCHIVE -> onArchiveClick()
         MainNavDrawerItem.TRASH -> onTrashClick()
+        MainNavDrawerItem.PRO -> onProClick()
         null -> Unit
     }
 }

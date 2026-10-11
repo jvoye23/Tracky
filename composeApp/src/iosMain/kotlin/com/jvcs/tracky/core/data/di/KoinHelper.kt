@@ -2,8 +2,12 @@ package com.jvcs.tracky.core.data.di
 
 import androidx.sqlite.SQLiteException
 import co.touchlab.kermit.Logger
+import com.jvcs.tracky.core.data.purchases.RevenueCatConfigurator
 import com.jvcs.tracky.core.data.realtime.RealtimeTimerConnection
 import com.jvcs.tracky.core.domain.notification.TimerNotificationCoordinator
+import com.jvcs.tracky.core.domain.purchases.AppUserIdentitySync
+import com.jvcs.tracky.core.domain.sync.CloudSyncGate
+import com.jvcs.tracky.core.domain.sync.LocalDataImporter
 import com.jvcs.tracky.core.domain.sync.ProjectSyncManager
 import com.jvcs.tracky.core.domain.sync.SyncRepository
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
@@ -28,6 +32,8 @@ fun startKoinIos() {
     // initKoin already loads every module, including appModule, coreDataModule and projectModule.
     initKoin()
     val koin = KoinPlatform.getKoin()
+    // First, so RevenueCat is configured with the app user id before anything waits on it.
+    koin.get<RevenueCatConfigurator>().start()
 
     // Before the sync manager: a pull must not land on intervals the pass has not parked yet.
     koin.get<StrandedTimerReconciler>().start()
@@ -35,8 +41,15 @@ fun startKoinIos() {
     // After it, so the poll is already running: the socket is the fast path, never the only one.
     koin.get<RealtimeTimerConnection>().start()
     koin.get<TimerNotificationCoordinator>().start()
+
+    // Keeps the RevenueCat customer on the signed-in account's id.
+    koin.get<AppUserIdentitySync>().start()
+    // Uploads a free device's local data once it signs in to an account.
+    koin.get<LocalDataImporter>().start()
+
     koin.get<CoroutineScope>(named("AppScope")).launch {
-        koin.get<SyncScheduler>().schedulePeriodicSyncOnStart()
+        // A local-only device has nothing to drain. Trash cleanup still runs: the purge is local.
+        if (koin.get<CloudSyncGate>().isEnabled()) koin.get<SyncScheduler>().schedulePeriodicSyncOnStart()
         koin.get<TrashCleanupScheduler>().scheduleCleanup()
     }
 }

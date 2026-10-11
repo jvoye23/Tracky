@@ -37,22 +37,16 @@ fun App(
     TrackyTheme(
         darkTheme = isDarkTheme,
     ) {
-        // AppNavHost is withheld until the read of session storages finishes. rememberNavBackStack
-        // captures its start destination in a rememberSaveable initializer that runs once
-        // and never re-runs, so composing it while isCheckingAuth is still true would pin
-        // the back stack to Login even when a valid session exists on disk.
+        // AppNavHost is withheld until the read of the session and the onboarding status finishes.
+        // rememberNavBackStack captures its start destination in a rememberSaveable initializer that
+        // runs once and never re-runs, so composing it while isCheckingAuth is still true would pin
+        // the back stack to Welcome even when a valid session exists on disk.
 
         if (!state.isCheckingAuth) {
-            val startDestination =
-                if (state.isLoggedIn) {
-                    Route.ProjectRoute.ProjectOverview
-                } else {
-                    Route.AuthRoute.Login
-                }
             val backStack =
                 rememberNavBackStack(
                     configuration = routeSavedStateConfiguration,
-                    startDestination,
+                    state.startRoute,
                 )
 
             ObserveAsEvents(mainViewModel.events) { event ->
@@ -66,13 +60,14 @@ fun App(
 
             AppNavHost(
                 backStack = backStack,
-                isLoggedIn = state.isLoggedIn,
+                hasAppAccess = state.hasAppAccess,
             )
 
             // Above the nav host, not inside a screen: the back stack is restored across process
             // death, which is the very thing that strands a timer, so the user can land on any
-            // screen. Only once signed in - the review names a project and a task.
-            if (state.isLoggedIn) {
+            // screen. Only once past onboarding - signed in or free - since the review names a
+            // project and a task.
+            if (state.hasAppAccess) {
                 StrandedTimerDialogHost()
 
                 // Asked on the first timer, not at launch: a permission dialog makes sense to a
@@ -84,8 +79,8 @@ fun App(
 }
 
 @Composable
-private fun AppNavHost(backStack: NavBackStack<NavKey>, isLoggedIn: Boolean) {
-    DeepLinkListener(backStack = backStack, isLoggedIn = isLoggedIn)
+private fun AppNavHost(backStack: NavBackStack<NavKey>, hasAppAccess: Boolean) {
+    DeepLinkListener(backStack = backStack, hasAppAccess = hasAppAccess)
 
     NavigationRoot(
         backStack = backStack,

@@ -32,6 +32,7 @@ class DeltaSyncApplier(
     private val serverClock: ServerClock,
     private val timeProvider: TimeProvider,
     private val syncRecency: SyncRecency,
+    private val cloudSyncGate: CloudSyncGate,
 ) {
 
     /**
@@ -47,6 +48,10 @@ class DeltaSyncApplier(
      * the user had refreshed. One pull, one stamp, wherever the pull came from.
      */
     suspend fun pullChanges(): EmptyResult<DataError> {
+        // Local-only: there is no feed to read. Every pull path - the sync loop, the realtime socket,
+        // pull-to-refresh, the timer's settle - ends here.
+        if (!cloudSyncGate.isEnabled()) return Result.Success(Unit)
+
         val result = pull()
         // Only a pull that landed counts. Stamping the attempt would keep a foreign timer ticking
         // through an outage, which is the one thing SyncRecency exists to stop.

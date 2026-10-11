@@ -690,8 +690,8 @@ class ProjectDetailViewModel(
      * Keeps the task tree level with the database, whoever wrote to it — the edit-text screen, an
      * optimistic write of our own, or a sync pull carrying another device's rows.
      *
-     * Replaces only the tasks and the per-day strip: the colour, contrast and edit mode are left
-     * alone, so a colour pick the user has not saved yet survives an arrival.
+     * Replaces only the tasks, the last active date and the per-day strip: the colour, contrast and
+     * edit mode are left alone, so a colour pick the user has not saved yet survives an arrival.
      */
     private fun observeTaskTree(projectId: String) {
         viewModelScope.launch {
@@ -700,11 +700,17 @@ class ProjectDetailViewModel(
                 // A drag is the one time the order on screen outranks the order in the database.
                 if (reorderInFlight) return@collect
 
-                val freshTasks = fresh.toProjectUi().projectTasks
+                val freshUi = fresh.toProjectUi()
+                val freshTasks = freshUi.projectTasks
                 _state.update { current ->
                     val project = current.project ?: return@update current
                     current.copy(
-                        project = project.copy(projectTasks = freshTasks),
+                        // Stopping a timer closes an interval, which is what moves the last active date.
+                        project =
+                            project.copy(
+                                projectTasks = freshTasks,
+                                lastActiveDate = freshUi.lastActiveDate,
+                            ),
                         perDayStrip = fresh.perDayStrip(),
                     )
                 }

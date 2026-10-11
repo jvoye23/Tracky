@@ -4,6 +4,7 @@
     <string name="drawer_reminders">Reminders</string>
     <string name="drawer_archive">Archive</string>
     <string name="drawer_trash">Trash</string>
+    <string name="drawer_pro">Tracky Pro</string>
     <string name="drawer_settings">Settings</string>
     <string name="drawer_about_feedback">About &amp; Feedback</string>
     <string name="add_project">Add new project</string>
@@ -51,7 +52,9 @@
     <string name="logout_not_possible_desc">Logging out in offline mode is not possible.</string>
     <string name="submit">Submit</string>
     <string name="start_date">Start Date</string>
-    <string name="last_active">Last Updated</string>
+    <string name="last_active">Last Active</string>
+    <string name="last_active_today">Today</string>
+    <string name="last_active_never">—</string>
     <string name="color">Color</string>
     <string name="done">Done</string>
     <string name="task_progress">%1$d/%2$d DONE</string>
@@ -111,6 +114,7 @@
     <string name="create_your_tracky_account">Create your Tracky account</string>
     <string name="create_new_project">Create new project</string>
     <string name="already_have_account">Already have an account? Log in</string>
+    <string name="already_have_subscription">Already subscribed?</string>
     <string name="set_new_password">Set New Password</string>
     <string name="reset_password_successfully">Your password has been reset successfully!</string>
 
@@ -185,6 +189,9 @@
     <string name="error_conflict">A conflict happened</string>
     <string name="error_too_many_requests">You've hit the rate limit</string>
     <string name="error_no_internet">Unable to connect. Please check your internet connection.</string>
+    <string name="error_pro_required">Syncing requires Tracky Pro.</string>
+    <string name="error_import_refused">These projects could not be uploaded to your account and stay on this device only: %1$s</string>
+    <string name="upgrade_to_pro">Upgrade</string>
     <string name="error_payload_too_large">The file you've attached is too large</string>
     <string name="error_server">Oops, a server-side error happened</string>
     <string name="error_service_unavailable">Service unavailable, please try again later</string>
@@ -328,4 +335,71 @@
     <string name="report_column_subtask">SUBTASK</string>
     <string name="report_heading_tasks">Tasks</string>
     <string name="report_heading_per_day">Per day</string>
+    <string name="retry">Retry</string>
+    <string name="pro_active_title">Tracky Pro is active</string>
+    <string name="pro_active_description">Thank you for supporting Tracky. All Pro features are unlocked.</string>
+    <string name="restore_purchases">Already subscribed? Restore purchases</string>
+    <string name="paywall_restore_title">Restore purchases</string>
+    <string name="restore_nothing_found">No previous purchases were found for this account.</string>
+    <string name="pro_active_continue">Create your account</string>
+
+    <!-- Onboarding: welcome -->
+    <string name="welcome_hero_title">Track every minute that matters</string>
+    <string name="welcome_hero_subtitle">Projects, tasks and timers - all on your device, free.</string>
+    <string name="get_started">Get started</string>
+    <string name="basic_feature_offline_title">Offline data storage</string>
+    <string name="basic_feature_offline_description">Tracky runs on its own and keeps all your data on this device.</string>
+    <string name="basic_feature_projects_title">Up to 5 projects</string>
+    <string name="basic_feature_projects_description">Create up to five independent projects to track your time.</string>
+    <string name="basic_feature_tasks_title">Tasks for every project</string>
+    <string name="basic_feature_tasks_description">Create unlimited tasks for each of your projects.</string>
+    <string name="basic_feature_background_title">Tracking in the background</string>
+    <string name="basic_feature_background_description">Your timers keep running even when the app is closed.</string>
+    <string name="basic_feature_reorder_title">Reorder your projects</string>
+    <string name="basic_feature_reorder_description">Put your projects in the order you want.</string>
+    <string name="basic_feature_calendar_title">Calendar view</string>
+    <string name="basic_feature_calendar_description">See your tracked time laid out day by day.</string>
+    <string name="basic_feature_stats_title">Detailed stats</string>
+    <string name="basic_feature_stats_description">See detailed stats of your tracked tasks.</string>
+
+    <!-- Onboarding: notification permission -->
+    <string name="onboarding_permission_title">Keep an eye on your timer</string>
+    <string name="onboarding_permission_description">Tracky shows a notification while a timer runs, so you can see and pause it without opening the app. Allow notifications to get it.</string>
+    <string name="onboarding_permission_allow">Allow notifications</string>
+    <string name="onboarding_permission_skip">Not now</string>
+
+    <!-- Onboarding: paywall -->
+    <string name="paywall_title">Get more with %1$s</string>
+    <string name="paywall_title_brand">Tracky Pro</string>
+    <string name="paywall_subtitle">Everything in the free version, plus:</string>
+    <string name="paywall_plans_title">Choose your plan</string>
+    <string name="paywall_no_plans">No plans are available right now.</string>
+    <string name="paywall_subscribe_now">Subscribe Now</string>
+    <string name="paywall_continue_free">Continue with Free</string>
+    <string name="paywall_plan_unavailable">This plan is no longer available. Please choose another one.</string>
+    <string name="paywall_purchase_failed_title">Purchase failed</string>
+    <string name="plan_monthly">Monthly</string>
+    <string name="plan_annual">Yearly</string>
+    <string name="plan_lifetime">Lifetime</string>
+    <string name="plan_recommended">Recommended</string>
+    <string name="plan_monthly_description">Billed every month. Cancel anytime.</string>
+    <string name="plan_annual_description">Billed once a year. Cancel anytime.</string>
+    <string name="plan_lifetime_description">Pay once, keep Pro forever.</string>
+    <string name="pro_feature_sync_title">Cloud sync</string>
+    <string name="pro_feature_sync_description">Sync all your project data with the cloud server in real time.</string>
+    <string name="pro_feature_devices_title">Tracking across devices</string>
+    <string name="pro_feature_devices_description">Sync your timers on up to 3 devices in real time.</string>
+    <string name="pro_feature_unlimited_title">Unlimited projects</string>
+    <string name="pro_feature_unlimited_description">Create as many projects as you need.</string>
+    <string name="pro_feature_subtasks_title">Subtasks</string>
+    <string name="pro_feature_subtasks_description">Create unlimited subtasks for your project tasks.</string>
+    <string name="pro_feature_archive_title">Archive projects</string>
+    <string name="pro_feature_archive_description">Move the projects you no longer use to the archive.</string>
+    <string name="pro_feature_export_title">Export your projects</string>
+    <string name="pro_feature_export_description">Export and share your project statistics as PDF or JSON.</string>
+    <string name="pro_feature_stats_title">Detailed stats</string>
+    <string name="pro_feature_stats_description">See detailed stats of your tracked tasks and subtasks.</string>
+    <string name="pro_feature_pin_title">Pin your projects</string>
+    <string name="pro_feature_pin_description">Pin your most used projects to the top of your overview.</string>
+    <string name="more_features_with_tracky_pro">More features with Tracky Pro</string>
 </resources>

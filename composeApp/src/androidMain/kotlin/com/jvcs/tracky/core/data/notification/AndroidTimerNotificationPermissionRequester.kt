@@ -79,6 +79,8 @@ class AndroidTimerNotificationPermissionRequester(
             Manifest.permission.POST_NOTIFICATIONS,
         ) == PackageManager.PERMISSION_GRANTED
 
+    override fun needsPrompt(): Boolean = !isGranted()
+
     override suspend fun request(): TimerNotificationPermission {
         // Checked first so an already-granted permission never round-trips through the launcher -
         // the same short-circuit the hand-rolled version made with checkSelfPermission. It reads off

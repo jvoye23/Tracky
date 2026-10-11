@@ -5,6 +5,9 @@ sealed interface DataError : Error {
     enum class Remote : DataError {
         REQUEST_TIMEOUT,
         UNAUTHORIZED,
+
+        /** 402: the account is not Pro, as far as the server knows. */
+        PAYMENT_REQUIRED,
         FORBIDDEN,
         CONFLICT,
         TOO_MANY_REQUESTS,
@@ -25,6 +28,16 @@ sealed interface DataError : Error {
     }
 }
 
+/**
+ * True when the same request may well succeed later, so a local change is kept and queued.
+ *
+ * A 402 does not count. The backend contract (Requirements/backend-pro-entitlement-api.md §4) makes
+ * it terminal: the server promises never to send it for a temporary condition, such as a purchase
+ * whose webhook has not arrived yet, so the client drops the operation instead of re-sending it
+ * forever. Queuing it would let a lapsed account's outbox grow without bound. The local change is
+ * kept either way. Only [LocalDataImporter][com.jvcs.tracky.core.domain.sync.LocalDataImporter]
+ * waits a 402 out, because it runs right after a purchase.
+ */
 fun DataError.Remote.isTransient(): Boolean =
     when (this) {
         DataError.Remote.NO_INTERNET,

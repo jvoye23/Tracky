@@ -1,4 +1,5 @@
-import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.TestExecutable
 import java.util.Properties
 
 plugins {
@@ -20,6 +21,13 @@ val localProperties =
         if (file.exists()) load(file.inputStream())
     }
 
+val xcodeDeveloperDir =
+    providers
+        .exec { commandLine("xcode-select", "-p") }
+        .standardOutput
+        .asText
+        .map { it.trim() }
+
 val generateApiConfig by tasks.registering {
     val outputDir = layout.buildDirectory.dir("generated/apiConfig/kotlin")
     val baseUrl = localProperties["BASE_URL"]?.toString() ?: ""
@@ -40,11 +48,16 @@ val generateApiConfig by tasks.registering {
 }
 
 kotlin {
-    androidLibrary {
+    android {
         compileSdk = 37
         minSdk = 33
         namespace = "com.jvcs.tracky.composeapp"
         experimentalProperties["android.experimental.kmp.enableAndroidResources"] = true
+        // Pinned to androidApp's target. Left to the toolchain default (25), this library emitted
+        // bytecode the app cannot inline, which broke as soon as an app test called safeCall.
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_21)
+        }
     }
 
     listOf(
@@ -55,16 +68,15 @@ kotlin {
             baseName = "ComposeApp"
             isStatic = true
         }
-    }
-
-    jvm()
-
-    // skikoMain: the targets Compose draws with Skia (jvm, ios) share PDF page capture.
-    applyDefaultHierarchyTemplate {
-        common {
-            group("skiko") {
-                withJvm()
-                group("ios")
+        // RevenueCat's iOS core is Swift. The app links through Xcode, which brings the Swift
+        // runtime along; the Kotlin/Native test executable links without Xcode, so it needs the
+        // active toolchain's Swift compatibility libraries on its search path.
+        if (System.getProperty("os.name").startsWith("Mac")) {
+            val swiftPlatform = if (iosTarget.name.contains("Simulator")) "iphonesimulator" else "iphoneos"
+            iosTarget.binaries.withType<TestExecutable>().configureEach {
+                linkerOpts(
+                    "-L${xcodeDeveloperDir.get()}/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$swiftPlatform",
+                )
             }
         }
     }
@@ -75,6 +87,12 @@ kotlin {
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
+        }
+        // RevenueCat's iOS bindings are generated cinterop code, so every iOS source set opts in.
+        named { it.lowercase().startsWith("ios") }.configureEach {
+            languageSettings {
+                optIn("kotlinx.cinterop.ExperimentalForeignApi")
+            }
         }
         androidMain.dependencies {
             implementation(compose.preview)
@@ -88,11 +106,6 @@ kotlin {
             implementation(libs.androidx.work.runtime)
             implementation(libs.androidx.lifecycle.process)
             implementation(libs.androidx.core.ktx)
-            // Android-only on purpose: moko-permissions publishes no jvm artifact, and
-            // PermissionsController is an `expect interface`, so it cannot be named in a
-            // commonMain that is shared with the jvm() target.
-            implementation(libs.moko.permissions)
-            implementation(libs.moko.permissions.notifications)
         }
         commonMain.dependencies {
             // implementation(compose.ui)
@@ -136,6 +149,12 @@ kotlin {
             implementation(libs.ktor.client.auth)
             implementation(libs.ktor.client.logging)
             implementation(libs.ktor.client.websockets)
+
+            implementation(libs.moko.permissions)
+            implementation(libs.moko.permissions.notifications)
+
+            implementation(libs.purchases.core)
+            implementation(libs.purchases.result) // Optional
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -148,21 +167,10 @@ kotlin {
             // A scripted HTTP engine, for the data sources whose behaviour is the status code
             // itself — a 204 that means "nothing is running", a 409 that carries an answer.
             implementation(libs.ktor.client.mock)
-        }
-        jvmTest.dependencies {
-            // JUnit Platform (JUnit 6) runs the JVM tests; kotlin.test's annotations map onto it.
-            implementation(libs.kotlin.test.junit5)
-            implementation(project.dependencies.platform(libs.junit.bom))
-            runtimeOnly(libs.junit.platform.launcher)
-            // Renders composables headlessly on the JVM (runComposeUiTest), so screens are tested
-            // off-device alongside their view models.
+            // Renders composables headlessly (runComposeUiTest), so screens are tested alongside
+            // their view models. Runs on the iOS simulator target.
+            @OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
             implementation(libs.compose.ui.test)
-        }
-        jvmMain.dependencies {
-            implementation(compose.desktop.currentOs)
-            implementation(libs.kotlinx.coroutines.swing)
-            implementation(libs.ktor.client.okhttp)
-            implementation(libs.pdfbox)
         }
     }
 }
@@ -171,14 +179,10 @@ kotlin {
 // 1.1.0, which is an empty forwarder to the AndroidX artifact it depends on. Both publish a klib
 // named `navigationevent-compose_commonMain`, and the metadata transformation keeps only one of
 // them -- the empty one wins, so androidx.navigationevent.compose vanishes from commonMain while
-// still resolving on the Android and JVM targets. Drop the forwarder; the real artifact is declared
+// still resolving on the Android target. Drop the forwarder; the real artifact is declared
 // above.
 configurations.configureEach {
     exclude(group = "org.jetbrains.androidx.navigationevent", module = "navigationevent-compose")
-}
-
-tasks.named<Test>("jvmTest") {
-    useJUnitPlatform()
 }
 
 room {
@@ -189,19 +193,6 @@ dependencies {
     // KSP support for Room Compiler.
     // KMP has no generic `ksp` configuration; each target needs its own.
     add("kspAndroid", libs.room.compiler)
-    add("kspJvm", libs.room.compiler)
     add("kspIosArm64", libs.room.compiler)
     add("kspIosSimulatorArm64", libs.room.compiler)
-}
-
-compose.desktop {
-    application {
-        mainClass = "com.jvcs.tracky.MainKt"
-
-        nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "com.jvcs.tracky"
-            packageVersion = "1.0.0"
-        }
-    }
 }

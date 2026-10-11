@@ -7,9 +7,11 @@ import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.features.project.data.mappers.toProject
+import com.jvcs.tracky.features.project.data.mappers.toProjects
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.project.LocalProjectOrganizationDataSource
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlin.time.Instant
@@ -21,14 +23,16 @@ class RoomLocalProjectOrganizationDataSource(
 ) : LocalProjectOrganizationDataSource {
 
     override fun getArchivedProjects(): Flow<List<Project>> =
-        projectTreeDao
-            .getArchivedProjectsWithTasks()
-            .map { list -> list.map { it.toProject() } }
+        combine(
+            projectTreeDao.getArchivedProjectsWithTasks(),
+            projectTreeDao.observeLastTrackedEnds(),
+        ) { list, lastTracked -> list.toProjects(lastTracked) }
 
     override fun getTrashedProjects(): Flow<List<Project>> =
-        projectTreeDao
-            .getTrashedProjectsWithTasks()
-            .map { list -> list.map { it.toProject() } }
+        combine(
+            projectTreeDao.getTrashedProjectsWithTasks(),
+            projectTreeDao.observeLastTrackedEnds(),
+        ) { list, lastTracked -> list.toProjects(lastTracked) }
 
     override suspend fun getPinnedProjects(): Result<List<Project>, DataError.Local> =
         read {

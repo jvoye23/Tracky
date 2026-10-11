@@ -30,4 +30,6 @@ data class ProjectOverviewState(
     val showLogoutConfirmation: Boolean = false,
     val isOnline: Boolean = true,
     val isRefreshing: Boolean = false,
+    /** Off on the free, local-only tier: there is no server to refresh from. */
+    val isCloudSyncEnabled: Boolean = false,
 )

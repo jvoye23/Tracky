@@ -1,5 +1,6 @@
 package com.jvcs.tracky.features.project.data.subtaskinterval
 
+import com.jvcs.tracky.core.domain.sync.CloudSyncGate
 import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
 import com.jvcs.tracky.core.domain.sync.SyncOutcome
@@ -42,6 +43,7 @@ class OfflineFirstSubTaskIntervalRepository(
     private val syncScheduler: SyncScheduler,
     private val applicationScope: CoroutineScope,
     private val timeProvider: TimeProvider,
+    private val cloudSyncGate: CloudSyncGate,
 ) : SubTaskIntervalRepository {
 
     // CREATE/UPDATE interval: local first (optimistic), then remote — same flow as task intervals.
@@ -81,6 +83,7 @@ class OfflineFirstSubTaskIntervalRepository(
             pendingSyncDataSource.deleteOperationsByEntityId(intervalId)
             return Result.Success(Unit)
         }
+        if (!cloudSyncGate.isEnabled()) return Result.Success(Unit)
 
         // The parent subtask was created offline too, so the server has neither it nor this
         // interval — and deleting the subtask later takes its intervals with it by cascade.
@@ -142,6 +145,9 @@ class OfflineFirstSubTaskIntervalRepository(
     private suspend fun pushInterval(interval: SubTaskInterval, isCreate: Boolean): EmptyResult<DataError> {
         val subTaskId = interval.parentSubTaskId
         val operation = if (isCreate) PendingSyncOperation.OP_CREATE else PendingSyncOperation.OP_UPDATE
+
+        // Local-only: the Room write is the whole change - nothing to push and nothing to queue.
+        if (!cloudSyncGate.isEnabled()) return Result.Success(Unit)
 
         if (pendingSyncDataSource.hasPendingCreate(subTaskId).getOrDefault(false)) {
             return queueForLater(interval.subTaskIntervalId, subTaskId, operation)

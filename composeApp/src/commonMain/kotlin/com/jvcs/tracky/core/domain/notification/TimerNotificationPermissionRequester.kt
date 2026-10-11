@@ -32,6 +32,13 @@ enum class TimerNotificationPermission {
  */
 interface TimerNotificationPermissionRequester {
 
+    /**
+     * Whether [request] would put a prompt in front of the user right now. False once the grant is
+     * held, and always false where the platform has nothing to ask - onboarding skips its
+     * permission step then, rather than explaining a dialog that never comes.
+     */
+    fun needsPrompt(): Boolean
+
     /** Asks once, returning what the platform answered. Never throws. */
     suspend fun request(): TimerNotificationPermission
 
@@ -41,6 +48,8 @@ interface TimerNotificationPermissionRequester {
 
 /** For JVM and iOS, and for platforms before their surface is wired up. */
 class NoOpTimerNotificationPermissionRequester : TimerNotificationPermissionRequester {
+
+    override fun needsPrompt() = false
 
     override suspend fun request() = TimerNotificationPermission.NotRequired
 

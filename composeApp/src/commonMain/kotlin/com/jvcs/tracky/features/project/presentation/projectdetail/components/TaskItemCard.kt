@@ -415,12 +415,12 @@ fun TaskItemCard(
                         }
                     }
                 }
-                if (isEditMode) {
-                    AddSubTaskPill(
-                        onClick = onAddSubTaskClick,
-                        modifier = Modifier.padding(start = 40.dp, top = 16.dp, bottom = 16.dp),
-                    )
-                }
+            }
+            if (isEditMode) {
+                AddSubTaskPill(
+                    onClick = onAddSubTaskClick,
+                    modifier = Modifier.padding(start = 40.dp, top = 16.dp, bottom = 16.dp),
+                )
             }
         }
     }

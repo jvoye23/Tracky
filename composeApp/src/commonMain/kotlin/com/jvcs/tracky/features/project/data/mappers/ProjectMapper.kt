@@ -5,9 +5,11 @@ package com.jvcs.tracky.features.project.data.mappers
 import com.jvcs.tracky.core.data.networking.CreateProjectRequest
 import com.jvcs.tracky.core.data.networking.UpdateProjectRequest
 import com.jvcs.tracky.core.database.entity.ProjectEntity
+import com.jvcs.tracky.core.database.relation.ProjectLastTrackedEntity
 import com.jvcs.tracky.core.database.relation.ProjectWithTaskTreeEntity
 import com.jvcs.tracky.core.database.relation.ProjectWithTasksEntity
 import com.jvcs.tracky.core.database.relation.TaskWithSubTasks
+import com.jvcs.tracky.features.project.domain.interval.lastTrackedEnd
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.task.sortedByTaskOrder
 import kotlin.time.ExperimentalTime
@@ -69,11 +71,25 @@ fun ProjectWithTasksEntity.toProject(): Project =
     )
 
 /**
+ * A list read joined with [lastTracked] from ProjectTreeDao.observeLastTrackedEnds. Its relation
+ * graph carries no intervals, so this is where those projects get [Project.lastTrackedEndUtc].
+ */
+fun List<ProjectWithTasksEntity>.toProjects(lastTracked: List<ProjectLastTrackedEntity>): List<Project> {
+    val endByProjectId = lastTracked.associate { it.projectId to it.lastTrackedEndEpochMs }
+    return map { entity ->
+        entity.toProject().copy(
+            lastTrackedEndUtc = endByProjectId[entity.project.projectId]?.let(Instant::fromEpochMilliseconds),
+        )
+    }
+}
+
+/**
  * Same as [ProjectWithTasksEntity.toProject], except the tasks keep their intervals and subtasks
  * because they map through the [TaskWithSubTasks] overload of `toProjectTask`.
  */
-fun ProjectWithTaskTreeEntity.toProject(): Project =
-    Project(
+fun ProjectWithTaskTreeEntity.toProject(): Project {
+    val tasks = projectTasks.map { it.toProjectTask() }.sortedByTaskOrder()
+    return Project(
         projectId = project.projectId,
         title = project.title,
         description = project.description,
@@ -83,13 +99,15 @@ fun ProjectWithTaskTreeEntity.toProject(): Project =
         isFinished = project.isFinished,
         useLightTextColor = project.useLightTextColor,
         endDateTimeUtc = project.endDateTimeEpochMs?.let(Instant::fromEpochMilliseconds),
-        projectTasks = projectTasks.map { it.toProjectTask() }.sortedByTaskOrder(),
+        projectTasks = tasks,
         isArchived = project.isArchived,
         trashedAt = project.trashedAtEpochMs?.let(Instant::fromEpochMilliseconds),
         isPinned = project.isPinned,
         ownUpdatedAt = project.updatedAtEpochMs?.let(Instant::fromEpochMilliseconds),
         sortIndex = project.sortIndex,
+        lastTrackedEndUtc = tasks.flatMap { it.intervals }.lastTrackedEnd(),
     )
+}
 
 fun Project.toCreateProjectRequest(): CreateProjectRequest =
     CreateProjectRequest(

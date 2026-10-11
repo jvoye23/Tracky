@@ -80,6 +80,7 @@ fun ProjectArchiveScreenRoot(
     onNavigateToDetail: (String) -> Unit,
     onNavigateToProjects: () -> Unit,
     onNavigateToTrash: () -> Unit,
+    onNavigateToPro: () -> Unit,
     viewModel: ProjectArchiveViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -120,6 +121,7 @@ fun ProjectArchiveScreenRoot(
         },
         onNavigateToProjects = onNavigateToProjects,
         onNavigateToTrash = onNavigateToTrash,
+        onNavigateToPro = onNavigateToPro,
         snackbarHostState = snackbarHostState,
     )
 }
@@ -131,6 +133,7 @@ fun ProjectArchiveScreen(
     modifier: Modifier = Modifier,
     onNavigateToProjects: () -> Unit = {},
     onNavigateToTrash: () -> Unit = {},
+    onNavigateToPro: () -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed),
 ) {
@@ -167,6 +170,7 @@ fun ProjectArchiveScreen(
         selectedItem = MainNavDrawerItem.ARCHIVE,
         onProjectsClick = onNavigateToProjects,
         onTrashClick = onNavigateToTrash,
+        onProClick = onNavigateToPro,
     ) { showMenuButton ->
         Scaffold(
             snackbarHost = {
@@ -306,6 +310,7 @@ private fun previewArchivedProjects(): List<ProjectUi> =
             startDateTimeUtc = "Jan, 5, 2025",
             isFinished = true,
             endDateTimeUtc = "Mar, 1, 2025",
+            lastActiveDate = "Mar, 1, 2025",
             projectTasks = emptyList(),
         ),
         ProjectUi(
@@ -317,6 +322,7 @@ private fun previewArchivedProjects(): List<ProjectUi> =
             startDateTimeUtc = "Feb, 2, 2024",
             isFinished = true,
             endDateTimeUtc = "Dec, 1, 2024",
+            lastActiveDate = "Dec, 1, 2024",
             projectTasks = emptyList(),
         ),
     )

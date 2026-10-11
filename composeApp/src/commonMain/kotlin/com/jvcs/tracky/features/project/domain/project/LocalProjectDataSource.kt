@@ -36,6 +36,9 @@ interface LocalProjectDataSource {
     /** The same tree, streamed, so a sync writing another device's rows repaints the screen. */
     fun observeProjectWithTaskTreeById(projectId: String): Flow<Project?>
 
+    /** Every project with its full task tree, archived and trashed ones included. */
+    suspend fun getAllProjectTrees(): Result<List<Project>, DataError.Local>
+
     suspend fun upsertProject(project: Project): EmptyResult<DataError.Local>
 
     suspend fun deleteProject(projectId: String): EmptyResult<DataError.Local>

@@ -1,6 +1,7 @@
 package com.jvcs.tracky.features.project.presentation.mappers
 
 import androidx.compose.ui.graphics.Color
+import com.jvcs.tracky.features.project.domain.interval.lastActiveLocalDate
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.models.ProjectSubTask
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
@@ -44,6 +45,10 @@ fun Project.toProjectUi(): ProjectUi {
         isFinished = isFinished,
         useLightTextColor = useLightTextColor,
         endDateTimeUtc = endDateTimeInLocalDateTime?.date?.format(dateTimeFormat),
+        lastActiveDate =
+            lastTrackedEndUtc
+                ?.lastActiveLocalDate(TimeZone.currentSystemDefault())
+                ?.format(dateTimeFormat),
         projectTasks = projectTasks?.map { it.toProjectTaskUi() },
         isPinned = isPinned,
     )

@@ -11,6 +11,7 @@ import tracky.composeapp.generated.resources.error_forbidden
 import tracky.composeapp.generated.resources.error_no_internet
 import tracky.composeapp.generated.resources.error_not_found
 import tracky.composeapp.generated.resources.error_payload_too_large
+import tracky.composeapp.generated.resources.error_pro_required
 import tracky.composeapp.generated.resources.error_request_timeout
 import tracky.composeapp.generated.resources.error_serialization
 import tracky.composeapp.generated.resources.error_server
@@ -29,6 +30,7 @@ private fun DataError.toStringResource(): StringResource =
         DataError.Remote.BAD_REQUEST -> Res.string.error_bad_request
         DataError.Remote.REQUEST_TIMEOUT -> Res.string.error_request_timeout
         DataError.Remote.UNAUTHORIZED -> Res.string.error_unauthorized
+        DataError.Remote.PAYMENT_REQUIRED -> Res.string.error_pro_required
         DataError.Remote.FORBIDDEN -> Res.string.error_forbidden
         DataError.Remote.NOT_FOUND -> Res.string.error_not_found
         DataError.Remote.CONFLICT -> Res.string.error_conflict

@@ -81,6 +81,7 @@ import tracky.composeapp.generated.resources.trash_title
 fun ProjectTrashScreenRoot(
     onNavigateToProjects: () -> Unit,
     onNavigateToArchive: () -> Unit,
+    onNavigateToPro: () -> Unit,
     viewModel: ProjectTrashViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -119,6 +120,7 @@ fun ProjectTrashScreenRoot(
         onAction = viewModel::onAction,
         onNavigateToProjects = onNavigateToProjects,
         onNavigateToArchive = onNavigateToArchive,
+        onNavigateToPro = onNavigateToPro,
         snackbarHostState = snackbarHostState,
     )
 }
@@ -130,6 +132,7 @@ fun ProjectTrashScreen(
     modifier: Modifier = Modifier,
     onNavigateToProjects: () -> Unit = {},
     onNavigateToArchive: () -> Unit = {},
+    onNavigateToPro: () -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed),
 ) {
@@ -165,6 +168,7 @@ fun ProjectTrashScreen(
         selectedItem = MainNavDrawerItem.TRASH,
         onProjectsClick = onNavigateToProjects,
         onArchiveClick = onNavigateToArchive,
+        onProClick = onNavigateToPro,
     ) { showMenuButton ->
         Scaffold(
             snackbarHost = {
@@ -304,6 +308,7 @@ private fun previewTrashedProjects(): List<ProjectUi> =
             startDateTimeUtc = "Jan, 5, 2025",
             isFinished = true,
             endDateTimeUtc = "Mar, 1, 2025",
+            lastActiveDate = "Mar, 1, 2025",
             projectTasks = emptyList(),
         ),
         ProjectUi(
@@ -315,6 +320,7 @@ private fun previewTrashedProjects(): List<ProjectUi> =
             startDateTimeUtc = "Feb, 2, 2024",
             isFinished = true,
             endDateTimeUtc = "Dec, 1, 2024",
+            lastActiveDate = "Dec, 1, 2024",
             projectTasks = emptyList(),
         ),
     )
