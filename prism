@@ -481,8 +481,14 @@ cmd_coverage() {
         kind=$("$PRISM_PY" "$LIB/coverage.py" check --module "$module" --root "$PRISM_HOME" 2>/dev/null)
         printf '  %-30s %-11s unit + instrumented, on %s\n' \
             "$module" "$kind" "$ANDROID_SERIAL"
+        # A Kotlin Multiplatform library's device tests run under the KMP task
+        # name; an Android module's under the variant's.
+        connected_task="connectedDebugAndroidTest"
+        if [ -d "$PRISM_HOME/$(printf '%s' "$module" | sed 's|^:||; s|:|/|g')/src/androidDeviceTest" ]; then
+            connected_task="connectedAndroidDeviceTest"
+        fi
         ( cd "$PRISM_HOME" && "$PRISM_PY" "$PRISM_HOME/.prism/assets/device_lock.py" \
-            -- "$(prism_gradlew_path "$PRISM_HOME")" "$module:connectedDebugAndroidTest" ) || {
+            -- "$(prism_gradlew_path "$PRISM_HOME")" "$module:$connected_task" ) || {
                 printf '  %-34s FAILED — the connected suite did not pass\n' "$module"
                 continue
             }

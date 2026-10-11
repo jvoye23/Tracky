@@ -27,7 +27,12 @@ allprojects {
     afterEvaluate {
         // Only Android library/application modules produce androidTest coverage.
         val isAndroid = pluginManager.hasPlugin("com.android.base")
-        if (!isAndroid) return@afterEvaluate
+        // A Kotlin Multiplatform library with an Android target: commonTest runs on the device
+        // (androidDeviceTest), so the device's execution data is the whole measurement, of the
+        // Android compilation of commonMain and androidMain.
+        val isKmpAndroid = pluginManager.hasPlugin("org.jetbrains.kotlin.multiplatform") &&
+            pluginManager.hasPlugin("com.android.kotlin.multiplatform.library")
+        if (!isAndroid && !isKmpAndroid) return@afterEvaluate
 
         // Ensure the JaCoCo agent is attached to the unit-test task so it emits .exec.
         pluginManager.apply("jacoco")
@@ -71,6 +76,10 @@ allprojects {
             // carry most of those lines.
             "**/*_Impl.*",
             "**/*_Impl\$*.*",
+            // Compose Multiplatform's generated resource accessors (Res.string.*
+            // and friends): the KMP counterpart of R.class above. Kept in step
+            // with prism-coverage.init.gradle.kts.
+            "**/composeapp/generated/resources/**",
         )
 
         // CLASS OUTPUT DIRECTORIES — ASKED FOR, NOT GUESSED. The same defect and
@@ -82,10 +91,14 @@ allprojects {
         // the wrong answer silent.
         //
         // This module is always Android — the non-Android case returned above.
-        val legacyKotlin = listOf(
-            "intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes", // AGP 9.x
-            "tmp/kotlin-classes/debug",                                        // AGP 8.x
-        )
+        val legacyKotlin = if (isKmpAndroid) {
+            listOf("classes/kotlin/android/main")
+        } else {
+            listOf(
+                "intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes", // AGP 9.x
+                "tmp/kotlin-classes/debug",                                        // AGP 8.x
+            )
+        }
         val legacyJava = listOf(
             "intermediates/javac/debug/compileDebugJavaWithJavac/classes",
             "intermediates/javac/debug/classes",
@@ -118,7 +131,12 @@ allprojects {
         // Resolved LAZILY: AGP registers its tasks in its own afterEvaluate,
         // which may run after this one.
         val classDirectoriesTree = provider {
-            val declared = listOf("compileDebugKotlin", "compileDebugJavaWithJavac")
+            val compileTasks = if (isKmpAndroid) {
+                listOf("compileAndroidMain")
+            } else {
+                listOf("compileDebugKotlin", "compileDebugJavaWithJavac")
+            }
+            val declared = compileTasks
                 // EACH LOOKUP IS GUARDED, and the guard has to cover the
                 // OUTPUTS, not just the lookup. Under AGP 9
                 // `compileDebugJavaWithJavac` still exists as a task object
@@ -145,7 +163,11 @@ allprojects {
             files(roots.map { root -> fileTree(root) { exclude(coverageExcludes) } })
         }
 
-        val sourceDirs = files("src/main/java", "src/main/kotlin")
+        val sourceDirs = if (isKmpAndroid) {
+            files("src/commonMain/kotlin", "src/androidMain/kotlin")
+        } else {
+            files("src/main/java", "src/main/kotlin")
+        }
 
         // Merge both execution-data sets. Use fileTrees so missing files are tolerated
         // (a module may have only one suite) and any device sub-directory is captured.
@@ -158,7 +180,7 @@ allprojects {
         }
 
         tasks.register("prismCombinedCoverage", JacocoReport::class.java) {
-            dependsOn("testDebugUnitTest")
+            if (!isKmpAndroid) dependsOn("testDebugUnitTest")
             group = "verification"
             description = "PRISM combined unit + instrumentation coverage (merged JaCoCo XML)."
 
