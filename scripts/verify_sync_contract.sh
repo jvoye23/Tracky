@@ -208,7 +208,8 @@ chk "stopping a subtask that opened its parent closes both" "$(stop_timer "$STI"
 chk "  both closed at the same instant" \
   "$(jq -r 'if ([.touched[].endDateTimeUtc]|unique|length) == 1 then "yes" else "no" end' "$TMP/r.json")" yes
 
-# The known-failing one. See Requirements/backend-active-timer-api.md section 3.
+# A task timer the user started themselves must outlive a subtask they then drilled into. It failed
+# against the deployed backend until 2026-10-11; see Requirements/backend-active-timer-api.md §3.
 TI2=$(uuid); STI2=$(uuid)
 start_task_timer "$TI2" "$T" "$DEV" "$(now)" >/dev/null
 sleep 1
@@ -243,9 +244,4 @@ for triple in "project:$P:project" "task:$T:task" "subtask:$ST:sub_task" \
 done
 
 printf '\n==== %s passed, %s failed ====\n' "$PASS" "$FAIL"
-if [ "$FAIL" -gt 0 ]; then
-  printf 'Two of these are expected until the backend is fixed: a task timer started\n'
-  printf 'independently must survive its subtask being stopped, and it must still be what is\n'
-  printf 'running afterwards. See backend-active-timer-api.md section 3.\n'
-fi
 [ "$FAIL" -eq 0 ]
