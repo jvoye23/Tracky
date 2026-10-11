@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "accepted"
 date: 2026-09-22
 deciders: Jörg Voye
 ---
@@ -66,10 +66,20 @@ keeps working locally exactly as the free tier does.
 
 ### Confirmation
 
-Not yet implementable — this ADR is `proposed`. When built, the check to enforce is that a sync
-write from an account without entitlement is rejected **by the server**, verified the same way the
-sync contract is: an assertion in `scripts/verify_sync_contract.sh` run against a deployed
-environment, not a unit test against a mock.
+Accepted on 2026-10-11, when the backend shipped `Requirements/backend-pro-entitlement-api.md`
+together with `backend-client-user-id-api.md` (ADR 0005).
+
+**Verified end to end on 2026-10-11:** a Pixel 8 Pro ran against the deployed backend with the
+RevenueCat Test Store.
+- A purchase reached the backend.
+- The new account came back with `"entitlement":"pro"` and the purchase's expiry.
+- The gated sync endpoints (`/api/sync/import`, `/api/sync/changes`, `/api/projects`) served it.
+
+**The refusal is verified too, by section F of `scripts/verify_sync_contract.sh`** (first green run
+2026-10-11, against the deployed backend). It registers an account that has never bought anything
+and asserts `402` with code `ENTITLEMENT_REQUIRED` on `POST /api/sync/import`, `GET
+/api/sync/changes`, `GET` and `POST /api/projects`, and `GET /api/timer/active`. It also asserts that
+`GET /api/entitlement` stays reachable and reports `free`.
 
 ## Pros and Cons of the Options
 
@@ -101,8 +111,13 @@ environment, not a unit test against a mock.
 
 ## More Information
 
-Specified in `Requirements/backend-pro-entitlement-api.md`. **Not implemented** — phase 4 of the
-cross-device sync work (issue 45); the client currently has no entitlement gate at all.
+Specified in `Requirements/backend-pro-entitlement-api.md`, as phase 4 of the cross-device sync work
+(issue 45). **Implemented on the backend as of 2026-10-11.** On the client, the onboarding paywall
+and `LocalDataImporter` handle `402`; this note does not claim that every client path does.
+
+ADR 0005 (*The client mints the user id*) resolves the neutral consequence above: RevenueCat events
+for an id that has no account yet are kept as pending entitlements and claimed when the account is
+created.
 
 Sequencing note: this must land before any release that exposes sync to users. Shipping sync
 ungated and adding the gate later means taking a working feature away from people who already have
@@ -112,5 +127,5 @@ Related: phase 5 (anonymous mode, bulk import on upgrade, trial and downgrade) d
 is larger than it looks — the app currently requires a session to show anything, and logging out
 wipes the local database. Both must change before a genuinely anonymous free tier is possible.
 
-Revisit when phase 4 is built; the reasoning here has not yet met an implementation, and this ADR
-should be superseded rather than edited if it turns out to be wrong.
+Now that phase 4 is built, a change to this decision should come as a new ADR that supersedes this
+one, not as an edit.
