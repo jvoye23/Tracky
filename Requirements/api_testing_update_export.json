@@ -1,0 +1,1615 @@
+{
+  "schemaVersion": 19,
+  "project": {
+    "projectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+    "title": "API Testing update",
+    "description": "this a new description update",
+    "color": -16328219,
+    "totalDuration": 0,
+    "startDateTimeEpochMs": 1786658400000,
+    "isFinished": 0,
+    "useLightTextColor": 0,
+    "endDateTimeEpochMs": null,
+    "isArchived": 0,
+    "trashedAtEpochMs": null,
+    "isPinned": 0,
+    "updatedAtEpochMs": 1790108916869,
+    "sortIndex": 5,
+    "tasks": [
+      {
+        "projectTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+        "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+        "title": "Testing Tasks Update",
+        "description": "new description ",
+        "durationMillis": 15699201,
+        "startDateTimeEpochMs": 1786683423380,
+        "endDateTimeEpochMs": null,
+        "isFinished": 0,
+        "isTimerRunning": 0,
+        "updatedAtEpochMs": 1790062048699,
+        "sortIndex": 0,
+        "intervals": [
+          {
+            "intervalId": "4c4c8c0e-0801-48d2-a863-b1bd104e687c",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1786683484045,
+            "endDateTimeEpochMs": 1786683538134,
+            "durationMillis": 54089,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "3c63f23f-1097-46af-994c-f9a1aa3331ed",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1786683879106,
+            "endDateTimeEpochMs": 1786683908615,
+            "durationMillis": 29509,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "d7d3ef88-f635-4d62-8051-f194713d7647",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1786683958199,
+            "endDateTimeEpochMs": 1786683991142,
+            "durationMillis": 32943,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "ff03c3fc-44cc-4d38-9cef-55e50e380681",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1786684037530,
+            "endDateTimeEpochMs": 1786684070424,
+            "durationMillis": 32894,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "a04d2055-a4a9-43d6-8779-7ed529281f6f",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1786684107966,
+            "endDateTimeEpochMs": 1786684109317,
+            "durationMillis": 1351,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "489509d4-6015-456c-a21b-b28748c08c34",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1786880919312,
+            "endDateTimeEpochMs": 1786880935556,
+            "durationMillis": 16244,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "d1b4a111-da04-4e12-b930-b75d5227053c",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1786963500571,
+            "endDateTimeEpochMs": 1786963502460,
+            "durationMillis": 1889,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "b524520b-6267-4afb-9a34-d5ab1c041479",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787601249705,
+            "endDateTimeEpochMs": 1787601273755,
+            "durationMillis": 24050,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "2657c337-a21b-45d9-857b-1cf5fa7895c3",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787601276616,
+            "endDateTimeEpochMs": 1787601279933,
+            "durationMillis": 3317,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "d195a0c5-8fd4-4a21-90e9-b1b571e3f200",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787643926388,
+            "endDateTimeEpochMs": 1787643927967,
+            "durationMillis": 1579,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "c28f367e-2cd6-49e6-a090-3e31180678d0",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787643929751,
+            "endDateTimeEpochMs": 1787643941538,
+            "durationMillis": 11787,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "7a038c9b-79c4-46a5-920d-7f70c8bbf021",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787650818962,
+            "endDateTimeEpochMs": 1787650831180,
+            "durationMillis": 12218,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "2396e602-8319-46ef-bc83-4fcff1c42695",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787657009093,
+            "endDateTimeEpochMs": 1787657016203,
+            "durationMillis": 7110,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "4f9020a4-ae78-40f2-bec9-bc2a45eff351",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787657704847,
+            "endDateTimeEpochMs": 1787657714837,
+            "durationMillis": 9990,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "1d49284a-3935-4fad-a831-6ad421652ba7",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787657719586,
+            "endDateTimeEpochMs": 1787657724295,
+            "durationMillis": 4709,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "0ef50213-7a74-4d9b-9c4a-f5508ea720aa",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787657738245,
+            "endDateTimeEpochMs": 1787657740974,
+            "durationMillis": 2729,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "e88d4c97-90d3-4d7d-a865-ba518478dd28",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787657742561,
+            "endDateTimeEpochMs": 1787657749229,
+            "durationMillis": 6668,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "25ef389d-c037-41f7-984c-4373e404c4da",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787657750731,
+            "endDateTimeEpochMs": 1787657752721,
+            "durationMillis": 1990,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "e8d9875f-fc9c-46c7-9ba3-b6acce13aa39",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787657758067,
+            "endDateTimeEpochMs": 1787657760392,
+            "durationMillis": 2325,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "ba3a2899-c42e-425e-a4f6-4d560b1ad971",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787691694282,
+            "endDateTimeEpochMs": 1787691722610,
+            "durationMillis": 28328,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "82dbd80c-7adb-4055-ba7f-015283cff7bd",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787691724916,
+            "endDateTimeEpochMs": 1787691728915,
+            "durationMillis": 3999,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "796b746b-3612-4445-bcb5-d1b92d78aa6f",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787691730912,
+            "endDateTimeEpochMs": 1787691733856,
+            "durationMillis": 2944,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "e2066db3-30b6-4b40-b28a-7ee8ee8b80da",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787691737356,
+            "endDateTimeEpochMs": 1787691742211,
+            "durationMillis": 4855,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "3835c138-d01d-4937-a697-26daec251d56",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787691744565,
+            "endDateTimeEpochMs": 1787691748224,
+            "durationMillis": 3659,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "ec502f7c-893f-4505-823c-e1a4af40c5e8",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787691757312,
+            "endDateTimeEpochMs": 1787691791380,
+            "durationMillis": 34068,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "67e666b9-9bf1-491b-b866-43e5eec4b8e0",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787693383699,
+            "endDateTimeEpochMs": 1787693390975,
+            "durationMillis": 7276,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "abc813b3-4a79-4053-99dd-b8d9af9b73f0",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787693392625,
+            "endDateTimeEpochMs": 1787693395207,
+            "durationMillis": 2582,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "6d591f46-7165-48f4-ae9e-b329bcfcf231",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787693398904,
+            "endDateTimeEpochMs": 1787693402119,
+            "durationMillis": 3215,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "9d05697e-5d7e-47d1-9e65-0e983a94b86f",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787693403934,
+            "endDateTimeEpochMs": 1787693406084,
+            "durationMillis": 2150,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "78ebc104-eea0-48e5-a4ad-49a88628b144",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787740357626,
+            "endDateTimeEpochMs": 1787740375639,
+            "durationMillis": 18013,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "16b77abe-c2f7-4e76-92c5-5b70f92cb2b8",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787740377114,
+            "endDateTimeEpochMs": 1787740379518,
+            "durationMillis": 2404,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "a015bb0c-5d22-4627-8253-9938f754eafb",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787741012860,
+            "endDateTimeEpochMs": 1787741017451,
+            "durationMillis": 4591,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "ea5fbcb6-946d-4ebd-8e47-7cca936305ea",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787741116641,
+            "endDateTimeEpochMs": 1787741119479,
+            "durationMillis": 2838,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "df352ebe-f9d3-4c18-bfca-77ce8c881eea",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787741133533,
+            "endDateTimeEpochMs": 1787741144589,
+            "durationMillis": 11056,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "d16c4eb1-8df8-4904-b846-8306bfc78b28",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787741994689,
+            "endDateTimeEpochMs": 1787742021227,
+            "durationMillis": 26538,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "c1185d72-77f4-43ae-9000-c801f76d3b37",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787742027606,
+            "endDateTimeEpochMs": 1787742034297,
+            "durationMillis": 6691,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "12bfdb23-a0ce-43a6-9d70-2ed527ddd64b",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787743277618,
+            "endDateTimeEpochMs": 1787748797618,
+            "durationMillis": 5520000,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "94d8f7a2-39f4-49be-bf3e-1566cc0f639d",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1789763964662,
+            "endDateTimeEpochMs": 1789763967595,
+            "durationMillis": 2933,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "7ca9588a-0c06-44bd-87ae-46407c816794",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1789763979646,
+            "endDateTimeEpochMs": 1789763991098,
+            "durationMillis": 11452,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "b3269485-a6c4-42ab-a9e6-fcfb9220e486",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1789795605866,
+            "endDateTimeEpochMs": 1789795636351,
+            "durationMillis": 30485,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "2fc12e18-de98-46ae-a88b-46b79f0546f4",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1789797452282,
+            "endDateTimeEpochMs": 1789797480853,
+            "durationMillis": 28571,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "5874dd9c-f917-48e0-9a09-f6bacbc4ea76",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1789797488692,
+            "endDateTimeEpochMs": 1789797494554,
+            "durationMillis": 5862,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "d42939f6-d5b5-4cbe-82ca-878bf0746650",
+            "parentTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1790061957165,
+            "endDateTimeEpochMs": 1790062047831,
+            "durationMillis": 90666,
+            "startedByDeviceId": "f829080a-3960-495a-be2d-49a3593040b9"
+          }
+        ],
+        "subTasks": [
+          {
+            "projectSubTaskId": "33226591-dc81-4d2b-b840-9ecd04966089",
+            "parentProjectTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "title": "Subtask Number One",
+            "description": null,
+            "durationMillis": 19848274,
+            "isTimerRunning": 0,
+            "startDateTimeEpochMs": 1787657652766,
+            "endDateTimeEpochMs": null,
+            "isFinished": 0,
+            "updatedAtEpochMs": 1790062049082,
+            "sortIndex": 0,
+            "intervals": [
+              {
+                "subTaskIntervalId": "388685bd-466b-4835-8f55-693fa76b633b",
+                "parentSubTaskId": "33226591-dc81-4d2b-b840-9ecd04966089",
+                "parentTaskIntervalId": "4f9020a4-ae78-40f2-bec9-bc2a45eff351",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1787657704847,
+                "endDateTimeEpochMs": 1787657714837,
+                "durationMillis": 9990,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "5fa1d600-0e24-49fa-96d4-3f59bbb9417a",
+                "parentSubTaskId": "33226591-dc81-4d2b-b840-9ecd04966089",
+                "parentTaskIntervalId": "1d49284a-3935-4fad-a831-6ad421652ba7",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1787657719586,
+                "endDateTimeEpochMs": 1787657724295,
+                "durationMillis": 4709,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "8a7824eb-90a5-4eaa-8007-2a5da0401c80",
+                "parentSubTaskId": "33226591-dc81-4d2b-b840-9ecd04966089",
+                "parentTaskIntervalId": "0ef50213-7a74-4d9b-9c4a-f5508ea720aa",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1787657738245,
+                "endDateTimeEpochMs": 1787657740974,
+                "durationMillis": 2729,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "fc94c9f7-fe2e-42cc-a3b5-9b9c24dfd65a",
+                "parentSubTaskId": "33226591-dc81-4d2b-b840-9ecd04966089",
+                "parentTaskIntervalId": "25ef389d-c037-41f7-984c-4373e404c4da",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1787657750731,
+                "endDateTimeEpochMs": 1787657752721,
+                "durationMillis": 1990,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "8c42c544-9a86-4d0e-83d7-5134e4e512d3",
+                "parentSubTaskId": "33226591-dc81-4d2b-b840-9ecd04966089",
+                "parentTaskIntervalId": "ba3a2899-c42e-425e-a4f6-4d560b1ad971",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1787691694282,
+                "endDateTimeEpochMs": 1787691722610,
+                "durationMillis": 28328,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "a6d50e89-9fb9-43b5-881b-3f4995d97e3b",
+                "parentSubTaskId": "33226591-dc81-4d2b-b840-9ecd04966089",
+                "parentTaskIntervalId": "82dbd80c-7adb-4055-ba7f-015283cff7bd",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1787691724916,
+                "endDateTimeEpochMs": 1787691728915,
+                "durationMillis": 3999,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "406e3e82-7de6-445a-93b4-3cad4b23bc0e",
+                "parentSubTaskId": "33226591-dc81-4d2b-b840-9ecd04966089",
+                "parentTaskIntervalId": "796b746b-3612-4445-bcb5-d1b92d78aa6f",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1787691730912,
+                "endDateTimeEpochMs": 1787691733856,
+                "durationMillis": 2944,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "b16499d9-3a3a-41f8-a18f-d3adec465af8",
+                "parentSubTaskId": "33226591-dc81-4d2b-b840-9ecd04966089",
+                "parentTaskIntervalId": "e2066db3-30b6-4b40-b28a-7ee8ee8b80da",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1787691737356,
+                "endDateTimeEpochMs": 1787691742211,
+                "durationMillis": 4855,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "b240c2a4-04e4-496d-a1ab-697a05e39d8d",
+                "parentSubTaskId": "33226591-dc81-4d2b-b840-9ecd04966089",
+                "parentTaskIntervalId": "3835c138-d01d-4937-a697-26daec251d56",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1787691744565,
+                "endDateTimeEpochMs": 1787691748224,
+                "durationMillis": 3659,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "12c84635-fa44-4af7-a729-cd16b830d441",
+                "parentSubTaskId": "33226591-dc81-4d2b-b840-9ecd04966089",
+                "parentTaskIntervalId": "ec502f7c-893f-4505-823c-e1a4af40c5e8",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1787691757312,
+                "endDateTimeEpochMs": 1787691791380,
+                "durationMillis": 34068,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "fa1bcdf0-3919-46bc-b8fb-5a31dab3f86a",
+                "parentSubTaskId": "33226591-dc81-4d2b-b840-9ecd04966089",
+                "parentTaskIntervalId": "67e666b9-9bf1-491b-b866-43e5eec4b8e0",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1787693383699,
+                "endDateTimeEpochMs": 1787693390975,
+                "durationMillis": 7276,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "a1560559-8e58-4ca4-aa67-b6a377e2a580",
+                "parentSubTaskId": "33226591-dc81-4d2b-b840-9ecd04966089",
+                "parentTaskIntervalId": "abc813b3-4a79-4053-99dd-b8d9af9b73f0",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1787693392625,
+                "endDateTimeEpochMs": 1787693395207,
+                "durationMillis": 2582,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "250818c7-f242-4da1-a1e9-cea93e64ea0e",
+                "parentSubTaskId": "33226591-dc81-4d2b-b840-9ecd04966089",
+                "parentTaskIntervalId": "12bfdb23-a0ce-43a6-9d70-2ed527ddd64b",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1787743357302,
+                "endDateTimeEpochMs": 1787743558529,
+                "durationMillis": 201227,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "1a107266-6727-4af6-a95b-9bd95a4a5364",
+                "parentSubTaskId": "33226591-dc81-4d2b-b840-9ecd04966089",
+                "parentTaskIntervalId": "12bfdb23-a0ce-43a6-9d70-2ed527ddd64b",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1787743557463,
+                "endDateTimeEpochMs": 1787743781072,
+                "durationMillis": 223609,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "4bf4d129-ffd2-455b-a61e-f202ea7caa1d",
+                "parentSubTaskId": "33226591-dc81-4d2b-b840-9ecd04966089",
+                "parentTaskIntervalId": "12bfdb23-a0ce-43a6-9d70-2ed527ddd64b",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1787743560706,
+                "endDateTimeEpochMs": 1787743570415,
+                "durationMillis": 9709,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "5b8cd945-67b3-4fa8-a732-589c26da36e6",
+                "parentSubTaskId": "33226591-dc81-4d2b-b840-9ecd04966089",
+                "parentTaskIntervalId": "12bfdb23-a0ce-43a6-9d70-2ed527ddd64b",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1787743574229,
+                "endDateTimeEpochMs": 1787743631813,
+                "durationMillis": 57584,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "24700ae7-06a8-487d-9cbc-b2a066a826a2",
+                "parentSubTaskId": "33226591-dc81-4d2b-b840-9ecd04966089",
+                "parentTaskIntervalId": "12bfdb23-a0ce-43a6-9d70-2ed527ddd64b",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1787743633828,
+                "endDateTimeEpochMs": 1787743709125,
+                "durationMillis": 75297,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "03afd08f-df36-4b77-b001-e77692448c7b",
+                "parentSubTaskId": "33226591-dc81-4d2b-b840-9ecd04966089",
+                "parentTaskIntervalId": "12bfdb23-a0ce-43a6-9d70-2ed527ddd64b",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1787743711695,
+                "endDateTimeEpochMs": 1787743814101,
+                "durationMillis": 102406,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "ad99d4eb-8745-4fa2-b623-d0183e2f8b73",
+                "parentSubTaskId": "33226591-dc81-4d2b-b840-9ecd04966089",
+                "parentTaskIntervalId": "12bfdb23-a0ce-43a6-9d70-2ed527ddd64b",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1787743784642,
+                "endDateTimeEpochMs": 1787754164642,
+                "durationMillis": 10380000,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "b6c70f04-ae9a-40ec-8095-fb09c0877658",
+                "parentSubTaskId": "33226591-dc81-4d2b-b840-9ecd04966089",
+                "parentTaskIntervalId": "7ca9588a-0c06-44bd-87ae-46407c816794",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1789763979646,
+                "endDateTimeEpochMs": 1789763991098,
+                "durationMillis": 11452,
+                "startedParentTimer": 1,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "16873a86-992d-4c2b-9dc3-27b16814662e",
+                "parentSubTaskId": "33226591-dc81-4d2b-b840-9ecd04966089",
+                "parentTaskIntervalId": "d42939f6-d5b5-4cbe-82ca-878bf0746650",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1790061957165,
+                "endDateTimeEpochMs": 1790062047831,
+                "durationMillis": 90666,
+                "startedParentTimer": 0,
+                "startedByDeviceId": "f829080a-3960-495a-be2d-49a3593040b9"
+              }
+            ]
+          },
+          {
+            "projectSubTaskId": "0af4c7b3-61af-4caf-8dde-fd84d371d468",
+            "parentProjectTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "title": "subtask update",
+            "description": "new subtask description ",
+            "durationMillis": 31227,
+            "isTimerRunning": 0,
+            "startDateTimeEpochMs": 1787752082509,
+            "endDateTimeEpochMs": null,
+            "isFinished": 0,
+            "updatedAtEpochMs": 1789743382588,
+            "sortIndex": 1,
+            "intervals": [
+              {
+                "subTaskIntervalId": "c62baaa1-a576-475e-971c-e0bab1c68b54",
+                "parentSubTaskId": "0af4c7b3-61af-4caf-8dde-fd84d371d468",
+                "parentTaskIntervalId": "12bfdb23-a0ce-43a6-9d70-2ed527ddd64b",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1787753529138,
+                "endDateTimeEpochMs": 1787753536100,
+                "durationMillis": 6962,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "26b69477-81bd-4b43-9f8a-91d86246ab3f",
+                "parentSubTaskId": "0af4c7b3-61af-4caf-8dde-fd84d371d468",
+                "parentTaskIntervalId": "12bfdb23-a0ce-43a6-9d70-2ed527ddd64b",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1788200876182,
+                "endDateTimeEpochMs": 1788200881696,
+                "durationMillis": 5514,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "fc0fe434-1f02-45f9-82e9-9bb1e9c17de5",
+                "parentSubTaskId": "0af4c7b3-61af-4caf-8dde-fd84d371d468",
+                "parentTaskIntervalId": "12bfdb23-a0ce-43a6-9d70-2ed527ddd64b",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1788200883867,
+                "endDateTimeEpochMs": 1788200885769,
+                "durationMillis": 1902,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "e30bf0c5-415a-4ec1-9544-706c2072dae3",
+                "parentSubTaskId": "0af4c7b3-61af-4caf-8dde-fd84d371d468",
+                "parentTaskIntervalId": "12bfdb23-a0ce-43a6-9d70-2ed527ddd64b",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1788200887167,
+                "endDateTimeEpochMs": 1788200888300,
+                "durationMillis": 1133,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "7c6c3ced-8c27-4631-aad5-d7ea79243c55",
+                "parentSubTaskId": "0af4c7b3-61af-4caf-8dde-fd84d371d468",
+                "parentTaskIntervalId": "12bfdb23-a0ce-43a6-9d70-2ed527ddd64b",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1788380720257,
+                "endDateTimeEpochMs": 1788380730121,
+                "durationMillis": 9864,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "bf461c9f-bb0d-4868-93f0-5c1553b2d233",
+                "parentSubTaskId": "0af4c7b3-61af-4caf-8dde-fd84d371d468",
+                "parentTaskIntervalId": "12bfdb23-a0ce-43a6-9d70-2ed527ddd64b",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1789041637198,
+                "endDateTimeEpochMs": 1789041643050,
+                "durationMillis": 5852,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              }
+            ]
+          },
+          {
+            "projectSubTaskId": "ffc87b9c-4908-4c3f-9caf-f40c40c95a6d",
+            "parentProjectTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "title": "New Test",
+            "description": null,
+            "durationMillis": 0,
+            "isTimerRunning": 0,
+            "startDateTimeEpochMs": 1787750164834,
+            "endDateTimeEpochMs": null,
+            "isFinished": 0,
+            "updatedAtEpochMs": 1789738368161,
+            "sortIndex": 2,
+            "intervals": []
+          },
+          {
+            "projectSubTaskId": "4dc90dfc-fe69-4390-a92a-a58a110c815d",
+            "parentProjectTaskId": "be43ef00-77a4-4db7-baec-7112e39b6b05",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "title": "subtask number 4",
+            "description": "no description ",
+            "durationMillis": 64918,
+            "isTimerRunning": 0,
+            "startDateTimeEpochMs": 1789743294584,
+            "endDateTimeEpochMs": null,
+            "isFinished": 0,
+            "updatedAtEpochMs": 1789797493765,
+            "sortIndex": 3,
+            "intervals": [
+              {
+                "subTaskIntervalId": "58b36513-f8c9-46fe-9e54-db5cb1182e5f",
+                "parentSubTaskId": "4dc90dfc-fe69-4390-a92a-a58a110c815d",
+                "parentTaskIntervalId": "b3269485-a6c4-42ab-a9e6-fcfb9220e486",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1789795605866,
+                "endDateTimeEpochMs": 1789795636351,
+                "durationMillis": 30485,
+                "startedParentTimer": 1,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "7062645f-df77-427d-97e7-5128e653911c",
+                "parentSubTaskId": "4dc90dfc-fe69-4390-a92a-a58a110c815d",
+                "parentTaskIntervalId": "2fc12e18-de98-46ae-a88b-46b79f0546f4",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1789797452282,
+                "endDateTimeEpochMs": 1789797480853,
+                "durationMillis": 28571,
+                "startedParentTimer": 1,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "7838d804-4313-4ca5-8cc0-d2c9e7c5aa20",
+                "parentSubTaskId": "4dc90dfc-fe69-4390-a92a-a58a110c815d",
+                "parentTaskIntervalId": "5874dd9c-f917-48e0-9a09-f6bacbc4ea76",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1789797488692,
+                "endDateTimeEpochMs": 1789797494554,
+                "durationMillis": 5862,
+                "startedParentTimer": 1,
+                "startedByDeviceId": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "projectTaskId": "b21d434b-1cbc-4e41-98fb-545b871c095e",
+        "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+        "title": "Cross Device Test",
+        "description": "neue Beschreibung ",
+        "durationMillis": 1409021,
+        "startDateTimeEpochMs": 1786684099275,
+        "endDateTimeEpochMs": null,
+        "isFinished": 0,
+        "isTimerRunning": 0,
+        "updatedAtEpochMs": 1790091463484,
+        "sortIndex": 1,
+        "intervals": [
+          {
+            "intervalId": "065c3e7a-6863-4e92-bb9e-e9c52709d717",
+            "parentTaskId": "b21d434b-1cbc-4e41-98fb-545b871c095e",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1786684102452,
+            "endDateTimeEpochMs": 1786684159002,
+            "durationMillis": 56550,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "44f36540-6383-4970-8055-d8aa1ffb0272",
+            "parentTaskId": "b21d434b-1cbc-4e41-98fb-545b871c095e",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1786684206644,
+            "endDateTimeEpochMs": 1786684218211,
+            "durationMillis": 11567,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "2dbfabec-3400-4296-878a-4756d6d09391",
+            "parentTaskId": "b21d434b-1cbc-4e41-98fb-545b871c095e",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787658002560,
+            "endDateTimeEpochMs": 1787658004157,
+            "durationMillis": 1597,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "0c7e5761-79c3-4782-a576-4c6413218f14",
+            "parentTaskId": "b21d434b-1cbc-4e41-98fb-545b871c095e",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787658006906,
+            "endDateTimeEpochMs": 1787658017852,
+            "durationMillis": 10946,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "3071bc06-4bc4-4baa-b811-8ff2fb79895d",
+            "parentTaskId": "b21d434b-1cbc-4e41-98fb-545b871c095e",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787659770509,
+            "endDateTimeEpochMs": 1787659789735,
+            "durationMillis": 19226,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "de378235-f284-414b-a946-2379a5b84669",
+            "parentTaskId": "b21d434b-1cbc-4e41-98fb-545b871c095e",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787659811947,
+            "endDateTimeEpochMs": 1787659816730,
+            "durationMillis": 4783,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "9a5e5a55-6362-4e00-9544-32d1116d5972",
+            "parentTaskId": "b21d434b-1cbc-4e41-98fb-545b871c095e",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787659819118,
+            "endDateTimeEpochMs": 1787659825185,
+            "durationMillis": 6067,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "a135b496-f029-4b13-a81d-99a45970c01f",
+            "parentTaskId": "b21d434b-1cbc-4e41-98fb-545b871c095e",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787659838690,
+            "endDateTimeEpochMs": 1787659850835,
+            "durationMillis": 12145,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "bfb7347e-e255-4a75-b6d8-bae0dde9c786",
+            "parentTaskId": "b21d434b-1cbc-4e41-98fb-545b871c095e",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787659859200,
+            "endDateTimeEpochMs": 1787659873069,
+            "durationMillis": 13869,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "5a7857f8-a772-4894-8c71-d86b31d90e2e",
+            "parentTaskId": "b21d434b-1cbc-4e41-98fb-545b871c095e",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787659874978,
+            "endDateTimeEpochMs": 1787659878801,
+            "durationMillis": 3823,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "ca29002b-0af6-4494-9172-5e40e426a19f",
+            "parentTaskId": "b21d434b-1cbc-4e41-98fb-545b871c095e",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787659881114,
+            "endDateTimeEpochMs": 1787659886161,
+            "durationMillis": 5047,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "a9f3b718-c289-4d6e-ae54-402c0c31fe4c",
+            "parentTaskId": "b21d434b-1cbc-4e41-98fb-545b871c095e",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1789639166801,
+            "endDateTimeEpochMs": 1789639909889,
+            "durationMillis": 743088,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "dd163b4c-a52c-4c5b-a0bb-6be8dc46d7a4",
+            "parentTaskId": "b21d434b-1cbc-4e41-98fb-545b871c095e",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1789639945189,
+            "endDateTimeEpochMs": 1789639946451,
+            "durationMillis": 1262,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "e0965d4a-e7f9-4371-9ef8-f546b2ae2a57",
+            "parentTaskId": "b21d434b-1cbc-4e41-98fb-545b871c095e",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1789639982020,
+            "endDateTimeEpochMs": 1789639985385,
+            "durationMillis": 3365,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "a49dc745-c9f8-4783-8f1c-6f4177657d2e",
+            "parentTaskId": "b21d434b-1cbc-4e41-98fb-545b871c095e",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1789640511851,
+            "endDateTimeEpochMs": 1789640524328,
+            "durationMillis": 12477,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "25146978-1d96-45a9-bee2-337de40a1896",
+            "parentTaskId": "b21d434b-1cbc-4e41-98fb-545b871c095e",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1789640539967,
+            "endDateTimeEpochMs": 1789640546371,
+            "durationMillis": 6404,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "75463fc9-65ea-4d76-9ecb-4fd5899faa23",
+            "parentTaskId": "b21d434b-1cbc-4e41-98fb-545b871c095e",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1789679652983,
+            "endDateTimeEpochMs": 1789680038550,
+            "durationMillis": 385567,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "abbe73ce-967d-4a0f-a817-95c4139c0430",
+            "parentTaskId": "b21d434b-1cbc-4e41-98fb-545b871c095e",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1789802836962,
+            "endDateTimeEpochMs": 1789802846884,
+            "durationMillis": 9922,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "a0cc2ee1-3906-4008-b751-fdb01837b961",
+            "parentTaskId": "b21d434b-1cbc-4e41-98fb-545b871c095e",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1790064878184,
+            "endDateTimeEpochMs": 1790064933387,
+            "durationMillis": 55203,
+            "startedByDeviceId": "f829080a-3960-495a-be2d-49a3593040b9"
+          },
+          {
+            "intervalId": "f5496c6b-d579-4bf3-8025-328c51a36c06",
+            "parentTaskId": "b21d434b-1cbc-4e41-98fb-545b871c095e",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1790091326965,
+            "endDateTimeEpochMs": 1790091399819,
+            "durationMillis": 72854,
+            "startedByDeviceId": "daac4261-66d3-4fc6-a483-f388ef9c191f"
+          },
+          {
+            "intervalId": "461a2869-3603-40a9-87cf-f39e31493560",
+            "parentTaskId": "b21d434b-1cbc-4e41-98fb-545b871c095e",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1790091383259,
+            "endDateTimeEpochMs": 1790091402009,
+            "durationMillis": 18750,
+            "startedByDeviceId": "daac4261-66d3-4fc6-a483-f388ef9c191f"
+          },
+          {
+            "intervalId": "cad42695-c2ee-4653-9e87-d64fdd8aa883",
+            "parentTaskId": "b21d434b-1cbc-4e41-98fb-545b871c095e",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1790091404328,
+            "endDateTimeEpochMs": 1790091407326,
+            "durationMillis": 2998,
+            "startedByDeviceId": "daac4261-66d3-4fc6-a483-f388ef9c191f"
+          },
+          {
+            "intervalId": "ca67139b-5b0e-43bf-a9f4-23ba0cea685f",
+            "parentTaskId": "b21d434b-1cbc-4e41-98fb-545b871c095e",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1790091405993,
+            "endDateTimeEpochMs": 1790091423770,
+            "durationMillis": 17777,
+            "startedByDeviceId": "f829080a-3960-495a-be2d-49a3593040b9"
+          },
+          {
+            "intervalId": "730c5cd4-6dc3-46cb-90ce-1261e49e8489",
+            "parentTaskId": "b21d434b-1cbc-4e41-98fb-545b871c095e",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1790091408685,
+            "endDateTimeEpochMs": 1790091415273,
+            "durationMillis": 6588,
+            "startedByDeviceId": "daac4261-66d3-4fc6-a483-f388ef9c191f"
+          }
+        ],
+        "subTasks": [
+          {
+            "projectSubTaskId": "e92a7271-c91a-46b8-8079-28666bcbad1d",
+            "parentProjectTaskId": "b21d434b-1cbc-4e41-98fb-545b871c095e",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "title": "Cross Device Subtask 1",
+            "description": null,
+            "durationMillis": 788594,
+            "isTimerRunning": 0,
+            "startDateTimeEpochMs": 1787657947951,
+            "endDateTimeEpochMs": null,
+            "isFinished": 0,
+            "updatedAtEpochMs": 1790091463705,
+            "sortIndex": 0,
+            "intervals": [
+              {
+                "subTaskIntervalId": "88dcccca-9293-4542-ba03-7191507dd94c",
+                "parentSubTaskId": "e92a7271-c91a-46b8-8079-28666bcbad1d",
+                "parentTaskIntervalId": "2dbfabec-3400-4296-878a-4756d6d09391",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1787658002560,
+                "endDateTimeEpochMs": 1787658004157,
+                "durationMillis": 1597,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "ad80a73c-1cba-4e53-969e-a6c0f4c2994f",
+                "parentSubTaskId": "e92a7271-c91a-46b8-8079-28666bcbad1d",
+                "parentTaskIntervalId": "0c7e5761-79c3-4782-a576-4c6413218f14",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1787658006906,
+                "endDateTimeEpochMs": 1787658017852,
+                "durationMillis": 10946,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "5dfa9bea-3797-46f3-9dbd-c477ab9a8c46",
+                "parentSubTaskId": "e92a7271-c91a-46b8-8079-28666bcbad1d",
+                "parentTaskIntervalId": "a9f3b718-c289-4d6e-ae54-402c0c31fe4c",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1789639166801,
+                "endDateTimeEpochMs": 1789639909889,
+                "durationMillis": 743088,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "20ec8114-e0b8-49f1-a1bc-c9f5aac1aa00",
+                "parentSubTaskId": "e92a7271-c91a-46b8-8079-28666bcbad1d",
+                "parentTaskIntervalId": "dd163b4c-a52c-4c5b-a0bb-6be8dc46d7a4",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1789639945189,
+                "endDateTimeEpochMs": 1789639946451,
+                "durationMillis": 1262,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "93c5f20a-d1b7-48a7-993c-4b434a53ba19",
+                "parentSubTaskId": "e92a7271-c91a-46b8-8079-28666bcbad1d",
+                "parentTaskIntervalId": "e0965d4a-e7f9-4371-9ef8-f546b2ae2a57",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1789639982020,
+                "endDateTimeEpochMs": 1789639985385,
+                "durationMillis": 3365,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "bd03fddc-a051-4bc5-9b07-4410716088ca",
+                "parentSubTaskId": "e92a7271-c91a-46b8-8079-28666bcbad1d",
+                "parentTaskIntervalId": "f5496c6b-d579-4bf3-8025-328c51a36c06",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1790091326965,
+                "endDateTimeEpochMs": 1790091399819,
+                "durationMillis": 72854,
+                "startedParentTimer": 0,
+                "startedByDeviceId": "daac4261-66d3-4fc6-a483-f388ef9c191f"
+              },
+              {
+                "subTaskIntervalId": "d451aeb1-2c64-4b40-a84f-88321d8bf15c",
+                "parentSubTaskId": "e92a7271-c91a-46b8-8079-28666bcbad1d",
+                "parentTaskIntervalId": "461a2869-3603-40a9-87cf-f39e31493560",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1790091383259,
+                "endDateTimeEpochMs": 1790091402009,
+                "durationMillis": 18750,
+                "startedParentTimer": 0,
+                "startedByDeviceId": "daac4261-66d3-4fc6-a483-f388ef9c191f"
+              },
+              {
+                "subTaskIntervalId": "965d4298-dfc4-4ae5-a865-a75ba1850818",
+                "parentSubTaskId": "e92a7271-c91a-46b8-8079-28666bcbad1d",
+                "parentTaskIntervalId": "cad42695-c2ee-4653-9e87-d64fdd8aa883",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1790091404328,
+                "endDateTimeEpochMs": 1790091407326,
+                "durationMillis": 2998,
+                "startedParentTimer": 0,
+                "startedByDeviceId": "daac4261-66d3-4fc6-a483-f388ef9c191f"
+              },
+              {
+                "subTaskIntervalId": "f58b3d11-e6ac-4a3c-b612-4c4cff581e30",
+                "parentSubTaskId": "e92a7271-c91a-46b8-8079-28666bcbad1d",
+                "parentTaskIntervalId": "ca67139b-5b0e-43bf-a9f4-23ba0cea685f",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1790091405993,
+                "endDateTimeEpochMs": 1790091423770,
+                "durationMillis": 17777,
+                "startedParentTimer": 0,
+                "startedByDeviceId": "f829080a-3960-495a-be2d-49a3593040b9"
+              },
+              {
+                "subTaskIntervalId": "4145adf0-4d27-486b-8a69-855742d9e312",
+                "parentSubTaskId": "e92a7271-c91a-46b8-8079-28666bcbad1d",
+                "parentTaskIntervalId": "730c5cd4-6dc3-46cb-90ce-1261e49e8489",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1790091408685,
+                "endDateTimeEpochMs": 1790091415273,
+                "durationMillis": 6588,
+                "startedParentTimer": 0,
+                "startedByDeviceId": "daac4261-66d3-4fc6-a483-f388ef9c191f"
+              }
+            ]
+          },
+          {
+            "projectSubTaskId": "6e685072-eb42-4b3e-a053-f0bc89ad89e6",
+            "parentProjectTaskId": "b21d434b-1cbc-4e41-98fb-545b871c095e",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "title": "hfthh",
+            "description": null,
+            "durationMillis": 508519,
+            "isTimerRunning": 0,
+            "startDateTimeEpochMs": 1787659763288,
+            "endDateTimeEpochMs": null,
+            "isFinished": 0,
+            "updatedAtEpochMs": 1790064934410,
+            "sortIndex": 1,
+            "intervals": [
+              {
+                "subTaskIntervalId": "239f23f6-118c-4ef0-8f0c-1a560d63226e",
+                "parentSubTaskId": "6e685072-eb42-4b3e-a053-f0bc89ad89e6",
+                "parentTaskIntervalId": "3071bc06-4bc4-4baa-b811-8ff2fb79895d",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1787659770509,
+                "endDateTimeEpochMs": 1787659789735,
+                "durationMillis": 19226,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "4bfa4a37-0b4b-4ba9-ab23-a591357c646f",
+                "parentSubTaskId": "6e685072-eb42-4b3e-a053-f0bc89ad89e6",
+                "parentTaskIntervalId": "de378235-f284-414b-a946-2379a5b84669",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1787659811947,
+                "endDateTimeEpochMs": 1787659816730,
+                "durationMillis": 4783,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "4250e5f1-2089-49f1-8032-ee226adba20a",
+                "parentSubTaskId": "6e685072-eb42-4b3e-a053-f0bc89ad89e6",
+                "parentTaskIntervalId": "9a5e5a55-6362-4e00-9544-32d1116d5972",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1787659819118,
+                "endDateTimeEpochMs": 1787659825185,
+                "durationMillis": 6067,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "e0e4b40f-47cd-409c-ac7c-1cb59f9807d9",
+                "parentSubTaskId": "6e685072-eb42-4b3e-a053-f0bc89ad89e6",
+                "parentTaskIntervalId": "5a7857f8-a772-4894-8c71-d86b31d90e2e",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1787659874978,
+                "endDateTimeEpochMs": 1787659878801,
+                "durationMillis": 3823,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "39ef73bc-1e77-4968-864e-3097e87f5ebc",
+                "parentSubTaskId": "6e685072-eb42-4b3e-a053-f0bc89ad89e6",
+                "parentTaskIntervalId": "ca29002b-0af6-4494-9172-5e40e426a19f",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1787659881114,
+                "endDateTimeEpochMs": 1787659886161,
+                "durationMillis": 5047,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "ec28cff4-b676-41c3-8c2f-b453f68ba6be",
+                "parentSubTaskId": "6e685072-eb42-4b3e-a053-f0bc89ad89e6",
+                "parentTaskIntervalId": "a49dc745-c9f8-4783-8f1c-6f4177657d2e",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1789640511851,
+                "endDateTimeEpochMs": 1789640524328,
+                "durationMillis": 12477,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "b3688bb2-1da2-494f-8438-35eea183532b",
+                "parentSubTaskId": "6e685072-eb42-4b3e-a053-f0bc89ad89e6",
+                "parentTaskIntervalId": "25146978-1d96-45a9-bee2-337de40a1896",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1789640539967,
+                "endDateTimeEpochMs": 1789640546371,
+                "durationMillis": 6404,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "e5f952fa-3709-4343-89cf-91be14a2bde2",
+                "parentSubTaskId": "6e685072-eb42-4b3e-a053-f0bc89ad89e6",
+                "parentTaskIntervalId": "75463fc9-65ea-4d76-9ecb-4fd5899faa23",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1789679652983,
+                "endDateTimeEpochMs": 1789680038550,
+                "durationMillis": 385567,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "1237da89-383f-4d49-a334-a289ee3317f2",
+                "parentSubTaskId": "6e685072-eb42-4b3e-a053-f0bc89ad89e6",
+                "parentTaskIntervalId": "abbe73ce-967d-4a0f-a817-95c4139c0430",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1789802836962,
+                "endDateTimeEpochMs": 1789802846884,
+                "durationMillis": 9922,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "deddd430-8ca0-43ae-8ada-a056fb9c2c5a",
+                "parentSubTaskId": "6e685072-eb42-4b3e-a053-f0bc89ad89e6",
+                "parentTaskIntervalId": "a0cc2ee1-3906-4008-b751-fdb01837b961",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1790064878184,
+                "endDateTimeEpochMs": 1790064933387,
+                "durationMillis": 55203,
+                "startedParentTimer": 0,
+                "startedByDeviceId": "f829080a-3960-495a-be2d-49a3593040b9"
+              }
+            ]
+          },
+          {
+            "projectSubTaskId": "4df0b413-2796-4c57-bde3-bc311f771de3",
+            "parentProjectTaskId": "b21d434b-1cbc-4e41-98fb-545b871c095e",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "title": "gggjjjjjj",
+            "description": null,
+            "durationMillis": 26014,
+            "isTimerRunning": 0,
+            "startDateTimeEpochMs": 1787659834235,
+            "endDateTimeEpochMs": null,
+            "isFinished": 0,
+            "updatedAtEpochMs": 1789762890432,
+            "sortIndex": 2,
+            "intervals": [
+              {
+                "subTaskIntervalId": "16efdd3b-2ae2-4f17-9261-7ca9714aaf88",
+                "parentSubTaskId": "4df0b413-2796-4c57-bde3-bc311f771de3",
+                "parentTaskIntervalId": "a135b496-f029-4b13-a81d-99a45970c01f",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1787659838690,
+                "endDateTimeEpochMs": 1787659850835,
+                "durationMillis": 12145,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              },
+              {
+                "subTaskIntervalId": "3d0735aa-0348-417b-bf3a-0a0d6739ae9a",
+                "parentSubTaskId": "4df0b413-2796-4c57-bde3-bc311f771de3",
+                "parentTaskIntervalId": "bfb7347e-e255-4a75-b6d8-bae0dde9c786",
+                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+                "startDateTimeEpochMs": 1787659859200,
+                "endDateTimeEpochMs": 1787659873069,
+                "durationMillis": 13869,
+                "startedParentTimer": 0,
+                "startedByDeviceId": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "projectTaskId": "5c86de27-c492-4bd9-ba47-2d1f61e5d283",
+        "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+        "title": "iPhone Task",
+        "description": "iPhone Task",
+        "durationMillis": 48364,
+        "startDateTimeEpochMs": 1786684700711,
+        "endDateTimeEpochMs": 1787821067559,
+        "isFinished": 1,
+        "isTimerRunning": 0,
+        "updatedAtEpochMs": 1789763052322,
+        "sortIndex": 2,
+        "intervals": [
+          {
+            "intervalId": "1ca4a1c2-4a2d-4ef3-b7f0-c29c30a931ac",
+            "parentTaskId": "5c86de27-c492-4bd9-ba47-2d1f61e5d283",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1786684721195,
+            "endDateTimeEpochMs": 1786684744944,
+            "durationMillis": 23749,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "54c0b0ae-3dcd-43e3-828d-140d3e2e148b",
+            "parentTaskId": "5c86de27-c492-4bd9-ba47-2d1f61e5d283",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787743787377,
+            "endDateTimeEpochMs": 1787743795451,
+            "durationMillis": 8074,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "9e5a1566-8a95-4326-8587-8d70da9c139c",
+            "parentTaskId": "5c86de27-c492-4bd9-ba47-2d1f61e5d283",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787743798710,
+            "endDateTimeEpochMs": 1787743811537,
+            "durationMillis": 12827,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "5b1b7443-52cd-4085-85c0-08e98d14c2f5",
+            "parentTaskId": "5c86de27-c492-4bd9-ba47-2d1f61e5d283",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787816068416,
+            "endDateTimeEpochMs": 1787816072130,
+            "durationMillis": 3714,
+            "startedByDeviceId": null
+          }
+        ],
+        "subTasks": []
+      },
+      {
+        "projectTaskId": "1ec36753-c9e6-4eab-9d72-3212f87b7d9c",
+        "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+        "title": "Task Number Four",
+        "description": "Task Number Four",
+        "durationMillis": 13958843,
+        "startDateTimeEpochMs": 1786885511207,
+        "endDateTimeEpochMs": 1788897609016,
+        "isFinished": 1,
+        "isTimerRunning": 0,
+        "updatedAtEpochMs": 1789763052322,
+        "sortIndex": 3,
+        "intervals": [
+          {
+            "intervalId": "088ff1ce-430e-40ae-b7e8-41c84b0f563b",
+            "parentTaskId": "1ec36753-c9e6-4eab-9d72-3212f87b7d9c",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1786885519294,
+            "endDateTimeEpochMs": 1786885538080,
+            "durationMillis": 18786,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "28a6ea6f-2692-41e7-bf6a-059588d036a5",
+            "parentTaskId": "1ec36753-c9e6-4eab-9d72-3212f87b7d9c",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1786885538938,
+            "endDateTimeEpochMs": 1786885539979,
+            "durationMillis": 1041,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "8527c45a-4e77-4115-aaba-5de60fe5f5ec",
+            "parentTaskId": "1ec36753-c9e6-4eab-9d72-3212f87b7d9c",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1786885541093,
+            "endDateTimeEpochMs": 1786885542367,
+            "durationMillis": 1274,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "10340a02-d405-45e3-a3f9-74c0794941ac",
+            "parentTaskId": "1ec36753-c9e6-4eab-9d72-3212f87b7d9c",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1787743800002,
+            "endDateTimeEpochMs": 1787743810550,
+            "durationMillis": 10548,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "38d661ca-736f-4cac-95ff-b021bee52783",
+            "parentTaskId": "1ec36753-c9e6-4eab-9d72-3212f87b7d9c",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1788350765346,
+            "endDateTimeEpochMs": 1788350772788,
+            "durationMillis": 7442,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "c9b66649-f0ec-4380-9930-7b6323d31fea",
+            "parentTaskId": "1ec36753-c9e6-4eab-9d72-3212f87b7d9c",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1788897205372,
+            "endDateTimeEpochMs": 1788897243709,
+            "durationMillis": 38337,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "ecf90671-1f75-4836-b9e8-2d1b9b19a34b",
+            "parentTaskId": "1ec36753-c9e6-4eab-9d72-3212f87b7d9c",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1788897591371,
+            "endDateTimeEpochMs": 1788897595543,
+            "durationMillis": 4172,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "14a6cdd3-5def-4f76-bb41-88c53ecf1538",
+            "parentTaskId": "1ec36753-c9e6-4eab-9d72-3212f87b7d9c",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1788897592937,
+            "endDateTimeEpochMs": 1788897599100,
+            "durationMillis": 6163,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "da675d6d-fd86-4238-b623-c7ec0c66fbc6",
+            "parentTaskId": "1ec36753-c9e6-4eab-9d72-3212f87b7d9c",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1788897597057,
+            "endDateTimeEpochMs": 1788897607129,
+            "durationMillis": 10072,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "b8adaa80-a068-47e9-a8b8-94ea3e21dc10",
+            "parentTaskId": "1ec36753-c9e6-4eab-9d72-3212f87b7d9c",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1788897603245,
+            "endDateTimeEpochMs": 1788904263245,
+            "durationMillis": 6660000,
+            "startedByDeviceId": null
+          }
+        ],
+        "subTasks": []
+      },
+      {
+        "projectTaskId": "0b5248a9-45be-4057-998f-f2ca895f9683",
+        "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+        "title": "Neuer Task",
+        "description": null,
+        "durationMillis": 464428,
+        "startDateTimeEpochMs": 1787657073652,
+        "endDateTimeEpochMs": null,
+        "isFinished": 0,
+        "isTimerRunning": 0,
+        "updatedAtEpochMs": 1789762913787,
+        "sortIndex": 4,
+        "intervals": [
+          {
+            "intervalId": "2716113f-8fd7-4939-9050-a7d6f4161232",
+            "parentTaskId": "0b5248a9-45be-4057-998f-f2ca895f9683",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1789033398492,
+            "endDateTimeEpochMs": 1789033416505,
+            "durationMillis": 18013,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "315492b8-ca35-4334-86df-aed3cc6db4ea",
+            "parentTaskId": "0b5248a9-45be-4057-998f-f2ca895f9683",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1789033528955,
+            "endDateTimeEpochMs": 1789033615210,
+            "durationMillis": 86255,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "b4a4a414-9462-4ae2-acfb-fbf926209809",
+            "parentTaskId": "0b5248a9-45be-4057-998f-f2ca895f9683",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1789327887527,
+            "endDateTimeEpochMs": 1789327916308,
+            "durationMillis": 28781,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "adb16feb-c637-42a2-b06f-7b72d6f5c7d5",
+            "parentTaskId": "0b5248a9-45be-4057-998f-f2ca895f9683",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1789327918850,
+            "endDateTimeEpochMs": 1789327927871,
+            "durationMillis": 9021,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "892a93e1-8cc2-48b8-836f-06ac1a12071f",
+            "parentTaskId": "0b5248a9-45be-4057-998f-f2ca895f9683",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1789327934559,
+            "endDateTimeEpochMs": 1789327955826,
+            "durationMillis": 21267,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "94f43194-3900-40e0-ad6c-500bd017fad9",
+            "parentTaskId": "0b5248a9-45be-4057-998f-f2ca895f9683",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1789638922316,
+            "endDateTimeEpochMs": 1789638945261,
+            "durationMillis": 22945,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "5c59daf1-5384-4aef-b71c-de1c746e6e2d",
+            "parentTaskId": "0b5248a9-45be-4057-998f-f2ca895f9683",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1789640470635,
+            "endDateTimeEpochMs": 1789640506584,
+            "durationMillis": 35949,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "3459870b-2de8-4255-a043-b854fed6b527",
+            "parentTaskId": "0b5248a9-45be-4057-998f-f2ca895f9683",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1789661404790,
+            "endDateTimeEpochMs": 1789661458405,
+            "durationMillis": 53615,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "1933b48c-da4b-4680-96a4-134c0cd5f921",
+            "parentTaskId": "0b5248a9-45be-4057-998f-f2ca895f9683",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1789661680508,
+            "endDateTimeEpochMs": 1789661695523,
+            "durationMillis": 15015,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "9257de3e-e567-40ef-9167-823019ff212f",
+            "parentTaskId": "0b5248a9-45be-4057-998f-f2ca895f9683",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1789661699190,
+            "endDateTimeEpochMs": 1789661702245,
+            "durationMillis": 3055,
+            "startedByDeviceId": null
+          },
+          {
+            "intervalId": "7c27e303-0792-442d-a5e8-07a009f66623",
+            "parentTaskId": "0b5248a9-45be-4057-998f-f2ca895f9683",
+            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+            "startDateTimeEpochMs": 1789661704918,
+            "endDateTimeEpochMs": 1789661875430,
+            "durationMillis": 170512,
+            "startedByDeviceId": null
+          }
+        ],
+        "subTasks": []
+      }
+    ]
+  },
+  "pendingSyncOperations": []
+}
