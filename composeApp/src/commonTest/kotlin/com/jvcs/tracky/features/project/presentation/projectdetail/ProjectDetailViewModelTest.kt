@@ -6,6 +6,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import app.cash.turbine.test
 import assertk.assertThat
+import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
@@ -192,6 +193,63 @@ class ProjectDetailViewModelTest {
             ?.map { it.projectSubTaskId }
 
     // --- tests ---------------------------------------------------------------------------------
+
+    @Test
+    fun `deleting a subtask removes it from its task without a reload`() =
+        runTest {
+            val s1 = subTask("s1")
+            val (vm, repo) = viewModel(project(s1, subTask("s2")), FakeSubTaskRepository(listOf(s1)))
+            vm.state.test {
+                awaitItem()
+                advanceUntilIdle()
+
+                vm.onAction(ProjectDetailAction.OnDeleteSubTaskClick("s1"))
+                advanceUntilIdle()
+
+                assertThat(repo.deleted).containsExactly("s1")
+                assertThat(vm.subTaskIds()).isEqualTo(listOf("s2"))
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `deleting a task removes it from the project without a reload`() =
+        runTest {
+            val (vm, _) = viewModel(projectWithTasks("a", "b"))
+            vm.state.test {
+                awaitItem()
+                advanceUntilIdle()
+
+                vm.onAction(ProjectDetailAction.OnDeleteSessionClick("a"))
+                advanceUntilIdle()
+
+                assertThat(vm.taskIds()).isEqualTo(listOf("b"))
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `adding a task stores it and shows it at the end`() =
+        runTest {
+            val taskRepo = FakeProjectTaskRepository(null)
+            val (vm, _) = viewModel(projectWithTasks("a"), taskRepository = taskRepo)
+            vm.state.test {
+                awaitItem()
+                advanceUntilIdle()
+
+                vm.onAction(ProjectDetailAction.OnCreateProjectSession("Write tests"))
+                advanceUntilIdle()
+
+                assertThat(taskRepo.upserted.map { it.title }).containsExactly("Write tests")
+                assertThat(
+                    vm.state.value.project
+                        ?.projectTasks
+                        ?.map { it.title },
+                ).isEqualTo(listOf("task-a", "Write tests"))
+                assertThat(vm.state.value.isAddNewProjectTaskBottomSheetVisible).isFalse()
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
 
     @Test
     fun `starting a subtask marks the parent task running`() =
