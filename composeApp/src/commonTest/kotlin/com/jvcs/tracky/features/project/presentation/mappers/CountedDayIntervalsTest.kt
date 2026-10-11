@@ -104,7 +104,7 @@ class CountedDayIntervalsTest {
     }
 
     @Test
-    fun `a task with subtasks contributes only its subtasks' intervals`() {
+    fun `a task with subtasks contributes only its subtasks’ intervals`() {
         // The task interval and the subtask interval describe the same stretch of wall clock:
         // counting both would bill 42 minutes twice.
         val counted =

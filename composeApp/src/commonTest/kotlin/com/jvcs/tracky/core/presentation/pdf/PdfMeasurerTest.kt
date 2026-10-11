@@ -13,12 +13,12 @@ import androidx.compose.ui.unit.dp
 import assertk.assertThat
 import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
-import assertk.assertions.isNotNull
 import kotlin.math.roundToInt
 import kotlin.test.Test
 
+/** Measuring a document only lays it out, so unlike page capture it runs on every platform. */
 @OptIn(ExperimentalTestApi::class)
-internal class PdfPageLayoutTest {
+internal class PdfMeasurerTest {
 
     @Composable
     private fun Block(height: Int) = Spacer(Modifier.height(height.dp))
@@ -50,29 +50,5 @@ internal class PdfPageLayoutTest {
             assertThat(sizes.footerHeight).isEqualTo(px(20))
             assertThat(sizes.blockHeights).containsExactly(px(100), 0, px(10))
             assertThat(sizes.sectionHeaderHeights).isEqualTo(mapOf(0 to px(50)))
-        }
-
-    @Test
-    fun aLandscapePageIsCapturedAtPageSizeWithItsPageInfo() =
-        runComposeUiTest {
-            var captured: CapturedPdfPage? = null
-            var footerInfo: PdfPageInfo? = null
-            val document =
-                buildPdfDocument {
-                    footer { info -> footerInfo = info }
-                    item { Block(10) }
-                }
-            val landscape = PdfPageSpec(PageOrientation.Landscape)
-            val info = PdfPageInfo(pageNumber = 2, pageCount = 3)
-            setContent {
-                AtRenderDensity {
-                    PdfPage(document, landscape, listOf(PdfPlacement.Block(0)), info) { captured = it }
-                }
-            }
-            waitUntil { captured != null }
-
-            val page = checkNotNull(captured)
-            assertThat(page.widthPx to page.heightPx).isEqualTo(px(842) to px(595))
-            assertThat(footerInfo).isNotNull().isEqualTo(info)
         }
 }

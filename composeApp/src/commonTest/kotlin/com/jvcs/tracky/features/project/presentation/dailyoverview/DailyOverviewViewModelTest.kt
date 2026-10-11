@@ -57,7 +57,7 @@ class DailyOverviewViewModelTest {
     // --- loading ------------------------------------------------------------------------------
 
     @Test
-    fun `the screen opens on today with today's month showing`() =
+    fun `the screen opens on today with today’s month showing`() =
         runTest {
             val state = viewModel().state.value
 
@@ -67,7 +67,7 @@ class DailyOverviewViewModelTest {
         }
 
     @Test
-    fun `the project's title and colour reach the state`() =
+    fun `the project’s title and colour reach the state`() =
         runTest {
             val vm = viewModel(project = project().copy(title = "Tracky", colorArgb = 0xFFF39B19.toInt()))
 

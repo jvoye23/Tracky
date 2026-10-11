@@ -4,8 +4,13 @@ package com.jvcs.tracky.features.project.domain.export
  * `sample_project_export.json`: the project the PDF export design was drawn from, as a Room-shaped
  * dump. Inlined rather than read as a resource, because the tests run on the iOS simulator, where
  * there is no class loader to read it through.
+ *
+ * In pieces because the JVM caps one string constant at 64 KB, and the Android host tests compile
+ * this for the JVM.
  */
-internal const val SAMPLE_PROJECT_JSON = """{
+internal val SAMPLE_PROJECT_JSON: String =
+    listOf(
+        """{
   "schemaVersion": 19,
   "project": {
     "projectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
@@ -456,7 +461,8 @@ internal const val SAMPLE_PROJECT_JSON = """{
                 "parentTaskIntervalId": "1d49284a-3935-4fad-a831-6ad421652ba7",
                 "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
                 "startDateTimeEpochMs": 1787657719586,
-                "endDateTimeEpochMs": 1787657724295,
+""",
+        """                "endDateTimeEpochMs": 1787657724295,
                 "durationMillis": 4709,
                 "startedParentTimer": 0,
                 "startedByDeviceId": null
@@ -863,7 +869,8 @@ internal const val SAMPLE_PROJECT_JSON = """{
           {
             "intervalId": "0c7e5761-79c3-4782-a576-4c6413218f14",
             "parentTaskId": "b21d434b-1cbc-4e41-98fb-545b871c095e",
-            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+""",
+        """            "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
             "startDateTimeEpochMs": 1787658006906,
             "endDateTimeEpochMs": 1787658017852,
             "durationMillis": 10946,
@@ -1272,7 +1279,8 @@ internal const val SAMPLE_PROJECT_JSON = """{
                 "subTaskIntervalId": "e5f952fa-3709-4343-89cf-91be14a2bde2",
                 "parentSubTaskId": "6e685072-eb42-4b3e-a053-f0bc89ad89e6",
                 "parentTaskIntervalId": "75463fc9-65ea-4d76-9ecb-4fd5899faa23",
-                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
+""",
+        """                "parentProjectId": "79a1a6f6-e0e5-4928-bed5-516f0fa13b7d",
                 "startDateTimeEpochMs": 1789679652983,
                 "endDateTimeEpochMs": 1789680038550,
                 "durationMillis": 385567,
@@ -1619,4 +1627,5 @@ internal const val SAMPLE_PROJECT_JSON = """{
     ]
   },
   "pendingSyncOperations": []
-}"""
+}""",
+    ).joinToString("")

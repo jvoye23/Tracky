@@ -58,6 +58,12 @@ kotlin {
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_21)
         }
+        // commonTest also runs on a device, instrumented, so that it has a coverage number: JaCoCo
+        // cannot measure the iOS simulator run.
+        withDeviceTestBuilder { sourceSetTreeName = "test" }.configure {
+            instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+            enableCoverage = true
+        }
     }
 
     listOf(
@@ -171,6 +177,12 @@ kotlin {
             // their view models. Runs on the iOS simulator target.
             @OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
             implementation(libs.compose.ui.test)
+        }
+        getByName("androidDeviceTest").dependencies {
+            implementation(libs.androidx.test.runner)
+            implementation(libs.androidx.test.core)
+            // Declares the ComponentActivity that runComposeUiTest launches.
+            implementation(libs.androidx.compose.ui.test.manifest)
         }
     }
 }

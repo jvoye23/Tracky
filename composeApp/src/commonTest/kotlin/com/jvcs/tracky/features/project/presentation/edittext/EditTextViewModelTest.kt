@@ -134,7 +134,7 @@ class EditTextViewModelTest {
         }
 
     @Test
-    fun `saving a rename keeps the project's place in the manual order`() =
+    fun `saving a rename keeps the project’s place in the manual order`() =
         runTest {
             // Rebuilding the project from its UI model dropped sortIndex, and a null index sorts first
             // under Custom: a rename moved the project to the top of the overview.

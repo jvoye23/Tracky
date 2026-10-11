@@ -1,7 +1,5 @@
 package com.jvcs.tracky.features.project.data.timer
 
-import androidx.room.Room
-import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
@@ -14,11 +12,10 @@ import com.jvcs.tracky.core.database.entity.ProjectSubTaskEntity
 import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
 import com.jvcs.tracky.core.database.entity.SubTaskIntervalEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
+import com.jvcs.tracky.core.database.inMemoryTrackyDatabase
 import com.jvcs.tracky.core.domain.device.FakeDeviceIdProvider
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
 import com.jvcs.tracky.core.domain.util.testServerClock
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestScope
@@ -46,11 +43,7 @@ internal class StrandedTimerReconcilerTest {
     @BeforeTest
     fun setUp() {
         db =
-            Room
-                .inMemoryDatabaseBuilder<TrackyDatabase>()
-                .setDriver(BundledSQLiteDriver())
-                .setQueryCoroutineContext(Dispatchers.IO)
-                .build()
+            inMemoryTrackyDatabase()
         reconciler =
             StrandedTimerReconciler(
                 db.subTaskDao,

@@ -955,7 +955,7 @@ class ProjectDetailViewModelTest {
         }
 
     @Test
-    fun `saving a colour change keeps the project's place in the manual order`() =
+    fun `saving a colour change keeps the project’s place in the manual order`() =
         runTest {
             val stored =
                 projectWithTasks("a").copy(

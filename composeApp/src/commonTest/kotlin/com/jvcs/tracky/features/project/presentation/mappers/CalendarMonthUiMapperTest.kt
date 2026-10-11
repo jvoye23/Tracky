@@ -45,7 +45,7 @@ class CalendarMonthUiMapperTest {
     }
 
     @Test
-    fun `today's month always has a page even for a project that banked nothing`() {
+    fun `today’s month always has a page even for a project that banked nothing`() {
         val pages = months(on = LocalDate(2027, 3, 4))
 
         assertThat(pages.last().yearMonth).isEqualTo(YearMonth(2027, 3))
@@ -159,7 +159,7 @@ class CalendarMonthUiMapperTest {
     // --- totals and tint ----------------------------------------------------------------------
 
     @Test
-    fun `a day's tracked time lands on its cell and nowhere else`() {
+    fun `a day’s tracked time lands on its cell and nowhere else`() {
         val sep = months(task(intervals = listOf(interval("2026-09-08T09:30:00Z", minutes = 42)))).september()
 
         assertThat(sep.monthDays.single { it.date == LocalDate(2026, 9, 8) }.trackedMillis).isEqualTo(42 * 60_000L)
@@ -188,7 +188,7 @@ class CalendarMonthUiMapperTest {
     }
 
     @Test
-    fun `the month total sums only that month's days`() {
+    fun `the month total sums only that month’s days`() {
         val sep =
             months(
                 task(
@@ -272,7 +272,7 @@ class CalendarMonthUiMapperTest {
     }
 
     @Test
-    fun `the zone decides which cell a day's time lands on`() {
+    fun `the zone decides which cell a day’s time lands on`() {
         val tasks = arrayOf(task(intervals = listOf(interval("2026-09-05T02:00:00Z", minutes = 30))))
 
         assertThat(months(*tasks).september().busiestDayLabel).isEqualTo("Sep, 05, 2026")

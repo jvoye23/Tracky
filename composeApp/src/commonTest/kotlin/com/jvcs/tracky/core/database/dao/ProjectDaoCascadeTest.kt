@@ -1,7 +1,6 @@
 package com.jvcs.tracky.core.database.dao
 
 import androidx.room.Room
-import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import assertk.assertThat
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
@@ -9,8 +8,7 @@ import com.jvcs.tracky.core.database.TrackyDatabase
 import com.jvcs.tracky.core.database.entity.ProjectEntity
 import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
+import com.jvcs.tracky.core.database.inMemoryTrackyDatabase
 import kotlinx.coroutines.runBlocking
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -33,11 +31,7 @@ class ProjectDaoCascadeTest {
     @BeforeTest
     fun setUp() {
         db =
-            Room
-                .inMemoryDatabaseBuilder<TrackyDatabase>()
-                .setDriver(BundledSQLiteDriver())
-                .setQueryCoroutineContext(Dispatchers.IO)
-                .build()
+            inMemoryTrackyDatabase()
         dao = db.projectDao
     }
 

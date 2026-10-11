@@ -150,7 +150,7 @@ class DayDetailUiMapperTest {
     // --- the counts and the total ---------------------------------------------------------------
 
     @Test
-    fun `the total sums the day's intervals`() {
+    fun `the total sums the day’s intervals`() {
         val detail =
             day(
                 task(

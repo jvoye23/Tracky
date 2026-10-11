@@ -1,7 +1,5 @@
 package com.jvcs.tracky.features.project.data.subtask
 
-import androidx.room.Room
-import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
@@ -13,13 +11,12 @@ import com.jvcs.tracky.core.database.entity.ProjectEntity
 import com.jvcs.tracky.core.database.entity.ProjectSubTaskEntity
 import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
+import com.jvcs.tracky.core.database.inMemoryTrackyDatabase
 import com.jvcs.tracky.core.domain.device.FakeDeviceIdProvider
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.testServerClock
 import com.jvcs.tracky.features.project.data.task.RoomLocalTaskDataSource
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.runBlocking
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -44,11 +41,7 @@ internal class RoomLocalSubTaskDataSourceStopTest {
     @BeforeTest
     fun setUp() {
         db =
-            Room
-                .inMemoryDatabaseBuilder<TrackyDatabase>()
-                .setDriver(BundledSQLiteDriver())
-                .setQueryCoroutineContext(Dispatchers.IO)
-                .build()
+            inMemoryTrackyDatabase()
         subTasks =
             RoomLocalSubTaskDataSource(
                 db.sortOrderDao,

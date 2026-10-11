@@ -1,7 +1,6 @@
 package com.jvcs.tracky.features.project.data.project
 
 import androidx.room.Room
-import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import assertk.assertThat
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
@@ -13,10 +12,9 @@ import com.jvcs.tracky.core.database.entity.ProjectSubTaskEntity
 import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
 import com.jvcs.tracky.core.database.entity.SubTaskIntervalEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
+import com.jvcs.tracky.core.database.inMemoryTrackyDatabase
 import com.jvcs.tracky.core.domain.sync.SyncChanges
 import com.jvcs.tracky.core.domain.sync.Tombstone
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.runBlocking
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -45,11 +43,7 @@ internal class RoomLocalServerTreeDataSourceTombstoneTest {
     @BeforeTest
     fun setUp() {
         db =
-            Room
-                .inMemoryDatabaseBuilder<TrackyDatabase>()
-                .setDriver(BundledSQLiteDriver())
-                .setQueryCoroutineContext(Dispatchers.IO)
-                .build()
+            inMemoryTrackyDatabase()
         dataSource = RoomLocalServerTreeDataSource(ServerTreeWriter(db))
     }
 

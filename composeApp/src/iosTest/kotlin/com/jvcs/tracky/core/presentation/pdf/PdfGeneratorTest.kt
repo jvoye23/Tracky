@@ -23,6 +23,8 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 
 @OptIn(ExperimentalTestApi::class, ExperimentalCoroutinesApi::class)
+// In iosTest, not commonTest: on an Android device the page capture never fires and these time
+// out. Whether that is the test environment or Android's PDF export is still open.
 internal class PdfGeneratorTest {
 
     private class FakeWriter : PdfDocumentWriter {

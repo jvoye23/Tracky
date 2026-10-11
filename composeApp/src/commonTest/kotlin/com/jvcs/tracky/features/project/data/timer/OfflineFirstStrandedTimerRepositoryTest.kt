@@ -1,7 +1,5 @@
 package com.jvcs.tracky.features.project.data.timer
 
-import androidx.room.Room
-import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
@@ -13,6 +11,7 @@ import com.jvcs.tracky.core.database.entity.ProjectSubTaskEntity
 import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
 import com.jvcs.tracky.core.database.entity.SubTaskIntervalEntity
 import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
+import com.jvcs.tracky.core.database.inMemoryTrackyDatabase
 import com.jvcs.tracky.core.domain.device.FakeDeviceIdProvider
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
@@ -27,8 +26,6 @@ import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import com.jvcs.tracky.features.project.domain.subtask.SubTaskRepository
 import com.jvcs.tracky.features.project.domain.subtaskinterval.SubTaskIntervalRepository
 import com.jvcs.tracky.features.project.domain.task.ProjectTaskRepository
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
@@ -64,11 +61,7 @@ internal class OfflineFirstStrandedTimerRepositoryTest {
     @BeforeTest
     fun setUp() {
         db =
-            Room
-                .inMemoryDatabaseBuilder<TrackyDatabase>()
-                .setDriver(BundledSQLiteDriver())
-                .setQueryCoroutineContext(Dispatchers.IO)
-                .build()
+            inMemoryTrackyDatabase()
         repository =
             OfflineFirstStrandedTimerRepository(
                 projectDao = db.projectDao,

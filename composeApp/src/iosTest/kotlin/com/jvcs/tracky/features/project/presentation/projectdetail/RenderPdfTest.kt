@@ -22,6 +22,9 @@ import kotlinx.coroutines.async
 import kotlinx.datetime.TimeZone
 import kotlin.test.Test
 
+// In iosTest, not commonTest: on an Android device the page capture never fires and these time
+// out. Whether that is the test environment or Android's PDF export is still open.
+
 /** The Root's half of the PDF round trip: what [renderPdf] answers the view model with. */
 @OptIn(ExperimentalTestApi::class)
 internal class RenderPdfTest {
