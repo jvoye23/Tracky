@@ -92,8 +92,15 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.appcompat)
-    testImplementation(libs.junit)
+    // JVM unit tests run on JUnit 5, like the tooling modules'.
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.jupiter.engine)
+    testRuntimeOnly(libs.junit.platform.launcher)
     testImplementation(libs.assertk)
+    // NetworkErrorMapperTest drives composeApp's inline safeCall with OkHttp's java.net failures;
+    // inlining puts Ktor and Kermit on the test's own compile classpath.
+    testImplementation(libs.ktor.client.okhttp)
+    testImplementation(libs.kermit)
     androidTestImplementation(libs.assertk)
     androidTestImplementation(libs.androidx.testExt.junit)
     androidTestImplementation(libs.androidx.test.runner)
@@ -101,4 +108,8 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+}
+
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
 }

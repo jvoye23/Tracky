@@ -1,0 +1,134 @@
+package com.jvcs.tracky.core.database.dao
+
+import androidx.room.Room
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import assertk.assertThat
+import assertk.assertions.isNotNull
+import assertk.assertions.isNull
+import com.jvcs.tracky.core.database.TrackyDatabase
+import com.jvcs.tracky.core.database.entity.ProjectEntity
+import com.jvcs.tracky.core.database.entity.ProjectTaskEntity
+import com.jvcs.tracky.core.database.entity.TaskIntervalEntity
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.runBlocking
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+
+/**
+ * Pins down the cascading deletes on a real (in-memory) database.
+ *
+ * Deleting a project used to leave every interval underneath it in the table forever: only
+ * `project_tasks` cascaded, and `task_intervals` had no foreign key at all. The delete paths in
+ * the data source are now plain single-table deletes that rely entirely on the schema, so this is
+ * what proves the cleanup actually happens — and that Room really does enable foreign key
+ * enforcement at runtime.
+ */
+class ProjectDaoCascadeTest {
+
+    private lateinit var db: TrackyDatabase
+    private lateinit var dao: ProjectDao
+
+    @BeforeTest
+    fun setUp() {
+        db =
+            Room
+                .inMemoryDatabaseBuilder<TrackyDatabase>()
+                .setDriver(BundledSQLiteDriver())
+                .setQueryCoroutineContext(Dispatchers.IO)
+                .build()
+        dao = db.projectDao
+    }
+
+    @AfterTest
+    fun tearDown() {
+        db.close()
+    }
+
+    private suspend fun seedTree() {
+        dao.upsertProject(
+            ProjectEntity(
+                projectId = "p1",
+                title = "title",
+                description = null,
+                color = null,
+                totalDuration = null,
+                startDateTimeEpochMs = 0,
+                isFinished = false,
+                useLightTextColor = false,
+                endDateTimeEpochMs = null,
+                isArchived = false,
+                trashedAtEpochMs = null,
+                isPinned = false,
+                updatedAtEpochMs = null,
+                sortIndex = null,
+            ),
+        )
+        listOf("t1", "t2").forEach { taskId ->
+            db.taskDao.upsertProjectTask(
+                ProjectTaskEntity(
+                    projectTaskId = taskId,
+                    parentProjectId = "p1",
+                    title = "task-$taskId",
+                    description = null,
+                    durationMillis = 0,
+                    startDateTimeEpochMs = 0,
+                    endDateTimeEpochMs = null,
+                    isFinished = false,
+                    isTimerRunning = false,
+                    updatedAtEpochMs = null,
+                ),
+            )
+            db.taskIntervalDao.upsertTaskInterval(
+                TaskIntervalEntity(
+                    intervalId = "i-$taskId",
+                    parentTaskId = taskId,
+                    parentProjectId = "p1",
+                    startDateTimeEpochMs = 0,
+                    endDateTimeEpochMs = 60_000,
+                    durationMillis = 60_000,
+                ),
+            )
+        }
+    }
+
+    @Test
+    fun deletingAProjectAlsoDeletesItsTasksAndIntervals() =
+        runBlocking {
+            seedTree()
+
+            dao.deleteProject("p1")
+
+            assertThat(db.taskDao.getTaskById("t1")).isNull()
+            assertThat(db.taskDao.getTaskById("t2")).isNull()
+            assertThat(db.taskIntervalDao.getIntervalById("i-t1")).isNull()
+            assertThat(db.taskIntervalDao.getIntervalById("i-t2")).isNull()
+        }
+
+    @Test
+    fun deletingASingleTaskDeletesOnlyItsOwnIntervals() =
+        runBlocking {
+            seedTree()
+
+            db.taskDao.deleteProjectTask("t1")
+
+            assertThat(db.taskIntervalDao.getIntervalById("i-t1")).isNull()
+            // The sibling task is untouched, so its tracked time has to survive.
+            assertThat(db.taskDao.getTaskById("t2")).isNotNull()
+            assertThat(db.taskIntervalDao.getIntervalById("i-t2")).isNotNull()
+            Unit
+        }
+
+    @Test
+    fun deletingAllProjectsClearsTheWholeTree() =
+        runBlocking {
+            seedTree()
+
+            dao.deleteAllProjects()
+
+            assertThat(db.taskDao.getTaskById("t1")).isNull()
+            assertThat(db.taskIntervalDao.getIntervalById("i-t1")).isNull()
+            assertThat(db.taskIntervalDao.getIntervalById("i-t2")).isNull()
+        }
+}
