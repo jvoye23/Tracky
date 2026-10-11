@@ -52,9 +52,13 @@ fun EntryProviderScope<NavKey>.projectListEntries(backStack: NavBackStack<NavKey
             onNavigateToTrash = {
                 backStack.add(Route.ProjectRoute.ProjectTrash)
             },
+            onNavigateToPro = {
+                backStack.add(Route.ProjectRoute.ProPaywall)
+            },
             onSuccessfulLogout = {
+                // Back to the start of onboarding, which offers both ways in: free, or signing in.
                 backStack.removeAll { true }
-                backStack.add(Route.AuthRoute.Login)
+                backStack.add(Route.OnboardingRoute.Welcome)
             },
         )
     }
@@ -71,6 +75,9 @@ fun EntryProviderScope<NavKey>.projectListEntries(backStack: NavBackStack<NavKey
                 backStack.removeLastOrNull()
                 backStack.add(Route.ProjectRoute.ProjectTrash)
             },
+            onNavigateToPro = {
+                backStack.add(Route.ProjectRoute.ProPaywall)
+            },
         )
     }
 
@@ -82,6 +89,9 @@ fun EntryProviderScope<NavKey>.projectListEntries(backStack: NavBackStack<NavKey
             onNavigateToArchive = {
                 backStack.removeLastOrNull()
                 backStack.add(Route.ProjectRoute.ProjectArchive)
+            },
+            onNavigateToPro = {
+                backStack.add(Route.ProjectRoute.ProPaywall)
             },
         )
     }

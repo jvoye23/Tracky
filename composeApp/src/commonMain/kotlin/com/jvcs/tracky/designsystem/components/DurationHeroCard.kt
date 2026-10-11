@@ -25,6 +25,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.jvcs.tracky.designsystem.theme.timerStyle
 
 @Composable
 fun DurationHeroCard(
@@ -59,9 +61,8 @@ fun DurationHeroCard(
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = totalDuration,
-                style = MaterialTheme.typography.displayMedium,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.timerStyle,
+                fontSize = 34.sp,
                 color = contentColor,
             )
             if (caption != null) {

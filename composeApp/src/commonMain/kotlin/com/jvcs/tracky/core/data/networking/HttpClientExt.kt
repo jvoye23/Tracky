@@ -80,6 +80,7 @@ fun httpStatusToRemoteError(status: Int): DataError.Remote =
     when (status) {
         HttpStatusCode.BadRequest.value -> DataError.Remote.BAD_REQUEST
         HttpStatusCode.Unauthorized.value -> DataError.Remote.UNAUTHORIZED
+        HttpStatusCode.PaymentRequired.value -> DataError.Remote.PAYMENT_REQUIRED
         HttpStatusCode.Forbidden.value -> DataError.Remote.FORBIDDEN
         HttpStatusCode.NotFound.value -> DataError.Remote.NOT_FOUND
         HttpStatusCode.RequestTimeout.value -> DataError.Remote.REQUEST_TIMEOUT

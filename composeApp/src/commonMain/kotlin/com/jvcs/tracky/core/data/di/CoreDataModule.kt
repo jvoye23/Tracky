@@ -4,16 +4,21 @@ import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.jvcs.tracky.core.data.auth.DataStoreSessionStorage
 import com.jvcs.tracky.core.data.auth.KtorAuthService
 import com.jvcs.tracky.core.data.device.DataStoreDeviceIdProvider
+import com.jvcs.tracky.core.data.identity.DataStoreAppUserIdStore
 import com.jvcs.tracky.core.data.networking.ApiConfig
 import com.jvcs.tracky.core.data.networking.HttpClientFactory
 import com.jvcs.tracky.core.data.networking.realtimeUrl
+import com.jvcs.tracky.core.data.purchases.RevenueCatConfigurator
+import com.jvcs.tracky.core.data.purchases.RevenueCatProAccessRepository
 import com.jvcs.tracky.core.data.realtime.KtorRealtimeChannel
 import com.jvcs.tracky.core.data.realtime.RealtimeEnvelopeParser
 import com.jvcs.tracky.core.data.realtime.RealtimeTimerConnection
+import com.jvcs.tracky.core.data.sync.DataStoreLocalDataImportStore
 import com.jvcs.tracky.core.data.sync.DataStoreServerClockOffsetStore
 import com.jvcs.tracky.core.data.sync.DataStoreSyncCursorStore
 import com.jvcs.tracky.core.data.sync.KtorRemoteSyncDataSource
 import com.jvcs.tracky.core.data.sync.RoomPendingSyncDataSource
+import com.jvcs.tracky.core.data.sync.SessionCloudSyncGate
 import com.jvcs.tracky.core.data.sync.SyncCoordinator
 import com.jvcs.tracky.core.data.timer.KtorRemoteActiveTimerDataSource
 import com.jvcs.tracky.core.data.timer.OfflineFirstActiveTimerRepository
@@ -25,12 +30,18 @@ import com.jvcs.tracky.core.domain.auth.SessionStorage
 import com.jvcs.tracky.core.domain.auth.SocialAuthProvider
 import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
 import com.jvcs.tracky.core.domain.device.DeviceIdProvider
+import com.jvcs.tracky.core.domain.identity.AppUserIdStore
 import com.jvcs.tracky.core.domain.lifecycle.AppLifecycleObserver
 import com.jvcs.tracky.core.domain.notification.TimerNotificationCoordinator
+import com.jvcs.tracky.core.domain.purchases.AppUserIdentitySync
+import com.jvcs.tracky.core.domain.purchases.ProAccessRepository
 import com.jvcs.tracky.core.domain.realtime.RealtimeChannel
 import com.jvcs.tracky.core.domain.realtime.RealtimeConnectivity
 import com.jvcs.tracky.core.domain.startup.StartupReconciliation
+import com.jvcs.tracky.core.domain.sync.CloudSyncGate
 import com.jvcs.tracky.core.domain.sync.DeltaSyncApplier
+import com.jvcs.tracky.core.domain.sync.LocalDataImportStore
+import com.jvcs.tracky.core.domain.sync.LocalDataImporter
 import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource
 import com.jvcs.tracky.core.domain.sync.ProjectSyncManager
 import com.jvcs.tracky.core.domain.sync.RemoteSyncDataSource
@@ -87,8 +98,6 @@ import com.jvcs.tracky.features.project.domain.task.ProjectTaskRepository
 import com.jvcs.tracky.features.project.domain.task.RemoteTaskDataSource
 import com.jvcs.tracky.features.project.domain.timer.RunningTimerRepository
 import com.jvcs.tracky.features.project.domain.timer.StrandedTimerRepository
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.singleOf
@@ -122,6 +131,40 @@ val coreDataModule =
 
         singleOf(::RoomPendingSyncDataSource) bind PendingSyncDataSource::class
 
+        // Local-only until signed in, and until a free device's data is imported; every remote edge
+        // asks this.
+        singleOf(::SessionCloudSyncGate) bind CloudSyncGate::class
+        singleOf(::DataStoreLocalDataImportStore) bind LocalDataImportStore::class
+        single {
+            LocalDataImporter(
+                sessionStorage = get(),
+                localDataImportStore = get(),
+                connectivityObserver = get(),
+                localProjectDataSource = get(),
+                remoteSyncDataSource = get(),
+                pendingSyncDataSource = get(),
+                onboardingStatusStore = get(),
+                timeProvider = get(),
+                applicationScope = get(qualifier = named("AppScope")),
+            )
+        }
+
+        single {
+            RevenueCatConfigurator(
+                appUserIdStore = get(),
+                applicationScope = get(qualifier = named("AppScope")),
+            )
+        }
+        singleOf(::RevenueCatProAccessRepository) bind ProAccessRepository::class
+        single {
+            AppUserIdentitySync(
+                sessionStorage = get(),
+                appUserIdStore = get(),
+                proAccessRepository = get(),
+                applicationScope = get(qualifier = named("AppScope")),
+            )
+        }
+
         singleOf(::RoomLocalProjectDataSource) bind LocalProjectDataSource::class
         singleOf(::RoomLocalProjectOrganizationDataSource) bind LocalProjectOrganizationDataSource::class
         singleOf(::RoomLocalServerTreeDataSource) bind LocalServerTreeDataSource::class
@@ -147,6 +190,7 @@ val coreDataModule =
                 syncScheduler = get(),
                 applicationScope = get(qualifier = named("AppScope")),
                 timeProvider = get(),
+                cloudSyncGate = get(),
             )
         } bind ProjectRepository::class
 
@@ -160,6 +204,7 @@ val coreDataModule =
                 syncScheduler = get(),
                 applicationScope = get(qualifier = named("AppScope")),
                 timeProvider = get(),
+                cloudSyncGate = get(),
             )
         } bind ProjectOrganizationRepository::class
 
@@ -175,6 +220,7 @@ val coreDataModule =
                 syncScheduler = get(),
                 applicationScope = get(qualifier = named("AppScope")),
                 timeProvider = get(),
+                cloudSyncGate = get(),
             )
         } bind IntervalRepository::class
 
@@ -191,6 +237,7 @@ val coreDataModule =
                 timeProvider = get(),
                 applicationScope = get(qualifier = named("AppScope")),
                 startupReconciliation = get(),
+                cloudSyncGate = get(),
             )
         } bind ProjectTaskRepository::class
 
@@ -206,6 +253,7 @@ val coreDataModule =
                 syncScheduler = get(),
                 applicationScope = get(qualifier = named("AppScope")),
                 timeProvider = get(),
+                cloudSyncGate = get(),
             )
         } bind SubTaskIntervalRepository::class
 
@@ -228,6 +276,7 @@ val coreDataModule =
                 applicationScope = get(qualifier = named("AppScope")),
                 timeProvider = get(),
                 startupReconciliation = get(),
+                cloudSyncGate = get(),
             )
         } bind SubTaskRepository::class
 
@@ -269,6 +318,7 @@ val coreDataModule =
                 intervalRepository = get(),
                 subTaskRepository = get(),
                 subTaskIntervalRepository = get(),
+                cloudSyncGate = get(),
                 dispatcher = get(named("DefaultDispatcher")),
             )
         }
@@ -294,6 +344,7 @@ val coreDataModule =
                 appLifecycleObserver = get(),
                 syncRepository = get(),
                 pullCoordinator = get(),
+                cloudSyncGate = get(),
                 applicationScope = get(qualifier = named("AppScope")),
             )
         }
@@ -354,6 +405,10 @@ val coreDataModule =
         // minting it eagerly would touch DataStore on the startup path for no benefit.
         singleOf(::DataStoreDeviceIdProvider) bind DeviceIdProvider::class
 
+        // The RevenueCat customer id and, after sign-up, the user id. Read at app start to configure
+        // RevenueCat, and changed by AppUserIdentitySync when the session does.
+        singleOf(::DataStoreAppUserIdStore) bind AppUserIdStore::class
+
         // How far this device has read the server's change feed. Cleared on logout.
         singleOf(::DataStoreSyncCursorStore) bind SyncCursorStore::class
 
@@ -380,11 +435,7 @@ val coreDataModule =
                 isInForeground = get<AppLifecycleObserver>().isInForeground,
                 // A socket without a session is refused by the server anyway; gating on it here means
                 // logging out tears the connection down without anyone having to remember to.
-                isAuthenticated =
-                    get<SessionStorage>()
-                        .observeAuthInfo()
-                        .map { authInfo -> !authInfo?.accessToken.isNullOrBlank() }
-                        .distinctUntilChanged(),
+                isAuthenticated = get<CloudSyncGate>().observeIsEnabled(),
                 applicationScope = get(qualifier = named("AppScope")),
             )
         }
@@ -405,6 +456,7 @@ val coreDataModule =
                 serverClock = get(),
                 timeProvider = get(),
                 syncRecency = get(),
+                cloudSyncGate = get(),
             )
         }
 
@@ -423,6 +475,7 @@ val coreDataModule =
                 serverClock = get(),
                 timeProvider = get(),
                 applicationScope = get(qualifier = named("AppScope")),
+                cloudSyncGate = get(),
             )
         } bind ActiveTimerRepository::class
 

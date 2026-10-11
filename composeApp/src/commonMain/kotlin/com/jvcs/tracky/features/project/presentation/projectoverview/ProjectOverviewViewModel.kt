@@ -10,8 +10,11 @@ import co.touchlab.kermit.Logger
 import com.jvcs.tracky.core.domain.auth.AuthService
 import com.jvcs.tracky.core.domain.auth.SessionStorage
 import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
+import com.jvcs.tracky.core.domain.sync.CloudSyncGate
 import com.jvcs.tracky.core.domain.sync.DeltaSyncApplier
+import com.jvcs.tracky.core.domain.sync.LocalDataImportStore
 import com.jvcs.tracky.core.domain.sync.SyncCursorStore
+import com.jvcs.tracky.core.domain.sync.SyncScheduler
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeManager
@@ -20,6 +23,9 @@ import com.jvcs.tracky.core.domain.util.TimerState
 import com.jvcs.tracky.core.domain.util.onFailure
 import com.jvcs.tracky.core.domain.util.onSuccess
 import com.jvcs.tracky.designsystem.theme.defaultProjectColor
+import com.jvcs.tracky.designsystem.util.UiText
+import com.jvcs.tracky.features.onboarding.domain.OnboardingStatus
+import com.jvcs.tracky.features.onboarding.domain.OnboardingStatusStore
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.project.ProjectOrganizationRepository
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
@@ -28,7 +34,6 @@ import com.jvcs.tracky.features.project.presentation.mappers.toProjectUi
 import com.jvcs.tracky.features.project.presentation.models.ProjectUi
 import com.jvcs.tracky.features.project.presentation.util.toUiText
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -38,18 +43,17 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import tracky.composeapp.generated.resources.Res
+import tracky.composeapp.generated.resources.error_import_refused
 import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -66,6 +70,10 @@ class ProjectOverviewViewModel(
     private val syncCursorStore: SyncCursorStore,
     private val deltaSyncApplier: DeltaSyncApplier,
     private val applicationScope: CoroutineScope,
+    cloudSyncGate: CloudSyncGate,
+    private val syncScheduler: SyncScheduler,
+    private val onboardingStatusStore: OnboardingStatusStore,
+    private val localDataImportStore: LocalDataImportStore,
 ) : ViewModel() {
 
     private val _sortOption = MutableStateFlow(SortOption.CUSTOM)
@@ -86,19 +94,21 @@ class ProjectOverviewViewModel(
             _state,
             sessionStorage.observeAuthInfo(),
             connectivityObserver.isConnected.debounce(1.seconds),
-        ) { currentState, authInfo, isOnline ->
-            if (authInfo == null) {
-                return@combine ProjectOverviewState()
-            }
+            cloudSyncGate.observeIsEnabled(),
+        ) { currentState, authInfo, isOnline, isCloudSyncEnabled ->
+            // No session is the free, local-only tier - the projects still show, just without an
+            // account in the drawer and without anything to refresh from.
             currentState.copy(
-                localUser = authInfo.user,
+                localUser = authInfo?.user,
                 isOnline = isOnline,
+                isCloudSyncEnabled = isCloudSyncEnabled,
             )
         }.onStart {
             if (!hasLoadedInitialData) {
                 hasLoadedInitialData = true
                 loadProjectsFromServer()
                 observeProjects()
+                observeRefusedImports()
             }
         }.stateIn(
             scope = viewModelScope,
@@ -449,9 +459,7 @@ class ProjectOverviewViewModel(
         viewModelScope.launch {
             projectRepository
                 .fetchProjects()
-                .onFailure { error ->
-                    eventChannel.send(ProjectOverviewEvent.Error(error.toUiText()))
-                }
+                .onFailure { error -> sendServerError(error) }
             _state.update { it.copy(isLoading = false) }
         }
     }
@@ -470,56 +478,67 @@ class ProjectOverviewViewModel(
             _state.update { it.copy(isRefreshing = true) }
             deltaSyncApplier
                 .pullChanges()
-                .onFailure { error ->
-                    eventChannel.send(ProjectOverviewEvent.Error(error.toUiText()))
-                }
+                .onFailure { error -> sendServerError(error) }
             _state.update { it.copy(isRefreshing = false) }
         }
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private fun observeProjects() {
-        // We only care whether a session exists, not what changed inside it
-        sessionStorage
-            .observeAuthInfo()
-            .map { it != null }
-            .distinctUntilChanged()
-            // switch onto the local stream while authenticated, drop it on logout.
-            // flatMapLatest cancels the previous inner flow for you, so you never
-            // end up with two collectors after a re-login
-            .flatMapLatest { isAuthenticated ->
-                if (!isAuthenticated) {
-                    emptyFlow()
-                } else {
-                    combine(
-                        projectRepository.getActiveProjects(),
-                        timeManager.taskStates,
-                        _sortOption,
-                    ) { projects, activeTimers, sortOption ->
-                        val runningTimer =
-                            activeTimers.entries
-                                .firstOrNull { it.value.isRunning }
-                                ?.let { it.key to it.value }
-                        projects
-                            .sortedForOption(sortOption)
-                            .map { it.toProjectUi().withRunningTimer(runningTimer) } to sortOption
-                    }
-                }
-            }.onEach { (uiProjects, sortOption) ->
-                val sortChanged = _state.value.sortOption != sortOption
-                val adoptSourceOrder = sortChanged || !reorderInFlight
-                _state.update { state ->
-                    state
-                        .copy(
-                            projects = uiProjects,
-                            sortOption = sortOption,
-                        ).withSectionsFrom(uiProjects, adoptSourceOrder)
-                }
-                // The reorder has made it back through Room, so the source is authoritative again.
-                if (reorderInFlight && _state.value.matchesSourceOrder(uiProjects)) {
-                    reorderInFlight = false
-                }
+    private suspend fun sendServerError(error: DataError) {
+        val event =
+            if (error == DataError.Remote.PAYMENT_REQUIRED) {
+                ProjectOverviewEvent.ProRequired
+            } else {
+                ProjectOverviewEvent.Error(error.toUiText())
+            }
+        eventChannel.send(event)
+    }
+
+    /** Tells the user once about projects the import had to leave on this device. */
+    private fun observeRefusedImports() {
+        localDataImportStore
+            .observeRefusedProjects()
+            .filter { it.isNotEmpty() }
+            .onEach { titles ->
+                eventChannel.send(
+                    ProjectOverviewEvent.Error(
+                        UiText.Resource(Res.string.error_import_refused, arrayOf(titles.joinToString())),
+                    ),
+                )
+                localDataImportStore.setRefusedProjects(emptyList())
             }.launchIn(viewModelScope)
+    }
+
+    private fun observeProjects() {
+        // Room is the source of truth with or without a session: a free user's projects live only
+        // there, and a signed-in user's arrive there through sync. Logout empties the tables, so the
+        // stream empties with them.
+        combine(
+            projectRepository.getActiveProjects(),
+            timeManager.taskStates,
+            _sortOption,
+        ) { projects, activeTimers, sortOption ->
+            val runningTimer =
+                activeTimers.entries
+                    .firstOrNull { it.value.isRunning }
+                    ?.let { it.key to it.value }
+            projects
+                .sortedForOption(sortOption)
+                .map { it.toProjectUi().withRunningTimer(runningTimer) } to sortOption
+        }.onEach { (uiProjects, sortOption) ->
+            val sortChanged = _state.value.sortOption != sortOption
+            val adoptSourceOrder = sortChanged || !reorderInFlight
+            _state.update { state ->
+                state
+                    .copy(
+                        projects = uiProjects,
+                        sortOption = sortOption,
+                    ).withSectionsFrom(uiProjects, adoptSourceOrder)
+            }
+            // The reorder has made it back through Room, so the source is authoritative again.
+            if (reorderInFlight && _state.value.matchesSourceOrder(uiProjects)) {
+                reorderInFlight = false
+            }
+        }.launchIn(viewModelScope)
     }
 
     private fun ProjectUi.withRunningTimer(runningTimer: Pair<String, TimerState>?): ProjectUi {
@@ -614,6 +633,14 @@ class ProjectOverviewViewModel(
             // The next account to sign in here has its own change feed; a cursor carried across
             // would silently skip everything below that sequence number.
             syncCursorStore.clear()
+
+            // Nothing is left to drain, and a signed-out device is local-only until the next sign-in.
+            syncScheduler.cancelAllSyncs()
+            // Back to the start: the welcome screen offers both ways in again, free or signed in.
+            onboardingStatusStore.set(OnboardingStatus.NOT_STARTED)
+            // The local data just went with the account; there is nothing left to import.
+            localDataImportStore.setPending(false)
+            localDataImportStore.setRefusedProjects(emptyList())
         }
     }
 

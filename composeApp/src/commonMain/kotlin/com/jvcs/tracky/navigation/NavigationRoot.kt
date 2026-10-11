@@ -45,9 +45,13 @@ fun NavigationRoot(backStack: NavBackStack<NavKey>, modifier: Modifier = Modifie
             ),
         entryProvider =
             entryProvider {
+                onboardingEntries(backStack)
+
                 authAccountEntries(backStack)
                 authEmailEntries(backStack)
+
                 projectListEntries(backStack)
+                proPaywallEntry(backStack)
                 projectDetailEntries(backStack)
                 projectDetailChildEntries(backStack)
             },

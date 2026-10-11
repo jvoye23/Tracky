@@ -16,6 +16,8 @@ class LoginE2ETest {
 
     @Test
     fun loginAndNavigateToProjectOverview() {
+        composeTestRule.openLoginFromWelcome()
+
         // Wait for login screen to appear (auth check may show loading first)
         composeTestRule.waitUntil(5_000) {
             composeTestRule

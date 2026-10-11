@@ -10,7 +10,9 @@ decision is captured as a new ADR that supersedes the old one.
 | 0001 | [Server arbitrates which timer is running, never how long](0001-server-authoritative-active-timer.md) | accepted | 2026-09-22 |
 | 0002 | [A server-assigned sequence cursor orders the change feed](0002-sequence-cursor-delta-sync.md)    | accepted | 2026-09-22 |
 | 0003 | [The interval merge asks the outbox, not the shape of the row](0003-outbox-driven-interval-merge.md) | accepted | 2026-09-22 |
-| 0004 | [The backend is the authority on Pro entitlement](0004-server-enforced-entitlement-via-revenuecat.md) | proposed | 2026-09-22 |
+| 0004 | [The backend is the authority on Pro entitlement](0004-server-enforced-entitlement-via-revenuecat.md) | accepted | 2026-09-22 |
+| 0005 | [The client mints the user id, and RevenueCat and the backend share it](0005-client-minted-user-id.md) | accepted | 2026-10-11 |
 
 The first four all come from the cross-device timer sync work (issue 45). 0001–0003 are implemented
-and verified against a deployed backend; 0004 is specified but not built.
+and verified against a deployed backend. 0004 was accepted on 2026-10-11, when its backend shipped
+together with 0005; the contract script's section F verifies its `402` refusal path.

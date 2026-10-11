@@ -133,7 +133,7 @@ fun TrackyOutlinedButton(
         if (isPressed) {
             MaterialTheme.colorScheme.primary.copy(alpha = 0.06f)
         } else {
-            Color.Transparent
+            MaterialTheme.colorScheme.surface
         }
 
     Box(

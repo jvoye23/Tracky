@@ -14,6 +14,25 @@ import kotlinx.serialization.Serializable
 @SerialName("route")
 sealed interface Route : NavKey {
 
+    // Not an enum: each step has to be its own NavKey type for entry<T>() to route to it.
+    @Suppress("SealedHierarchyOfOnlyObjectsShouldBeEnum")
+    @Serializable
+    @SerialName("onboarding_route")
+    sealed interface OnboardingRoute : Route {
+
+        @Serializable
+        @SerialName("onboarding_welcome")
+        data object Welcome : OnboardingRoute, NavKey
+
+        @Serializable
+        @SerialName("onboarding_notification_permission")
+        data object NotificationPermission : OnboardingRoute, NavKey
+
+        @Serializable
+        @SerialName("onboarding_paywall")
+        data object Paywall : OnboardingRoute, NavKey
+    }
+
     @Serializable
     @SerialName("auth_route")
     sealed interface AuthRoute : Route {
@@ -101,6 +120,11 @@ sealed interface Route : NavKey {
             val preselectedDateEpochDay: Long = -1L,
         ) : Route,
             NavKey
+
+        /** The paywall opened from inside the app, as opposed to the last onboarding step. */
+        @Serializable
+        @SerialName("pro_paywall")
+        data object ProPaywall : Route, NavKey
 
         @Serializable
         @SerialName("task_detail")

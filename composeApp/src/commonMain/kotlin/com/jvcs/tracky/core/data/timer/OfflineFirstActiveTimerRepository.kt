@@ -1,6 +1,7 @@
 package com.jvcs.tracky.core.data.timer
 
 import com.jvcs.tracky.core.domain.device.DeviceIdProvider
+import com.jvcs.tracky.core.domain.sync.CloudSyncGate
 import com.jvcs.tracky.core.domain.sync.DeltaSyncApplier
 import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
@@ -53,9 +54,14 @@ class OfflineFirstActiveTimerRepository(
     private val serverClock: ServerClock,
     private val timeProvider: TimeProvider,
     private val applicationScope: CoroutineScope,
+    private val cloudSyncGate: CloudSyncGate,
 ) : ActiveTimerRepository {
 
     override suspend fun start(taskInterval: TaskInterval, subTaskInterval: SubTaskInterval?): EmptyResult<DataError> {
+        // Local-only: the caller has already written the interval, and there is no other device to
+        // take the timer over from.
+        if (!cloudSyncGate.isEnabled()) return Result.Success(Unit)
+
         val deviceId = deviceIdProvider.deviceId()
         // The inner row wins when there is one. Timing a subtask opens its parent task's interval
         // as well, but naming the task interval here would let another device stop the task while
@@ -114,8 +120,11 @@ class OfflineFirstActiveTimerRepository(
         kind: ActiveTimerKind,
         endedAt: Instant,
         sentAt: Instant,
-    ): EmptyResult<DataError> =
-        when (val result = remoteActiveTimerDataSource.stop(intervalId, endedAt)) {
+    ): EmptyResult<DataError> {
+        // Local-only: the caller has already closed the interval.
+        if (!cloudSyncGate.isEnabled()) return Result.Success(Unit)
+
+        return when (val result = remoteActiveTimerDataSource.stop(intervalId, endedAt)) {
             is Result.Success -> {
                 settle(result.data, midpoint(sentAt, timeProvider.nowInstant))
             }
@@ -131,6 +140,7 @@ class OfflineFirstActiveTimerRepository(
                 )
             }
         }
+    }
 
     /** The instant halfway between a request leaving and its answer arriving. */
     private fun midpoint(sentAt: Instant, receivedAt: Instant): Instant = sentAt + (receivedAt - sentAt) / 2

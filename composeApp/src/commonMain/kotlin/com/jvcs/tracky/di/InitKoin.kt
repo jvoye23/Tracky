@@ -2,6 +2,8 @@ package com.jvcs.tracky.di
 
 import com.jvcs.tracky.core.data.di.coreDataModule
 import com.jvcs.tracky.features.auth.presentation.di.authPresentationModule
+import com.jvcs.tracky.features.onboarding.data.di.onboardingDataModule
+import com.jvcs.tracky.features.onboarding.presentation.di.onboardingPresentationModule
 import com.jvcs.tracky.features.project.di.archiveModule
 import com.jvcs.tracky.features.project.di.projectModule
 import com.jvcs.tracky.features.project.di.trashModule
@@ -18,6 +20,8 @@ fun initKoin(config: KoinAppDeclaration? = null) {
             trashModule,
             coreDataModule,
             authPresentationModule,
+            onboardingDataModule,
+            onboardingPresentationModule,
         )
     }
 }

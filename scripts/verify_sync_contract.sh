@@ -1,8 +1,9 @@
 #!/bin/bash
 #
-# Checks the deployed backend against the two shipped sync specs:
+# Checks the deployed backend against the shipped sync and entitlement specs:
 #   Requirements/backend-delta-sync-api.md
 #   Requirements/backend-active-timer-api.md
+#   Requirements/backend-pro-entitlement-api.md   (section F: a free account is refused with 402)
 #
 # Why this exists: every client slice of the cross-device timer was written against those specs
 # before the backend shipped, and a contract mismatch here fails *silently*. A flat delta row
@@ -13,6 +14,8 @@
 #
 # Credentials come from local.properties (gitignored): BASE_URL, TEST_EMAIL, TEST_PASSWORD.
 # It creates a throwaway project per group and deletes it again; the account is left as found.
+# Section F also registers one throwaway, unverified account per run, on a plus-address of
+# TEST_EMAIL; set SKIP_ENTITLEMENT=1 to leave it out.
 #
 # Exits non-zero if any assertion fails.
 #
@@ -208,7 +211,8 @@ chk "stopping a subtask that opened its parent closes both" "$(stop_timer "$STI"
 chk "  both closed at the same instant" \
   "$(jq -r 'if ([.touched[].endDateTimeUtc]|unique|length) == 1 then "yes" else "no" end' "$TMP/r.json")" yes
 
-# The known-failing one. See Requirements/backend-active-timer-api.md section 3.
+# A task timer the user started themselves must outlive a subtask they then drilled into. It failed
+# against the deployed backend until 2026-10-11; see Requirements/backend-active-timer-api.md §3.
 TI2=$(uuid); STI2=$(uuid)
 start_task_timer "$TI2" "$T" "$DEV" "$(now)" >/dev/null
 sleep 1
@@ -242,10 +246,50 @@ for triple in "project:$P:project" "task:$T:task" "subtask:$ST:sub_task" \
     "$(jq -r --arg i "$id" '[.tombstones[]|select(.entityId==$i)|.entityType]|first // "missing"' "$TMP/r.json")" "$want"
 done
 
-printf '\n==== %s passed, %s failed ====\n' "$PASS" "$FAIL"
-if [ "$FAIL" -gt 0 ]; then
-  printf 'Two of these are expected until the backend is fixed: a task timer started\n'
-  printf 'independently must survive its subtask being stopped, and it must still be what is\n'
-  printf 'running afterwards. See backend-active-timer-api.md section 3.\n'
+# ---------------------------------------------------------------- F. entitlement gating
+# ADR 0004: the server, not the paywall, refuses a free account. The test account above predates the
+# paywall and is grandfathered, so it can never see a 402. This registers a throwaway account that
+# has never bought anything, which is as free as an account gets. Each run leaves one unverified
+# account behind, because there is no delete-account endpoint. SKIP_ENTITLEMENT=1 skips the section.
+if [ "${SKIP_ENTITLEMENT:-0}" = 1 ]; then
+  hdr "F. entitlement gating — skipped (SKIP_ENTITLEMENT=1)"
+else
+  hdr "F. entitlement gating — a free account"
+  FREE_ID=$(uuid)
+  # Plus-addressing on the test inbox, so the verification mail lands somewhere we own.
+  FREE_EMAIL="${TEST_EMAIL%@*}+contract-${FREE_ID:0:8}@${TEST_EMAIL#*@}"
+  RC=$(curl -sS -m 30 -X POST "$BASE_URL/api/auth/register" -H 'Content-Type: application/json' \
+    -d "$(jq -nc --arg i "$FREE_ID" --arg e "$FREE_EMAIL" --arg u "contract-${FREE_ID:0:8}" \
+      '{id:$i,email:$e,username:$u,password:"Contract.Check1"}')" \
+    -o "$TMP/free.json" -w '%{http_code}')
+  chk "setup: register a free account with a client id" "$RC" 201
+  chk "  the account id is the one the client sent" "$(jq -r '.user.id // "none"' "$TMP/free.json")" "$FREE_ID"
+  chk "  and it starts free" "$(jq -r '.entitlement.entitlement // "missing"' "$TMP/free.json")" free
+
+  TOK=$(jq -r '.accessToken // empty' "$TMP/free.json")
+  if [ -z "$TOK" ]; then
+    no "the register response carried no access token, so the gated routes cannot be probed"
+  else
+    # The client treats 402 as "open the paywall" and 403 as a bug, so the exact status matters.
+    gated() { # $1 = label, then req's arguments
+      local label="$1"; shift
+      chk "$label is refused with 402" "$(req "$@")" 402
+      chk "  with code ENTITLEMENT_REQUIRED" "$(jq -r '.code // "missing"' "$TMP/r.json" 2>/dev/null)" ENTITLEMENT_REQUIRED
+    }
+    gated "POST /api/sync/import" POST /api/sync/import '[]'
+    gated "GET /api/sync/changes" GET /api/sync/changes
+    gated "GET /api/projects" GET /api/projects
+    gated "GET /api/timer/active" GET /api/timer/active
+    # Refused before anything is written: the probe project must not exist afterwards either.
+    FP=$(uuid)
+    gated "POST /api/projects" POST /api/projects "$(jq -nc --arg i "$FP" --arg s "$(now)" \
+      '{id:$i,title:"ZZ verify_sync_contract free",description:"verify_sync_contract",color:-1,startDateTimeUtc:$s,useLightTextColor:false}')"
+
+    # A free user must still be told what they are missing.
+    chk "GET /api/entitlement stays reachable" "$(req GET /api/entitlement)" 200
+    chk "  and reports free" "$(jq -r '.entitlement // "missing"' "$TMP/r.json" 2>/dev/null)" free
+  fi
 fi
+
+printf '\n==== %s passed, %s failed ====\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

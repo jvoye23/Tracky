@@ -2,6 +2,7 @@ package com.jvcs.tracky.features.project.data.subtask
 
 import com.jvcs.tracky.core.domain.device.DeviceIdProvider
 import com.jvcs.tracky.core.domain.startup.StartupReconciliation
+import com.jvcs.tracky.core.domain.sync.CloudSyncGate
 import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
 import com.jvcs.tracky.core.domain.sync.SyncOutcome
@@ -34,6 +35,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
+import kotlin.time.Instant
 
 /**
  * Subtasks sync through their own routes nested under the task, one level below where the task
@@ -60,6 +62,7 @@ class OfflineFirstSubTaskRepository(
     private val applicationScope: CoroutineScope,
     private val timeProvider: TimeProvider,
     private val startupReconciliation: StartupReconciliation,
+    private val cloudSyncGate: CloudSyncGate,
 ) : SubTaskRepository {
 
     override fun getSubTasksForTask(taskId: String): Flow<List<ProjectSubTask>> =
@@ -96,6 +99,7 @@ class OfflineFirstSubTaskRepository(
             pendingSyncDataSource.deleteOperationsByEntityId(subTaskId)
             return Result.Success(Unit)
         }
+        if (!cloudSyncGate.isEnabled()) return Result.Success(Unit)
 
         val taskId = subTask.parentProjectTaskId
         // The parent task was created offline too, so the server has neither it nor this subtask —
@@ -300,6 +304,9 @@ class OfflineFirstSubTaskRepository(
         val projectId = subTask.parentProjectId
         val operation = if (isCreate) PendingSyncOperation.OP_CREATE else PendingSyncOperation.OP_UPDATE
 
+        // Local-only: the Room write is the whole change - nothing to push and nothing to queue.
+        if (!cloudSyncGate.isEnabled()) return Result.Success(Unit)
+
         if (pendingSyncDataSource.hasPendingCreate(taskId).getOrDefault(false)) {
             return queueForLater(subTask.projectSubTaskId, taskId, operation)
         }
@@ -411,6 +418,18 @@ class OfflineFirstSubTaskRepository(
         if (localResult !is Result.Success) {
             return localResult.asEmptyDataResult()
         }
+
+        return pushSubTaskOrder(taskId, changed, updatedAt)
+    }
+
+    /** The remote half of [reorderSubTasks]: push the new order, or queue it when it cannot go yet. */
+    private suspend fun pushSubTaskOrder(
+        taskId: String,
+        changed: Map<String, Long>,
+        updatedAt: Instant,
+    ): EmptyResult<DataError> {
+        // Local-only: the new order lives in Room alone.
+        if (!cloudSyncGate.isEnabled()) return Result.Success(Unit)
 
         // No route until the parent task exists server-side; the drain runs tasks first.
         if (pendingSyncDataSource.hasPendingCreate(taskId).getOrDefault(false)) {

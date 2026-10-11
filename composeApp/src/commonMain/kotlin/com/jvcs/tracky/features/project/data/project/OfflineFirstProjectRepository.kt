@@ -1,5 +1,6 @@
 package com.jvcs.tracky.features.project.data.project
 
+import com.jvcs.tracky.core.domain.sync.CloudSyncGate
 import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
 import com.jvcs.tracky.core.domain.sync.SyncOutcome
@@ -40,10 +41,14 @@ class OfflineFirstProjectRepository(
     private val syncScheduler: SyncScheduler,
     private val applicationScope: CoroutineScope,
     private val timeProvider: TimeProvider,
+    private val cloudSyncGate: CloudSyncGate,
 ) : ProjectRepository {
 
-    override suspend fun fetchProjects(): EmptyResult<DataError> =
-        when (val remoteResult = remoteProjectDataSource.getProjects()) {
+    override suspend fun fetchProjects(): EmptyResult<DataError> {
+        // Local-only: there is no server copy to fetch, and Room already holds everything.
+        if (!cloudSyncGate.isEnabled()) return Result.Success(Unit)
+
+        return when (val remoteResult = remoteProjectDataSource.getProjects()) {
             is Result.Error -> {
                 remoteResult.asEmptyDataResult()
             }
@@ -55,6 +60,7 @@ class OfflineFirstProjectRepository(
                     }.await()
             }
         }
+    }
 
     override fun getProjects(): Flow<List<Project>> = localProjectDataSource.getProjects()
 
@@ -89,6 +95,8 @@ class OfflineFirstProjectRepository(
         if (localResult !is Result.Success) {
             return localResult.asEmptyDataResult()
         }
+        // Local-only: the Room write is the whole change - nothing to push and nothing to queue.
+        if (!cloudSyncGate.isEnabled()) return Result.Success(Unit)
 
         val remoteResult =
             if (isCreate) {
@@ -143,6 +151,7 @@ class OfflineFirstProjectRepository(
             pendingSyncDataSource.deleteOperationsByEntityId(projectId)
             return Result.Success(Unit)
         }
+        if (!cloudSyncGate.isEnabled()) return Result.Success(Unit)
 
         val remoteResult =
             applicationScope

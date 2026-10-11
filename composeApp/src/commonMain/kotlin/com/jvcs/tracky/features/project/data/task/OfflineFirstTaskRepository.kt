@@ -2,6 +2,7 @@ package com.jvcs.tracky.features.project.data.task
 
 import com.jvcs.tracky.core.domain.device.DeviceIdProvider
 import com.jvcs.tracky.core.domain.startup.StartupReconciliation
+import com.jvcs.tracky.core.domain.sync.CloudSyncGate
 import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
 import com.jvcs.tracky.core.domain.sync.SyncOutcome
@@ -48,6 +49,7 @@ class OfflineFirstTaskRepository(
     private val timeProvider: TimeProvider,
     private val applicationScope: CoroutineScope,
     private val startupReconciliation: StartupReconciliation,
+    private val cloudSyncGate: CloudSyncGate,
 ) : ProjectTaskRepository {
 
     // CREATE/UPDATE task: local first (optimistic), then remote; on transient failure → queue.
@@ -63,6 +65,8 @@ class OfflineFirstTaskRepository(
         if (localResult !is Result.Success) {
             return localResult.asEmptyDataResult()
         }
+        // Local-only: the Room write is the whole change - nothing to push and nothing to queue.
+        if (!cloudSyncGate.isEnabled()) return Result.Success(Unit)
 
         val operation = if (isCreate) PendingSyncOperation.OP_CREATE else PendingSyncOperation.OP_UPDATE
         val projectId = stamped.parentProjectId
@@ -120,6 +124,7 @@ class OfflineFirstTaskRepository(
             pendingSyncDataSource.deleteOperationsByEntityId(taskId)
             return Result.Success(Unit)
         }
+        if (!cloudSyncGate.isEnabled()) return Result.Success(Unit)
 
         // The parent project was created offline too, so the server has neither it nor this task —
         // and deleting the project later takes its tasks with it by cascade. Nothing to push.
@@ -304,6 +309,7 @@ class OfflineFirstTaskRepository(
         if (localResult !is Result.Success) {
             return localResult.asEmptyDataResult()
         }
+        if (!cloudSyncGate.isEnabled()) return Result.Success(Unit)
 
         // A project that only exists locally has no /tasks/sort route yet; queue and let the drain
         // push it once the project's own CREATE has landed.

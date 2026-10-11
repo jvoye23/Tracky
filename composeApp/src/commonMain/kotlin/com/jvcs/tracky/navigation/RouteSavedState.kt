@@ -14,6 +14,13 @@ val routeSavedStateConfiguration: SavedStateConfiguration =
         serializersModule =
             SerializersModule {
                 polymorphic(NavKey::class) {
+                    subclass(Route.OnboardingRoute.Welcome::class, Route.OnboardingRoute.Welcome.serializer())
+                    subclass(
+                        Route.OnboardingRoute.NotificationPermission::class,
+                        Route.OnboardingRoute.NotificationPermission.serializer(),
+                    )
+                    subclass(Route.OnboardingRoute.Paywall::class, Route.OnboardingRoute.Paywall.serializer())
+
                     subclass(Route.AuthRoute.Login::class, Route.AuthRoute.Login.serializer())
                     subclass(Route.AuthRoute.Register::class, Route.AuthRoute.Register.serializer())
                     subclass(Route.AuthRoute.RegisterSuccess::class, Route.AuthRoute.RegisterSuccess.serializer())
@@ -34,6 +41,7 @@ val routeSavedStateConfiguration: SavedStateConfiguration =
                     subclass(Route.ProjectRoute.EditTextNavKey::class, Route.ProjectRoute.EditTextNavKey.serializer())
                     subclass(Route.ProjectRoute.TaskDetail::class, Route.ProjectRoute.TaskDetail.serializer())
                     subclass(Route.ProjectRoute.DailyOverview::class, Route.ProjectRoute.DailyOverview.serializer())
+                    subclass(Route.ProjectRoute.ProPaywall::class, Route.ProjectRoute.ProPaywall.serializer())
                 }
             }
     }

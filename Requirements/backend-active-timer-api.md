@@ -1,5 +1,9 @@
 # Backend prompt — the active timer resource
 
+> **§3 shipped — verified 2026-10-11.** Stopping a subtask interval now closes its enclosing task
+> interval only when the subtask opened it. `scripts/verify_sync_contract.sh` section D asserts it
+> against the deployed backend and passes. Kept as the record of what was asked for and why.
+
 Paste the block below into a session opened on the Tracky backend repo.
 
 ---
@@ -157,8 +161,9 @@ needs a body, and a body on `DELETE` is awkward for several client stacks includ
 - `intervalId` is the active interval → close it with `endedAtUtc`, compute `durationMillis` from
   its stored start, and close any subtask interval nested inside it at the same instant.
 - **Stopping a `sub_task` interval closes its enclosing task interval only when that interval was
-  opened by this subtask.** This is currently wrong in the deployed build, which closes the
-  enclosing task interval unconditionally — verified 2026-09-21. It matters because the client
+  opened by this subtask.** This was wrong in the deployed build, which closed the
+  enclosing task interval unconditionally (verified 2026-09-21). It is fixed; see the note at the
+  top. It matters because the client
   tracks which timer opened which: `SubTaskInterval.startedParentTimer` is true when starting the
   subtask is what opened the task's interval, and false when the user had already started the task
   timer and then drilled into a subtask. In that second case the task must keep running when the

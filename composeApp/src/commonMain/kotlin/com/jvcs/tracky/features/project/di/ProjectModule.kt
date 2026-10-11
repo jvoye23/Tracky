@@ -46,6 +46,10 @@ val projectModule =
                 syncCursorStore = get(),
                 deltaSyncApplier = get(),
                 applicationScope = get(qualifier = named("AppScope")),
+                cloudSyncGate = get(),
+                syncScheduler = get(),
+                onboardingStatusStore = get(),
+                localDataImportStore = get(),
             )
         }
 

@@ -279,6 +279,15 @@ JWT_SECRET=<base64-encoded HS256 signing key>
 # App
 APP_BASE_URL=https://tracky.jv-coding-solutions.com
 SERVER_PORT=8080
+
+# RevenueCat
+REVENUECAT_WEBHOOK_SECRET=<shared secret from the RevenueCat webhook config>
+# REST API v2 secret key with ONLY customer_information:customers:read. Used at registration to
+# see a purchase the webhook has not delivered yet. Empty = lookup skipped, account starts free.
+REVENUECAT_SECRET_API_KEY=<sk_...>
+# Defaults are Tracky's; override only for another RevenueCat project.
+# REVENUECAT_PROJECT_ID=projc4a0bfac
+# REVENUECAT_PRO_ENTITLEMENT_ID=entl8705419ed4
 ```
 
 ### JWT Configuration
@@ -358,12 +367,39 @@ Design rationale: `docs/superpowers/specs/2026-08-13-fixture-account-design.md`.
 
 | Column | Type | Constraints |
 |--------|------|-------------|
-| `id` | UUID | PK |
+| `id` | UUID | PK — **client-generated**, sent on register (see [Register](#register)) |
 | `email` | String | NOT NULL, UNIQUE |
 | `username` | String | NOT NULL, UNIQUE |
 | `hashed_password` | String | NOT NULL |
 | `has_verified_email` | Boolean | NOT NULL, default `false` |
 | `created_at` | Instant | NOT NULL |
+| `entitlement` | String | NOT NULL, `free` \| `pro` |
+| `entitlement_expires_at` | Instant | NULL = does not lapse |
+| `entitlement_source` | String | `revenuecat` \| `trial` \| `grandfathered` \| `manual` |
+| `trial_started_at` | Instant | set once, never cleared |
+| `is_grandfathered` | Boolean | NOT NULL; set only by migration |
+
+#### `user_service.pending_entitlements`
+
+What RevenueCat reported for a client-generated user id **before that id registered** (pay first,
+register later). Claimed onto the account — and deleted — in the same transaction that creates it.
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| `app_user_id` | UUID | PK — the client's user id / RevenueCat `app_user_id` |
+| `entitlement` | String | NOT NULL, `free` \| `pro` |
+| `entitlement_expires_at` | Instant | NULL = does not lapse |
+| `last_event_timestamp_ms` | Long | NOT NULL |
+| `updated_at` | Instant | NOT NULL |
+
+A nightly job deletes rows whose expiry passed more than 12 months ago, and `free` rows untouched
+for 12 months. Lifetime (`pro`, no expiry) rows are kept.
+
+#### `user_service.revenuecat_events`
+
+The webhook's ledger, keyed on RevenueCat's event id (idempotency). `target_id` is the id the event
+was applied to and `source_id` the giving side of a `TRANSFER`; ordering by `event_timestamp_ms`
+is per target, and carries across registration because a pending row and its account share a UUID.
 
 #### `user_service.api_keys`
 
@@ -583,7 +619,7 @@ https://tracky.jv-coding-solutions.com
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| POST | `/api/auth/register` | None | Register a new user |
+| POST | `/api/auth/register` | None | Register a new user with its client-generated `id` |
 | POST | `/api/auth/login` | None | Login with email and password |
 | POST | `/api/auth/refresh` | None | Refresh access token |
 | POST | `/api/auth/logout` | None | Invalidate refresh token |
@@ -659,24 +695,64 @@ The same seven operations `Task Intervals` offers, one level down.
 
 #### Register
 
+The client generates the user `id` (UUID v4) on first launch, stores it, configures RevenueCat
+with it as the `app_user_id`, and sends the same id here. The server stores it verbatim.
+
 ```bash
 curl -X POST https://tracky.jv-coding-solutions.com/api/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"email":"user@example.com","username":"myuser","password":"MyPass@123"}'
+  -d '{"id":"6f1c2a7e-4b8d-4f0a-9c3e-2d5b7a1e8f40","email":"user@example.com","username":"myuser","password":"MyPass@123"}'
 ```
 
 ```json
 {
   "user": {
-    "id": "3010de5f-3239-4c7b-8ed2-f94d54c682cd",
+    "id": "6f1c2a7e-4b8d-4f0a-9c3e-2d5b7a1e8f40",
     "email": "user@example.com",
     "username": "myuser",
     "hasVerifiedEmail": false
   },
   "accessToken": "eyJhbGciOiJIUzI1NiJ9...",
-  "refreshToken": "a94d2949-ec74-40db-b171-e65e0fde91f4"
+  "refreshToken": "a94d2949-ec74-40db-b171-e65e0fde91f4",
+  "entitlement": {
+    "entitlement": "pro",
+    "entitlementExpiresAt": "2026-11-11T09:30:00Z",
+    "isGrandfathered": false
+  }
 }
 ```
+
+| Status | When |
+|---|---|
+| `201` | Created. `user.id` echoes the id sent. |
+| `400` `VALIDATION_ERROR` | `id` missing, or not a **lowercase canonical** UUID (any version), or another invalid field |
+| `400` `BAD_REQUEST` | email or username already in use. If the id **and** the email are taken, this email error is returned. |
+| `409` `DUPLICATE_RESOURCE` | `id` already belongs to an account — the same device registered before. Nothing is merged, overwritten or logged in; send the user to log in. |
+
+**Entitlement at registration.** Anything RevenueCat reported for the id before the account existed
+(`pending_entitlements`) is claimed in the same transaction, so the `entitlement` block above can
+already be `pro`. With nothing pending, the server asks RevenueCat's REST API v2 directly (3 s
+timeout, no retry) — this covers buying and registering within seconds, before the webhook lands.
+If RevenueCat is unreachable or the key is unset, the account starts `free` and the webhook catches
+up; registration never fails because of it. The id is not a credential: it only ever creates an
+account or attaches pending purchase state to a new one.
+
+**Social sign-up (`/api/auth/google`, `/api/auth/apple`).** Not implemented on the backend yet.
+When it is, its request takes an optional `id` used only when the call creates a new user (same
+validation and `409` as above); for an existing social identity the `id` is ignored.
+
+#### RevenueCat webhook (`POST /api/webhooks/revenuecat`)
+
+Server-to-server only. Changes relevant to the client-generated id:
+
+- An event for a UUID that is not an account yet is applied to `pending_entitlements` through the
+  same mapping, idempotency and `event_timestamp_ms` ordering as for an account.
+- If any id in `aliases` is an account, the event is applied to that account instead.
+- Non-UUID `app_user_id`s (`$RCAnonymousID:…`, from older clients) are answered `200` and ignored.
+- `TRANSFER` (receipt moved, e.g. reinstall before registering + *Restore purchases*): the first
+  `transferred_to` id gets the entitlement the `transferred_from` side held — becoming a pending row
+  if it is not an account — and the giving side drops to `free` (account) or its pending row is
+  deleted. A grandfathered account is never downgraded. Same idempotency and ordering as any event.
 
 #### Create Project
 

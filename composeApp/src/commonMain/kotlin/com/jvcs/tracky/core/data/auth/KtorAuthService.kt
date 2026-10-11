@@ -12,6 +12,7 @@ import com.jvcs.tracky.core.data.networking.get
 import com.jvcs.tracky.core.data.networking.post
 import com.jvcs.tracky.core.domain.auth.AuthInfo
 import com.jvcs.tracky.core.domain.auth.AuthService
+import com.jvcs.tracky.core.domain.identity.AppUserIdStore
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
@@ -21,7 +22,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.plugins.auth.authProviders
 import io.ktor.client.plugins.auth.providers.BearerAuthProvider
 
-class KtorAuthService(private val httpClient: HttpClient) : AuthService {
+class KtorAuthService(private val httpClient: HttpClient, private val appUserIdStore: AppUserIdStore) : AuthService {
 
     override fun clearTokenCache() {
         httpClient.authProviders
@@ -46,7 +47,13 @@ class KtorAuthService(private val httpClient: HttpClient) : AuthService {
         httpClient
             .post<RegisterRequest, AuthInfoDto>(
                 route = "/api/auth/register",
-                body = RegisterRequest(email = email, name = name, password = password),
+                body =
+                    RegisterRequest(
+                        id = appUserIdStore.get(),
+                        email = email,
+                        username = name,
+                        password = password,
+                    ),
             ).map { it.toDomain() }
             .onSuccess { clearTokenCache() }
 
@@ -54,7 +61,7 @@ class KtorAuthService(private val httpClient: HttpClient) : AuthService {
         httpClient
             .post<SocialLoginRequest, AuthInfoDto>(
                 route = "/api/auth/google",
-                body = SocialLoginRequest(idToken = idToken),
+                body = SocialLoginRequest(idToken = idToken, id = appUserIdStore.get()),
             ).map { it.toDomain() }
             .onSuccess { clearTokenCache() }
 
@@ -62,7 +69,7 @@ class KtorAuthService(private val httpClient: HttpClient) : AuthService {
         httpClient
             .post<SocialLoginRequest, AuthInfoDto>(
                 route = "/api/auth/apple",
-                body = SocialLoginRequest(idToken = idToken),
+                body = SocialLoginRequest(idToken = idToken, id = appUserIdStore.get()),
             ).map { it.toDomain() }
             .onSuccess { clearTokenCache() }
 

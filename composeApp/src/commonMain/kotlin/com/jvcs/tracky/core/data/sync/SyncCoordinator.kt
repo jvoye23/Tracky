@@ -1,5 +1,6 @@
 package com.jvcs.tracky.core.data.sync
 
+import com.jvcs.tracky.core.domain.sync.CloudSyncGate
 import com.jvcs.tracky.core.domain.sync.SyncRepository
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
@@ -31,12 +32,17 @@ class SyncCoordinator(
     private val intervalRepository: IntervalRepository,
     private val subTaskRepository: SubTaskRepository,
     private val subTaskIntervalRepository: SubTaskIntervalRepository,
+    private val cloudSyncGate: CloudSyncGate,
     /** CPU-bound ordering work; the repositories move their own I/O. */
     private val dispatcher: CoroutineDispatcher,
 ) : SyncRepository {
 
-    override suspend fun syncPendingOperations(): EmptyResult<DataError> =
-        withContext(dispatcher) {
+    override suspend fun syncPendingOperations(): EmptyResult<DataError> {
+        // Local-only: there is nowhere to drain to. Also what turns SyncWorker and the iOS BGTask
+        // into no-ops on a free device.
+        if (!cloudSyncGate.isEnabled()) return Result.Success(Unit)
+
+        return withContext(dispatcher) {
             // Every level still runs when an earlier one could not read the queue, in the same
             // parent-first order as always: a later drain may get through, and anything it cannot
             // push yet stays queued behind its parent. The first failure is the one reported.
@@ -48,4 +54,5 @@ class SyncCoordinator(
                 subTaskIntervalRepository.syncPendingSubTaskIntervals(),
             ).firstOrNull { it is Result.Error } ?: Result.Success(Unit)
         }
+    }
 }

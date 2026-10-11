@@ -8,6 +8,9 @@ sealed interface ProjectOverviewEvent {
 
     data class Error(val error: UiText) : ProjectOverviewEvent
 
+    /** The server refused to sync because the account is not Pro; offered with a way to upgrade. */
+    data object ProRequired : ProjectOverviewEvent
+
     data object ArchiveError : ProjectOverviewEvent
 
     data object PinError : ProjectOverviewEvent

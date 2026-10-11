@@ -3,6 +3,7 @@ package com.jvcs.tracky.core.database.dao
 import androidx.room.Dao
 import androidx.room.Query
 import androidx.room.Transaction
+import com.jvcs.tracky.core.database.relation.ProjectLastTrackedEntity
 import com.jvcs.tracky.core.database.relation.ProjectWithTaskTreeEntity
 import com.jvcs.tracky.core.database.relation.ProjectWithTasksEntity
 import kotlinx.coroutines.flow.Flow
@@ -31,6 +32,17 @@ interface ProjectTreeDao {
     )
     fun getPinnedProjectsWithTasks(): Flow<List<ProjectWithTasksEntity>>
 
+    /**
+     * The end of each project's last closed task interval that banked time; projects that never
+     * tracked any are absent. Mirrors lastTrackedEnd, which derives the same from a loaded tree.
+     */
+    @Query(
+        "SELECT parentProjectId AS projectId, MAX(endDateTimeEpochMs) AS lastTrackedEndEpochMs " +
+            "FROM task_intervals WHERE endDateTimeEpochMs IS NOT NULL AND durationMillis > 0 " +
+            "GROUP BY parentProjectId",
+    )
+    fun observeLastTrackedEnds(): Flow<List<ProjectLastTrackedEntity>>
+
     @Transaction
     @Query("SELECT * FROM projects WHERE projectId = :projectId")
     suspend fun getProjectWithTasksById(projectId: String): ProjectWithTasksEntity?
@@ -48,4 +60,12 @@ interface ProjectTreeDao {
     @Transaction
     @Query("SELECT * FROM projects WHERE projectId = :projectId")
     fun observeProjectWithTaskTreeById(projectId: String): Flow<ProjectWithTaskTreeEntity?>
+
+    /**
+     * Every project with its whole tree - archived and trashed included - in one transaction, so the
+     * read is a consistent snapshot rather than one assembled while timers keep writing.
+     */
+    @Transaction
+    @Query("SELECT * FROM projects")
+    suspend fun getAllProjectsWithTaskTree(): List<ProjectWithTaskTreeEntity>
 }

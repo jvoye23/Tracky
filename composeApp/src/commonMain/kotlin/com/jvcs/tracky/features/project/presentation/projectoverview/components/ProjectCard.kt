@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CalendarToday
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material3.CardDefaults
@@ -31,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
@@ -42,12 +44,14 @@ import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.designsystem.theme.timerStyle
 import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
 import com.jvcs.tracky.features.project.presentation.models.ProjectUi
+import com.jvcs.tracky.features.project.presentation.util.lastActiveText
 import kotlinx.datetime.LocalDateTime
 import org.jetbrains.compose.resources.stringResource
 import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.done
 import tracky.composeapp.generated.resources.duration
 import tracky.composeapp.generated.resources.in_progress
+import tracky.composeapp.generated.resources.last_active
 import tracky.composeapp.generated.resources.start_date
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -160,7 +164,7 @@ fun ProjectCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            // Spacer(modifier = Modifier.height(8.dp))
 
             // BODY: Description
             Text(
@@ -171,13 +175,29 @@ fun ProjectCard(
                 overflow = TextOverflow.Ellipsis,
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                Text(
+                    text = projectUi.totalProjectDuration,
+                    style =
+                        MaterialTheme.typography.timerStyle.copy(
+                            fontSize = 34.sp,
+                        ),
+                    color = contentColor,
+                )
+            }
 
             // FOOTER: Stacked Meta Information
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(32.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 MetaInfoStackedItem(
                     label = stringResource(Res.string.start_date),
@@ -185,10 +205,11 @@ fun ProjectCard(
                     value = projectUi.startDateTimeUtc,
                     contentColor = contentColor,
                 )
+
                 MetaInfoStackedItem(
-                    label = stringResource(Res.string.duration),
-                    icon = Icons.Rounded.Timer,
-                    value = projectUi.totalProjectDuration,
+                    label = stringResource(Res.string.last_active),
+                    icon = Icons.Rounded.History,
+                    value = lastActiveText(projectUi),
                     contentColor = contentColor,
                 )
             }
@@ -299,6 +320,7 @@ private fun ProjectCardPreview() {
                             startDateTimeUtc = LocalDateTime(2025, 12, 1, 10, 0, 0).toString(),
                             isFinished = false,
                             endDateTimeUtc = null,
+                            lastActiveDate = "Dec, 3, 2025",
                             projectTasks =
                                 listOf(
                                     ProjectTaskUi(
@@ -327,6 +349,7 @@ private fun ProjectCardPreview() {
                             startDateTimeUtc = LocalDateTime(2025, 12, 1, 10, 0, 0).toString(),
                             isFinished = true,
                             endDateTimeUtc = null,
+                            lastActiveDate = "Dec, 3, 2025",
                             projectTasks =
                                 listOf(
                                     ProjectTaskUi(
@@ -355,6 +378,7 @@ private fun ProjectCardPreview() {
                             startDateTimeUtc = LocalDateTime(2025, 12, 1, 10, 0, 0).toString(),
                             isFinished = false,
                             endDateTimeUtc = null,
+                            lastActiveDate = "Dec, 3, 2025",
                             projectTasks =
                                 listOf(
                                     ProjectTaskUi(
@@ -380,12 +404,13 @@ private fun ProjectCardPreview() {
                         ProjectUi(
                             projectId = "4",
                             title = "Empty Project",
-                            description = "Description of the project",
+                            description = "",
                             color = Color.Magenta,
                             totalDurationMillis = 3_600_000L,
                             startDateTimeUtc = LocalDateTime(2025, 12, 1, 10, 0, 0).toString(),
                             isFinished = false,
                             endDateTimeUtc = null,
+                            lastActiveDate = "Dec, 3, 2025",
                             useLightTextColor = true,
                         ),
                 )

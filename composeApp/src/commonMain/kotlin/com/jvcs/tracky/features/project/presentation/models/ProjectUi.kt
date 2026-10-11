@@ -23,6 +23,12 @@ data class ProjectUi(
     val isFinished: Boolean,
     val useLightTextColor: Boolean = false,
     val endDateTimeUtc: String?,
+    /**
+     * The last local day this project banked tracked time, formatted like [startDateTimeUtc]; null
+     * when it never has. A running timer is not in it — see lastActiveText, which shows "Today"
+     * for one.
+     */
+    val lastActiveDate: String?,
     val projectTasks: List<ProjectTaskUi>? = null,
     val isPinned: Boolean = false,
 ) {

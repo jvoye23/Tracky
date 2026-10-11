@@ -35,6 +35,7 @@ val appModule =
         viewModel {
             MainViewModel(
                 sessionStorage = get(),
+                onboardingStatusStore = get(),
             )
         }
     }

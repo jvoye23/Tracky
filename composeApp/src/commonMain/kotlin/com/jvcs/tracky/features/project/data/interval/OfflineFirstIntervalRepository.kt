@@ -1,5 +1,6 @@
 package com.jvcs.tracky.features.project.data.interval
 
+import com.jvcs.tracky.core.domain.sync.CloudSyncGate
 import com.jvcs.tracky.core.domain.sync.PendingSyncDataSource
 import com.jvcs.tracky.core.domain.sync.PendingSyncOperation
 import com.jvcs.tracky.core.domain.sync.SyncOutcome
@@ -40,6 +41,7 @@ class OfflineFirstIntervalRepository(
     private val syncScheduler: SyncScheduler,
     private val applicationScope: CoroutineScope,
     private val timeProvider: TimeProvider,
+    private val cloudSyncGate: CloudSyncGate,
 ) : IntervalRepository {
 
     // CREATE/UPDATE interval: local first (optimistic), then remote — same flow as projects/tasks.
@@ -78,6 +80,7 @@ class OfflineFirstIntervalRepository(
             pendingSyncDataSource.deleteOperationsByEntityId(intervalId)
             return Result.Success(Unit)
         }
+        if (!cloudSyncGate.isEnabled()) return Result.Success(Unit)
 
         val taskId = interval.parentTaskId
         val remoteResult =
@@ -129,6 +132,9 @@ class OfflineFirstIntervalRepository(
     private suspend fun pushInterval(interval: TaskInterval, isCreate: Boolean): EmptyResult<DataError> {
         val taskId = interval.parentTaskId
         val operation = if (isCreate) PendingSyncOperation.OP_CREATE else PendingSyncOperation.OP_UPDATE
+
+        // Local-only: the Room write is the whole change - nothing to push and nothing to queue.
+        if (!cloudSyncGate.isEnabled()) return Result.Success(Unit)
 
         if (pendingSyncDataSource.hasPendingCreate(taskId).getOrDefault(false)) {
             return queueForLater(interval.intervalId, taskId, operation)

@@ -47,6 +47,7 @@ fun TrackyAdaptiveNavigationLayout(
     onProjectsClick: () -> Unit = {},
     onArchiveClick: () -> Unit = {},
     onTrashClick: () -> Unit = {},
+    onProClick: () -> Unit = {},
     content: @Composable (showMenuButton: Boolean) -> Unit,
 ) {
     // Movable so the screen keeps its scroll position and selection when a rotation or window
@@ -64,6 +65,7 @@ fun TrackyAdaptiveNavigationLayout(
                 onProjectsClick = onProjectsClick,
                 onArchiveClick = onArchiveClick,
                 onTrashClick = onTrashClick,
+                onProClick = onProClick,
             ) {
                 movableContent(true)
             }
@@ -80,6 +82,7 @@ fun TrackyAdaptiveNavigationLayout(
                     onProjectsClick = onProjectsClick,
                     onArchiveClick = onArchiveClick,
                     onTrashClick = onTrashClick,
+                    onProClick = onProClick,
                 )
                 // The rail already pads for the start inset (cutout, 3-button nav bar); consume it so
                 // the content's Scaffold does not pad for it a second time.

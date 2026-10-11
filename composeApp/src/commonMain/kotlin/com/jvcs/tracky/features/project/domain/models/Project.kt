@@ -18,6 +18,10 @@ data class Project(
     val isPinned: Boolean = false,
     override val ownUpdatedAt: Instant? = null,
     val sortIndex: Long? = null,
+    // Derived, never stored or synced: the end of the last closed task interval that banked time
+    // (see lastTrackedEnd). The list reads fill it from an aggregate query, since their tasks
+    // arrive without intervals; the tree read derives it from the intervals it already has.
+    val lastTrackedEndUtc: Instant? = null,
 ) : Timestamped {
 
     // null projectTasks means "not loaded" (see ProjectEntity.toProject), not "no tasks".

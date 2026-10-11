@@ -18,6 +18,7 @@ import com.jvcs.tracky.features.project.data.mappers.toProject
 import com.jvcs.tracky.features.project.data.mappers.toProjectEntity
 import com.jvcs.tracky.features.project.data.mappers.toProjectSubTaskEntity
 import com.jvcs.tracky.features.project.data.mappers.toProjectTaskEntity
+import com.jvcs.tracky.features.project.data.mappers.toProjects
 import com.jvcs.tracky.features.project.data.mappers.toSubTaskIntervalEntity
 import com.jvcs.tracky.features.project.data.mappers.toTaskIntervalEntity
 import com.jvcs.tracky.features.project.domain.models.Project
@@ -26,6 +27,7 @@ import com.jvcs.tracky.features.project.domain.models.TaskInterval
 import com.jvcs.tracky.features.project.domain.project.LocalProjectDataSource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -40,9 +42,10 @@ class RoomLocalProjectDataSource(private val projectDao: ProjectDao, private val
             .map { list -> list.map { it.toProject() } }
 
     override fun getActiveProjects(): Flow<List<Project>> =
-        projectTreeDao
-            .getActiveProjectsWithTasks()
-            .map { list -> list.map { it.toProject() } }
+        combine(
+            projectTreeDao.getActiveProjectsWithTasks(),
+            projectTreeDao.observeLastTrackedEnds(),
+        ) { list, lastTracked -> list.toProjects(lastTracked) }
 
     override suspend fun getProjectById(projectId: String): Result<Project?, DataError.Local> =
         read {
@@ -59,6 +62,11 @@ class RoomLocalProjectDataSource(private val projectDao: ProjectDao, private val
 
     override fun observeProjectWithTaskTreeById(projectId: String): Flow<Project?> =
         projectTreeDao.observeProjectWithTaskTreeById(projectId).map { it?.toProject() }
+
+    override suspend fun getAllProjectTrees(): Result<List<Project>, DataError.Local> =
+        read {
+            projectTreeDao.getAllProjectsWithTaskTree().map { it.toProject() }
+        }
 
     override suspend fun upsertProject(project: Project): EmptyResult<DataError.Local> =
         write {

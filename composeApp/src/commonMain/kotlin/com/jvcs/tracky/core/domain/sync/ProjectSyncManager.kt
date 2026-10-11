@@ -39,6 +39,7 @@ class ProjectSyncManager(
     private val appLifecycleObserver: AppLifecycleObserver,
     private val syncRepository: SyncRepository,
     private val pullCoordinator: SyncPullCoordinator,
+    private val cloudSyncGate: CloudSyncGate,
     private val applicationScope: CoroutineScope,
 ) {
 
@@ -52,7 +53,9 @@ class ProjectSyncManager(
         combine(
             connectivityObserver.isConnected.debounce(1.seconds),
             appLifecycleObserver.isInForeground,
-        ) { online, foreground -> online && foreground }
+            // Local-only devices never tick: signing in starts the loop, signing out stops it.
+            cloudSyncGate.observeIsEnabled(),
+        ) { online, foreground, syncEnabled -> online && foreground && syncEnabled }
             .distinctUntilChanged()
             .flatMapLatest { active ->
                 // flatMapLatest, so going offline or backgrounding cancels the ticker outright
