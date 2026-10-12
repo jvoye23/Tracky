@@ -11,6 +11,10 @@ import com.jvcs.tracky.core.domain.auth.FakeAuthService
 import com.jvcs.tracky.core.domain.auth.FakeSessionStorage
 import com.jvcs.tracky.core.domain.auth.authInfo
 import com.jvcs.tracky.core.domain.connectivity.FixedConnectivityObserver
+import com.jvcs.tracky.core.domain.purchases.FakeEntitlementService
+import com.jvcs.tracky.core.domain.purchases.FakeProAccessRepository
+import com.jvcs.tracky.core.domain.sync.CountingRemoteSyncDataSource
+import com.jvcs.tracky.core.domain.sync.DeltaSyncApplier
 import com.jvcs.tracky.core.domain.sync.FakeCloudSyncGate
 import com.jvcs.tracky.core.domain.sync.FakeLocalDataImportStore
 import com.jvcs.tracky.core.domain.sync.FakeSyncCursorStore
@@ -38,6 +42,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import tracky.composeapp.generated.resources.Res
@@ -46,6 +51,7 @@ import tracky.composeapp.generated.resources.error_no_internet
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
@@ -90,6 +96,9 @@ class ProjectOverviewViewModelTest {
         repository: FakeProjectRepository,
         sessionStorage: FakeSessionStorage = FakeSessionStorage(authInfo()),
         authService: FakeAuthService = FakeAuthService(),
+        proAccessRepository: FakeProAccessRepository = FakeProAccessRepository(),
+        entitlementService: FakeEntitlementService = FakeEntitlementService(),
+        deltaSyncApplier: DeltaSyncApplier = testDeltaSyncApplier(),
     ): ProjectOverviewViewModel =
         ProjectOverviewViewModel(
             cloudSyncGate = FakeCloudSyncGate(),
@@ -101,13 +110,15 @@ class ProjectOverviewViewModelTest {
             authService = authService,
             connectivityObserver = FixedConnectivityObserver(),
             syncCursorStore = FakeSyncCursorStore(),
-            deltaSyncApplier = testDeltaSyncApplier(),
+            deltaSyncApplier = deltaSyncApplier,
             // Shares the test scheduler, so `runCurrent` drives the logout teardown (`advanceUntilIdle`
             // skips background work) and the scope dies with the test instead of outliving it.
             applicationScope = backgroundScope,
             syncScheduler = FakeSyncScheduler(),
             onboardingStatusStore = FakeOnboardingStatusStore(),
             localDataImportStore = FakeLocalDataImportStore(),
+            proAccessRepository = proAccessRepository,
+            entitlementService = entitlementService,
         )
 
     /**
@@ -265,6 +276,201 @@ class ProjectOverviewViewModelTest {
 
             // A failed pull still has to clear the spinner, or the screen hangs on the loading state.
             assertThat(stateOf(viewModel).isLoading).isFalse()
+        }
+
+    @Test
+    fun loadProjectsFromServer_on402WhileTheStoreSaysPro_refreshesTheServer_andRetriesQuietly() =
+        runTest(dispatcher) {
+            val repository =
+                FakeProjectRepository(seededProjects()).apply {
+                    fetchResults += Result.Error(DataError.Remote.PAYMENT_REQUIRED)
+                }
+            val entitlementService = FakeEntitlementService(Result.Success(true))
+            val viewModel =
+                createViewModel(
+                    repository,
+                    proAccessRepository = FakeProAccessRepository(result = Result.Success(true)),
+                    entitlementService = entitlementService,
+                )
+
+            viewModel.events.test {
+                startCollectingState(viewModel)
+                // The server was only behind the store; the user never learns it was.
+                expectNoEvents()
+            }
+
+            assertThat(entitlementService.refreshCalls).isEqualTo(1)
+            assertThat(repository.fetchCalls).isEqualTo(2)
+            assertThat(stateOf(viewModel).isLoading).isFalse()
+        }
+
+    @Test
+    fun loadProjectsFromServer_on402WhileTheStoreSaysFree_asksForPro_withoutARefresh() =
+        runTest(dispatcher) {
+            val repository =
+                FakeProjectRepository(seededProjects()).apply {
+                    fetchResult = Result.Error(DataError.Remote.PAYMENT_REQUIRED)
+                }
+            val entitlementService = FakeEntitlementService()
+            val viewModel =
+                createViewModel(
+                    repository,
+                    proAccessRepository = FakeProAccessRepository(result = Result.Success(false)),
+                    entitlementService = entitlementService,
+                )
+
+            viewModel.events.test {
+                startCollectingState(viewModel)
+                assertThat(awaitItem()).isEqualTo(ProjectOverviewEvent.ProRequired)
+                expectNoEvents()
+            }
+
+            assertThat(entitlementService.refreshCalls).isEqualTo(0)
+            assertThat(repository.fetchCalls).isEqualTo(1)
+        }
+
+    @Test
+    fun loadProjectsFromServer_on402_whenTheRefreshFailsOrSaysFree_asksForProOnce() =
+        runTest(dispatcher) {
+            val refreshResults =
+                listOf<Result<Boolean, DataError.Remote>>(
+                    Result.Success(false),
+                    Result.Error(DataError.Remote.SERVICE_UNAVAILABLE),
+                    Result.Error(DataError.Remote.TOO_MANY_REQUESTS),
+                )
+            refreshResults.forEach { refreshResult ->
+                val repository =
+                    FakeProjectRepository(seededProjects()).apply {
+                        fetchResult = Result.Error(DataError.Remote.PAYMENT_REQUIRED)
+                    }
+                val entitlementService = FakeEntitlementService(refreshResult)
+                val viewModel =
+                    createViewModel(
+                        repository,
+                        proAccessRepository = FakeProAccessRepository(result = Result.Success(true)),
+                        entitlementService = entitlementService,
+                    )
+
+                viewModel.events.test {
+                    startCollectingState(viewModel)
+                    assertThat(awaitItem()).isEqualTo(ProjectOverviewEvent.ProRequired)
+                    expectNoEvents()
+                }
+
+                assertThat(entitlementService.refreshCalls).isEqualTo(1)
+                assertThat(repository.fetchCalls).isEqualTo(1)
+            }
+        }
+
+    @Test
+    fun loadProjectsFromServer_whenTheRetryIs402Too_asksForProOnce_withoutAnotherRefresh() =
+        runTest(dispatcher) {
+            val repository =
+                FakeProjectRepository(seededProjects()).apply {
+                    // The retry after the refresh is refused as well: RevenueCat and the store disagree.
+                    fetchResult = Result.Error(DataError.Remote.PAYMENT_REQUIRED)
+                }
+            val entitlementService = FakeEntitlementService(Result.Success(true))
+            val viewModel =
+                createViewModel(
+                    repository,
+                    proAccessRepository = FakeProAccessRepository(result = Result.Success(true)),
+                    entitlementService = entitlementService,
+                )
+
+            viewModel.events.test {
+                startCollectingState(viewModel)
+                assertThat(awaitItem()).isEqualTo(ProjectOverviewEvent.ProRequired)
+                expectNoEvents()
+            }
+
+            assertThat(entitlementService.refreshCalls).isEqualTo(1)
+            assertThat(repository.fetchCalls).isEqualTo(2)
+        }
+
+    @Test
+    fun pullToRefresh_on402WhileTheStoreSaysPro_refreshesTheServer_andRetriesThePull() =
+        runTest(dispatcher) {
+            val remote = CountingRemoteSyncDataSource(failures = 1, failure = DataError.Remote.PAYMENT_REQUIRED)
+            val entitlementService = FakeEntitlementService(Result.Success(true))
+            val viewModel =
+                createViewModel(
+                    FakeProjectRepository(seededProjects()),
+                    proAccessRepository = FakeProAccessRepository(result = Result.Success(true)),
+                    entitlementService = entitlementService,
+                    deltaSyncApplier = testDeltaSyncApplier(remote = remote),
+                )
+
+            viewModel.events.test {
+                startCollectingState(viewModel)
+                viewModel.onAction(ProjectOverviewAction.OnPullToRefresh)
+                testScheduler.advanceUntilIdle()
+                expectNoEvents()
+            }
+
+            assertThat(entitlementService.refreshCalls).isEqualTo(1)
+            assertThat(remote.calls).isEqualTo(2)
+        }
+
+    @Test
+    fun aLater402OnTheSameScreen_asksForPro_withoutAnotherRefresh() =
+        runTest(dispatcher) {
+            val repository =
+                FakeProjectRepository(seededProjects()).apply {
+                    fetchResults += Result.Error(DataError.Remote.PAYMENT_REQUIRED)
+                }
+            val remote = CountingRemoteSyncDataSource(failures = 1, failure = DataError.Remote.PAYMENT_REQUIRED)
+            val entitlementService = FakeEntitlementService(Result.Success(true))
+            val viewModel =
+                createViewModel(
+                    repository,
+                    proAccessRepository = FakeProAccessRepository(result = Result.Success(true)),
+                    entitlementService = entitlementService,
+                    deltaSyncApplier = testDeltaSyncApplier(remote = remote),
+                )
+
+            viewModel.events.test {
+                startCollectingState(viewModel) // 402, refresh, retry succeeds.
+                viewModel.onAction(ProjectOverviewAction.OnPullToRefresh)
+                // The server would refuse a second refresh this soon, so the 402 stands.
+                assertThat(awaitItem()).isEqualTo(ProjectOverviewEvent.ProRequired)
+                expectNoEvents()
+            }
+
+            assertThat(entitlementService.refreshCalls).isEqualTo(1)
+            assertThat(remote.calls).isEqualTo(1)
+        }
+
+    @Test
+    fun a402WhileTheRefreshIsRunning_waitsForIt_andRetriesToo() =
+        runTest(dispatcher) {
+            val repository =
+                FakeProjectRepository(seededProjects()).apply {
+                    fetchResults += Result.Error(DataError.Remote.PAYMENT_REQUIRED)
+                }
+            val remote = CountingRemoteSyncDataSource(failures = 1, failure = DataError.Remote.PAYMENT_REQUIRED)
+            val entitlementService = FakeEntitlementService(Result.Success(true), latency = 1.seconds)
+            val viewModel =
+                createViewModel(
+                    repository,
+                    proAccessRepository = FakeProAccessRepository(result = Result.Success(true)),
+                    entitlementService = entitlementService,
+                    deltaSyncApplier = testDeltaSyncApplier(remote = remote),
+                )
+
+            viewModel.events.test {
+                // The first load's 402 starts the refresh, which is still running when the
+                // pull-to-refresh gets its own 402.
+                backgroundScope.launch { viewModel.state.collect { } }
+                runCurrent()
+                viewModel.onAction(ProjectOverviewAction.OnPullToRefresh)
+                testScheduler.advanceUntilIdle()
+                expectNoEvents()
+            }
+
+            assertThat(entitlementService.refreshCalls).isEqualTo(1)
+            assertThat(repository.fetchCalls).isEqualTo(2)
+            assertThat(remote.calls).isEqualTo(2)
         }
 
     @Test
@@ -542,6 +748,11 @@ private class FakeProjectRepository(initial: List<Project>) :
     private val projectsFlow = MutableStateFlow(initial)
     var reorderResult: EmptyResult<DataError> = Result.Success(Unit)
     var fetchResult: EmptyResult<DataError> = Result.Success(Unit)
+
+    /** Answers fetches in order; once empty, a fetch answers [fetchResult]. */
+    val fetchResults = ArrayDeque<EmptyResult<DataError>>()
+    var fetchCalls = 0
+        private set
     val reorderCalls = mutableListOf<List<String>>()
     val pinCalls = mutableListOf<Pair<List<String>, Boolean>>()
 
@@ -561,7 +772,10 @@ private class FakeProjectRepository(initial: List<Project>) :
         projectsFlow
             .map { projects -> projects.filter { !it.isArchived && !it.isFinished && it.trashedAt == null } }
 
-    override suspend fun fetchProjects(): EmptyResult<DataError> = fetchResult
+    override suspend fun fetchProjects(): EmptyResult<DataError> {
+        fetchCalls++
+        return fetchResults.removeFirstOrNull() ?: fetchResult
+    }
 
     override suspend fun reorderProjects(orderedProjectIds: List<String>): EmptyResult<DataError> {
         reorderCalls += orderedProjectIds

@@ -10,12 +10,15 @@ import co.touchlab.kermit.Logger
 import com.jvcs.tracky.core.domain.auth.AuthService
 import com.jvcs.tracky.core.domain.auth.SessionStorage
 import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
+import com.jvcs.tracky.core.domain.purchases.EntitlementService
+import com.jvcs.tracky.core.domain.purchases.ProAccessRepository
 import com.jvcs.tracky.core.domain.sync.CloudSyncGate
 import com.jvcs.tracky.core.domain.sync.DeltaSyncApplier
 import com.jvcs.tracky.core.domain.sync.LocalDataImportStore
 import com.jvcs.tracky.core.domain.sync.SyncCursorStore
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
 import com.jvcs.tracky.core.domain.util.DataError
+import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeManager
 import com.jvcs.tracky.core.domain.util.TimeProvider
@@ -34,6 +37,7 @@ import com.jvcs.tracky.features.project.presentation.mappers.toProjectUi
 import com.jvcs.tracky.features.project.presentation.models.ProjectUi
 import com.jvcs.tracky.features.project.presentation.util.toUiText
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -74,6 +78,8 @@ class ProjectOverviewViewModel(
     private val syncScheduler: SyncScheduler,
     private val onboardingStatusStore: OnboardingStatusStore,
     private val localDataImportStore: LocalDataImportStore,
+    private val proAccessRepository: ProAccessRepository,
+    private val entitlementService: EntitlementService,
 ) : ViewModel() {
 
     private val _sortOption = MutableStateFlow(SortOption.CUSTOM)
@@ -88,6 +94,9 @@ class ProjectOverviewViewModel(
      */
     private var reorderInFlight = false
     private var hasLoadedInitialData = false
+
+    /** The one entitlement refresh this screen may make; see [callServer]. */
+    private var entitlementRefresh: Deferred<Boolean>? = null
     private val _state = MutableStateFlow(ProjectOverviewState())
     val state =
         combine(
@@ -457,9 +466,7 @@ class ProjectOverviewViewModel(
 
     private fun loadProjectsFromServer() {
         viewModelScope.launch {
-            projectRepository
-                .fetchProjects()
-                .onFailure { error -> sendServerError(error) }
+            callServer { projectRepository.fetchProjects() }
             _state.update { it.copy(isLoading = false) }
         }
     }
@@ -476,11 +483,44 @@ class ProjectOverviewViewModel(
     private fun refreshProjectsFromServer() {
         viewModelScope.launch {
             _state.update { it.copy(isRefreshing = true) }
-            deltaSyncApplier
-                .pullChanges()
-                .onFailure { error -> sendServerError(error) }
+            callServer { deltaSyncApplier.pullChanges() }
             _state.update { it.copy(isRefreshing = false) }
         }
+    }
+
+    /**
+     * Runs [call] and reports its failure, except for a 402 that only means the server is behind.
+     *
+     * The server learns about purchases from RevenueCat's webhook, so it can still say "not Pro"
+     * after the store already says Pro. A lifetime purchase it did not understand stays that way
+     * for good. When the store says Pro, the server is asked to re-read the entitlement and [call]
+     * runs once more. A 402 from that second run is reported as it is.
+     *
+     * At most one refresh per screen: the server rate-limits it, and a store that says Pro while
+     * RevenueCat says otherwise is not something a retry loop can fix. A 402 that arrives while the
+     * refresh is still running, e.g. from a pull-to-refresh during the first load, waits for it and
+     * shares its answer. A second refresh would be refused with a 429.
+     */
+    private suspend fun callServer(call: suspend () -> EmptyResult<DataError>) {
+        val result = call()
+        if (result !is Result.Error) return
+        if (result.error == DataError.Remote.PAYMENT_REQUIRED && refreshStaleEntitlement()) {
+            call().onFailure { error -> sendServerError(error) }
+        } else {
+            sendServerError(result.error)
+        }
+    }
+
+    /** True when the store says Pro and the server, after a refresh, agrees. */
+    private suspend fun refreshStaleEntitlement(): Boolean {
+        entitlementRefresh?.let { refresh -> return !refresh.isCompleted && refresh.await() }
+        val refresh =
+            viewModelScope.async {
+                proAccessRepository.hasProAccess() == Result.Success(true) &&
+                    entitlementService.refresh() == Result.Success(true)
+            }
+        entitlementRefresh = refresh
+        return refresh.await()
     }
 
     private suspend fun sendServerError(error: DataError) {

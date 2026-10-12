@@ -17,8 +17,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.yield
 
-/** A change feed that always answers with an empty page, and counts how often it was asked. */
-internal class CountingRemoteSyncDataSource(private var failures: Int = 0) : RemoteSyncDataSource {
+/**
+ * A change feed that answers with an empty page, and counts how often it was asked. The first
+ * [failures] calls fail with [failure] instead.
+ */
+internal class CountingRemoteSyncDataSource(
+    private var failures: Int = 0,
+    private val failure: DataError.Remote = DataError.Remote.NO_INTERNET,
+) : RemoteSyncDataSource {
 
     override suspend fun importProjects(projects: List<Project>): EmptyResult<DataError.Remote> = Result.Success(Unit)
 
@@ -40,7 +46,7 @@ internal class CountingRemoteSyncDataSource(private var failures: Int = 0) : Rem
         inFlight--
         if (failures > 0) {
             failures--
-            return Result.Error(DataError.Remote.NO_INTERNET)
+            return Result.Error(failure)
         }
         return Result.Success(
             SyncChanges(

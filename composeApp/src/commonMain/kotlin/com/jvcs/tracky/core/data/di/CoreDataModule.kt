@@ -8,6 +8,7 @@ import com.jvcs.tracky.core.data.identity.DataStoreAppUserIdStore
 import com.jvcs.tracky.core.data.networking.ApiConfig
 import com.jvcs.tracky.core.data.networking.HttpClientFactory
 import com.jvcs.tracky.core.data.networking.realtimeUrl
+import com.jvcs.tracky.core.data.purchases.KtorEntitlementService
 import com.jvcs.tracky.core.data.purchases.RevenueCatConfigurator
 import com.jvcs.tracky.core.data.purchases.RevenueCatProAccessRepository
 import com.jvcs.tracky.core.data.realtime.KtorRealtimeChannel
@@ -34,6 +35,7 @@ import com.jvcs.tracky.core.domain.identity.AppUserIdStore
 import com.jvcs.tracky.core.domain.lifecycle.AppLifecycleObserver
 import com.jvcs.tracky.core.domain.notification.TimerNotificationCoordinator
 import com.jvcs.tracky.core.domain.purchases.AppUserIdentitySync
+import com.jvcs.tracky.core.domain.purchases.EntitlementService
 import com.jvcs.tracky.core.domain.purchases.ProAccessRepository
 import com.jvcs.tracky.core.domain.realtime.RealtimeChannel
 import com.jvcs.tracky.core.domain.realtime.RealtimeConnectivity
@@ -156,6 +158,7 @@ val coreDataModule =
             )
         }
         singleOf(::RevenueCatProAccessRepository) bind ProAccessRepository::class
+        singleOf(::KtorEntitlementService) bind EntitlementService::class
         single {
             AppUserIdentitySync(
                 sessionStorage = get(),
