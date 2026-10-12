@@ -6,10 +6,12 @@ import assertk.assertions.containsExactly
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
+import assertk.assertions.isLessThanOrEqualTo
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
 import com.jvcs.tracky.core.domain.auth.FakeSessionStorage
 import com.jvcs.tracky.core.domain.auth.authInfo
+import com.jvcs.tracky.core.domain.purchases.FakeEntitlementService
 import com.jvcs.tracky.core.domain.purchases.FakeProAccessRepository
 import com.jvcs.tracky.core.domain.purchases.ProPackage
 import com.jvcs.tracky.core.domain.purchases.ProPackageType
@@ -26,6 +28,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -35,6 +38,8 @@ import tracky.composeapp.generated.resources.restore_nothing_found
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 internal class PaywallViewModelTest {
 
@@ -45,6 +50,7 @@ internal class PaywallViewModelTest {
     private val statusStore = FakeOnboardingStatusStore()
     private val sessionStorage = FakeSessionStorage()
     private val importStore = FakeLocalDataImportStore()
+    private val entitlementService = FakeEntitlementService()
 
     @BeforeTest
     fun setUp() = Dispatchers.setMain(dispatcher)
@@ -54,7 +60,8 @@ internal class PaywallViewModelTest {
 
     /** Subscribes, since the state is WhileSubscribed, and lets the first load settle. */
     private fun TestScope.openScreen(source: PaywallSource = PaywallSource.ONBOARDING): PaywallViewModel {
-        val viewModel = PaywallViewModel(source, repository, statusStore, sessionStorage, importStore)
+        val viewModel =
+            PaywallViewModel(source, repository, statusStore, sessionStorage, importStore, entitlementService)
         backgroundScope.launch { viewModel.state.collect {} }
         advanceUntilIdle()
         return viewModel
@@ -62,7 +69,15 @@ internal class PaywallViewModelTest {
 
     @Test
     fun theScreenIsLoadingUntilThePlansArrive() {
-        val viewModel = PaywallViewModel(PaywallSource.ONBOARDING, repository, statusStore, sessionStorage, importStore)
+        val viewModel =
+            PaywallViewModel(
+                PaywallSource.ONBOARDING,
+                repository,
+                statusStore,
+                sessionStorage,
+                importStore,
+                entitlementService,
+            )
 
         assertThat(viewModel.state.value.isLoading).isTrue()
     }
@@ -154,6 +169,8 @@ internal class PaywallViewModelTest {
             assertThat(repository.purchasedPackages).containsExactly(annual)
             assertThat(statusStore.current).isEqualTo(OnboardingStatus.AWAITING_ACCOUNT)
             assertThat(importStore.isPending).isTrue()
+            // There is no account to refresh yet; registration reads the entitlement instead.
+            assertThat(entitlementService.refreshCalls).isEqualTo(0)
         }
 
     @Test
@@ -339,6 +356,51 @@ internal class PaywallViewModelTest {
             assertThat(statusStore.current).isEqualTo(OnboardingStatus.NOT_STARTED)
             // A signed-in device already syncs; there is nothing local-only to import.
             assertThat(importStore.isPending).isFalse()
+            // The server hears about the purchase now rather than when the webhook lands.
+            assertThat(entitlementService.refreshCalls).isEqualTo(1)
+        }
+
+    @Test
+    fun theServerIsRefreshedBeforeThePaywallCloses() =
+        runTest(dispatcher) {
+            sessionStorage.set(authInfo())
+            entitlementService.latency = 2.seconds
+            val viewModel = openScreen(PaywallSource.APP)
+
+            viewModel.events.test {
+                viewModel.onAction(PaywallAction.OnSubscribeClick)
+                assertThat(awaitItem()).isEqualTo(PaywallEvent.ProActivated)
+                // Closed only once the refresh answered. Closing first would let the overview's first
+                // sync reach the server before it knows, and its own refresh would be rate-limited.
+                assertThat(currentTime).isEqualTo(2.seconds.inWholeMilliseconds)
+            }
+        }
+
+    @Test
+    fun aSlowRefreshDoesNotHoldAPaidUserOnThePaywall() =
+        runTest(dispatcher) {
+            sessionStorage.set(authInfo())
+            entitlementService.latency = 1.minutes
+            val viewModel = openScreen(PaywallSource.APP)
+
+            viewModel.events.test {
+                viewModel.onAction(PaywallAction.OnSubscribeClick)
+                assertThat(awaitItem()).isEqualTo(PaywallEvent.ProActivated)
+            }
+            assertThat(currentTime).isLessThanOrEqualTo(5.seconds.inWholeMilliseconds)
+        }
+
+    @Test
+    fun aSignedInUserStillClosesWhenTheServerCannotBeRefreshed() =
+        runTest(dispatcher) {
+            sessionStorage.set(authInfo())
+            entitlementService.result = Result.Error(DataError.Remote.SERVICE_UNAVAILABLE)
+            val viewModel = openScreen(PaywallSource.APP)
+
+            viewModel.events.test {
+                viewModel.onAction(PaywallAction.OnSubscribeClick)
+                assertThat(awaitItem()).isEqualTo(PaywallEvent.ProActivated)
+            }
         }
 
     @Test

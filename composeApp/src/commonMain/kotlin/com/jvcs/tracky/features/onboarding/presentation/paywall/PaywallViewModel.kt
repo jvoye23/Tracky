@@ -3,6 +3,7 @@ package com.jvcs.tracky.features.onboarding.presentation.paywall
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jvcs.tracky.core.domain.auth.SessionStorage
+import com.jvcs.tracky.core.domain.purchases.EntitlementService
 import com.jvcs.tracky.core.domain.purchases.ProAccessRepository
 import com.jvcs.tracky.core.domain.purchases.ProPackage
 import com.jvcs.tracky.core.domain.purchases.ProPackageType
@@ -26,9 +27,11 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import tracky.composeapp.generated.resources.Res
 import tracky.composeapp.generated.resources.paywall_plan_unavailable
 import tracky.composeapp.generated.resources.restore_nothing_found
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Pro, or free - as the last onboarding step, or opened from the drawer.
@@ -39,7 +42,8 @@ import tracky.composeapp.generated.resources.restore_nothing_found
  *   marked for import should it ever get an account. Free from the drawer only closes the screen.
  * - Pro without an account, from either place: the app is pinned to registration until an account
  *   exists, and the local data is marked for import into it.
- * - Pro with an account: nothing to persist; the purchase is already linked to it.
+ * - Pro with an account: nothing to persist; the purchase is already linked to it. The server is
+ *   asked to re-read the entitlement, so sync works before RevenueCat's webhook arrives.
  */
 class PaywallViewModel(
     private val source: PaywallSource,
@@ -47,6 +51,7 @@ class PaywallViewModel(
     private val onboardingStatusStore: OnboardingStatusStore,
     private val sessionStorage: SessionStorage,
     private val localDataImportStore: LocalDataImportStore,
+    private val entitlementService: EntitlementService,
 ) : ViewModel() {
 
     private val eventChannel = Channel<PaywallEvent>()
@@ -198,9 +203,11 @@ class PaywallViewModel(
     private fun finishWithPro() {
         viewModelScope.launch {
             when {
-                // The purchase is already linked to the signed-in account, so there is nothing left to
-                // do but close.
+                // The purchase is already linked to the signed-in account. Telling the server now saves
+                // waiting for the webhook. A failed or slow refresh does not hold the user, who has
+                // paid, on the paywall: the webhook still arrives, and the overview refreshes on a 402.
                 hasAccount() -> {
+                    withTimeoutOrNull(ENTITLEMENT_REFRESH_TIMEOUT) { entitlementService.refresh() }
                     eventChannel.send(PaywallEvent.ProActivated)
                 }
 
@@ -228,4 +235,8 @@ class PaywallViewModel(
             PurchaseError.PackageNotFound -> UiText.Resource(Res.string.paywall_plan_unavailable)
             is PurchaseError.Remote -> error.toUiText()
         }
+
+    private companion object {
+        val ENTITLEMENT_REFRESH_TIMEOUT = 5.seconds
+    }
 }

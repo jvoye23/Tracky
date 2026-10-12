@@ -50,6 +50,8 @@ val projectModule =
                 syncScheduler = get(),
                 onboardingStatusStore = get(),
                 localDataImportStore = get(),
+                proAccessRepository = get(),
+                entitlementService = get(),
             )
         }
 
