@@ -4,6 +4,7 @@
 #   Requirements/backend-delta-sync-api.md
 #   Requirements/backend-active-timer-api.md
 #   Requirements/backend-pro-entitlement-api.md   (section F: a free account is refused with 402)
+#   Requirements/backend-entitlement-refresh-api.md (section F: refresh is reachable and rate-limited)
 #
 # Why this exists: every client slice of the cross-device timer was written against those specs
 # before the backend shipped, and a contract mismatch here fails *silently*. A flat delta row
@@ -288,6 +289,16 @@ else
     # A free user must still be told what they are missing.
     chk "GET /api/entitlement stays reachable" "$(req GET /api/entitlement)" 200
     chk "  and reports free" "$(jq -r '.entitlement // "missing"' "$TMP/r.json" 2>/dev/null)" free
+
+    # Requirements/backend-entitlement-refresh-api.md §2: not gated, re-reads RevenueCat, and a
+    # second call inside 30 s is refused without touching the row. RevenueCat has never seen this
+    # id, which is its 404 and so "free".
+    chk "POST /api/entitlement/refresh stays reachable" "$(req POST /api/entitlement/refresh)" 200
+    chk "  and reports free" "$(jq -r '.entitlement // "missing"' "$TMP/r.json" 2>/dev/null)" free
+    chk "  with the same body as GET /api/entitlement" \
+      "$(jq -c '{entitlement,entitlementExpiresAt,isGrandfathered}' "$TMP/r.json" 2>/dev/null)" \
+      '{"entitlement":"free","entitlementExpiresAt":null,"isGrandfathered":false}'
+    chk "a second refresh within 30 s is rate-limited" "$(req POST /api/entitlement/refresh)" 429
   fi
 fi
 
