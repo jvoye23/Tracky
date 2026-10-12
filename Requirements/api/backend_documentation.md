@@ -283,7 +283,8 @@ SERVER_PORT=8080
 # RevenueCat
 REVENUECAT_WEBHOOK_SECRET=<shared secret from the RevenueCat webhook config>
 # REST API v2 secret key with ONLY customer_information:customers:read. Used at registration to
-# see a purchase the webhook has not delivered yet. Empty = lookup skipped, account starts free.
+# see a purchase the webhook has not delivered yet, and by POST /api/entitlement/refresh. Empty =
+# registration lookup skipped (account starts free) and refresh answers 503.
 REVENUECAT_SECRET_API_KEY=<sk_...>
 # Defaults are Tracky's; override only for another RevenueCat project.
 # REVENUECAT_PROJECT_ID=projc4a0bfac
@@ -376,6 +377,7 @@ Design rationale: `docs/superpowers/specs/2026-08-13-fixture-account-design.md`.
 | `entitlement` | String | NOT NULL, `free` \| `pro` |
 | `entitlement_expires_at` | Instant | NULL = does not lapse |
 | `entitlement_source` | String | `revenuecat` \| `trial` \| `grandfathered` \| `manual` |
+| `entitlement_product_id` | String | NULL; store product that granted Pro (see [webhook](#revenuecat-webhook-post-apiwebhooksrevenuecat)). NULL = next `EXPIRATION` is trusted |
 | `trial_started_at` | Instant | set once, never cleared |
 | `is_grandfathered` | Boolean | NOT NULL; set only by migration |
 
@@ -389,6 +391,7 @@ register later). Claimed onto the account — and deleted — in the same transa
 | `app_user_id` | UUID | PK — the client's user id / RevenueCat `app_user_id` |
 | `entitlement` | String | NOT NULL, `free` \| `pro` |
 | `entitlement_expires_at` | Instant | NULL = does not lapse |
+| `entitlement_product_id` | String | NULL; carried onto the account by the claim |
 | `last_event_timestamp_ms` | Long | NOT NULL |
 | `updated_at` | Instant | NOT NULL |
 
@@ -595,6 +598,9 @@ IP-based rate limiting using Redis (Lua script for atomicity):
 | `POST /api/auth/forgot-password` | 3 requests / 60 seconds |
 | `POST /api/auth/reset-password` | 5 requests / 60 seconds |
 
+`POST /api/entitlement/refresh` is limited separately, **per user** and in memory: one call per 30
+seconds, `429 TOO_MANY_REQUESTS` with `Retry-After` otherwise.
+
 ### Password Requirements
 
 Enforced by the custom `@Password` bean-validation constraint (`user/.../api/validation/Password.kt`). Passwords are stored BCrypt-hashed (`BCryptPasswordEncoder`); API keys and refresh tokens are stored SHA-256 hashed.
@@ -753,6 +759,56 @@ Server-to-server only. Changes relevant to the client-generated id:
   `transferred_to` id gets the entitlement the `transferred_from` side held — becoming a pending row
   if it is not an account — and the giving side drops to `free` (account) or its pending row is
   deleted. A grandfathered account is never downgraded. Same idempotency and ordering as any event.
+  The stored `entitlement_product_id` moves with it.
+
+Event mapping (one function, shared by accounts and pending rows):
+
+| Event | Effect |
+|---|---|
+| `INITIAL_PURCHASE`, `RENEWAL`, `UNCANCELLATION`, `PRODUCT_CHANGE`, `SUBSCRIPTION_EXTENDED` | `pro` until `expiration_at_ms` (absent = keep stored expiry); `product_id` stored |
+| `NON_RENEWING_PURCHASE` | `pro`; `expiration_at_ms` null = **lifetime** (expiry null); `product_id` stored |
+| `EXPIRATION` | `free` — **only** if its `product_id` equals the stored `entitlement_product_id`, or nothing is stored. Otherwise `200`, logged, no change |
+| `CANCELLATION` | No change (Pro until expiry) — except a **refund of lifetime**: `cancel_reason = CUSTOMER_SUPPORT`, `product_id` equals the stored one and the stored expiry is null → `free` |
+| `BILLING_ISSUE` | No change |
+| anything else | `200`, logged, ignored |
+
+**Lifetime is not shortened by another product.** While the account holds non-lapsing Pro, a
+granting event for a different product that carries an expiry (e.g. the old monthly plan still
+renewing after lifetime was bought) is answered `200` and changes nothing; that plan's
+`EXPIRATION` then names a different product and is ignored too. A grandfathered account is never
+downgraded by any of these.
+
+#### Refresh entitlement (`POST /api/entitlement/refresh`)
+
+Bearer auth, no body, **not gated** (free accounts can call it). Call it when a gated route answers
+`402` but the store on the device says Pro, and right after an in-app purchase so sync works before
+the webhook lands.
+
+The server asks RevenueCat REST v2 (`GET /v2/projects/{project}/customers/{userId}`, same client,
+key and ~3 s timeout as the registration lookup) and writes the answer:
+
+- Active Pro entitlement → `pro`, `entitlementExpiresAt` from RevenueCat (`null` = lifetime),
+  source `revenuecat`, `entitlement_product_id` null. A running `manual` grant is left alone.
+- No purchase (or `404`) → `free`, **except** grandfathered accounts, a running trial and `manual`
+  grants, which are left alone.
+
+Response is the same body as `GET /api/entitlement`:
+
+```json
+{ "entitlement": "pro", "entitlementExpiresAt": null, "isGrandfathered": false }
+```
+
+| Status | When |
+|---|---|
+| `200` | RevenueCat answered (including `404`). Body is the resulting entitlement |
+| `401` | Missing or invalid credentials |
+| `429` | A refresh for this user ran less than 30 s ago. Nothing changed. `Retry-After` header |
+| `503` | RevenueCat failed/timed out (timeout, `401`, `403`, `429`, `5xx`) or the key is not configured. Nothing changed — never a downgrade |
+
+```json
+{ "code": "TOO_MANY_REQUESTS", "message": "Try again in a moment." }
+{ "code": "ENTITLEMENT_SOURCE_UNAVAILABLE", "message": "Could not reach the purchase service." }
+```
 
 #### Create Project
 
