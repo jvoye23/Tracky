@@ -122,8 +122,11 @@ import tracky.composeapp.generated.resources.no_current_projects_subtitle
 import tracky.composeapp.generated.resources.no_internet_connection
 import tracky.composeapp.generated.resources.other
 import tracky.composeapp.generated.resources.pinned
+import tracky.composeapp.generated.resources.project_limit_text
+import tracky.composeapp.generated.resources.project_limit_title
 import tracky.composeapp.generated.resources.project_saved_successfully
 import tracky.composeapp.generated.resources.search_results
+import tracky.composeapp.generated.resources.show_subscription_offers
 import tracky.composeapp.generated.resources.upgrade_to_pro
 
 @Composable
@@ -151,6 +154,10 @@ fun ProjectOverviewScreenRoot(
 
             ProjectOverviewEvent.OnLogoutSuccess -> {
                 onSuccessfulLogout()
+            }
+
+            ProjectOverviewEvent.NavigateToPaywall -> {
+                onNavigateToPro()
             }
 
             else -> {
@@ -365,20 +372,18 @@ fun ProjectOverviewScreen(
                 }
             }
 
-            if (state.isAddNewProjectBottomSheetVisible) {
-                AddNewProjectBottomSheet(
-                    textFieldState = state.addProjectTextFieldState,
-                    onAction = onAction,
-                )
-            }
-            if (state.isSortBottomSheetVisible) {
-                SortBottomSheet(
-                    sortOption = sortOption,
-                    onAction = onAction,
-                )
-            }
+            ProjectOverviewBottomSheets(
+                isAddNewProjectVisible = state.isAddNewProjectBottomSheetVisible,
+                addProjectTextFieldState = state.addProjectTextFieldState,
+                isSortVisible = state.isSortBottomSheetVisible,
+                sortOption = sortOption,
+                onAction = onAction,
+            )
             if (state.isDeleteConfirmationDialogVisible) {
                 DeleteProjectsDialog(selectedCount = state.selectedProjectIds.size, onAction = onAction)
+            }
+            if (state.isProjectLimitDialogVisible) {
+                ProjectLimitDialog(onAction = onAction)
             }
             if (state.showLogoutConfirmation) {
                 LogoutConfirmationDialog(isOnline = state.isOnline, onAction = onAction)
@@ -468,7 +473,7 @@ private suspend fun SnackbarHostState.showEventSnackbar(event: ProjectOverviewEv
             showSnackbar(message = event.error.asStringAsync())
         }
 
-        ProjectOverviewEvent.OnLogoutSuccess -> {
+        ProjectOverviewEvent.OnLogoutSuccess, ProjectOverviewEvent.NavigateToPaywall -> {
             Unit
         }
     }
@@ -613,6 +618,43 @@ private fun DeleteProjectsDialog(selectedCount: Int, onAction: (ProjectOverviewA
         },
         dismissButton = {
             TextButton(onClick = { onAction(ProjectOverviewAction.OnDismissDeleteDialog) }) {
+                Text(text = stringResource(Res.string.cancel))
+            }
+        },
+    )
+}
+
+/** The add-project and sort sheets drawn over the overview. */
+@Composable
+private fun ProjectOverviewBottomSheets(
+    isAddNewProjectVisible: Boolean,
+    addProjectTextFieldState: TextFieldState,
+    isSortVisible: Boolean,
+    sortOption: SortOption,
+    onAction: (ProjectOverviewAction) -> Unit,
+) {
+    if (isAddNewProjectVisible) {
+        AddNewProjectBottomSheet(textFieldState = addProjectTextFieldState, onAction = onAction)
+    }
+    if (isSortVisible) {
+        SortBottomSheet(sortOption = sortOption, onAction = onAction)
+    }
+}
+
+/** A free user tried to create a sixth project (Requirements/basic_free_user_flow.md §2). */
+@Composable
+private fun ProjectLimitDialog(onAction: (ProjectOverviewAction) -> Unit) {
+    AlertDialog(
+        onDismissRequest = { onAction(ProjectOverviewAction.OnDismissProjectLimitDialog) },
+        title = { Text(text = stringResource(Res.string.project_limit_title)) },
+        text = { Text(text = stringResource(Res.string.project_limit_text)) },
+        confirmButton = {
+            TextButton(onClick = { onAction(ProjectOverviewAction.OnShowSubscriptionOffersClick) }) {
+                Text(text = stringResource(Res.string.show_subscription_offers))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = { onAction(ProjectOverviewAction.OnDismissProjectLimitDialog) }) {
                 Text(text = stringResource(Res.string.cancel))
             }
         },

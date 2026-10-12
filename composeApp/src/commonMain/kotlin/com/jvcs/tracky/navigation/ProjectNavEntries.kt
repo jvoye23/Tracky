@@ -134,6 +134,9 @@ fun EntryProviderScope<NavKey>.projectDetailEntries(backStack: NavBackStack<NavK
                     Route.ProjectRoute.TaskDetail(sessionId),
                 )
             },
+            onNavigateToPro = {
+                backStack.add(Route.ProjectRoute.ProPaywall)
+            },
             onDailyOverviewClick = { epochDay ->
                 backStack.add(
                     Route.ProjectRoute.DailyOverview(

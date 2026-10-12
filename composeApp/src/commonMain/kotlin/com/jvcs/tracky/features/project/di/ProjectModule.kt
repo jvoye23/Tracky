@@ -52,6 +52,7 @@ val projectModule =
                 localDataImportStore = get(),
                 proAccessRepository = get(),
                 entitlementService = get(),
+                proStatusProvider = get(),
             )
         }
 
@@ -65,6 +66,7 @@ val projectModule =
                 timeProvider = get(),
                 projectJsonExporter = get(),
                 exportFileSharer = get(),
+                proStatusProvider = get(),
             )
         }
 

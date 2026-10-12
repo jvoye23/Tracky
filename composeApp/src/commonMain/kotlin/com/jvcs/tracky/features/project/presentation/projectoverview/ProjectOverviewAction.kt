@@ -60,4 +60,8 @@ sealed interface ProjectOverviewAction {
     data object OnDismissLogoutConfirmation : ProjectOverviewAction
 
     data object OnPullToRefresh : ProjectOverviewAction
+
+    data object OnDismissProjectLimitDialog : ProjectOverviewAction
+
+    data object OnShowSubscriptionOffersClick : ProjectOverviewAction
 }

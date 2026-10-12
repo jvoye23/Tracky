@@ -10,6 +10,7 @@ import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
+import com.jvcs.tracky.core.domain.purchases.FakeProStatusProvider
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.FakeRunningTimerRepository
@@ -120,6 +121,7 @@ class ProjectDetailViewModelTest {
         // The open interval is what says a timer is running, so the fakes that open one publish it
         // here and TimeManager renders it - the same path production takes.
         running: FakeRunningTimerRepository = FakeRunningTimerRepository(),
+        proStatusProvider: FakeProStatusProvider = FakeProStatusProvider(),
     ): Pair<ProjectDetailViewModel, FakeSubTaskRepository> {
         subTaskRepository.running = running
         taskRepository.running = running
@@ -133,6 +135,7 @@ class ProjectDetailViewModelTest {
                 timeProvider = FakeTimeProvider(),
                 projectJsonExporter = FakeProjectJsonExporter(),
                 exportFileSharer = FakeExportFileSharer(),
+                proStatusProvider = proStatusProvider,
                 ioDispatcher = dispatcher,
             )
         return vm to subTaskRepository
@@ -1281,6 +1284,32 @@ class ProjectDetailViewModelTest {
         }
 
     /** A drag is the one time the screen's order outranks the database's. */
+    @Test
+    fun addingASubtaskAsPro_opensTheEditorForThatTask() =
+        runTest {
+            val (vm, _) = viewModel(project(), proStatusProvider = FakeProStatusProvider(isPro = true))
+
+            vm.events.test {
+                vm.onAction(ProjectDetailAction.OnAddSubTaskClick(TASK_ID))
+                runCurrent()
+
+                assertThat(awaitItem()).isEqualTo(ProjectDetailEvent.NavigateToNewSubTask(TASK_ID))
+            }
+        }
+
+    @Test
+    fun addingASubtaskWhileFree_opensThePaywall() =
+        runTest {
+            val (vm, _) = viewModel(project(), proStatusProvider = FakeProStatusProvider(isPro = false))
+
+            vm.events.test {
+                vm.onAction(ProjectDetailAction.OnAddSubTaskClick(TASK_ID))
+                runCurrent()
+
+                assertThat(awaitItem()).isEqualTo(ProjectDetailEvent.NavigateToPaywall)
+            }
+        }
+
     @Test
     fun aTreeEmissionMidDragDoesNotReplayTheMove() =
         runTest {

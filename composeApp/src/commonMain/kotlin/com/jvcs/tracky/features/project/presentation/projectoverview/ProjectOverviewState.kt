@@ -11,6 +11,7 @@ data class ProjectOverviewState(
     val timer: Long = 0L,
     val label: String = "",
     val isAddNewProjectBottomSheetVisible: Boolean = false,
+    val isProjectLimitDialogVisible: Boolean = false,
     val addProjectTextFieldState: TextFieldState = TextFieldState(),
     val searchQuery: String = "",
     val projects: List<ProjectUi> = emptyList(),
