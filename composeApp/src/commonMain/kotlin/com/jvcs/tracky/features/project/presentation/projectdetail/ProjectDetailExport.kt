@@ -47,6 +47,9 @@ internal class ProjectDetailExport(
 
     fun onExportMenuClick() = state.update { it.copy(isExportMenuExpanded = !it.isExportMenuExpanded) }
 
+    /** Opens the menu, rather than toggling it: the Pro check before it can finish after the user moved on. */
+    fun openExportMenu() = state.update { it.copy(isExportMenuExpanded = true) }
+
     fun onExportMenuDismiss() = state.update { it.copy(isExportMenuExpanded = false) }
 
     fun onExportFormatClick(format: ExportFormat) {

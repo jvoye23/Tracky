@@ -402,4 +402,7 @@
     <string name="pro_feature_pin_title">Pin your projects</string>
     <string name="pro_feature_pin_description">Pin your most used projects to the top of your overview.</string>
     <string name="more_features_with_tracky_pro">More features with Tracky Pro</string>
+    <string name="project_limit_title">Maximum number of projects reached</string>
+    <string name="project_limit_text">You have reached the maximum number of projects that can be created for a basic user. If you want to create more projects please subscribe to a Pro tier</string>
+    <string name="show_subscription_offers">Show subscription offers</string>
 </resources>

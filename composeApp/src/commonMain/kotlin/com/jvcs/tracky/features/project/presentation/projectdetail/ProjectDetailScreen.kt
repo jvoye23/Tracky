@@ -123,6 +123,7 @@ fun ProjectDetailScreenRoot(
     onProjectTaskClick: (String) -> Unit,
     onDailyOverviewClick: (epochDay: Long) -> Unit,
     modifier: Modifier = Modifier,
+    onNavigateToPro: () -> Unit = {},
     viewModel: ProjectDetailViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -155,6 +156,16 @@ fun ProjectDetailScreenRoot(
 
                 is ProjectDetailEvent.NewProjectSessionSaved -> {
                     snackbarHostState.showShortSnackbar("Task saved successfully!")
+                }
+
+                is ProjectDetailEvent.NavigateToNewSubTask -> {
+                    state.project?.projectId?.let {
+                        onEditTextClick(true, it, EditTextTarget.NEW_SUBTASK, event.taskId, null)
+                    }
+                }
+
+                ProjectDetailEvent.NavigateToPaywall -> {
+                    onNavigateToPro()
                 }
             }
         }
@@ -236,8 +247,8 @@ private fun navigateFor(
             )
         }
 
-        // The three task-level taps below only exist in edit mode, so the editor opens
-        // straight into editing.
+        // The task-level taps below only exist in edit mode, so the editor opens straight into
+        // editing. Adding a subtask is Pro, so the view model decides where that one goes.
         is ProjectDetailAction.OnTaskTitleClick -> {
             projectId?.let {
                 onEditTextClick(true, it, EditTextTarget.TASK, action.taskId, null)
@@ -247,12 +258,6 @@ private fun navigateFor(
         is ProjectDetailAction.OnSubTaskClick -> {
             projectId?.let {
                 onEditTextClick(true, it, EditTextTarget.SUBTASK, action.taskId, action.subTaskId)
-            }
-        }
-
-        is ProjectDetailAction.OnAddSubTaskClick -> {
-            projectId?.let {
-                onEditTextClick(true, it, EditTextTarget.NEW_SUBTASK, action.taskId, null)
             }
         }
 

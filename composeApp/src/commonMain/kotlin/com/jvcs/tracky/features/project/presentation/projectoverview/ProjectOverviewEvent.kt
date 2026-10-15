@@ -11,6 +11,9 @@ sealed interface ProjectOverviewEvent {
     /** The server refused to sync because the account is not Pro; offered with a way to upgrade. */
     data object ProRequired : ProjectOverviewEvent
 
+    /** A free user reached for a Pro feature: open the paywall. */
+    data object NavigateToPaywall : ProjectOverviewEvent
+
     data object ArchiveError : ProjectOverviewEvent
 
     data object PinError : ProjectOverviewEvent

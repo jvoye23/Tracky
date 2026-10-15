@@ -13,6 +13,7 @@ import com.jvcs.tracky.core.domain.auth.authInfo
 import com.jvcs.tracky.core.domain.connectivity.FixedConnectivityObserver
 import com.jvcs.tracky.core.domain.purchases.FakeEntitlementService
 import com.jvcs.tracky.core.domain.purchases.FakeProAccessRepository
+import com.jvcs.tracky.core.domain.purchases.FakeProStatusProvider
 import com.jvcs.tracky.core.domain.sync.CountingRemoteSyncDataSource
 import com.jvcs.tracky.core.domain.sync.DeltaSyncApplier
 import com.jvcs.tracky.core.domain.sync.FakeCloudSyncGate
@@ -99,6 +100,7 @@ class ProjectOverviewViewModelTest {
         proAccessRepository: FakeProAccessRepository = FakeProAccessRepository(),
         entitlementService: FakeEntitlementService = FakeEntitlementService(),
         deltaSyncApplier: DeltaSyncApplier = testDeltaSyncApplier(),
+        proStatusProvider: FakeProStatusProvider = FakeProStatusProvider(),
     ): ProjectOverviewViewModel =
         ProjectOverviewViewModel(
             cloudSyncGate = FakeCloudSyncGate(),
@@ -119,6 +121,7 @@ class ProjectOverviewViewModelTest {
             localDataImportStore = FakeLocalDataImportStore(),
             proAccessRepository = proAccessRepository,
             entitlementService = entitlementService,
+            proStatusProvider = proStatusProvider,
         )
 
     /**
@@ -137,8 +140,10 @@ class ProjectOverviewViewModelTest {
         repository: FakeProjectRepository,
         sessionStorage: FakeSessionStorage = FakeSessionStorage(authInfo()),
         authService: FakeAuthService = FakeAuthService(),
+        proStatusProvider: FakeProStatusProvider = FakeProStatusProvider(),
     ): ProjectOverviewViewModel =
-        createViewModel(repository, sessionStorage, authService).also { startCollectingState(it) }
+        createViewModel(repository, sessionStorage, authService, proStatusProvider = proStatusProvider)
+            .also { startCollectingState(it) }
 
     /** The state is a `stateIn` flow, so let the dispatcher deliver pending updates before reading it. */
     private fun TestScope.stateOf(viewModel: ProjectOverviewViewModel): ProjectOverviewState {
@@ -661,6 +666,189 @@ class ProjectOverviewViewModelTest {
             assertThat(repository.archivedIds).isEqualTo(listOf("p3"))
             assertThat(repository.trashedIds).isEqualTo(listOf("p4"))
             assertThat(stateOf(viewModel).isEditModeActive).isFalse()
+        }
+
+    // --- Basic free user (Requirements/basic_free_user_flow.md) ---
+
+    private fun projects(count: Int) = (1..count).map { project("p$it") }
+
+    @Test
+    fun aFreeUserWithFiveProjects_seesTheLimitDialog_insteadOfTheSheet() =
+        runTest(dispatcher) {
+            val viewModel =
+                viewModelWith(
+                    FakeProjectRepository(projects(5)),
+                    proStatusProvider = FakeProStatusProvider(isPro = false),
+                )
+
+            viewModel.onAction(ProjectOverviewAction.OnFabClick)
+
+            with(stateOf(viewModel)) {
+                assertThat(isProjectLimitDialogVisible).isTrue()
+                assertThat(isAddNewProjectBottomSheetVisible).isFalse()
+            }
+        }
+
+    @Test
+    fun aFreeUserWithFourProjects_opensTheSheet_withoutAskingForPro() =
+        runTest(dispatcher) {
+            val pro = FakeProStatusProvider(isPro = false)
+            val viewModel = viewModelWith(FakeProjectRepository(projects(4)), proStatusProvider = pro)
+
+            viewModel.onAction(ProjectOverviewAction.OnToggleAddNewProjectBottomSheet)
+
+            assertThat(stateOf(viewModel).isAddNewProjectBottomSheetVisible).isTrue()
+            assertThat(stateOf(viewModel).isProjectLimitDialogVisible).isFalse()
+            assertThat(pro.calls).isEqualTo(0)
+        }
+
+    @Test
+    fun trashedAndArchivedProjects_countTowardTheLimit() =
+        runTest(dispatcher) {
+            val stored =
+                projects(3) +
+                    project("archived").copy(isArchived = true) +
+                    project("trashed").copy(trashedAt = Instant.fromEpochMilliseconds(1))
+            val viewModel =
+                viewModelWith(FakeProjectRepository(stored), proStatusProvider = FakeProStatusProvider(isPro = false))
+
+            // The sheet's own toggle is gated the same way as the FAB.
+            viewModel.onAction(ProjectOverviewAction.OnToggleAddNewProjectBottomSheet)
+
+            assertThat(stateOf(viewModel).isProjectLimitDialogVisible).isTrue()
+            assertThat(stateOf(viewModel).isAddNewProjectBottomSheetVisible).isFalse()
+        }
+
+    @Test
+    fun aProUserWithFiveProjects_opensTheSheet() =
+        runTest(dispatcher) {
+            val viewModel =
+                viewModelWith(
+                    FakeProjectRepository(projects(5)),
+                    proStatusProvider = FakeProStatusProvider(isPro = true),
+                )
+
+            viewModel.onAction(ProjectOverviewAction.OnFabClick)
+
+            assertThat(stateOf(viewModel).isAddNewProjectBottomSheetVisible).isTrue()
+            assertThat(stateOf(viewModel).isProjectLimitDialogVisible).isFalse()
+        }
+
+    @Test
+    fun closingTheSheet_neverChecksTheLimit() =
+        runTest(dispatcher) {
+            val pro = FakeProStatusProvider(isPro = true)
+            val viewModel = viewModelWith(FakeProjectRepository(projects(5)), proStatusProvider = pro)
+            viewModel.onAction(ProjectOverviewAction.OnFabClick)
+            testScheduler.advanceUntilIdle()
+            val callsToOpen = pro.calls
+
+            viewModel.onAction(ProjectOverviewAction.OnFabClick)
+
+            assertThat(stateOf(viewModel).isAddNewProjectBottomSheetVisible).isFalse()
+            assertThat(pro.calls).isEqualTo(callsToOpen)
+        }
+
+    @Test
+    fun theLimitDialog_offersOpenThePaywall_andCancelCloses() =
+        runTest(dispatcher) {
+            val viewModel =
+                viewModelWith(
+                    FakeProjectRepository(projects(5)),
+                    proStatusProvider = FakeProStatusProvider(isPro = false),
+                )
+            viewModel.onAction(ProjectOverviewAction.OnFabClick)
+            assertThat(stateOf(viewModel).isProjectLimitDialogVisible).isTrue()
+            viewModel.onAction(ProjectOverviewAction.OnDismissProjectLimitDialog)
+            assertThat(stateOf(viewModel).isProjectLimitDialogVisible).isFalse()
+
+            viewModel.onAction(ProjectOverviewAction.OnFabClick)
+            testScheduler.advanceUntilIdle()
+            viewModel.events.test {
+                viewModel.onAction(ProjectOverviewAction.OnShowSubscriptionOffersClick)
+                testScheduler.advanceUntilIdle()
+
+                assertThat(awaitItem()).isEqualTo(ProjectOverviewEvent.NavigateToPaywall)
+            }
+            assertThat(stateOf(viewModel).isProjectLimitDialogVisible).isFalse()
+        }
+
+    @Test
+    fun addingASixthProject_whileFree_savesNothing_andShowsTheLimitDialog() =
+        runTest(dispatcher) {
+            val repository = FakeProjectRepository(projects(4))
+            val viewModel = viewModelWith(repository, proStatusProvider = FakeProStatusProvider(isPro = false))
+            viewModel.onAction(ProjectOverviewAction.OnFabClick)
+            assertThat(stateOf(viewModel).isAddNewProjectBottomSheetVisible).isTrue()
+            // Another device's sync fills the fifth slot while the sheet is open.
+            repository.emit(projects(5))
+
+            viewModel.onAction(ProjectOverviewAction.OnAddProjectClick("Garden"))
+
+            with(stateOf(viewModel)) {
+                assertThat(isProjectLimitDialogVisible).isTrue()
+                assertThat(isAddNewProjectBottomSheetVisible).isFalse()
+            }
+            assertThat(repository.upserted).isEqualTo(emptyList())
+        }
+
+    @Test
+    fun archivingWhileFree_opensThePaywall_archivesNothing_andKeepsTheSelection() =
+        runTest(dispatcher) {
+            val repository = FakeProjectRepository(seededProjects())
+            val viewModel = viewModelWith(repository, proStatusProvider = FakeProStatusProvider(isPro = false))
+            viewModel.onAction(ProjectOverviewAction.OnProjectCardLongPress("p3"))
+
+            viewModel.events.test {
+                viewModel.onAction(ProjectOverviewAction.OnArchiveSelectedClick)
+                testScheduler.advanceUntilIdle()
+
+                assertThat(awaitItem()).isEqualTo(ProjectOverviewEvent.NavigateToPaywall)
+            }
+            assertThat(repository.archivedIds).isEqualTo(emptyList())
+            assertThat(stateOf(viewModel).selectedProjectIds).isEqualTo(setOf("p3"))
+        }
+
+    @Test
+    fun pinningWhileFree_opensThePaywall_andPinsNothing() =
+        runTest(dispatcher) {
+            val repository = FakeProjectRepository(seededProjects())
+            val viewModel = viewModelWith(repository, proStatusProvider = FakeProStatusProvider(isPro = false))
+            viewModel.onAction(ProjectOverviewAction.OnProjectCardLongPress("p3"))
+
+            viewModel.events.test {
+                viewModel.onAction(ProjectOverviewAction.OnPinSelectedClick)
+                testScheduler.advanceUntilIdle()
+
+                assertThat(awaitItem()).isEqualTo(ProjectOverviewEvent.NavigateToPaywall)
+            }
+            assertThat(repository.pinCalls).isEqualTo(emptyList())
+        }
+
+    @Test
+    fun unpinningWhileFree_stillUnpins() =
+        runTest(dispatcher) {
+            val repository = FakeProjectRepository(seededProjects())
+            val viewModel = viewModelWith(repository, proStatusProvider = FakeProStatusProvider(isPro = false))
+            viewModel.onAction(ProjectOverviewAction.OnProjectCardLongPress("p1"))
+
+            viewModel.onAction(ProjectOverviewAction.OnPinSelectedClick)
+            testScheduler.advanceUntilIdle()
+
+            assertThat(repository.pinCalls).isEqualTo(listOf(listOf("p1") to false))
+        }
+
+    @Test
+    fun archivingAsPro_stillArchives() =
+        runTest(dispatcher) {
+            val repository = FakeProjectRepository(seededProjects())
+            val viewModel = viewModelWith(repository, proStatusProvider = FakeProStatusProvider(isPro = true))
+            viewModel.onAction(ProjectOverviewAction.OnProjectCardLongPress("p3"))
+
+            viewModel.onAction(ProjectOverviewAction.OnArchiveSelectedClick)
+            testScheduler.advanceUntilIdle()
+
+            assertThat(repository.archivedIds).isEqualTo(listOf("p3"))
         }
 
     @Test

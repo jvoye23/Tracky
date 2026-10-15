@@ -16,4 +16,7 @@ interface EntitlementService {
      * second call too soon fails with [DataError.Remote.TOO_MANY_REQUESTS].
      */
     suspend fun refresh(): Result<Boolean, DataError.Remote>
+
+    /** Reads the entitlement the server has stored, without asking RevenueCat. Success carries whether it is Pro. */
+    suspend fun current(): Result<Boolean, DataError.Remote>
 }

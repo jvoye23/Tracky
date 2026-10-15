@@ -12,6 +12,7 @@ import com.jvcs.tracky.core.domain.auth.SessionStorage
 import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
 import com.jvcs.tracky.core.domain.purchases.EntitlementService
 import com.jvcs.tracky.core.domain.purchases.ProAccessRepository
+import com.jvcs.tracky.core.domain.purchases.ProStatusProvider
 import com.jvcs.tracky.core.domain.sync.CloudSyncGate
 import com.jvcs.tracky.core.domain.sync.DeltaSyncApplier
 import com.jvcs.tracky.core.domain.sync.LocalDataImportStore
@@ -48,6 +49,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -80,6 +82,7 @@ class ProjectOverviewViewModel(
     private val localDataImportStore: LocalDataImportStore,
     private val proAccessRepository: ProAccessRepository,
     private val entitlementService: EntitlementService,
+    private val proStatusProvider: ProStatusProvider,
 ) : ViewModel() {
 
     private val _sortOption = MutableStateFlow(SortOption.CUSTOM)
@@ -132,11 +135,7 @@ class ProjectOverviewViewModel(
             ProjectOverviewAction.OnStartTrackerClick -> {}
 
             ProjectOverviewAction.OnToggleAddNewProjectBottomSheet -> {
-                _state.update {
-                    it.copy(
-                        isAddNewProjectBottomSheetVisible = !it.isAddNewProjectBottomSheetVisible,
-                    )
-                }
+                toggleAddNewProjectBottomSheet()
             }
 
             ProjectOverviewAction.OnCalendarIconClick -> {
@@ -147,11 +146,16 @@ class ProjectOverviewViewModel(
             }
 
             ProjectOverviewAction.OnFabClick -> {
-                _state.update {
-                    it.copy(
-                        isAddNewProjectBottomSheetVisible = !it.isAddNewProjectBottomSheetVisible,
-                    )
-                }
+                toggleAddNewProjectBottomSheet()
+            }
+
+            ProjectOverviewAction.OnDismissProjectLimitDialog -> {
+                _state.update { it.copy(isProjectLimitDialogVisible = false) }
+            }
+
+            ProjectOverviewAction.OnShowSubscriptionOffersClick -> {
+                _state.update { it.copy(isProjectLimitDialogVisible = false) }
+                viewModelScope.launch { eventChannel.send(ProjectOverviewEvent.NavigateToPaywall) }
             }
 
             ProjectOverviewAction.OnMenuClick -> { /* Handle menu */ }
@@ -397,9 +401,37 @@ class ProjectOverviewViewModel(
             SortOption.MODIFICATION_DATE -> sortedByDescending { it.lastUpdatedAt ?: it.startDateTimeUtc }
         }
 
+    /** Opening the sheet is where a free user meets the project limit; closing it never checks. */
+    private fun toggleAddNewProjectBottomSheet() {
+        if (_state.value.isAddNewProjectBottomSheetVisible) {
+            _state.update { it.copy(isAddNewProjectBottomSheetVisible = false) }
+            return
+        }
+        viewModelScope.launch {
+            if (hasReachedFreeProjectLimit()) {
+                _state.update { it.copy(isProjectLimitDialogVisible = true) }
+            } else {
+                _state.update { it.copy(isAddNewProjectBottomSheetVisible = true) }
+            }
+        }
+    }
+
+    /**
+     * Every stored project counts, archived and trashed ones too: only deleting one for good frees
+     * a slot (Requirements/basic_free_user_flow.md §2). The local count goes first, so a Pro user
+     * under the limit never waits on the store or the server.
+     */
+    private suspend fun hasReachedFreeProjectLimit(): Boolean =
+        projectRepository.getProjects().first().size >= FREE_PROJECT_LIMIT && !proStatusProvider.isPro()
+
     private fun archiveSelectedProjects() {
         val ids = _state.value.selectedProjectIds
         viewModelScope.launch {
+            // Archiving is Pro. The selection stays, so coming back from the paywall finds it as it was.
+            if (!proStatusProvider.isPro()) {
+                eventChannel.send(ProjectOverviewEvent.NavigateToPaywall)
+                return@launch
+            }
             val errors =
                 ids.mapNotNull { id ->
                     (projectOrganizationRepository.setProjectArchived(id, isArchived = true) as? Result.Error)?.error
@@ -423,6 +455,11 @@ class ProjectOverviewViewModel(
                 .filter { it.projectId in ids }
         val targetPinned = selected.any { !it.isPinned }
         viewModelScope.launch {
+            // Pinning is Pro; unpinning stays open, so a lapsed Pro user can still clear old pins.
+            if (targetPinned && !proStatusProvider.isPro()) {
+                eventChannel.send(ProjectOverviewEvent.NavigateToPaywall)
+                return@launch
+            }
             // One call for the whole selection: the repository flips every flag and then re-indexes
             // the target section once, so the pinned projects land on top of it.
             val result = projectOrganizationRepository.setProjectsPinned(ids.toList(), isPinned = targetPinned)
@@ -602,6 +639,11 @@ class ProjectOverviewViewModel(
 
     private fun addProject(projectTitle: String) {
         viewModelScope.launch {
+            // The sheet only opens under the limit, but another device's sync can fill it meanwhile.
+            if (hasReachedFreeProjectLimit()) {
+                _state.update { it.copy(isAddNewProjectBottomSheetVisible = false, isProjectLimitDialogVisible = true) }
+                return@launch
+            }
             val newProjectId = Uuid.random().toString()
 
             val newProject =
@@ -698,5 +740,10 @@ class ProjectOverviewViewModel(
                 showLogoutConfirmation = false,
             )
         }
+    }
+
+    private companion object {
+        /** Basic users may keep this many projects (Requirements/basic_free_user_flow.md §2). */
+        const val FREE_PROJECT_LIMIT = 5
     }
 }

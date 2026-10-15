@@ -17,4 +17,10 @@ sealed interface ProjectDetailEvent {
      * [ProjectDetailAction.OnPdfRenderFailed]. Rendering needs Compose, so the Root does it.
      */
     data class RenderPdf(val report: ProjectReportUi) : ProjectDetailEvent
+
+    /** A Pro user asked to add a subtask to [taskId]: open the editor for it. */
+    data class NavigateToNewSubTask(val taskId: String) : ProjectDetailEvent
+
+    /** A free user reached for a Pro feature: open the paywall. */
+    data object NavigateToPaywall : ProjectDetailEvent
 }

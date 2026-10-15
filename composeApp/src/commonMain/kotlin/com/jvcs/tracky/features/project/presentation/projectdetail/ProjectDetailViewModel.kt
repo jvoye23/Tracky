@@ -7,6 +7,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jvcs.tracky.core.domain.purchases.ProStatusProvider
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeManager
 import com.jvcs.tracky.core.domain.util.TimeProvider
@@ -59,6 +60,7 @@ class ProjectDetailViewModel(
     private val timeProvider: TimeProvider,
     projectJsonExporter: ProjectJsonExporter,
     exportFileSharer: ExportFileSharer,
+    private val proStatusProvider: ProStatusProvider,
     // Injectable so tests can drive the initial load on their own scheduler; production keeps IO.
     private val ioDispatcher: CoroutineDispatcher = platformIoDispatcher,
 ) : ViewModel() {
@@ -261,7 +263,11 @@ class ProjectDetailViewModel(
             }
 
             ProjectDetailAction.OnExportMenuClick -> {
-                export.onExportMenuClick()
+                onExportMenuClick()
+            }
+
+            is ProjectDetailAction.OnAddSubTaskClick -> {
+                onAddSubTaskClick(action.taskId)
             }
 
             ProjectDetailAction.OnExportMenuDismiss -> {
@@ -749,6 +755,34 @@ class ProjectDetailViewModel(
                 projectColor = it.project?.color,
                 useLightTextColor = it.project?.useLightTextColor ?: false,
             )
+        }
+    }
+
+    /** Export is Pro (Requirements/basic_free_user_flow.md §9). Closing an open menu never checks. */
+    private fun onExportMenuClick() {
+        if (_state.value.isExportMenuExpanded) {
+            export.onExportMenuClick()
+            return
+        }
+        viewModelScope.launch {
+            if (proStatusProvider.isPro()) {
+                export.openExportMenu()
+            } else {
+                eventChannel.send(ProjectDetailEvent.NavigateToPaywall)
+            }
+        }
+    }
+
+    /** Subtasks are Pro (Requirements/basic_free_user_flow.md §8). */
+    private fun onAddSubTaskClick(taskId: String) {
+        viewModelScope.launch {
+            val event =
+                if (proStatusProvider.isPro()) {
+                    ProjectDetailEvent.NavigateToNewSubTask(taskId)
+                } else {
+                    ProjectDetailEvent.NavigateToPaywall
+                }
+            eventChannel.send(event)
         }
     }
 }

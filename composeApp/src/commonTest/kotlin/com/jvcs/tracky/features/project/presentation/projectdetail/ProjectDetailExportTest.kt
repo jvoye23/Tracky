@@ -14,6 +14,7 @@ import assertk.assertions.isInstanceOf
 import assertk.assertions.isTrue
 import assertk.assertions.prop
 import assertk.assertions.startsWith
+import com.jvcs.tracky.core.domain.purchases.FakeProStatusProvider
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.testTimeManager
@@ -30,6 +31,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -37,6 +39,7 @@ import kotlinx.coroutines.test.setMain
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 private const val PROJECT_TITLE = "Client work: Q3"
@@ -67,6 +70,8 @@ class ProjectDetailExportTest {
             projectTasks = emptyList(),
         )
 
+    private val pro = FakeProStatusProvider(isPro = true)
+
     private fun TestScope.viewModel(tree: Project? = project): ProjectDetailViewModel {
         val vm =
             ProjectDetailViewModel(
@@ -78,6 +83,7 @@ class ProjectDetailExportTest {
                 timeProvider = FakeTimeProvider(now = Instant.parse("2026-09-22T12:00:00Z")),
                 projectJsonExporter = exporter,
                 exportFileSharer = sharer,
+                proStatusProvider = pro,
                 ioDispatcher = dispatcher,
             )
         // The state is WhileSubscribed, so it only folds updates in while something collects it.
@@ -101,9 +107,55 @@ class ProjectDetailExportTest {
             assertThat(vm.state.value.isExportMenuExpanded).isFalse()
 
             vm.onAction(ProjectDetailAction.OnExportMenuClick)
+            runCurrent()
             vm.onAction(ProjectDetailAction.OnExportMenuDismiss)
             runCurrent()
             assertThat(vm.state.value.isExportMenuExpanded).isFalse()
+        }
+
+    @Test
+    fun exportWhileFree_opensThePaywall_andKeepsTheMenuClosed() =
+        runTest {
+            pro.isPro = false
+            val vm = viewModel()
+
+            vm.events.test {
+                vm.onAction(ProjectDetailAction.OnExportMenuClick)
+                runCurrent()
+
+                assertThat(awaitItem()).isEqualTo(ProjectDetailEvent.NavigateToPaywall)
+            }
+            assertThat(vm.state.value.isExportMenuExpanded).isFalse()
+        }
+
+    @Test
+    fun aSecondTapWhileTheProCheckRuns_stillLeavesTheMenuOpen() =
+        runTest {
+            pro.latency = 1.seconds
+            val vm = viewModel()
+
+            // Both taps land before either check answers, so both find the menu closed.
+            vm.onAction(ProjectDetailAction.OnExportMenuClick)
+            vm.onAction(ProjectDetailAction.OnExportMenuClick)
+            advanceUntilIdle()
+
+            assertThat(pro.calls).isEqualTo(2)
+            assertThat(vm.state.value.isExportMenuExpanded).isTrue()
+        }
+
+    @Test
+    fun closingTheExportMenu_neverAsksForPro() =
+        runTest {
+            val vm = viewModel()
+            vm.onAction(ProjectDetailAction.OnExportMenuClick)
+            runCurrent()
+            val callsToOpen = pro.calls
+
+            vm.onAction(ProjectDetailAction.OnExportMenuClick)
+            runCurrent()
+
+            assertThat(vm.state.value.isExportMenuExpanded).isFalse()
+            assertThat(pro.calls).isEqualTo(callsToOpen)
         }
 
     @Test
@@ -111,6 +163,7 @@ class ProjectDetailExportTest {
         runTest {
             val vm = viewModel()
             vm.onAction(ProjectDetailAction.OnExportMenuClick)
+            runCurrent()
 
             vm.onAction(ProjectDetailAction.OnExportFormatClick(ExportFormat.Json))
             runCurrent()
@@ -271,6 +324,7 @@ class ProjectDetailExportTest {
                 awaitItem()
             }
             vm.onAction(ProjectDetailAction.OnExportMenuClick)
+            runCurrent()
             vm.onAction(ProjectDetailAction.OnExportFormatClick(ExportFormat.Json))
             runCurrent()
             assertThat(exporter.exportedProjects).containsExactly(project)
