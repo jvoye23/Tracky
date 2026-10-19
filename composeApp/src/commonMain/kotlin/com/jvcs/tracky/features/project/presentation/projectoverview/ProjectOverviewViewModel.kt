@@ -7,6 +7,8 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import co.touchlab.kermit.Logger
+import com.jvcs.tracky.analytics.api.AnalyticsEvent
+import com.jvcs.tracky.analytics.api.AnalyticsLogger
 import com.jvcs.tracky.core.domain.auth.AuthService
 import com.jvcs.tracky.core.domain.auth.SessionStorage
 import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
@@ -31,6 +33,7 @@ import com.jvcs.tracky.designsystem.util.UiText
 import com.jvcs.tracky.features.onboarding.domain.OnboardingStatus
 import com.jvcs.tracky.features.onboarding.domain.OnboardingStatusStore
 import com.jvcs.tracky.features.project.domain.models.Project
+import com.jvcs.tracky.features.project.domain.project.FirstProjectCreatedTracker
 import com.jvcs.tracky.features.project.domain.project.ProjectOrganizationRepository
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
 import com.jvcs.tracky.features.project.domain.project.sortedByCustomOrder
@@ -83,6 +86,8 @@ class ProjectOverviewViewModel(
     private val proAccessRepository: ProAccessRepository,
     private val entitlementService: EntitlementService,
     private val proStatusProvider: ProStatusProvider,
+    private val analyticsLogger: AnalyticsLogger,
+    private val firstProjectCreatedTracker: FirstProjectCreatedTracker,
 ) : ViewModel() {
 
     private val _sortOption = MutableStateFlow(SortOption.CUSTOM)
@@ -130,6 +135,10 @@ class ProjectOverviewViewModel(
 
     fun onAction(action: ProjectOverviewAction) {
         when (action) {
+            ProjectOverviewAction.OnScreenResumed -> {
+                analyticsLogger.log(AnalyticsEvent.ProjectOverviewScreenViewed(screenName = SCREEN_NAME))
+            }
+
             is ProjectOverviewAction.OnProjectCardClick -> {}
 
             ProjectOverviewAction.OnStartTrackerClick -> {}
@@ -672,6 +681,7 @@ class ProjectOverviewViewModel(
                             addProjectTextFieldState = TextFieldState(),
                         )
                     }
+                    firstProjectCreatedTracker.onProjectCreated(newProjectId)
                     eventChannel.send(ProjectOverviewEvent.NewProjectSaved(projectId = newProjectId))
                 }
             }
@@ -745,5 +755,8 @@ class ProjectOverviewViewModel(
     private companion object {
         /** Basic users may keep this many projects (Requirements/basic_free_user_flow.md §2). */
         const val FREE_PROJECT_LIMIT = 5
+
+        /** The screen_name Firebase reports this screen under. */
+        const val SCREEN_NAME = "project_overview"
     }
 }

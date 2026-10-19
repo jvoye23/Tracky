@@ -1,5 +1,7 @@
 package com.jvcs.tracky.features.project.presentation.projectdetail
 
+import com.jvcs.tracky.analytics.api.AnalyticsEvent
+import com.jvcs.tracky.analytics.api.AnalyticsLogger
 import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.core.domain.util.onFailure
 import com.jvcs.tracky.core.domain.util.onSuccess
@@ -40,6 +42,7 @@ internal class ProjectDetailExport(
     private val projectJsonExporter: ProjectJsonExporter,
     private val exportFileSharer: ExportFileSharer,
     private val timeProvider: TimeProvider,
+    private val analyticsLogger: AnalyticsLogger,
 ) {
 
     /** The name the PDF being drawn will be shared under; null while no PDF is being drawn. */
@@ -84,7 +87,11 @@ internal class ProjectDetailExport(
 
     fun onPdfRendered(bytes: ByteArray) {
         val fileName = pendingPdfFileName.also { pendingPdfFileName = null } ?: return
-        scope.launch { share(ExportFile(fileName = fileName, mimeType = PDF_MIME_TYPE, bytes = bytes)) }
+        scope.launch {
+            share(ExportFile(fileName = fileName, mimeType = PDF_MIME_TYPE, bytes = bytes)) {
+                analyticsLogger.log(AnalyticsEvent.PdfExported)
+            }
+        }
     }
 
     fun onPdfRenderFailed() {
@@ -100,11 +107,14 @@ internal class ProjectDetailExport(
         state.update { it.copy(isExporting = false) }
     }
 
-    private suspend fun share(file: ExportFile) {
+    /** Hands [file] to the share sheet, and calls [onShared] only once it got there. */
+    private suspend fun share(file: ExportFile, onShared: () -> Unit = {}) {
         exportFileSharer
             .share(file)
-            .onSuccess { state.update { current -> current.copy(isExporting = false) } }
-            .onFailure { fail(it) }
+            .onSuccess {
+                state.update { current -> current.copy(isExporting = false) }
+                onShared()
+            }.onFailure { fail(it) }
     }
 
     private suspend fun fail(error: ExportError) {

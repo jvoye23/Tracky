@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import com.jvcs.tracky.core.data.connectivity.AndroidConnectivityObserver
+import com.jvcs.tracky.core.data.device.AndroidInstallTimeProvider
 import com.jvcs.tracky.core.data.lifecycle.AndroidAppLifecycleObserver
 import com.jvcs.tracky.core.data.notification.AndroidTimerNotificationController
 import com.jvcs.tracky.core.data.notification.AndroidTimerNotificationPermissionRequester
@@ -11,6 +12,7 @@ import com.jvcs.tracky.core.data.sync.AndroidSyncScheduler
 import com.jvcs.tracky.core.data.sync.AndroidTrashCleanupScheduler
 import com.jvcs.tracky.core.database.DatabaseFactory
 import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
+import com.jvcs.tracky.core.domain.device.InstallTimeProvider
 import com.jvcs.tracky.core.domain.lifecycle.AppLifecycleObserver
 import com.jvcs.tracky.core.domain.notification.TimerNotificationController
 import com.jvcs.tracky.core.domain.notification.TimerNotificationPermissionRequester
@@ -33,6 +35,7 @@ actual val platformCoreDataModule =
         single { DatabaseFactory(androidContext()) }
         single<ConnectivityObserver> { AndroidConnectivityObserver(androidContext()) }
         singleOf(::AndroidAppLifecycleObserver) bind AppLifecycleObserver::class
+        single { AndroidInstallTimeProvider(androidContext()) } bind InstallTimeProvider::class
 
         single { AndroidSyncScheduler(androidContext()) } bind SyncScheduler::class
         single { AndroidTrashCleanupScheduler(androidContext()) } bind TrashCleanupScheduler::class

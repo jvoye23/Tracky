@@ -1,5 +1,10 @@
 package com.jvcs.tracky.features.project.di
 
+import com.jvcs.tracky.features.project.data.project.DataStoreFirstProjectStore
+import com.jvcs.tracky.features.project.domain.project.FirstProjectCreatedTracker
+import com.jvcs.tracky.features.project.domain.project.FirstProjectStore
+import com.jvcs.tracky.features.project.domain.project.ProjectsCountPropertySync
+import com.jvcs.tracky.features.project.domain.subtask.SubTasksCountPropertySync
 import com.jvcs.tracky.features.project.presentation.dailyoverview.DailyOverviewViewModel
 import com.jvcs.tracky.features.project.presentation.edittext.EditTextTarget
 import com.jvcs.tracky.features.project.presentation.edittext.EditTextViewModel
@@ -11,8 +16,10 @@ import com.jvcs.tracky.features.project.presentation.timerpermission.TimerNotifi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.qualifier.named
+import org.koin.dsl.bind
 import org.koin.dsl.module
 
 val projectModule =
@@ -20,6 +27,23 @@ val projectModule =
 
         single(named("AppScope")) {
             CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        }
+
+        singleOf(::DataStoreFirstProjectStore) bind FirstProjectStore::class
+        singleOf(::FirstProjectCreatedTracker)
+        single {
+            ProjectsCountPropertySync(
+                localProjectDataSource = get(),
+                analyticsLogger = get(),
+                applicationScope = get(qualifier = named("AppScope")),
+            )
+        }
+        single {
+            SubTasksCountPropertySync(
+                localSubTaskDataSource = get(),
+                analyticsLogger = get(),
+                applicationScope = get(qualifier = named("AppScope")),
+            )
         }
 
         viewModel {
@@ -53,6 +77,8 @@ val projectModule =
                 proAccessRepository = get(),
                 entitlementService = get(),
                 proStatusProvider = get(),
+                analyticsLogger = get(),
+                firstProjectCreatedTracker = get(),
             )
         }
 
@@ -67,6 +93,7 @@ val projectModule =
                 projectJsonExporter = get(),
                 exportFileSharer = get(),
                 proStatusProvider = get(),
+                analyticsLogger = get(),
             )
         }
 
@@ -105,6 +132,7 @@ val projectModule =
                 subTaskRepository = get(),
                 projectRepository = get(),
                 timeManager = get(),
+                analyticsLogger = get(),
             )
         }
     }

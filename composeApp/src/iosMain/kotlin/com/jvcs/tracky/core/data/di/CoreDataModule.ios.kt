@@ -4,12 +4,14 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import com.jvcs.tracky.core.data.connectivity.IosConnectivityObserver
+import com.jvcs.tracky.core.data.device.IosInstallTimeProvider
 import com.jvcs.tracky.core.data.lifecycle.IosAppLifecycleObserver
 import com.jvcs.tracky.core.data.notification.IosTimerNotificationController
 import com.jvcs.tracky.core.data.sync.IosSyncScheduler
 import com.jvcs.tracky.core.data.sync.IosTrashCleanupScheduler
 import com.jvcs.tracky.core.database.DatabaseFactory
 import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
+import com.jvcs.tracky.core.domain.device.InstallTimeProvider
 import com.jvcs.tracky.core.domain.lifecycle.AppLifecycleObserver
 import com.jvcs.tracky.core.domain.notification.NoOpTimerNotificationPermissionRequester
 import com.jvcs.tracky.core.domain.notification.TimerNotificationController
@@ -37,6 +39,7 @@ actual val platformCoreDataModule =
         singleOf(::DatabaseFactory)
         singleOf(::IosConnectivityObserver) bind ConnectivityObserver::class
         singleOf(::IosAppLifecycleObserver) bind AppLifecycleObserver::class
+        single { IosInstallTimeProvider() } bind InstallTimeProvider::class
 
         single { IosSyncScheduler() } bind SyncScheduler::class
         single { IosTrashCleanupScheduler() } bind TrashCleanupScheduler::class

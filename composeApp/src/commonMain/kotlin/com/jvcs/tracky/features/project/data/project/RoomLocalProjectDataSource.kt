@@ -41,6 +41,8 @@ class RoomLocalProjectDataSource(private val projectDao: ProjectDao, private val
             .getProjectsWithTasks()
             .map { list -> list.map { it.toProject() } }
 
+    override fun observeProjectCount(): Flow<Int> = projectDao.observeProjectCount()
+
     override fun getActiveProjects(): Flow<List<Project>> =
         combine(
             projectTreeDao.getActiveProjectsWithTasks(),

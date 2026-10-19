@@ -10,6 +10,7 @@ import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
+import com.jvcs.tracky.analytics.api.FakeAnalyticsLogger
 import com.jvcs.tracky.core.domain.purchases.FakeProStatusProvider
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
@@ -137,6 +138,7 @@ class ProjectDetailViewModelTest {
                 exportFileSharer = FakeExportFileSharer(),
                 proStatusProvider = proStatusProvider,
                 ioDispatcher = dispatcher,
+                analyticsLogger = FakeAnalyticsLogger(),
             )
         return vm to subTaskRepository
     }

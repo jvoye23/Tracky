@@ -225,6 +225,8 @@ class FakeLocalProjectDataSource(private val db: FakeDb = FakeDb()) :
 
     override fun getProjects(): Flow<List<Project>> = db.projectsFlow
 
+    override fun observeProjectCount(): Flow<Int> = db.projectsFlow.map { it.size }
+
     override fun getActiveProjects(): Flow<List<Project>> =
         db.projectsFlow.map { list -> list.filter { !it.isArchived && !it.isFinished && it.trashedAt == null } }
 
@@ -772,6 +774,8 @@ class FakeLocalSubTaskDataSource(private val db: FakeDb = FakeDb()) : LocalSubTa
 
     override fun getSubTasksForTask(taskId: String): Flow<List<ProjectSubTask>> =
         flowOf(db.subTasks.values.filter { it.parentProjectTaskId == taskId })
+
+    override fun observeSubTaskCount(): Flow<Int> = flowOf(db.subTasks.size)
 
     override suspend fun getSubTaskById(subTaskId: String): Result<ProjectSubTask?, DataError.Local> {
         failReadWith?.let { return Result.Error(it) }

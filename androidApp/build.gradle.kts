@@ -5,6 +5,8 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.composeCompiler)
+    // Reads google-services.json, which is not committed: get it from the Firebase console.
+    alias(libs.plugins.google.services)
     id("prism.ktlint")
     id("prism.detekt")
     id("prism.jacoco")

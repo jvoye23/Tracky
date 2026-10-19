@@ -49,6 +49,10 @@ interface SubTaskDao {
     @Query("SELECT COUNT(*) FROM project_sub_tasks WHERE parentProjectTaskId = :taskId")
     suspend fun countSubTasks(taskId: String): Int
 
+    /** Every subtask, under any project. Re-emits on subtask writes only, not interval writes. */
+    @Query("SELECT COUNT(*) FROM project_sub_tasks")
+    fun observeSubTaskCount(): Flow<Int>
+
     // Backs the parent task's play button, which resumes whatever was worked on last rather than
     // opening a task-level interval of its own. Same join as
     // SubTaskIntervalDao.getOpenSubTaskIntervalForTask; ordered instead of filtered.

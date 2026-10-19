@@ -161,6 +161,8 @@ kotlin {
 
             implementation(libs.purchases.core)
             implementation(libs.purchases.result) // Optional
+
+            implementation(libs.gitlive.firebase.analytics)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

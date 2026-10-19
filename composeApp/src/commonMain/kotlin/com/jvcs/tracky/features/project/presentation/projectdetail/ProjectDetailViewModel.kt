@@ -7,6 +7,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jvcs.tracky.analytics.api.AnalyticsLogger
 import com.jvcs.tracky.core.domain.purchases.ProStatusProvider
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeManager
@@ -61,6 +62,7 @@ class ProjectDetailViewModel(
     projectJsonExporter: ProjectJsonExporter,
     exportFileSharer: ExportFileSharer,
     private val proStatusProvider: ProStatusProvider,
+    analyticsLogger: AnalyticsLogger,
     // Injectable so tests can drive the initial load on their own scheduler; production keeps IO.
     private val ioDispatcher: CoroutineDispatcher = platformIoDispatcher,
 ) : ViewModel() {
@@ -90,6 +92,7 @@ class ProjectDetailViewModel(
             projectJsonExporter = projectJsonExporter,
             exportFileSharer = exportFileSharer,
             timeProvider = timeProvider,
+            analyticsLogger = analyticsLogger,
         )
 
     private var hasLoadedInitialData = false

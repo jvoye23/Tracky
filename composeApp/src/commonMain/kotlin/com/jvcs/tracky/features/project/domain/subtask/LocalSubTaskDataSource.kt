@@ -12,6 +12,9 @@ interface LocalSubTaskDataSource {
     /** The stream the task detail screen observes, each subtask carrying its intervals. */
     fun getSubTasksForTask(taskId: String): Flow<List<ProjectSubTask>>
 
+    /** How many subtasks are stored, under any project, without loading them. */
+    fun observeSubTaskCount(): Flow<Int>
+
     /** One-shot read — repositories need a value, not a subscription. */
     suspend fun getSubTaskById(subTaskId: String): Result<ProjectSubTask?, DataError.Local>
 

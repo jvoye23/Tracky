@@ -56,6 +56,10 @@ junit5 = "5.14.4"
 konsist = "0.17.3"
 ktlint = "1.8.0"
 purchases-kmp = "3.12.0"
+# GitLive wraps the native Firebase SDKs. 2.7.0 is built against Android BOM 34.18.0 and iOS
+# 11.8.0, so iosApp pins its Firebase Swift package to 11.x to match the cinterop bindings.
+gitlive-firebase = "2.7.0"
+google-services = "4.5.0"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -148,6 +152,9 @@ purchases-core = { module = "com.revenuecat.purchases:purchases-kmp-core", versi
 # Optional: adds suspending functions that return kotlin.Result to indicate success / failure.
 purchases-result = { module = "com.revenuecat.purchases:purchases-kmp-result", version.ref = "purchases-kmp" }
 
+# Firebase. On iOS the native SDK is not a Gradle dependency: iosApp links it through Swift Package Manager.
+gitlive-firebase-analytics = { module = "dev.gitlive:firebase-analytics", version.ref = "gitlive-firebase" }
+
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
@@ -159,6 +166,7 @@ androidKmpLibrary = { id = "com.android.kotlin.multiplatform.library", version.r
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 room = { id = "androidx.room", version.ref = "room" }
+google-services = { id = "com.google.gms.google-services", version.ref = "google-services" }
 
 # PRISM (verification tooling)
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

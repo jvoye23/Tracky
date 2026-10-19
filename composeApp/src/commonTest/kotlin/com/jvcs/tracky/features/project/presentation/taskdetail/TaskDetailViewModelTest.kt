@@ -2,9 +2,12 @@ package com.jvcs.tracky.features.project.presentation.taskdetail
 
 import androidx.compose.ui.graphics.toArgb
 import assertk.assertThat
+import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
+import com.jvcs.tracky.analytics.api.AnalyticsEvent
+import com.jvcs.tracky.analytics.api.FakeAnalyticsLogger
 import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.EmptyResult
 import com.jvcs.tracky.core.domain.util.FakeRunningTimerRepository
@@ -58,6 +61,7 @@ internal class TaskDetailViewModelTest {
     private val running = FakeRunningTimerRepository()
     private val taskRepository = FakeProjectTaskRepository()
     private val subTaskRepository = FakeSubTaskRepository()
+    private val analytics = FakeAnalyticsLogger()
 
     @BeforeTest
     fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -77,11 +81,25 @@ internal class TaskDetailViewModelTest {
                 subTaskRepository = subTaskRepository,
                 projectRepository = FakeProjectRepository(project),
                 timeManager = testTimeManager(repository = running),
+                analyticsLogger = analytics,
             )
         // state is a WhileSubscribed stateIn, so loadSession does not run until something collects.
         backgroundScope.launch { viewModel.state.collect {} }
         return viewModel
     }
+
+    @Test
+    fun everyTimeTheScreenResumes_itIsLoggedAsViewed() =
+        runTest(UnconfinedTestDispatcher()) {
+            val viewModel = viewModelFor(task())
+
+            // Opened, then back from editing its text.
+            viewModel.onAction(TaskDetailAction.OnScreenResumed)
+            viewModel.onAction(TaskDetailAction.OnScreenResumed)
+
+            val viewed = AnalyticsEvent.TaskDetailScreenViewed(screenName = "task_detail")
+            assertThat(analytics.events).containsExactly(viewed, viewed)
+        }
 
     @Test
     fun aDayTotalIsFormattedWithoutCentiseconds() =

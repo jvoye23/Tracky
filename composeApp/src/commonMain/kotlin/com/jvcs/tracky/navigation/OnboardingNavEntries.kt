@@ -22,12 +22,12 @@ fun EntryProviderScope<NavKey>.onboardingEntries(backStack: NavBackStack<NavKey>
         WelcomeScreenRoot(
             onGetStartedClick = {
                 // Skipped where there is nothing to ask - iOS, or a grant already held - rather than
-                // explaining a dialog that never comes.
+                // explaining a dialog that never comes. Onboarding is then welcome and paywall only.
                 val next =
                     if (permissionRequester.needsPrompt()) {
                         Route.OnboardingRoute.NotificationPermission
                     } else {
-                        Route.OnboardingRoute.Paywall
+                        Route.OnboardingRoute.Paywall(stepsCompleted = 2)
                     }
                 backStack.add(next)
             },
@@ -43,14 +43,14 @@ fun EntryProviderScope<NavKey>.onboardingEntries(backStack: NavBackStack<NavKey>
                 // Replaced rather than stacked: Back from the paywall goes to the welcome screen, not
                 // to a permission that has already been answered.
                 backStack.removeLastOrNull()
-                backStack.add(Route.OnboardingRoute.Paywall)
+                backStack.add(Route.OnboardingRoute.Paywall(stepsCompleted = 3))
             },
         )
     }
 
-    entry<Route.OnboardingRoute.Paywall> {
+    entry<Route.OnboardingRoute.Paywall> { route ->
         PaywallScreenRoot(
-            source = PaywallSource.ONBOARDING,
+            source = PaywallSource.Onboarding(stepsCompleted = route.stepsCompleted),
             onContinueFree = {
                 backStack.removeAll { true }
                 backStack.add(Route.ProjectRoute.ProjectOverview)
@@ -75,7 +75,7 @@ fun EntryProviderScope<NavKey>.onboardingEntries(backStack: NavBackStack<NavKey>
 fun EntryProviderScope<NavKey>.proPaywallEntry(backStack: NavBackStack<NavKey>) {
     entry<Route.ProjectRoute.ProPaywall> {
         PaywallScreenRoot(
-            source = PaywallSource.APP,
+            source = PaywallSource.App,
             onContinueFree = {
                 backStack.removeLastOrNull()
             },

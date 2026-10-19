@@ -30,7 +30,9 @@ sealed interface Route : NavKey {
 
         @Serializable
         @SerialName("onboarding_paywall")
-        data object Paywall : OnboardingRoute, NavKey
+        data class Paywall(val stepsCompleted: Int) :
+            OnboardingRoute,
+            NavKey
     }
 
     @Serializable
