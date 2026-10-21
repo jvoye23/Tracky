@@ -2,6 +2,7 @@ package com.jvcs.tracky.core.data.di
 
 import androidx.sqlite.SQLiteException
 import co.touchlab.kermit.Logger
+import com.jvcs.tracky.analytics.impl.AnalyticsBackend
 import com.jvcs.tracky.core.data.purchases.RevenueCatConfigurator
 import com.jvcs.tracky.core.data.realtime.RealtimeTimerConnection
 import com.jvcs.tracky.core.domain.notification.TimerNotificationCoordinator
@@ -29,11 +30,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.io.IOException
 import org.koin.core.qualifier.named
+import org.koin.dsl.module
 import org.koin.mp.KoinPlatform
 
-fun startKoinIos() {
+/** [analyticsBackend] is Swift's, which calls the Firebase SDK that Xcode links; see [AnalyticsBackend]. */
+fun startKoinIos(analyticsBackend: AnalyticsBackend) {
     // initKoin already loads every module, including appModule, coreDataModule and projectModule.
-    initKoin()
+    initKoin {
+        modules(module { single { analyticsBackend } })
+    }
     val koin = KoinPlatform.getKoin()
     // First, so RevenueCat is configured with the app user id before anything waits on it.
     koin.get<RevenueCatConfigurator>().start()

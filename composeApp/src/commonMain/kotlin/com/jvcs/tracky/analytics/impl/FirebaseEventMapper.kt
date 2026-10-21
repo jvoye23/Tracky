@@ -1,43 +1,49 @@
 package com.jvcs.tracky.analytics.impl
 
 import com.jvcs.tracky.analytics.api.AnalyticsEvent
-import dev.gitlive.firebase.analytics.FirebaseAnalyticsEvents
-import dev.gitlive.firebase.analytics.FirebaseAnalyticsParam
+
+// Firebase's reserved event and parameter names, spelled out: common code no longer sees an SDK
+// that would name them, and both platforms' SDKs accept the raw strings.
+private const val EVENT_TUTORIAL_COMPLETE = "tutorial_complete"
+private const val EVENT_LEVEL_START = "level_start"
+private const val EVENT_SCREEN_VIEW = "screen_view"
+private const val PARAM_SCREEN_NAME = "screen_name"
+private const val PARAM_SCREEN_CLASS = "screen_class"
 
 fun AnalyticsEvent.toFirebaseEvent(): FirebaseEvent =
     when (this) {
         is AnalyticsEvent.OnboardingCompleted -> {
             FirebaseEvent(
-                name = FirebaseAnalyticsEvents.TUTORIAL_COMPLETE,
+                name = EVENT_TUTORIAL_COMPLETE,
                 params = mapOf("steps_completed" to stepsCompleted.toLong()),
             )
         }
 
         is AnalyticsEvent.FirstProjectCreated -> {
             FirebaseEvent(
-                name = FirebaseAnalyticsEvents.LEVEL_START,
+                name = EVENT_LEVEL_START,
                 params = mapOf("seconds_since_install" to secondsSinceInstall.toDouble()),
             )
         }
 
         is AnalyticsEvent.ProjectOverviewScreenViewed -> {
             FirebaseEvent(
-                name = FirebaseAnalyticsEvents.SCREEN_VIEW,
+                name = EVENT_SCREEN_VIEW,
                 params =
                     mapOf(
-                        FirebaseAnalyticsParam.SCREEN_NAME to screenName,
-                        FirebaseAnalyticsParam.SCREEN_CLASS to screenName,
+                        PARAM_SCREEN_NAME to screenName,
+                        PARAM_SCREEN_CLASS to screenName,
                     ),
             )
         }
 
         is AnalyticsEvent.TaskDetailScreenViewed -> {
             FirebaseEvent(
-                name = FirebaseAnalyticsEvents.SCREEN_VIEW,
+                name = EVENT_SCREEN_VIEW,
                 params =
                     mapOf(
-                        FirebaseAnalyticsParam.SCREEN_NAME to screenName,
-                        FirebaseAnalyticsParam.SCREEN_CLASS to screenName,
+                        PARAM_SCREEN_NAME to screenName,
+                        PARAM_SCREEN_CLASS to screenName,
                     ),
             )
         }

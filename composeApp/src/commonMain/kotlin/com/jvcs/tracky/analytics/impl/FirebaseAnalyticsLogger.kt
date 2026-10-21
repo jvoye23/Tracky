@@ -3,21 +3,20 @@ package com.jvcs.tracky.analytics.impl
 import com.jvcs.tracky.analytics.api.AnalyticsEvent
 import com.jvcs.tracky.analytics.api.AnalyticsLogger
 import com.jvcs.tracky.analytics.api.UserProperty
-import dev.gitlive.firebase.analytics.FirebaseAnalytics
 
-class FirebaseAnalyticsLogger(private val firebase: FirebaseAnalytics) : AnalyticsLogger {
+class FirebaseAnalyticsLogger(private val backend: AnalyticsBackend) : AnalyticsLogger {
 
     override fun log(event: AnalyticsEvent) {
         val mapped = event.toFirebaseEvent()
-        firebase.logEvent(mapped.name, mapped.params.toFirebaseParams())
+        backend.logEvent(mapped.name, mapped.params.toFirebaseParams())
     }
 
     override fun setUserProperty(property: UserProperty) {
-        firebase.setUserProperty(property.name, property.value)
+        backend.setUserProperty(property.name, property.value)
     }
 
     override fun setUserId(id: String?) {
-        firebase.setUserId(id)
+        backend.setUserId(id)
     }
 }
 

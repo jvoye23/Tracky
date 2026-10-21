@@ -3,6 +3,8 @@ package com.jvcs.tracky.core.data.di
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import com.jvcs.tracky.analytics.impl.AnalyticsBackend
+import com.jvcs.tracky.analytics.impl.GitLiveAnalyticsBackend
 import com.jvcs.tracky.core.data.connectivity.AndroidConnectivityObserver
 import com.jvcs.tracky.core.data.device.AndroidInstallTimeProvider
 import com.jvcs.tracky.core.data.lifecycle.AndroidAppLifecycleObserver
@@ -22,6 +24,8 @@ import com.jvcs.tracky.core.presentation.pdf.AndroidPdfDocumentWriter
 import com.jvcs.tracky.core.presentation.pdf.PdfDocumentWriter
 import com.jvcs.tracky.features.project.data.export.FileProviderExportFileSharer
 import com.jvcs.tracky.features.project.domain.export.ExportFileSharer
+import dev.gitlive.firebase.Firebase
+import dev.gitlive.firebase.analytics.analytics
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.okhttp.OkHttp
 import okio.Path.Companion.toPath
@@ -36,6 +40,7 @@ actual val platformCoreDataModule =
         single<ConnectivityObserver> { AndroidConnectivityObserver(androidContext()) }
         singleOf(::AndroidAppLifecycleObserver) bind AppLifecycleObserver::class
         single { AndroidInstallTimeProvider(androidContext()) } bind InstallTimeProvider::class
+        single { GitLiveAnalyticsBackend(Firebase.analytics) } bind AnalyticsBackend::class
 
         single { AndroidSyncScheduler(androidContext()) } bind SyncScheduler::class
         single { AndroidTrashCleanupScheduler(androidContext()) } bind TrashCleanupScheduler::class
