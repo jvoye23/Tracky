@@ -5,6 +5,7 @@ import com.jvcs.tracky.analytics.api.PlanTierOption
 import com.jvcs.tracky.analytics.api.UserProperty
 import com.jvcs.tracky.core.domain.auth.SessionStorage
 import com.jvcs.tracky.core.domain.lifecycle.AppLifecycleObserver
+import com.jvcs.tracky.core.domain.util.onSuccess
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
@@ -13,7 +14,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /**
- * Keeps the `plan_tier` analytics user property on what [ProStatusProvider] says.
+ * Keeps the `plan_tier` analytics user property on what [ProStatusProvider] says, whenever it knows.
  *
  * Pro can change while the app is away (bought on another device, expired, refunded) and with the
  * account (the server grants Pro the store never saw), so it is read again on every return to the
@@ -42,8 +43,12 @@ class PlanTierPropertySync(
                 // collectLatest, so a newer trigger abandons a Pro check still waiting on the server.
                 .collectLatest { isInForeground ->
                     if (!isInForeground) return@collectLatest
-                    val tier = if (proStatusProvider.isPro()) PlanTierOption.PRO else PlanTierOption.FREE
-                    analyticsLogger.setUserProperty(UserProperty.PlanTier(tier))
+                    // A check that could not tell (offline, server down) keeps the tier last set:
+                    // reporting it as free would mislabel a Pro user until the next good check.
+                    proStatusProvider.proStatus().onSuccess { isPro ->
+                        val tier = if (isPro) PlanTierOption.PRO else PlanTierOption.FREE
+                        analyticsLogger.setUserProperty(UserProperty.PlanTier(tier))
+                    }
                 }
         }
     }
