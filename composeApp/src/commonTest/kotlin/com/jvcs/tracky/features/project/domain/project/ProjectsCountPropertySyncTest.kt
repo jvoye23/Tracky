@@ -15,12 +15,14 @@ internal class ProjectsCountPropertySyncTest {
 
     // runCurrent, not advanceUntilIdle: the sync collects on backgroundScope, which
     // advanceUntilIdle does not wait for.
-    private fun TestScope.startSync() {
-        ProjectsCountPropertySync(
-            localProjectDataSource = dataSource,
-            analyticsLogger = analytics,
-            applicationScope = backgroundScope,
-        ).start()
+    private fun TestScope.startSync(times: Int = 1) {
+        val sync =
+            ProjectsCountPropertySync(
+                localProjectDataSource = dataSource,
+                analyticsLogger = analytics,
+                applicationScope = backgroundScope,
+            )
+        repeat(times) { sync.start() }
         runCurrent()
     }
 
@@ -61,5 +63,26 @@ internal class ProjectsCountPropertySyncTest {
             runCurrent()
 
             assertThat(setValues().map { it.second }).containsExactly("1-5")
+        }
+
+    @Test
+    fun fiveProjectsAreTheTopOfTheLowBucket() =
+        runTest {
+            startSync()
+
+            storeProjects(5)
+            runCurrent()
+            storeProjects(6)
+            runCurrent()
+
+            assertThat(setValues().map { it.second }).containsExactly("0", "1-5", "6")
+        }
+
+    @Test
+    fun startingTwiceStillSetsItOnce() =
+        runTest {
+            startSync(times = 2)
+
+            assertThat(setValues()).containsExactly("projects_count" to "0")
         }
 }

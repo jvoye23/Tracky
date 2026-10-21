@@ -1038,6 +1038,10 @@ private class FakeProjectRepository(initial: List<Project>) :
 
     override suspend fun upsertProject(project: Project): EmptyResult<DataError> {
         upserted += project
+        // Like the real repository, a saved project is listed from then on.
+        if (writeResult is Result.Success) {
+            projectsFlow.value = projectsFlow.value.filter { it.projectId != project.projectId } + project
+        }
         return writeResult
     }
 

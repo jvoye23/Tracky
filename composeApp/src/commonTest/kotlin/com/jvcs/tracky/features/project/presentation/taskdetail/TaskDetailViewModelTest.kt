@@ -3,6 +3,7 @@ package com.jvcs.tracky.features.project.presentation.taskdetail
 import androidx.compose.ui.graphics.toArgb
 import assertk.assertThat
 import assertk.assertions.containsExactly
+import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
@@ -99,6 +100,19 @@ internal class TaskDetailViewModelTest {
 
             val viewed = AnalyticsEvent.TaskDetailScreenViewed(screenName = "task_detail")
             assertThat(analytics.events).containsExactly(viewed, viewed)
+        }
+
+    @Test
+    fun noOtherActionIsLoggedAsAView() =
+        runTest(UnconfinedTestDispatcher()) {
+            val viewModel = viewModelFor(task())
+
+            viewModel.onAction(TaskDetailAction.OnToggleTimer)
+            viewModel.onAction(TaskDetailAction.OnEditModeClick)
+            viewModel.onAction(TaskDetailAction.OnCloseEditModeClick)
+            viewModel.onAction(TaskDetailAction.OnHeaderClick)
+
+            assertThat(analytics.events).isEmpty()
         }
 
     @Test

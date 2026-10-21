@@ -23,12 +23,14 @@ internal class SubTasksCountPropertySyncTest {
 
     // runCurrent, not advanceUntilIdle: the sync collects on backgroundScope, which
     // advanceUntilIdle does not wait for.
-    private fun TestScope.startSync() {
-        SubTasksCountPropertySync(
-            localSubTaskDataSource = dataSource,
-            analyticsLogger = analytics,
-            applicationScope = backgroundScope,
-        ).start()
+    private fun TestScope.startSync(times: Int = 1) {
+        val sync =
+            SubTasksCountPropertySync(
+                localSubTaskDataSource = dataSource,
+                analyticsLogger = analytics,
+                applicationScope = backgroundScope,
+            )
+        repeat(times) { sync.start() }
         runCurrent()
     }
 
@@ -65,6 +67,26 @@ internal class SubTasksCountPropertySyncTest {
             runCurrent()
 
             assertThat(setValues().map { it.second }).containsExactly("1-5")
+        }
+
+    @Test
+    fun sixSubtasksLeaveTheLowBucket() =
+        runTest {
+            dataSource.count.value = 5
+            startSync()
+
+            dataSource.count.value = 6
+            runCurrent()
+
+            assertThat(setValues().map { it.second }).containsExactly("1-5", "6")
+        }
+
+    @Test
+    fun startingTwiceStillSetsItOnce() =
+        runTest {
+            startSync(times = 2)
+
+            assertThat(setValues()).containsExactly("sub_tasks_count" to "0")
         }
 }
 
