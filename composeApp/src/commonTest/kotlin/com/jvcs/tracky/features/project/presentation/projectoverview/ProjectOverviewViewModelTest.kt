@@ -4,13 +4,18 @@ package com.jvcs.tracky.features.project.presentation.projectoverview
 
 import app.cash.turbine.test
 import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
+import com.jvcs.tracky.analytics.api.AnalyticsEvent
+import com.jvcs.tracky.analytics.api.FakeAnalyticsLogger
 import com.jvcs.tracky.core.domain.auth.FakeAuthService
 import com.jvcs.tracky.core.domain.auth.FakeSessionStorage
 import com.jvcs.tracky.core.domain.auth.authInfo
 import com.jvcs.tracky.core.domain.connectivity.FixedConnectivityObserver
+import com.jvcs.tracky.core.domain.device.FakeInstallTimeProvider
 import com.jvcs.tracky.core.domain.purchases.FakeEntitlementService
 import com.jvcs.tracky.core.domain.purchases.FakeProAccessRepository
 import com.jvcs.tracky.core.domain.purchases.FakeProStatusProvider
@@ -29,6 +34,8 @@ import com.jvcs.tracky.designsystem.util.UiText
 import com.jvcs.tracky.features.onboarding.domain.FakeOnboardingStatusStore
 import com.jvcs.tracky.features.project.domain.models.Project
 import com.jvcs.tracky.features.project.domain.models.ProjectTask
+import com.jvcs.tracky.features.project.domain.project.FakeFirstProjectStore
+import com.jvcs.tracky.features.project.domain.project.FirstProjectCreatedTracker
 import com.jvcs.tracky.features.project.domain.project.ProjectOrganizationRepository
 import com.jvcs.tracky.features.project.domain.project.ProjectRepository
 import com.jvcs.tracky.features.projecttracker.data.FakeSyncScheduler
@@ -59,6 +66,7 @@ import kotlin.time.Instant
 class ProjectOverviewViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
+    private val analytics = FakeAnalyticsLogger()
 
     @BeforeTest
     fun setUp() = Dispatchers.setMain(dispatcher)
@@ -122,6 +130,15 @@ class ProjectOverviewViewModelTest {
             proAccessRepository = proAccessRepository,
             entitlementService = entitlementService,
             proStatusProvider = proStatusProvider,
+            analyticsLogger = analytics,
+            firstProjectCreatedTracker =
+                FirstProjectCreatedTracker(
+                    firstProjectStore = FakeFirstProjectStore(),
+                    projectRepository = repository,
+                    installTimeProvider = FakeInstallTimeProvider(),
+                    timeProvider = FakeTimeProvider(),
+                    analyticsLogger = analytics,
+                ),
         )
 
     /**
@@ -852,6 +869,19 @@ class ProjectOverviewViewModelTest {
         }
 
     @Test
+    fun everyTimeTheScreenResumes_itIsLoggedAsViewed() =
+        runTest(dispatcher) {
+            val viewModel = viewModelWith(FakeProjectRepository(seededProjects()))
+
+            // First shown, then back from a project.
+            viewModel.onAction(ProjectOverviewAction.OnScreenResumed)
+            viewModel.onAction(ProjectOverviewAction.OnScreenResumed)
+
+            val viewed = AnalyticsEvent.ProjectOverviewScreenViewed(screenName = "project_overview")
+            assertThat(analytics.events).containsExactly(viewed, viewed)
+        }
+
+    @Test
     fun addingAProject_savesIt_closesTheSheet_andOpensIt() =
         runTest(dispatcher) {
             val repository = FakeProjectRepository(emptyList())
@@ -867,6 +897,20 @@ class ProjectOverviewViewModelTest {
                 assertThat(awaitItem()).isEqualTo(ProjectOverviewEvent.NewProjectSaved(saved.projectId))
             }
             assertThat(stateOf(viewModel).isAddNewProjectBottomSheetVisible).isFalse()
+            assertThat(analytics.events).containsExactly(AnalyticsEvent.FirstProjectCreated(secondsSinceInstall = 0))
+        }
+
+    @Test
+    fun addingAProject_nextToOnesFromBeforeTheEventExisted_isNotLoggedAsTheFirst() =
+        runTest(dispatcher) {
+            val viewModel = viewModelWith(FakeProjectRepository(seededProjects()))
+
+            viewModel.events.test {
+                viewModel.onAction(ProjectOverviewAction.OnAddProjectClick("Garden"))
+                testScheduler.advanceUntilIdle()
+                awaitItem()
+            }
+            assertThat(analytics.events).isEmpty()
         }
 
     @Test
@@ -887,6 +931,8 @@ class ProjectOverviewViewModelTest {
                     awaitItem(),
                 ).isEqualTo(ProjectOverviewEvent.Error(UiText.Resource(Res.string.error_disk_full)))
             }
+            // Nothing was created, so the first project is still to come.
+            assertThat(analytics.events).isEmpty()
         }
 
     @Test
@@ -992,6 +1038,10 @@ private class FakeProjectRepository(initial: List<Project>) :
 
     override suspend fun upsertProject(project: Project): EmptyResult<DataError> {
         upserted += project
+        // Like the real repository, a saved project is listed from then on.
+        if (writeResult is Result.Success) {
+            projectsFlow.value = projectsFlow.value.filter { it.projectId != project.projectId } + project
+        }
         return writeResult
     }
 

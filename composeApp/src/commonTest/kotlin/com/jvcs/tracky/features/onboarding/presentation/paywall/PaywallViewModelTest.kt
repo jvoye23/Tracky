@@ -9,6 +9,10 @@ import assertk.assertions.isFalse
 import assertk.assertions.isLessThanOrEqualTo
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
+import com.jvcs.tracky.analytics.api.AnalyticsEvent
+import com.jvcs.tracky.analytics.api.FakeAnalyticsLogger
+import com.jvcs.tracky.analytics.api.PlanTierOption
+import com.jvcs.tracky.analytics.api.UserProperty
 import com.jvcs.tracky.core.domain.auth.FakeSessionStorage
 import com.jvcs.tracky.core.domain.auth.authInfo
 import com.jvcs.tracky.core.domain.purchases.FakeEntitlementService
@@ -51,6 +55,7 @@ internal class PaywallViewModelTest {
     private val sessionStorage = FakeSessionStorage()
     private val importStore = FakeLocalDataImportStore()
     private val entitlementService = FakeEntitlementService()
+    private val analytics = FakeAnalyticsLogger()
 
     @BeforeTest
     fun setUp() = Dispatchers.setMain(dispatcher)
@@ -59,9 +64,19 @@ internal class PaywallViewModelTest {
     fun tearDown() = Dispatchers.resetMain()
 
     /** Subscribes, since the state is WhileSubscribed, and lets the first load settle. */
-    private fun TestScope.openScreen(source: PaywallSource = PaywallSource.ONBOARDING): PaywallViewModel {
+    private fun TestScope.openScreen(
+        source: PaywallSource = PaywallSource.Onboarding(stepsCompleted = 3),
+    ): PaywallViewModel {
         val viewModel =
-            PaywallViewModel(source, repository, statusStore, sessionStorage, importStore, entitlementService)
+            PaywallViewModel(
+                source,
+                repository,
+                statusStore,
+                sessionStorage,
+                importStore,
+                entitlementService,
+                analytics,
+            )
         backgroundScope.launch { viewModel.state.collect {} }
         advanceUntilIdle()
         return viewModel
@@ -71,12 +86,13 @@ internal class PaywallViewModelTest {
     fun theScreenIsLoadingUntilThePlansArrive() {
         val viewModel =
             PaywallViewModel(
-                PaywallSource.ONBOARDING,
+                PaywallSource.Onboarding(stepsCompleted = 3),
                 repository,
                 statusStore,
                 sessionStorage,
                 importStore,
                 entitlementService,
+                analytics,
             )
 
         assertThat(viewModel.state.value.isLoading).isTrue()
@@ -313,13 +329,62 @@ internal class PaywallViewModelTest {
             }
         }
 
+    @Test
+    fun continuingFreeLogsTheCompletedOnboardingWithItsSteps() =
+        runTest(dispatcher) {
+            val viewModel = openScreen(PaywallSource.Onboarding(stepsCompleted = 2))
+
+            viewModel.events.test {
+                viewModel.onAction(PaywallAction.OnContinueFreeClick)
+                awaitItem()
+            }
+            assertThat(analytics.events).containsExactly(AnalyticsEvent.OnboardingCompleted(stepsCompleted = 2))
+        }
+
+    @Test
+    fun buyingProLogsTheCompletedOnboarding() =
+        runTest(dispatcher) {
+            val viewModel = openScreen()
+
+            viewModel.events.test {
+                viewModel.onAction(PaywallAction.OnSubscribeClick)
+                awaitItem()
+            }
+            assertThat(analytics.events).containsExactly(AnalyticsEvent.OnboardingCompleted(stepsCompleted = 3))
+        }
+
+    @Test
+    fun buyingProSetsThePlanTier() =
+        runTest(dispatcher) {
+            val viewModel = openScreen(PaywallSource.App)
+
+            viewModel.events.test {
+                viewModel.onAction(PaywallAction.OnSubscribeClick)
+                awaitItem()
+            }
+            assertThat(analytics.userProperties).containsExactly(UserProperty.PlanTier(PlanTierOption.PRO))
+        }
+
+    @Test
+    fun aCancelledPurchaseLogsNothing() =
+        runTest(dispatcher) {
+            repository.purchaseResult = Result.Error(PurchaseError.Cancelled)
+            val viewModel = openScreen()
+
+            viewModel.onAction(PaywallAction.OnSubscribeClick)
+            advanceUntilIdle()
+
+            assertThat(analytics.events).isEmpty()
+            assertThat(analytics.userProperties).isEmpty()
+        }
+
     // --- Opened from the drawer -------------------------------------------------------------------
 
     @Test
     fun fromTheAppContinuingFreeClosesWithoutTouchingTheOnboardingStatus() =
         runTest(dispatcher) {
             statusStore.set(OnboardingStatus.COMPLETED_FREE)
-            val viewModel = openScreen(PaywallSource.APP)
+            val viewModel = openScreen(PaywallSource.App)
 
             viewModel.events.test {
                 viewModel.onAction(PaywallAction.OnContinueFreeClick)
@@ -327,13 +392,14 @@ internal class PaywallViewModelTest {
             }
             assertThat(statusStore.current).isEqualTo(OnboardingStatus.COMPLETED_FREE)
             assertThat(importStore.isPending).isFalse()
+            assertThat(analytics.events).isEmpty()
         }
 
     @Test
     fun fromTheAppAFreeUserWhoBuysProIsPinnedToRegistrationLikeAfterOnboarding() =
         runTest(dispatcher) {
             statusStore.set(OnboardingStatus.COMPLETED_FREE)
-            val viewModel = openScreen(PaywallSource.APP)
+            val viewModel = openScreen(PaywallSource.App)
 
             viewModel.events.test {
                 viewModel.onAction(PaywallAction.OnSubscribeClick)
@@ -347,7 +413,7 @@ internal class PaywallViewModelTest {
     fun aSignedInUserWhoBuysProJustCloses() =
         runTest(dispatcher) {
             sessionStorage.set(authInfo())
-            val viewModel = openScreen(PaywallSource.APP)
+            val viewModel = openScreen(PaywallSource.App)
 
             viewModel.events.test {
                 viewModel.onAction(PaywallAction.OnSubscribeClick)
@@ -365,7 +431,7 @@ internal class PaywallViewModelTest {
         runTest(dispatcher) {
             sessionStorage.set(authInfo())
             entitlementService.latency = 2.seconds
-            val viewModel = openScreen(PaywallSource.APP)
+            val viewModel = openScreen(PaywallSource.App)
 
             viewModel.events.test {
                 viewModel.onAction(PaywallAction.OnSubscribeClick)
@@ -381,7 +447,7 @@ internal class PaywallViewModelTest {
         runTest(dispatcher) {
             sessionStorage.set(authInfo())
             entitlementService.latency = 1.minutes
-            val viewModel = openScreen(PaywallSource.APP)
+            val viewModel = openScreen(PaywallSource.App)
 
             viewModel.events.test {
                 viewModel.onAction(PaywallAction.OnSubscribeClick)
@@ -395,7 +461,7 @@ internal class PaywallViewModelTest {
         runTest(dispatcher) {
             sessionStorage.set(authInfo())
             entitlementService.result = Result.Error(DataError.Remote.SERVICE_UNAVAILABLE)
-            val viewModel = openScreen(PaywallSource.APP)
+            val viewModel = openScreen(PaywallSource.App)
 
             viewModel.events.test {
                 viewModel.onAction(PaywallAction.OnSubscribeClick)
@@ -408,7 +474,7 @@ internal class PaywallViewModelTest {
         runTest(dispatcher) {
             sessionStorage.set(authInfo())
 
-            assertThat(openScreen(PaywallSource.APP).state.value.hasAccount).isTrue()
+            assertThat(openScreen(PaywallSource.App).state.value.hasAccount).isTrue()
         }
 
     @Test

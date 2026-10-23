@@ -2,10 +2,12 @@ package com.jvcs.tracky.core.data.di
 
 import androidx.sqlite.SQLiteException
 import co.touchlab.kermit.Logger
+import com.jvcs.tracky.analytics.impl.AnalyticsBackend
 import com.jvcs.tracky.core.data.purchases.RevenueCatConfigurator
 import com.jvcs.tracky.core.data.realtime.RealtimeTimerConnection
 import com.jvcs.tracky.core.domain.notification.TimerNotificationCoordinator
 import com.jvcs.tracky.core.domain.purchases.AppUserIdentitySync
+import com.jvcs.tracky.core.domain.purchases.PlanTierPropertySync
 import com.jvcs.tracky.core.domain.sync.CloudSyncGate
 import com.jvcs.tracky.core.domain.sync.LocalDataImporter
 import com.jvcs.tracky.core.domain.sync.ProjectSyncManager
@@ -18,6 +20,8 @@ import com.jvcs.tracky.core.domain.util.TimeProvider
 import com.jvcs.tracky.di.initKoin
 import com.jvcs.tracky.features.project.data.timer.StrandedTimerReconciler
 import com.jvcs.tracky.features.project.domain.project.ProjectOrganizationRepository
+import com.jvcs.tracky.features.project.domain.project.ProjectsCountPropertySync
+import com.jvcs.tracky.features.project.domain.subtask.SubTasksCountPropertySync
 import com.jvcs.tracky.navigation.DeepLinkRouter
 import com.jvcs.tracky.navigation.Route
 import kotlinx.coroutines.CancellationException
@@ -26,11 +30,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.io.IOException
 import org.koin.core.qualifier.named
+import org.koin.dsl.module
 import org.koin.mp.KoinPlatform
 
-fun startKoinIos() {
+/** [analyticsBackend] is Swift's, which calls the Firebase SDK that Xcode links; see [AnalyticsBackend]. */
+fun startKoinIos(analyticsBackend: AnalyticsBackend) {
     // initKoin already loads every module, including appModule, coreDataModule and projectModule.
-    initKoin()
+    initKoin {
+        modules(module { single { analyticsBackend } })
+    }
     val koin = KoinPlatform.getKoin()
     // First, so RevenueCat is configured with the app user id before anything waits on it.
     koin.get<RevenueCatConfigurator>().start()
@@ -44,6 +52,10 @@ fun startKoinIos() {
 
     // Keeps the RevenueCat customer on the signed-in account's id.
     koin.get<AppUserIdentitySync>().start()
+    // Keep the plan_tier, projects_count and sub_tasks_count analytics user properties current.
+    koin.get<PlanTierPropertySync>().start()
+    koin.get<ProjectsCountPropertySync>().start()
+    koin.get<SubTasksCountPropertySync>().start()
     // Uploads a free device's local data once it signs in to an account.
     koin.get<LocalDataImporter>().start()
 

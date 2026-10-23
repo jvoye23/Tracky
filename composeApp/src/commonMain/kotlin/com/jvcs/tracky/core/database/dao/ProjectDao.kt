@@ -22,6 +22,10 @@ interface ProjectDao {
     @Query("SELECT * FROM projects ORDER BY projectId ASC")
     fun getProjects(): Flow<List<ProjectEntity>>
 
+    /** Every row, archived and trashed included. Re-emits on project writes only, not task writes. */
+    @Query("SELECT COUNT(*) FROM projects")
+    fun observeProjectCount(): Flow<Int>
+
     @Query("SELECT * FROM projects WHERE projectId = :id")
     suspend fun getProjectById(id: String): ProjectEntity?
 

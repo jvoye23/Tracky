@@ -5,6 +5,7 @@ import com.jvcs.tracky.core.data.purchases.RevenueCatConfigurator
 import com.jvcs.tracky.core.data.realtime.RealtimeTimerConnection
 import com.jvcs.tracky.core.domain.notification.TimerNotificationCoordinator
 import com.jvcs.tracky.core.domain.purchases.AppUserIdentitySync
+import com.jvcs.tracky.core.domain.purchases.PlanTierPropertySync
 import com.jvcs.tracky.core.domain.sync.CloudSyncGate
 import com.jvcs.tracky.core.domain.sync.LocalDataImporter
 import com.jvcs.tracky.core.domain.sync.ProjectSyncManager
@@ -12,6 +13,8 @@ import com.jvcs.tracky.core.domain.sync.SyncScheduler
 import com.jvcs.tracky.core.domain.sync.TrashCleanupScheduler
 import com.jvcs.tracky.di.initKoin
 import com.jvcs.tracky.features.project.data.timer.StrandedTimerReconciler
+import com.jvcs.tracky.features.project.domain.project.ProjectsCountPropertySync
+import com.jvcs.tracky.features.project.domain.subtask.SubTasksCountPropertySync
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.get
@@ -39,6 +42,10 @@ class TrackyApplication : Application() {
 
         // Keeps the RevenueCat customer on the signed-in account's id.
         get<AppUserIdentitySync>().start()
+        // Keep the plan_tier, projects_count and sub_tasks_count analytics user properties current.
+        get<PlanTierPropertySync>().start()
+        get<ProjectsCountPropertySync>().start()
+        get<SubTasksCountPropertySync>().start()
         // Uploads a free device's local data once it signs in to an account.
         get<LocalDataImporter>().start()
 

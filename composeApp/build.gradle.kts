@@ -104,6 +104,8 @@ kotlin {
             implementation(compose.preview)
             implementation(compose.uiTooling)
             implementation(libs.ktor.client.okhttp)
+            // Android only: iOS calls the Firebase Swift SDK directly, see FirebaseAnalyticsBackend.swift.
+            implementation(libs.gitlive.firebase.analytics)
             implementation(libs.androidx.activity.compose)
             implementation(libs.koin.android)
             implementation(libs.koin.compose)

@@ -1,5 +1,6 @@
 package com.jvcs.tracky.di
 
+import com.jvcs.tracky.analytics.di.analyticsModule
 import com.jvcs.tracky.core.data.di.coreDataModule
 import com.jvcs.tracky.features.auth.presentation.di.authPresentationModule
 import com.jvcs.tracky.features.onboarding.data.di.onboardingDataModule
@@ -22,6 +23,7 @@ fun initKoin(config: KoinAppDeclaration? = null) {
             authPresentationModule,
             onboardingDataModule,
             onboardingPresentationModule,
+            analyticsModule,
         )
     }
 }

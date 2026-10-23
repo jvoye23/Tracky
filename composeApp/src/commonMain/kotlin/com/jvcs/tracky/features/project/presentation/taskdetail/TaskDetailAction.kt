@@ -11,4 +11,7 @@ sealed interface TaskDetailAction {
     data object OnCloseEditModeClick : TaskDetailAction
 
     data object OnHeaderClick : TaskDetailAction
+
+    /** The screen came to the foreground: opened, returned to, or the app reopened on it. */
+    data object OnScreenResumed : TaskDetailAction
 }

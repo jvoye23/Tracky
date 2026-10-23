@@ -64,4 +64,7 @@ sealed interface ProjectOverviewAction {
     data object OnDismissProjectLimitDialog : ProjectOverviewAction
 
     data object OnShowSubscriptionOffersClick : ProjectOverviewAction
+
+    /** The screen came to the foreground: first shown, returned to, or the app reopened on it. */
+    data object OnScreenResumed : ProjectOverviewAction
 }

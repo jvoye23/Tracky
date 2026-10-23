@@ -2,6 +2,10 @@ package com.jvcs.tracky.features.onboarding.presentation.paywall
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jvcs.tracky.analytics.api.AnalyticsEvent
+import com.jvcs.tracky.analytics.api.AnalyticsLogger
+import com.jvcs.tracky.analytics.api.PlanTierOption
+import com.jvcs.tracky.analytics.api.UserProperty
 import com.jvcs.tracky.core.domain.auth.SessionStorage
 import com.jvcs.tracky.core.domain.purchases.EntitlementService
 import com.jvcs.tracky.core.domain.purchases.ProAccessRepository
@@ -52,6 +56,7 @@ class PaywallViewModel(
     private val sessionStorage: SessionStorage,
     private val localDataImportStore: LocalDataImportStore,
     private val entitlementService: EntitlementService,
+    private val analyticsLogger: AnalyticsLogger,
 ) : ViewModel() {
 
     private val eventChannel = Channel<PaywallEvent>()
@@ -191,17 +196,21 @@ class PaywallViewModel(
 
     private fun continueFree() {
         viewModelScope.launch {
-            if (source == PaywallSource.ONBOARDING && !hasAccount()) {
+            if (source is PaywallSource.Onboarding && !hasAccount()) {
                 onboardingStatusStore.set(OnboardingStatus.COMPLETED_FREE)
                 // Everything created from here on lives only on this device until an account exists.
                 localDataImportStore.setPending(true)
             }
+            logOnboardingCompleted()
             eventChannel.send(PaywallEvent.NavigateToApp)
         }
     }
 
     private fun finishWithPro() {
         viewModelScope.launch {
+            // Neither trigger of PlanTierPropertySync fires for a purchase made in the foreground.
+            analyticsLogger.setUserProperty(UserProperty.PlanTier(PlanTierOption.PRO))
+            logOnboardingCompleted()
             when {
                 // The purchase is already linked to the signed-in account. Telling the server now saves
                 // waiting for the webhook. A failed or slow refresh does not hold the user, who has
@@ -219,6 +228,13 @@ class PaywallViewModel(
                     eventChannel.send(PaywallEvent.NavigateToRegister)
                 }
             }
+        }
+    }
+
+    /** Either exit from the onboarding paywall completes onboarding; the drawer's paywall is not part of it. */
+    private fun logOnboardingCompleted() {
+        if (source is PaywallSource.Onboarding) {
+            analyticsLogger.log(AnalyticsEvent.OnboardingCompleted(stepsCompleted = source.stepsCompleted))
         }
     }
 

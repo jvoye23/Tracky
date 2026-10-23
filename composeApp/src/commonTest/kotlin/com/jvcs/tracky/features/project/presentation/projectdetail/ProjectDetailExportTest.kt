@@ -14,6 +14,8 @@ import assertk.assertions.isInstanceOf
 import assertk.assertions.isTrue
 import assertk.assertions.prop
 import assertk.assertions.startsWith
+import com.jvcs.tracky.analytics.api.AnalyticsEvent
+import com.jvcs.tracky.analytics.api.FakeAnalyticsLogger
 import com.jvcs.tracky.core.domain.purchases.FakeProStatusProvider
 import com.jvcs.tracky.core.domain.util.FakeTimeProvider
 import com.jvcs.tracky.core.domain.util.Result
@@ -50,6 +52,7 @@ class ProjectDetailExportTest {
     private val dispatcher = StandardTestDispatcher()
     private val exporter = FakeProjectJsonExporter()
     private val sharer = FakeExportFileSharer()
+    private val analytics = FakeAnalyticsLogger()
 
     @BeforeTest
     fun setUp() = Dispatchers.setMain(dispatcher)
@@ -85,6 +88,7 @@ class ProjectDetailExportTest {
                 exportFileSharer = sharer,
                 proStatusProvider = pro,
                 ioDispatcher = dispatcher,
+                analyticsLogger = analytics,
             )
         // The state is WhileSubscribed, so it only folds updates in while something collects it.
         backgroundScope.launch { vm.state.collect {} }
@@ -172,6 +176,8 @@ class ProjectDetailExportTest {
             assertThat(exporter.exportedProjects).containsExactly(project)
             assertThat(sharer.sharedFiles.map { it.fileName }).containsExactly("$PROJECT_TITLE.json")
             assertThat(vm.isExporting()).isFalse()
+            // Only PDF exports are logged.
+            assertThat(analytics.events).isEmpty()
         }
 
     @Test
@@ -248,6 +254,25 @@ class ProjectDetailExportTest {
             assertThat(shared.mimeType).isEqualTo("application/pdf")
             assertThat(shared.bytes.toList()).isEqualTo(listOf<Byte>(1, 2, 3))
             assertThat(vm.isExporting()).isFalse()
+            assertThat(analytics.events).containsExactly(AnalyticsEvent.PdfExported)
+        }
+
+    @Test
+    fun aPdfTheShareSheetRefusedIsNotLoggedAsExported() =
+        runTest {
+            sharer.result = Result.Error(ExportError.SHARE_FAILED)
+            val vm = viewModel()
+
+            vm.events.test {
+                vm.onAction(ProjectDetailAction.OnExportFormatClick(ExportFormat.Pdf))
+                runCurrent()
+                awaitItem()
+
+                vm.onAction(ProjectDetailAction.OnPdfRendered(byteArrayOf(1)))
+                runCurrent()
+                awaitItem()
+            }
+            assertThat(analytics.events).isEmpty()
         }
 
     @Test
@@ -267,6 +292,7 @@ class ProjectDetailExportTest {
             }
             assertThat(sharer.sharedFiles).isEmpty()
             assertThat(vm.isExporting()).isFalse()
+            assertThat(analytics.events).isEmpty()
         }
 
     @Test

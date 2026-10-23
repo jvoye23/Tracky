@@ -4,6 +4,7 @@ import com.jvcs.tracky.core.domain.auth.SessionStorage
 import com.jvcs.tracky.core.domain.purchases.EntitlementService
 import com.jvcs.tracky.core.domain.purchases.ProAccessRepository
 import com.jvcs.tracky.core.domain.purchases.ProStatusProvider
+import com.jvcs.tracky.core.domain.util.DataError
 import com.jvcs.tracky.core.domain.util.Result
 import kotlinx.coroutines.flow.first
 
@@ -18,9 +19,20 @@ class DefaultProStatusProvider(
     private val sessionStorage: SessionStorage,
 ) : ProStatusProvider {
 
-    override suspend fun isPro(): Boolean {
-        if (proAccessRepository.hasProAccess() == Result.Success(true)) return true
-        if (sessionStorage.observeAuthInfo().first() == null) return false
-        return entitlementService.current() == Result.Success(true)
+    override suspend fun proStatus(): Result<Boolean, DataError.Remote> {
+        val store = proAccessRepository.hasProAccess()
+        if (store == Result.Success(true)) return store
+        // Without an account the store is the only source, so its answer, or its failure, stands.
+        if (sessionStorage.observeAuthInfo().first() == null) return store
+
+        val server = entitlementService.current()
+        return when {
+            server == Result.Success(true) -> server
+
+            // The server says free, but a store that did not answer may still hold Pro.
+            server is Result.Success && store is Result.Error -> store
+
+            else -> server
+        }
     }
 }

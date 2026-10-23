@@ -67,6 +67,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
@@ -164,6 +165,12 @@ fun ProjectOverviewScreenRoot(
                 coroutineScope.launch { snackbarHostState.showEventSnackbar(event, onNavigateToPro) }
             }
         }
+    }
+
+    // Every resume is a view: first shown, back from a project or the paywall, or the app reopened here.
+    LifecycleResumeEffect(viewModel) {
+        viewModel.onAction(ProjectOverviewAction.OnScreenResumed)
+        onPauseOrDispose { }
     }
 
     BackHandler(enabled = state.isEditModeActive) {

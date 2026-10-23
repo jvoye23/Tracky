@@ -2,6 +2,8 @@ package com.jvcs.tracky.features.project.presentation.taskdetail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jvcs.tracky.analytics.api.AnalyticsEvent
+import com.jvcs.tracky.analytics.api.AnalyticsLogger
 import com.jvcs.tracky.core.domain.util.Result
 import com.jvcs.tracky.core.domain.util.TimeManager
 import com.jvcs.tracky.core.domain.util.TimerState
@@ -38,6 +40,7 @@ class TaskDetailViewModel(
     private val subTaskRepository: SubTaskRepository,
     private val projectRepository: ProjectRepository,
     private val timeManager: TimeManager,
+    private val analyticsLogger: AnalyticsLogger,
 ) : ViewModel() {
 
     private var hasLoadedInitialData = false
@@ -177,15 +180,27 @@ class TaskDetailViewModel(
 
     fun onAction(action: TaskDetailAction) {
         when (action) {
-            TaskDetailAction.OnToggleTimer -> toggleTimer()
+            TaskDetailAction.OnToggleTimer -> {
+                toggleTimer()
+            }
 
             // Nothing to save or revert here: the text is edited and saved on the edit-text screen,
             // so leaving edit mode either way only drops the outline.
-            TaskDetailAction.OnEditModeClick -> _state.update { it.copy(isEditMode = true) }
+            TaskDetailAction.OnEditModeClick -> {
+                _state.update { it.copy(isEditMode = true) }
+            }
 
-            TaskDetailAction.OnCloseEditModeClick -> _state.update { it.copy(isEditMode = false) }
+            TaskDetailAction.OnCloseEditModeClick -> {
+                _state.update { it.copy(isEditMode = false) }
+            }
 
-            else -> Unit
+            TaskDetailAction.OnScreenResumed -> {
+                analyticsLogger.log(AnalyticsEvent.TaskDetailScreenViewed(screenName = SCREEN_NAME))
+            }
+
+            else -> {
+                Unit
+            }
         }
     }
 
@@ -220,5 +235,10 @@ class TaskDetailViewModel(
                 projectTaskRepository.startProjectTask(taskId)
             }
         }
+    }
+
+    private companion object {
+        /** The screen_name Firebase reports this screen under. */
+        const val SCREEN_NAME = "task_detail"
     }
 }

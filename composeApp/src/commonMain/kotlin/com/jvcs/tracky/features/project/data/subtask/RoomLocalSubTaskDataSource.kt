@@ -50,6 +50,8 @@ class RoomLocalSubTaskDataSource(
     override fun getSubTasksForTask(taskId: String): Flow<List<ProjectSubTask>> =
         subTaskDao.getSubTasksWithIntervals(taskId).map { rows -> rows.map { it.toProjectSubTask() } }
 
+    override fun observeSubTaskCount(): Flow<Int> = subTaskDao.observeSubTaskCount()
+
     override suspend fun getSubTaskById(subTaskId: String): Result<ProjectSubTask?, DataError.Local> =
         read {
             subTaskDao.getSubTaskById(subTaskId)?.toProjectSubTask()

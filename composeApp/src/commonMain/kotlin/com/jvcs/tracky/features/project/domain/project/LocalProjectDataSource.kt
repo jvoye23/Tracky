@@ -24,6 +24,9 @@ interface LocalProjectDataSource {
 
     fun getProjects(): Flow<List<Project>>
 
+    /** How many projects are stored, archived and trashed included, without loading them. */
+    fun observeProjectCount(): Flow<Int>
+
     fun getActiveProjects(): Flow<List<Project>>
 
     suspend fun getProjectById(projectId: String): Result<Project?, DataError.Local>

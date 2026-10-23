@@ -18,6 +18,8 @@ class FakeLocalProjectDataSource(initial: List<Project> = emptyList()) : LocalPr
 
     override fun getProjects(): Flow<List<Project>> = trees
 
+    override fun observeProjectCount(): Flow<Int> = trees.map { it.size }
+
     override fun getActiveProjects(): Flow<List<Project>> = trees
 
     override suspend fun getProjectById(projectId: String): Result<Project?, DataError.Local> =

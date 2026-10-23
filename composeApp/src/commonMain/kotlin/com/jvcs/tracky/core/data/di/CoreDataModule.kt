@@ -37,6 +37,7 @@ import com.jvcs.tracky.core.domain.lifecycle.AppLifecycleObserver
 import com.jvcs.tracky.core.domain.notification.TimerNotificationCoordinator
 import com.jvcs.tracky.core.domain.purchases.AppUserIdentitySync
 import com.jvcs.tracky.core.domain.purchases.EntitlementService
+import com.jvcs.tracky.core.domain.purchases.PlanTierPropertySync
 import com.jvcs.tracky.core.domain.purchases.ProAccessRepository
 import com.jvcs.tracky.core.domain.purchases.ProStatusProvider
 import com.jvcs.tracky.core.domain.realtime.RealtimeChannel
@@ -167,6 +168,16 @@ val coreDataModule =
                 sessionStorage = get(),
                 appUserIdStore = get(),
                 proAccessRepository = get(),
+                applicationScope = get(qualifier = named("AppScope")),
+            )
+        }
+
+        single {
+            PlanTierPropertySync(
+                proStatusProvider = get(),
+                sessionStorage = get(),
+                appLifecycleObserver = get(),
+                analyticsLogger = get(),
                 applicationScope = get(qualifier = named("AppScope")),
             )
         }

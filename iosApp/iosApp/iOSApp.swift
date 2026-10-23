@@ -1,6 +1,7 @@
 import SwiftUI
 import BackgroundTasks
 import ComposeApp
+import FirebaseCore
 
 /// Installs the BGTaskScheduler launch handlers for every identifier the Kotlin schedulers submit.
 ///
@@ -68,10 +69,14 @@ enum LiveActivitySetup {
 struct iOSApp: App {
 
     init() {
+        // Firebase before Koin: the syncs Koin starts log through FirebaseAnalyticsBackend, which
+        // needs the configured default app. Android needs no counterpart — FirebaseInitProvider
+        // configures it before onCreate.
+        FirebaseApp.configure()
         // Order matters: handlers first, then Koin — see BackgroundTaskSetup above.
         BackgroundTaskSetup.registerHandlers()
         LiveActivitySetup.register()
-        KoinHelperKt.startKoinIos()
+        KoinHelperKt.startKoinIos(analyticsBackend: FirebaseAnalyticsBackend())
     }
 
     var body: some Scene {

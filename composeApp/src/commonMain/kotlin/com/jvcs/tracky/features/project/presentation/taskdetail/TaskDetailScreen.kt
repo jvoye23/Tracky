@@ -48,6 +48,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jvcs.tracky.designsystem.components.DurationHeroCard
 import com.jvcs.tracky.designsystem.components.layouts.TrackyAdaptiveDetailLayout
@@ -83,6 +84,12 @@ fun TaskDetailScreenRoot(
     viewModel: TaskDetailViewModel = koinViewModel(parameters = { parametersOf(taskId) }),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    // Every resume is a view: opened, back from editing its text, or the app reopened here.
+    LifecycleResumeEffect(viewModel) {
+        viewModel.onAction(TaskDetailAction.OnScreenResumed)
+        onPauseOrDispose { }
+    }
 
     TaskDetailScreen(
         state = state,
