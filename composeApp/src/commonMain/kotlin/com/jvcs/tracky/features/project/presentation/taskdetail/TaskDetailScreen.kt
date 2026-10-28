@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -42,7 +43,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -53,10 +53,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jvcs.tracky.designsystem.components.DurationHeroCard
 import com.jvcs.tracky.designsystem.components.layouts.TrackyAdaptiveDetailLayout
 import com.jvcs.tracky.designsystem.components.layouts.detailHeaderTopInset
+import com.jvcs.tracky.designsystem.components.layouts.rememberDetailTopBarScrollBehavior
 import com.jvcs.tracky.designsystem.theme.SampleProjectColors
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.designsystem.util.PreviewDevices
-import com.jvcs.tracky.designsystem.util.rememberCollapsibleScrollBehavior
 import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
 import com.jvcs.tracky.features.project.presentation.taskdetail.model.DailyStatistic
 import org.jetbrains.compose.resources.stringResource
@@ -132,18 +132,13 @@ fun TaskDetailScreen(
             ?: MaterialTheme.colorScheme.surfaceContainerLow
 
     val listState = rememberLazyListState()
-    // One instance, shared by the app bar and the nested-scroll connection below.
-    val scrollBehavior =
-        rememberCollapsibleScrollBehavior(
-            listState = listState,
-            pinned = state.isEditMode,
-        )
+    // The two-pane summary column; it collapses the top bar just like the list does.
+    val summaryScrollState = rememberScrollState()
+    // One instance, shared by the app bar and the layout's nested-scroll connection below.
+    val scrollBehavior = rememberDetailTopBarScrollBehavior(listState, summaryScrollState, pinned = state.isEditMode)
 
     Scaffold(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = modifier.fillMaxSize(),
         contentWindowInsets = WindowInsets.safeDrawing,
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         topBar = {
@@ -157,6 +152,8 @@ fun TaskDetailScreen(
     ) { paddingValues ->
         TrackyAdaptiveDetailLayout(
             listState = listState,
+            summaryScrollState = summaryScrollState,
+            topBarScrollConnection = scrollBehavior.nestedScrollConnection,
             contentPadding = paddingValues,
             listTopPadding = detailHeaderTopInset(),
             // The session rows draw their own dividers.

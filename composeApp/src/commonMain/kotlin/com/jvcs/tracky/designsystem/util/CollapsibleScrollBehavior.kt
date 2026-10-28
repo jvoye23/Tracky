@@ -9,15 +9,23 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 
+/**
+ * @param secondaryScrollState a second scrolling column feeding the same nested-scroll connection,
+ * e.g. the summary column of a two-pane layout. The bar collapses when either column can scroll.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun rememberCollapsibleScrollBehavior(listState: ScrollableState, pinned: Boolean = false): TopAppBarScrollBehavior {
+fun rememberCollapsibleScrollBehavior(
+    listState: ScrollableState,
+    pinned: Boolean = false,
+    secondaryScrollState: ScrollableState? = null,
+): TopAppBarScrollBehavior {
     // Without this guard the bar collapses on any drag, even when the whole list fits on screen and
     // there is nothing to scroll to. TopAppBarDefaults remembers the behavior keyed on this lambda,
     // so its identity has to stay stable across recompositions.
     val canScroll =
-        remember(listState) {
-            { listState.canScrollForward || listState.canScrollBackward }
+        remember(listState, secondaryScrollState) {
+            { listState.canScroll() || secondaryScrollState?.canScroll() == true }
         }
     // Each branch keeps its own TopAppBarState, so toggling `pinned` starts the incoming behavior
     // fully expanded. Sharing one state instead would carry a collapsed heightOffset into the
@@ -37,3 +45,5 @@ fun rememberCollapsibleScrollBehavior(listState: ScrollableState, pinned: Boolea
     }
     return behavior
 }
+
+private fun ScrollableState.canScroll(): Boolean = canScrollForward || canScrollBackward

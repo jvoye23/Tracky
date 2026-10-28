@@ -6,16 +6,22 @@ import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.runComposeUiTest
+import androidx.compose.ui.test.swipeUp
 import assertk.assertThat
 import assertk.assertions.containsExactly
 import assertk.assertions.hasSize
+import assertk.assertions.isEqualTo
+import assertk.assertions.isGreaterThan
 import assertk.assertions.isGreaterThanOrEqualTo
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.features.project.presentation.models.ProjectTaskUi
@@ -101,6 +107,23 @@ internal class TaskDetailScreenTest {
             val headerRight = onNodeWithText("Dig beds").getUnclippedBoundsInRoot().right
             val session = onNodeWithText("Mon, Aug 24").getUnclippedBoundsInRoot()
             assertThat(session.left).isGreaterThanOrEqualTo(headerRight)
+        }
+
+    /** A phone on its side: the sessions scroll under the bar and leave it where it is. */
+    @Test
+    fun scrollingTheSessionsInPhoneLandscapeKeepsTheTopBarInPlace() =
+        runSizedComposeUiTest(width = 900, height = 400) {
+            show(taskState.copy(dailyStatistics = manySessions))
+            val back = onNodeWithContentDescription("Back")
+            val sessions = onNode(hasScrollToIndexAction() and SemanticsMatcher.keyIsDefined(VerticalScrollAxisRange))
+            val expandedTop = back.getBoundsInRoot().top
+            // Guards the premise: a list that cannot scroll would leave the bar alone anyway.
+            assertThat(sessions.fetchSemanticsNode().config[VerticalScrollAxisRange].maxValue()).isGreaterThan(0f)
+
+            sessions.performTouchInput { swipeUp() }
+            waitForIdle()
+
+            assertThat(back.getBoundsInRoot().top).isEqualTo(expandedTop)
         }
 
     private companion object {

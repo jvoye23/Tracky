@@ -1,5 +1,6 @@
 package com.jvcs.tracky.designsystem.components.layouts
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,10 +24,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.movableContentWithReceiverOf
@@ -34,6 +37,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -42,11 +47,12 @@ import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.designsystem.util.DeviceConfiguration
 import com.jvcs.tracky.designsystem.util.PreviewDevices
 import com.jvcs.tracky.designsystem.util.currentDeviceConfiguration
+import com.jvcs.tracky.designsystem.util.rememberCollapsibleScrollBehavior
 
 private val ItemSpacing = 8.dp
 
 /** Breathing room between the top bar and the first item of each two-pane column. */
-private val TwoPaneTopGap = 16.dp
+val TwoPaneTopGap = 16.dp
 
 /**
  * Structural container for a detail screen: a summary block followed by a list.
@@ -59,11 +65,16 @@ private val TwoPaneTopGap = 16.dp
  * Both branches drive the list through the same [listState], so a rotation keeps the list's
  * scroll position and anything keyed on it (reorder, collapsing top bar) keeps working.
  * [summary] and [list] receive `isTwoPane`, so the screen never re-derives the window size.
+ * Hoist [summaryScrollState] when something outside, such as a collapsing top bar, has to know
+ * whether the two-pane summary column can scroll.
  *
  * @param contentPadding the Scaffold's padding; only its bottom and horizontal sides are applied,
  * because in portrait the summary paints behind the top bar and pads for it itself.
  * @param listTopPadding the height the top bar covers.
  * @param listItemSpacing the gap between list items, e.g. zero for rows that draw their own dividers.
+ * @param topBarScrollConnection the collapsing top bar's connection, usually from
+ * [rememberDetailTopBarScrollBehavior]. Both columns feed it, except on a phone on its side: there
+ * only the summary column does, and the list scrolls under a fixed bar.
  */
 @Composable
 fun TrackyAdaptiveDetailLayout(
@@ -73,6 +84,8 @@ fun TrackyAdaptiveDetailLayout(
     summary: @Composable ColumnScope.(isTwoPane: Boolean) -> Unit,
     modifier: Modifier = Modifier,
     listItemSpacing: Dp = ItemSpacing,
+    summaryScrollState: ScrollState = rememberScrollState(),
+    topBarScrollConnection: NestedScrollConnection? = null,
     list: LazyListScope.(isTwoPane: Boolean) -> Unit,
 ) {
     // Movable so a rotation carries the summary's state (e.g. the per-day strip's scroll) across
@@ -83,14 +96,13 @@ fun TrackyAdaptiveDetailLayout(
             movableContentWithReceiverOf<ColumnScope, Boolean> { isTwoPane -> currentSummary(isTwoPane) }
         }
     val bottomPadding = contentPadding.calculateBottomPadding()
+    val listDetached = isDetailListDetachedFromTopBar()
 
-    when (currentDeviceConfiguration()) {
-        DeviceConfiguration.MOBILE_PORTRAIT,
-        DeviceConfiguration.TABLET_PORTRAIT,
-        -> {
+    when (isDetailLayoutTwoPane()) {
+        false -> {
             LazyColumn(
                 state = listState,
-                modifier = modifier.fillMaxSize(),
+                modifier = modifier.fillMaxSize().feeding(topBarScrollConnection),
                 contentPadding = PaddingValues(bottom = bottomPadding),
                 verticalArrangement = Arrangement.spacedBy(listItemSpacing),
             ) {
@@ -103,15 +115,13 @@ fun TrackyAdaptiveDetailLayout(
             }
         }
 
-        DeviceConfiguration.MOBILE_LANDSCAPE,
-        DeviceConfiguration.TABLET_LANDSCAPE,
-        DeviceConfiguration.DESKTOP,
-        -> {
+        true -> {
             val layoutDirection = LocalLayoutDirection.current
             Row(
                 modifier =
                     modifier
                         .fillMaxSize()
+                        .feeding(topBarScrollConnection.takeUnless { listDetached })
                         .padding(
                             start = contentPadding.calculateStartPadding(layoutDirection),
                             end = contentPadding.calculateEndPadding(layoutDirection),
@@ -121,7 +131,8 @@ fun TrackyAdaptiveDetailLayout(
                     modifier =
                         Modifier
                             .weight(1f)
-                            .verticalScroll(rememberScrollState())
+                            .feeding(topBarScrollConnection.takeIf { listDetached })
+                            .verticalScroll(summaryScrollState)
                             .padding(top = listTopPadding + TwoPaneTopGap, bottom = bottomPadding),
                     verticalArrangement = Arrangement.spacedBy(ItemSpacing),
                 ) {
@@ -138,6 +149,55 @@ fun TrackyAdaptiveDetailLayout(
             }
         }
     }
+}
+
+/**
+ * Whether [TrackyAdaptiveDetailLayout] shows two columns in the current window. Callers watching
+ * `summaryScrollState` need this: in portrait that state is attached to nothing, and a detached
+ * [ScrollState] reports it can always scroll forward (its max is Int.MAX_VALUE until measured).
+ */
+@Composable
+fun isDetailLayoutTwoPane(): Boolean =
+    when (currentDeviceConfiguration()) {
+        DeviceConfiguration.MOBILE_PORTRAIT,
+        DeviceConfiguration.TABLET_PORTRAIT,
+        -> false
+
+        DeviceConfiguration.MOBILE_LANDSCAPE,
+        DeviceConfiguration.TABLET_LANDSCAPE,
+        DeviceConfiguration.DESKTOP,
+        -> true
+    }
+
+/**
+ * Whether only the summary column may move the top bar: a phone on its side is too short to give
+ * the bar up while reading the list, so the list column scrolls under a fixed bar.
+ */
+@Composable
+private fun isDetailListDetachedFromTopBar(): Boolean =
+    currentDeviceConfiguration() == DeviceConfiguration.MOBILE_LANDSCAPE
+
+private fun Modifier.feeding(connection: NestedScrollConnection?): Modifier =
+    connection?.let { nestedScroll(it) } ?: this
+
+/**
+ * The collapsing top bar for a [TrackyAdaptiveDetailLayout]; pass its `nestedScrollConnection` as
+ * `topBarScrollConnection`. It collapses only while a column that feeds it can actually scroll.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun rememberDetailTopBarScrollBehavior(
+    listState: LazyListState,
+    summaryScrollState: ScrollState,
+    pinned: Boolean = false,
+): TopAppBarScrollBehavior {
+    val listDetached = isDetailListDetachedFromTopBar()
+    return rememberCollapsibleScrollBehavior(
+        listState = if (listDetached) summaryScrollState else listState,
+        pinned = pinned,
+        // In portrait the summary scrolls with the list, not on its own.
+        secondaryScrollState = summaryScrollState.takeIf { !listDetached && isDetailLayoutTwoPane() },
+    )
 }
 
 /**
