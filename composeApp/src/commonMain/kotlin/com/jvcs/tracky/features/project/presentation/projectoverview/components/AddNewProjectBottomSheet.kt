@@ -38,6 +38,9 @@ import tracky.composeapp.generated.resources.confirm
 import tracky.composeapp.generated.resources.create_new_project
 import tracky.composeapp.generated.resources.enter_new_title
 
+/** Keeps the sheet a centered, phone-width column on wide windows (landscape, tablets). */
+private val SheetMaxWidth = 480.dp
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddNewProjectBottomSheet(
@@ -49,8 +52,9 @@ fun AddNewProjectBottomSheet(
 
     ModalBottomSheet(
         onDismissRequest = { onAction(ProjectOverviewAction.OnToggleAddNewProjectBottomSheet) },
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier,
         sheetState = sheetState,
+        sheetMaxWidth = SheetMaxWidth,
         containerColor = MaterialTheme.colorScheme.surface,
     ) {
         SheetContent(
