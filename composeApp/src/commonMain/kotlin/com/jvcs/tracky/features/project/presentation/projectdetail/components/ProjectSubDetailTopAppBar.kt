@@ -17,6 +17,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -41,6 +42,8 @@ fun ProjectSubDetailTopAppBar(
     onEditClick: () -> Unit = {},
     onSaveClick: () -> Unit = {},
     projectColor: Color = MaterialTheme.colorScheme.primary,
+    containerColor: Color = Color.Transparent,
+    scrollBehavior: TopAppBarScrollBehavior? = null,
 ) {
     TopAppBar(
         modifier = modifier,
@@ -109,14 +112,17 @@ fun ProjectSubDetailTopAppBar(
         },
         colors =
             TopAppBarDefaults.topAppBarColors(
-                containerColor = Color.Transparent,
+                containerColor = containerColor,
+                // Content scrolls underneath a collapsing bar, so it must not change colour on scroll.
+                scrolledContainerColor = containerColor,
             ),
+        scrollBehavior = scrollBehavior,
     )
 }
 
 private val PreviewEditTextProjectColor = SampleProjectColors.Green
 
-@OptIn(ExperimentalTime::class)
+@OptIn(ExperimentalTime::class, ExperimentalMaterial3Api::class)
 @Preview
 @Composable
 private fun EditTextTopAppBarEditModePreview() {
@@ -139,7 +145,7 @@ private fun EditTextTopAppBarEditModePreview() {
     }
 }
 
-@OptIn(ExperimentalTime::class)
+@OptIn(ExperimentalTime::class, ExperimentalMaterial3Api::class)
 @Preview
 @Composable
 private fun ProjectSubDetailTopAppBarReadModePreview() {

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material.icons.Icons
@@ -68,6 +69,7 @@ import com.jvcs.tracky.designsystem.components.FullScreenLoadingIndicator
 import com.jvcs.tracky.designsystem.components.InfoCard
 import com.jvcs.tracky.designsystem.components.layouts.TrackyAdaptiveDetailLayout
 import com.jvcs.tracky.designsystem.components.layouts.detailHeaderTopInset
+import com.jvcs.tracky.designsystem.components.layouts.isDetailLayoutTwoPane
 import com.jvcs.tracky.designsystem.theme.TrackyTheme
 import com.jvcs.tracky.designsystem.util.ObserveAsEvents
 import com.jvcs.tracky.designsystem.util.rememberCollapsibleScrollBehavior
@@ -281,6 +283,8 @@ fun ProjectDetailScreen(
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
+    // The two-pane summary column; it collapses the top bar just like the list does.
+    val summaryScrollState = rememberScrollState()
     val dragDropState =
         rememberReorderableListState(
             lazyListState = listState,
@@ -294,6 +298,8 @@ fun ProjectDetailScreen(
         rememberCollapsibleScrollBehavior(
             listState = listState,
             pinned = state.isEditMode,
+            // Only in two-pane: in portrait the summary scrolls with the list, not on its own.
+            secondaryScrollState = if (isDetailLayoutTwoPane()) summaryScrollState else null,
         )
 
     // Composited against the Scaffold background so it is fully opaque: the top bar uses this
@@ -335,6 +341,7 @@ fun ProjectDetailScreen(
             val projectColor = state.projectColor ?: MaterialTheme.colorScheme.primary
             TrackyAdaptiveDetailLayout(
                 listState = listState,
+                summaryScrollState = summaryScrollState,
                 contentPadding = paddingValues,
                 listTopPadding = detailHeaderTopInset(),
                 summary = { isTwoPane ->
