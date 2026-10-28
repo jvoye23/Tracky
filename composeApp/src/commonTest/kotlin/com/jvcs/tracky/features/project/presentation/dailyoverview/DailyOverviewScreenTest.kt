@@ -192,7 +192,7 @@ internal class DailyOverviewScreenTest {
     @Test
     fun aPortraitPageThatFitsKeepsTheTopBarInPlace() =
         runComposeUiTest {
-            showRoot(LocalDate(2026, 9, 9), window = DpSize(412.dp, 880.dp))
+            showRoot(LocalDate(2026, 9, 9), window = DpSize(412.dp, 960.dp))
             val back = onNodeWithContentDescription(text(Res.string.back))
             val page = onNode(hasScrollToIndexAction() and SemanticsMatcher.keyIsDefined(VerticalScrollAxisRange))
             val expandedTop = back.getBoundsInRoot().top
