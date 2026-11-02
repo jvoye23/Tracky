@@ -22,6 +22,10 @@ val routeSavedStateConfiguration: SavedStateConfiguration =
                     subclass(Route.OnboardingRoute.Paywall::class, Route.OnboardingRoute.Paywall.serializer())
 
                     subclass(Route.AuthRoute.Login::class, Route.AuthRoute.Login.serializer())
+                    subclass(
+                        Route.AuthRoute.LoginNotificationPermission::class,
+                        Route.AuthRoute.LoginNotificationPermission.serializer(),
+                    )
                     subclass(Route.AuthRoute.Register::class, Route.AuthRoute.Register.serializer())
                     subclass(Route.AuthRoute.RegisterSuccess::class, Route.AuthRoute.RegisterSuccess.serializer())
 
