@@ -16,6 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,6 +62,7 @@ internal const val DAYS_PER_WEEK = 7
  * luminance, which is where black and white swap places on the WCAG contrast curve.
  */
 @Composable
+@ReadOnlyComposable
 internal fun onProjectColor(tint: Color): Color {
     val composited = tint.compositeOver(MaterialTheme.colorScheme.surfaceContainerLow)
     return if (composited.luminance() > DARK_TEXT_LUMINANCE_THRESHOLD) Color.Black else Color.White

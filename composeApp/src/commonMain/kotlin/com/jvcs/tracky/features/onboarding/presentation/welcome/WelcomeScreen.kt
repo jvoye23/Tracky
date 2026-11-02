@@ -23,6 +23,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.NonRestartableComposable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -50,6 +51,7 @@ import tracky.composeapp.generated.resources.welcome_hero_title
  * No ViewModel - it holds no state and makes no decisions, so it only reports the two taps.
  */
 @Composable
+@NonRestartableComposable
 fun WelcomeScreenRoot(onGetStartedClick: () -> Unit, onLoginClick: () -> Unit) {
     WelcomeScreen(onGetStartedClick = onGetStartedClick, onLoginClick = onLoginClick)
 }
