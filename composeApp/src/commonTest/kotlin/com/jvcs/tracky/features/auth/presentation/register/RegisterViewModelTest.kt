@@ -64,14 +64,17 @@ internal class RegisterViewModelTest {
         agree: Boolean = true,
     ) {
         subscribe(viewModel)
-        with(viewModel.state.value) {
-            nameTextState.setTextAndPlaceCursorAtEnd(name)
-            emailTextState.setTextAndPlaceCursorAtEnd(email)
-            passwordTextState.setTextAndPlaceCursorAtEnd(password)
-            confirmPasswordTextState.setTextAndPlaceCursorAtEnd(confirm)
+        // Applies on this thread. Once a Compose UI test has run in this process, a global write can
+        // be applied from the main thread instead, after advanceUntilIdle has already returned.
+        Snapshot.withMutableSnapshot {
+            with(viewModel.state.value) {
+                nameTextState.setTextAndPlaceCursorAtEnd(name)
+                emailTextState.setTextAndPlaceCursorAtEnd(email)
+                passwordTextState.setTextAndPlaceCursorAtEnd(password)
+                confirmPasswordTextState.setTextAndPlaceCursorAtEnd(confirm)
+            }
         }
         viewModel.onAction(RegisterAction.OnTermsToggle(agree))
-        Snapshot.sendApplyNotifications()
         advanceUntilIdle()
     }
 

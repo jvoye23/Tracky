@@ -6,6 +6,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
 import com.jvcs.tracky.core.domain.auth.FakeSessionStorage
 import com.jvcs.tracky.core.domain.auth.authInfo
+import com.jvcs.tracky.core.domain.logging.FakeTrackyLogger
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.request.HttpRequestData
@@ -27,7 +28,7 @@ class HttpClientFactoryTest {
             """"user":{"id":"user-1","email":"user@example.com","username":"user","hasVerifiedEmail":true}}"""
 
     private fun client(sessionStorage: FakeSessionStorage, refreshStatus: HttpStatusCode = HttpStatusCode.OK) =
-        HttpClientFactory(sessionStorage).create(
+        HttpClientFactory(FakeTrackyLogger(), sessionStorage).create(
             MockEngine { request ->
                 requests += request
                 val json = headersOf(HttpHeaders.ContentType, "application/json")

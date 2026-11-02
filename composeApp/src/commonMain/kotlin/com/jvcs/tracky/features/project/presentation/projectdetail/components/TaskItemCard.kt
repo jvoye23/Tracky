@@ -40,6 +40,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -275,6 +276,7 @@ private val TaskCardShape = RoundedCornerShape(12.dp)
  * a hairline normally, and a project-tinted 1dp stroke while that item's timer runs.
  */
 @Composable
+@ReadOnlyComposable
 private fun taskBorder(isTimerRunning: Boolean, projectColor: Color): BorderStroke =
     BorderStroke(
         if (isTimerRunning) 1.dp else 0.dp,

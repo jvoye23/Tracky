@@ -104,13 +104,14 @@ class EditTextViewModelTest {
             val handle = SavedStateHandle()
             val vm = viewModel(savedStateHandle = handle)
 
-            vm.state.value.titleState
-                .setTextAndPlaceCursorAtEnd("Edited title")
-            vm.state.value.descriptionState
-                .setTextAndPlaceCursorAtEnd("Edited description")
-            // Off-composition there is no recomposer to apply the global snapshot, so snapshotFlow only
-            // re-reads once the notification is sent by hand.
-            Snapshot.sendApplyNotifications()
+            // Applies on this thread. Once a Compose UI test has run in this process, a global write can
+            // be applied from the main thread instead, after advanceUntilIdle has already returned.
+            Snapshot.withMutableSnapshot {
+                vm.state.value.titleState
+                    .setTextAndPlaceCursorAtEnd("Edited title")
+                vm.state.value.descriptionState
+                    .setTextAndPlaceCursorAtEnd("Edited description")
+            }
             advanceUntilIdle()
 
             assertThat(handle.get<String>(EditTextViewModel.KEY_TITLE)).isEqualTo("Edited title")

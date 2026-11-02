@@ -1,0 +1,54 @@
+<!--
+  The launcher logo as a status bar icon, where Android keeps only the alpha channel. Same paths as
+  ic_launcher_foreground, except the stacked card is dimmed and stops at the front card's edge so it
+  can't show through, the front card's cutout is wider so the stopwatch doesn't merge into it, and
+  its rows are holes.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="80"
+    android:viewportHeight="80"
+    android:tint="#FFFFFFFF">
+    <group
+        android:translateX="-13.5"
+        android:translateY="-13.5">
+        <path
+            android:fillAlpha="0.5"
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M32,30V24A8,8 0,0 1,40 16H68A8,8 0,0 1,76 24V46A8,8 0,0 1,68 54H64V38A8,8 0,0 0,56 30Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:fillType="evenOdd"
+            android:pathData="M24,30H56A8,8 0,0 1,64 38V53.2A21,21 0,0 0,50.02 72H24A8,8 0,0 1,16 64V38A8,8 0,0 1,24 30Z
+                M27,40H53A3,3 0,0 1,53 46H27A3,3 0,0 1,27 40Z
+                M27,51H47A3,3 0,0 1,47 57H27A3,3 0,0 1,27 51Z
+                M27,62H41A3,3 0,0 1,41 68H27A3,3 0,0 1,27 62Z" />
+        <path
+            android:pathData="M71,73m-16,0a16,16 0,1 1,32 0a16,16 0,1 1,-32 0"
+            android:strokeWidth="4"
+            android:strokeColor="#FFFFFFFF" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M68,41L74,41A3,3 0,0 1,77 44L77,46A3,3 0,0 1,74 49L68,49A3,3 0,0 1,65 46L65,44A3,3 0,0 1,68 41z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M70,47L72,47A2,2 0,0 1,74 49L74,54A2,2 0,0 1,72 56L70,56A2,2 0,0 1,68 54L68,49A2,2 0,0 1,70 47z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M83.64,61.69L86.92,59.4A2,2 100.04,0 1,89.7 59.89L90.85,61.52A2,2 110.26,0 1,90.36 64.31L87.08,66.6A2,2 125.19,0 1,84.3 66.11L83.15,64.48A2,2 92.65,0 1,83.64 61.69z" />
+        <path
+            android:pathData="M71,73l0,-10"
+            android:strokeWidth="3.2"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M71,73l7,3"
+            android:strokeWidth="3.2"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeLineCap="round" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M71,73m-2.2,0a2.2,2.2 0,1 1,4.4 0a2.2,2.2 0,1 1,-4.4 0" />
+    </group>
+</vector>

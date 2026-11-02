@@ -59,11 +59,14 @@ internal class LoginViewModelTest {
         password: String,
     ) {
         subscribe(viewModel)
-        viewModel.state.value.emailTextFieldState
-            .setTextAndPlaceCursorAtEnd(email)
-        viewModel.state.value.passwordTextFieldState
-            .setTextAndPlaceCursorAtEnd(password)
-        Snapshot.sendApplyNotifications()
+        // Applies on this thread. Once a Compose UI test has run in this process, a global write can
+        // be applied from the main thread instead, after advanceUntilIdle has already returned.
+        Snapshot.withMutableSnapshot {
+            viewModel.state.value.emailTextFieldState
+                .setTextAndPlaceCursorAtEnd(email)
+            viewModel.state.value.passwordTextFieldState
+                .setTextAndPlaceCursorAtEnd(password)
+        }
         advanceUntilIdle()
     }
 
@@ -75,9 +78,10 @@ internal class LoginViewModelTest {
             typeCredentials(viewModel, email = "not-an-email", password = "secret")
             assertThat(viewModel.state.value.canLogin).isFalse()
 
-            viewModel.state.value.emailTextFieldState
-                .setTextAndPlaceCursorAtEnd("user@example.com")
-            Snapshot.sendApplyNotifications()
+            Snapshot.withMutableSnapshot {
+                viewModel.state.value.emailTextFieldState
+                    .setTextAndPlaceCursorAtEnd("user@example.com")
+            }
             advanceUntilIdle()
             assertThat(viewModel.state.value.canLogin).isTrue()
         }

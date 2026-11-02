@@ -5,5 +5,8 @@
     <string name="timer_notification_pause">Pause</string>
     <string name="timer_notification_resume">Play</string>
     <string name="timer_notification_fgs_justification">Keeps the user\'s running time-tracking timer alive and visible while the app is in the background, so elapsed work time is recorded accurately and can be paused without reopening the app.</string>
+    <string name="push_notification_channel_id" translatable="false">announcements</string>
+    <string name="push_notification_channel_name">Announcements</string>
+    <string name="push_notification_channel_description">News and updates from Tracky.</string>
     <string name="export_share_chooser_title">Share export</string>
 </resources>

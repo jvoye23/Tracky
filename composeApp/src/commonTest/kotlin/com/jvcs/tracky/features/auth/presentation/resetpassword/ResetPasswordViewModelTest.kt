@@ -43,9 +43,12 @@ internal class ResetPasswordViewModelTest {
         val viewModel = ResetPasswordViewModel(authService, token = TOKEN)
         backgroundScope.launch { viewModel.state.collect {} }
         advanceUntilIdle()
-        viewModel.state.value.passwordTextState
-            .setTextAndPlaceCursorAtEnd(password)
-        Snapshot.sendApplyNotifications()
+        // Applies on this thread. Once a Compose UI test has run in this process, a global write can
+        // be applied from the main thread instead, after advanceUntilIdle has already returned.
+        Snapshot.withMutableSnapshot {
+            viewModel.state.value.passwordTextState
+                .setTextAndPlaceCursorAtEnd(password)
+        }
         advanceUntilIdle()
         return viewModel
     }

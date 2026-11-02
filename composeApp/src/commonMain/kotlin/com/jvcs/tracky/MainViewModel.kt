@@ -6,7 +6,6 @@ import com.jvcs.tracky.core.domain.auth.SessionStorage
 import com.jvcs.tracky.features.onboarding.domain.OnboardingStatus
 import com.jvcs.tracky.features.onboarding.domain.OnboardingStatusStore
 import com.jvcs.tracky.navigation.Route
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
