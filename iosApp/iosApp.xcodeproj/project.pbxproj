@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		A1F1A5E1305B000100D3AF8E /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = A1F1A5E2305B000100D3AF8E /* FirebaseAnalytics */; };
+		A1F1A5E4305B000100D3AF8E /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = A1F1A5E5305B000100D3AF8E /* FirebaseMessaging */; };
 		DFAC5061305AEE8400D3AF8E /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DFAC5060305AEE8400D3AF8E /* WidgetKit.framework */; };
 		DFAC5063305AEE8400D3AF8E /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DFAC5062305AEE8400D3AF8E /* SwiftUI.framework */; };
 		DFAC5072305AEE8600D3AF8E /* TrackyTimerWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = DFAC505E305AEE8400D3AF8E /* TrackyTimerWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -96,6 +97,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1F1A5E1305B000100D3AF8E /* FirebaseAnalytics in Frameworks */,
+				A1F1A5E4305B000100D3AF8E /* FirebaseMessaging in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -166,6 +168,7 @@
 			name = iosApp;
 			packageProductDependencies = (
 				A1F1A5E2305B000100D3AF8E /* FirebaseAnalytics */,
+				A1F1A5E5305B000100D3AF8E /* FirebaseMessaging */,
 			);
 			productName = iosApp;
 			productReference = 277B9CAB0DFCECF3897DDD1D /* Tracky.app */;
@@ -379,6 +382,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = iosApp/Info.plist;
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -471,6 +475,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = iosApp/Info.plist;
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -593,7 +598,7 @@
 			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 11.8.0;
+				minimumVersion = 12.19.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -603,6 +608,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = A1F1A5E3305B000100D3AF8E /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseAnalytics;
+		};
+		A1F1A5E5305B000100D3AF8E /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A1F1A5E3305B000100D3AF8E /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

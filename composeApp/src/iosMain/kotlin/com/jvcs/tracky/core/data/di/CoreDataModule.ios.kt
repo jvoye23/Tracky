@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import com.jvcs.tracky.core.data.connectivity.IosConnectivityObserver
 import com.jvcs.tracky.core.data.device.IosInstallTimeProvider
 import com.jvcs.tracky.core.data.lifecycle.IosAppLifecycleObserver
+import com.jvcs.tracky.core.data.notification.IosNotificationPermissionRequester
 import com.jvcs.tracky.core.data.notification.IosTimerNotificationController
 import com.jvcs.tracky.core.data.sync.IosSyncScheduler
 import com.jvcs.tracky.core.data.sync.IosTrashCleanupScheduler
@@ -13,7 +14,6 @@ import com.jvcs.tracky.core.database.DatabaseFactory
 import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
 import com.jvcs.tracky.core.domain.device.InstallTimeProvider
 import com.jvcs.tracky.core.domain.lifecycle.AppLifecycleObserver
-import com.jvcs.tracky.core.domain.notification.NoOpTimerNotificationPermissionRequester
 import com.jvcs.tracky.core.domain.notification.TimerNotificationController
 import com.jvcs.tracky.core.domain.notification.TimerNotificationPermissionRequester
 import com.jvcs.tracky.core.domain.sync.SyncScheduler
@@ -45,9 +45,7 @@ actual val platformCoreDataModule =
         single { IosTrashCleanupScheduler() } bind TrashCleanupScheduler::class
 
         single { IosTimerNotificationController() } bind TimerNotificationController::class
-        // Live Activities are governed by a Settings toggle, not a runtime prompt, so there is still
-        // nothing to ask for even now that the Live Activity has landed.
-        single { NoOpTimerNotificationPermissionRequester() } bind TimerNotificationPermissionRequester::class
+        single { IosNotificationPermissionRequester() } bind TimerNotificationPermissionRequester::class
 
         singleOf(::IosPdfDocumentWriter) bind PdfDocumentWriter::class
         single { UiActivityExportFileSharer() } bind ExportFileSharer::class
