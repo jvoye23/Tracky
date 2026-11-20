@@ -10,9 +10,9 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.room)
-    id("prism.ktlint")
-    id("prism.detekt")
-    id("prism.jacoco")
+    id("tracky.ktlint")
+    id("tracky.detekt")
+    id("tracky.jacoco")
 }
 
 val localProperties =
@@ -172,7 +172,7 @@ kotlin {
             implementation(libs.kotlinx.coroutines.test)
             // Ordered, suspending assertions on event flows; fails on unconsumed emissions.
             implementation(libs.turbine)
-            // Fluent assertions; the one assertion API PRISM's NonAssertKAssertion allows.
+            // Fluent assertions; the project's one assertion API.
             implementation(libs.assertk)
             // A scripted HTTP engine, for the data sources whose behaviour is the status code
             // itself — a 204 that means "nothing is running", a 409 that carries an answer.

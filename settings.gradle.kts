@@ -35,5 +35,3 @@ plugins {
 
 include(":composeApp")
 include(":androidApp")
-include(":tooling:prism-rules")
-include(":tooling:konsist")

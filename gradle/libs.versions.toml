@@ -44,16 +44,12 @@ mokoPermissions = "0.20.1"
 # For Compose Multiplatform
 cmpNavigation3 = "1.2.0"
 
-# PRISM (verification tooling)
+# Testing & static analysis
 assertk = "0.28.1"
 composeRules = "0.6.8"
-coroutines = "1.11.0"
 detekt = "2.0.0-alpha.6"
 jacoco = "0.8.16"
-# The PRISM tooling modules build on a Java 11 toolchain, and JUnit 6 needs 17: they stay on the
-# last JUnit 5 line.
 junit5 = "5.14.4"
-konsist = "0.17.3"
 ktlint = "1.8.0"
 purchases-kmp = "4.0.0"
 # GitLive wraps the Android Firebase SDK (2.7.0 is built against BOM 34.18.0). iOS does not use it:
@@ -133,20 +129,12 @@ androidx-lifecycle-process = { module = "androidx.lifecycle:lifecycle-process", 
 # iOS Specific:
 ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
 
-# PRISM (verification tooling)
-assertk-jvm = { group = "com.willowtreeapps.assertk", name = "assertk-jvm", version.ref = "assertk" }
+# Testing & static analysis
 compose-rules-detekt = { group = "io.nlopez.compose.rules", name = "detekt", version.ref = "composeRules" }
-detekt-api = { group = "dev.detekt", name = "detekt-api", version.ref = "detekt" }
 detekt-gradle-plugin = { group = "dev.detekt", name = "detekt-gradle-plugin", version.ref = "detekt" }
-detekt-test = { group = "dev.detekt", name = "detekt-test", version.ref = "detekt" }
-detekt-test-junit = { group = "dev.detekt", name = "detekt-test-junit", version.ref = "detekt" }
-detekt-test-utils = { group = "dev.detekt", name = "detekt-test-utils", version.ref = "detekt" }
-detekt-utils = { group = "dev.detekt", name = "detekt-utils", version.ref = "detekt" }
 junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter", version.ref = "junit5" }
 junit-jupiter-engine = { group = "org.junit.jupiter", name = "junit-jupiter-engine", version.ref = "junit5" }
 junit-platform-launcher = { group = "org.junit.platform", name = "junit-platform-launcher" }
-konsist = { group = "com.lemonappdev", name = "konsist", version.ref = "konsist" }
-kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 ktlint-cli = { group = "com.pinterest.ktlint", name = "ktlint-cli", version.ref = "ktlint" }
 
 # Required RevenueCat SDKs:
@@ -171,6 +159,3 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 room = { id = "androidx.room", version.ref = "room" }
 google-services = { id = "com.google.gms.google-services", version.ref = "google-services" }
-
-# PRISM (verification tooling)
-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

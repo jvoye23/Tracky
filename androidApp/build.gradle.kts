@@ -7,9 +7,9 @@ plugins {
     alias(libs.plugins.composeCompiler)
     // Reads google-services.json, which is not committed: get it from the Firebase console.
     alias(libs.plugins.google.services)
-    id("prism.ktlint")
-    id("prism.detekt")
-    id("prism.jacoco")
+    id("tracky.ktlint")
+    id("tracky.detekt")
+    id("tracky.jacoco")
 }
 
 val localProperties =
