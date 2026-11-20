@@ -68,6 +68,8 @@ enum LiveActivitySetup {
 @main
 struct iOSApp: App {
 
+    @UIApplicationDelegateAdaptor(PushAppDelegate.self) private var pushAppDelegate
+
     init() {
         // Firebase before Koin: the syncs Koin starts log through FirebaseAnalyticsBackend, which
         // needs the configured default app. Android needs no counterpart — FirebaseInitProvider

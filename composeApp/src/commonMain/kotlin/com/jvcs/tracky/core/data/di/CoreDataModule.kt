@@ -5,6 +5,7 @@ import com.jvcs.tracky.core.data.auth.DataStoreSessionStorage
 import com.jvcs.tracky.core.data.auth.KtorAuthService
 import com.jvcs.tracky.core.data.device.DataStoreDeviceIdProvider
 import com.jvcs.tracky.core.data.identity.DataStoreAppUserIdStore
+import com.jvcs.tracky.core.data.logging.KermitLogger
 import com.jvcs.tracky.core.data.networking.ApiConfig
 import com.jvcs.tracky.core.data.networking.HttpClientFactory
 import com.jvcs.tracky.core.data.networking.realtimeUrl
@@ -34,6 +35,7 @@ import com.jvcs.tracky.core.domain.connectivity.ConnectivityObserver
 import com.jvcs.tracky.core.domain.device.DeviceIdProvider
 import com.jvcs.tracky.core.domain.identity.AppUserIdStore
 import com.jvcs.tracky.core.domain.lifecycle.AppLifecycleObserver
+import com.jvcs.tracky.core.domain.logging.TrackyLogger
 import com.jvcs.tracky.core.domain.notification.TimerNotificationCoordinator
 import com.jvcs.tracky.core.domain.purchases.AppUserIdentitySync
 import com.jvcs.tracky.core.domain.purchases.EntitlementService
@@ -115,6 +117,7 @@ expect val platformCoreDataModule: Module
 val coreDataModule =
     module {
         includes(platformCoreDataModule)
+        single<TrackyLogger> { KermitLogger }
 
         // The one place the app commits to a real clock — everything else takes the TimeProvider
         // interface so tests can pin time.
@@ -509,7 +512,7 @@ val coreDataModule =
 
         // Auth
         singleOf(::DataStoreSessionStorage) bind SessionStorage::class
-        single { HttpClientFactory(get()).create(get()) }
+        single { HttpClientFactory(get(), get()).create(get()) }
         singleOf(::KtorAuthService) bind AuthService::class
         singleOf(::SocialAuthProvider)
     }

@@ -363,8 +363,8 @@
     <string name="basic_feature_stats_description">See detailed stats of your tracked tasks.</string>
 
     <!-- Onboarding: notification permission -->
-    <string name="onboarding_permission_title">Keep an eye on your timer</string>
-    <string name="onboarding_permission_description">Tracky shows a notification while a timer runs, so you can see and pause it without opening the app. Allow notifications to get it.</string>
+    <string name="onboarding_permission_title">Stay up to date</string>
+    <string name="onboarding_permission_description">Allow notifications so Tracky can keep you posted on your timer and what\'s new.</string>
     <string name="onboarding_permission_allow">Allow notifications</string>
     <string name="onboarding_permission_skip">Not now</string>
 

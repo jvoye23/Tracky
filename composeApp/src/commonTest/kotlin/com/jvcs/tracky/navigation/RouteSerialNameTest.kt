@@ -23,6 +23,10 @@ class RouteSerialNameTest {
                 Route.AuthRoute.Login
                     .serializer()
                     .descriptor.serialName,
+            "login_notification_permission" to
+                Route.AuthRoute.LoginNotificationPermission
+                    .serializer()
+                    .descriptor.serialName,
             "register" to
                 Route.AuthRoute.Register
                     .serializer()
@@ -86,7 +90,7 @@ class RouteSerialNameTest {
 
     @Test
     fun `every route is covered by this test`() {
-        assertThat(expectedSerialNames.size).isEqualTo(14)
+        assertThat(expectedSerialNames.size).isEqualTo(15)
     }
 
     @Test
@@ -110,6 +114,7 @@ class RouteSerialNameTest {
         val routes: List<NavKey> =
             listOf(
                 Route.AuthRoute.Login,
+                Route.AuthRoute.LoginNotificationPermission,
                 Route.AuthRoute.Register,
                 Route.AuthRoute.RegisterSuccess(email = "a@b.com"),
                 Route.AuthRoute.EmailVerification(token = "token"),

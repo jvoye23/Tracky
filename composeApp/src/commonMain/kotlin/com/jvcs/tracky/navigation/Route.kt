@@ -44,6 +44,10 @@ sealed interface Route : NavKey {
         data object Login : AuthRoute, NavKey
 
         @Serializable
+        @SerialName("login_notification_permission")
+        data object LoginNotificationPermission : AuthRoute, NavKey
+
+        @Serializable
         @SerialName("register")
         data object Register : AuthRoute, NavKey
 

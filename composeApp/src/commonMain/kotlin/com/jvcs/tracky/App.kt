@@ -28,6 +28,8 @@ fun App(
     val state by mainViewModel.state.collectAsStateWithLifecycle()
 
     val currentOnAuthenticationCheck by rememberUpdatedState(onAuthenticationCheck)
+    // Keyed so the callback fires once when the check finishes, not after every recomposition.
+    @Suppress("UnnecessaryLaunchedEffect")
     LaunchedEffect(state.isCheckingAuth) {
         if (!state.isCheckingAuth) {
             currentOnAuthenticationCheck()

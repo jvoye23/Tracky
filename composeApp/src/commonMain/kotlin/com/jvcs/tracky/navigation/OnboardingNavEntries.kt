@@ -21,8 +21,8 @@ fun EntryProviderScope<NavKey>.onboardingEntries(backStack: NavBackStack<NavKey>
         val permissionRequester = koinInject<TimerNotificationPermissionRequester>()
         WelcomeScreenRoot(
             onGetStartedClick = {
-                // Skipped where there is nothing to ask - iOS, or a grant already held - rather than
-                // explaining a dialog that never comes. Onboarding is then welcome and paywall only.
+                // Skipped when there is nothing to ask - a grant already held - rather than explaining
+                // a dialog that never comes. Onboarding is then welcome and paywall only.
                 val next =
                     if (permissionRequester.needsPrompt()) {
                         Route.OnboardingRoute.NotificationPermission

@@ -39,9 +39,12 @@ internal class ForgotPasswordViewModelTest {
         val viewModel = ForgotPasswordViewModel(authService)
         backgroundScope.launch { viewModel.state.collect {} }
         advanceUntilIdle()
-        viewModel.state.value.emailTextFieldState
-            .setTextAndPlaceCursorAtEnd(email)
-        Snapshot.sendApplyNotifications()
+        // Applies on this thread. Once a Compose UI test has run in this process, a global write can
+        // be applied from the main thread instead, after advanceUntilIdle has already returned.
+        Snapshot.withMutableSnapshot {
+            viewModel.state.value.emailTextFieldState
+                .setTextAndPlaceCursorAtEnd(email)
+        }
         advanceUntilIdle()
         return viewModel
     }

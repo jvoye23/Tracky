@@ -10,6 +10,7 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
+import com.jvcs.tracky.core.domain.notification.TimerNotificationPermissionRequester
 import com.jvcs.tracky.features.auth.presentation.emailverification.EmailVerificationScreenRoot
 import com.jvcs.tracky.features.auth.presentation.emailverification.EmailVerificationViewModel
 import com.jvcs.tracky.features.auth.presentation.forgotpassword.ForgotPasswordScreenRoot
@@ -19,6 +20,7 @@ import com.jvcs.tracky.features.auth.presentation.registersuccess.RegisterSucces
 import com.jvcs.tracky.features.auth.presentation.registersuccess.RegisterSuccessViewModel
 import com.jvcs.tracky.features.auth.presentation.resetpassword.ResetPasswordScreenRoot
 import com.jvcs.tracky.features.auth.presentation.resetpassword.ResetPasswordViewModel
+import com.jvcs.tracky.features.onboarding.presentation.permission.NotificationPermissionScreenRoot
 import com.jvcs.tracky.features.project.presentation.dailyoverview.DailyOverviewScreenRoot
 import com.jvcs.tracky.features.project.presentation.dailyoverview.DailyOverviewViewModel
 import com.jvcs.tracky.features.project.presentation.edittext.EditTextScreenRoot
@@ -31,22 +33,44 @@ import com.jvcs.tracky.features.project.presentation.projectdetail.ProjectDetail
 import com.jvcs.tracky.features.project.presentation.projectoverview.ProjectOverviewScreenRoot
 import com.jvcs.tracky.features.project.presentation.projecttrash.ProjectTrashScreenRoot
 import com.jvcs.tracky.features.project.presentation.taskdetail.TaskDetailScreenRoot
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
+
+/**
+ * Logging in from the welcome screen skips onboarding's permission step, so without this a returning
+ * user would not be asked until their first timer, and console pushes would miss them until then.
+ */
+internal fun routeAfterLogin(needsNotificationPrompt: Boolean): NavKey =
+    if (needsNotificationPrompt) {
+        Route.AuthRoute.LoginNotificationPermission
+    } else {
+        Route.ProjectRoute.ProjectOverview
+    }
 
 /** Login, sign-up and the sign-up confirmation. */
 fun EntryProviderScope<NavKey>.authAccountEntries(backStack: NavBackStack<NavKey>) {
     entry<Route.AuthRoute.Login> {
+        val permissionRequester = koinInject<TimerNotificationPermissionRequester>()
         LoginScreenRoot(
             onLoginSuccess = {
                 backStack.removeAll { true }
-                backStack.add(Route.ProjectRoute.ProjectOverview)
+                backStack.add(routeAfterLogin(permissionRequester.needsPrompt()))
             },
             onForgotPasswordClick = {
                 backStack.add(Route.AuthRoute.ForgotPassword)
             },
             onCreateAccountClick = {
                 backStack.add(Route.AuthRoute.Register)
+            },
+        )
+    }
+
+    entry<Route.AuthRoute.LoginNotificationPermission> {
+        NotificationPermissionScreenRoot(
+            onFinish = {
+                backStack.removeAll { true }
+                backStack.add(Route.ProjectRoute.ProjectOverview)
             },
         )
     }

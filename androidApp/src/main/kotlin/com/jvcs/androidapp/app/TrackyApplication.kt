@@ -1,6 +1,7 @@
 package com.jvcs.androidapp.app
 
 import android.app.Application
+import com.jvcs.tracky.core.data.notification.PushNotificationFactory
 import com.jvcs.tracky.core.data.purchases.RevenueCatConfigurator
 import com.jvcs.tracky.core.data.realtime.RealtimeTimerConnection
 import com.jvcs.tracky.core.domain.notification.TimerNotificationCoordinator
@@ -30,6 +31,8 @@ class TrackyApplication : Application() {
             androidContext(this@TrackyApplication)
             androidLogger()
         }
+        // FCM draws a background push itself, so the channel has to exist before the first one lands.
+        PushNotificationFactory(this).createChannel()
         // First, so RevenueCat is configured with the app user id before anything waits on it.
         get<RevenueCatConfigurator>().start()
 
